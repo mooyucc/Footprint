@@ -72,27 +72,20 @@ echo ""
 echo "🚀 推送到GitHub..."
 echo ""
 
-# 检查是否是首次推送
-if ! git rev-parse --abbrev-ref --symbolic-full-name @{u} > /dev/null 2>&1; then
-    echo "📤 首次推送，设置上游分支..."
+# 正常推送（已配置好远程仓库和认证）
+git push
+
+# 检查推送结果
+PUSH_RESULT=$?
+
+# 如果推送失败，可能是因为分支未设置
+if [ $PUSH_RESULT -ne 0 ]; then
+    echo "⚠️  常规推送失败，尝试设置上游分支..."
     git push -u origin main
-    
-    # 如果main分支推送失败，尝试master分支
-    if [ $? -ne 0 ]; then
-        echo "⚠️  main分支推送失败，尝试master分支..."
-        # 检查当前分支
-        CURRENT_BRANCH=$(git branch --show-current)
-        if [ "$CURRENT_BRANCH" != "master" ]; then
-            git branch -M master
-        fi
-        git push -u origin master
-    fi
-else
-    # 正常推送
-    git push
+    PUSH_RESULT=$?
 fi
 
-if [ $? -eq 0 ]; then
+if [ $PUSH_RESULT -eq 0 ]; then
     echo ""
     echo "======================================"
     echo "  ✅ 上传成功！"
