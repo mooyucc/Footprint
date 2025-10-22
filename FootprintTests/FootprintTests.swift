@@ -2,7 +2,7 @@
 //  FootprintTests.swift
 //  FootprintTests
 //
-//  Created by 徐化军 on 2025/10/19.
+//  Created by K.X on 2025/10/19.
 //
 
 import Testing

@@ -225,7 +225,7 @@ Task { @MainActor in
 
 **Footprint - 让每一次旅行都成为珍贵的回忆** ✈️🌍
 
-*Version 1.0.0 | Created with ❤️ by 徐化军*
+*Version 1.0.0 | Created with ❤️ by K.X*
 
 </div>
 

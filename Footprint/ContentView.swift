@@ -2,7 +2,7 @@
 //  ContentView.swift
 //  Footprint
 //
-//  Created by 徐化军 on 2025/10/19.
+//  Created by K.X on 2025/10/19.
 //
 
 import SwiftUI
@@ -43,7 +43,11 @@ struct ContentView: View {
 struct ProfileView: View {
     @EnvironmentObject var appleSignInManager: AppleSignInManager
     @Query private var destinations: [TravelDestination]
+    @Query private var trips: [TravelTrip]
     @State private var showSettings = false
+    @State private var showShareSheet = false
+    @State private var shareImage: UIImage?
+    @State private var pendingShare = false
     
     var statistics: (total: Int, domestic: Int, international: Int, countries: Int, continents: Int) {
         let total = destinations.count
@@ -134,9 +138,35 @@ struct ProfileView: View {
                     
                     // 统计卡片
                     VStack(spacing: 16) {
-                        Text("旅行统计")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        HStack {
+                            Text("旅行统计")
+                                .font(.headline)
+                            
+                            Spacer()
+                            
+                            Button {
+                                generateAndShareStatsImage()
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "square.and.arrow.up")
+                                    Text("分享")
+                                }
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(
+                                    LinearGradient(
+                                        colors: [.blue, .purple],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .cornerRadius(20)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         
                         LazyVGrid(columns: [
                             GridItem(.flexible()),
@@ -271,6 +301,42 @@ struct ProfileView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsView()
             }
+            .sheet(isPresented: $showShareSheet) {
+                if let image = shareImage {
+                    SystemShareSheet(items: [image])
+                }
+            }
+            .onChange(of: shareImage) { newImage in
+                if newImage != nil && pendingShare {
+                    showShareSheet = true
+                    pendingShare = false
+                }
+            }
+        }
+    }
+    
+    // MARK: - 生成并分享统计图片
+    private func generateAndShareStatsImage() {
+        // 准备统计数据
+        let yearlyData = Dictionary(grouping: destinations) { destination in
+            Calendar.current.component(.year, from: destination.visitDate)
+        }.map { (year: $0.key, count: $0.value.count) }
+        
+        let stats = TravelStats(
+            totalDestinations: statistics.total,
+            domesticDestinations: statistics.domestic,
+            internationalDestinations: statistics.international,
+            countries: statistics.countries,
+            yearlyData: yearlyData,
+            userName: appleSignInManager.displayName
+        )
+        
+        // 生成图片
+        if let image = StatsImageGenerator.generateStatsImage(stats: stats) {
+            // 设置待分享标志
+            pendingShare = true
+            // 设置图片，onChange 会自动触发分享面板显示
+            shareImage = image
         }
     }
     

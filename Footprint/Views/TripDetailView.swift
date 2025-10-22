@@ -2,7 +2,7 @@
 //  TripDetailView.swift
 //  Footprint
 //
-//  Created by 徐化军 on 2025/10/19.
+//  Created by K.X on 2025/10/19.
 //
 
 import SwiftUI
@@ -206,7 +206,8 @@ struct TripDetailView: View {
         }
         .sheet(item: $shareItem) { item in
             if let image = item.image {
-                SystemShareSheet(items: [item.text, image])
+                // 只分享图片，不分享文字
+                SystemShareSheet(items: [image])
             } else {
                 SystemShareSheet(items: [item.text])
             }
@@ -230,30 +231,8 @@ struct TripDetailView: View {
         // 生成旅程图片
         let tripImage = TripImageGenerator.generateTripImage(from: trip)
         
-        // 生成分享文字
-        var shareText = "📍 \(trip.name)\n\n"
-        
-        if !trip.desc.isEmpty {
-            shareText += "\(trip.desc)\n\n"
-        }
-        
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .medium
-        dateFormatter.locale = Locale(identifier: "zh_CN")
-        
-        shareText += "🗓️ 时间：\(dateFormatter.string(from: trip.startDate)) - \(dateFormatter.string(from: trip.endDate))\n"
-        shareText += "⏱️ 时长：\(trip.durationDays) 天\n\n"
-        
-        if !sortedDestinations.isEmpty {
-            shareText += "🌍 行程路线（\(sortedDestinations.count)个地点）：\n"
-            for (index, destination) in sortedDestinations.enumerated() {
-                shareText += "\(index + 1). \(destination.name) - \(destination.country)\n"
-            }
-        }
-        
-        shareText += "\n✨ 来自 Footprint 旅程记录"
-        
-        shareItem = TripShareItem(text: shareText, image: tripImage)
+        // 只分享图片，不分享文字（因为所有信息都已经包含在图片中）
+        shareItem = TripShareItem(text: "", image: tripImage)
     }
 }
 
