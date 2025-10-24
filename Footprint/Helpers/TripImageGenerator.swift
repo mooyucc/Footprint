@@ -13,6 +13,13 @@ struct TripShareItem: Identifiable {
     let id = UUID()
     let text: String
     let image: UIImage?
+    let url: URL?
+    
+    init(text: String, image: UIImage? = nil, url: URL? = nil) {
+        self.text = text
+        self.image = image
+        self.url = url
+    }
 }
 
 struct SystemShareSheet: UIViewControllerRepresentable {

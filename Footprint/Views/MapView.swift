@@ -301,6 +301,21 @@ struct MapView: View {
                 prefilledCountry: locationData.country,
                 prefilledCategory: locationData.category
             )
+        } else if isGeocodingLocation {
+            // 显示加载状态，等待地理编码完成
+            VStack(spacing: 20) {
+                ProgressView()
+                    .scaleEffect(1.2)
+                Text("正在获取位置信息...")
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+                Text("请稍候，我们正在识别您选择的位置")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(.systemBackground))
         } else {
             AddDestinationView()
         }
@@ -382,6 +397,9 @@ struct MapView: View {
         print("🗺️ 长按地图位置: (\(coordinate.latitude), \(coordinate.longitude))")
         longPressLocation = coordinate
         
+        // 立即显示添加目的地界面，显示加载状态
+        showingAddDestination = true
+        
         // 执行反向地理编码
         reverseGeocodeLocation(coordinate: coordinate)
     }
@@ -403,7 +421,7 @@ struct MapView: View {
             let mapItem = MKMapItem(placemark: mkPlacemark)
             mapItem.name = cityName
             prefilledLocationData = (location: mapItem, name: cityName, country: countryName, category: category)
-            showingAddDestination = true
+            // 不需要再次设置 showingAddDestination，界面已经显示
         }
 
         func failoverToAlternateLocales() {
@@ -457,7 +475,7 @@ struct MapView: View {
                 DispatchQueue.main.async {
                     self.isGeocodingLocation = false
                     self.prefilledLocationData = (location: mapItem, name: cityName, country: countryName, category: category)
-                    self.showingAddDestination = true
+                    // 不需要再次设置 showingAddDestination，界面已经显示
                 }
             } else {
                 print("⚠️ 附近搜索失败: \(error?.localizedDescription ?? "无结果")，继续使用坐标兜底…")
@@ -477,7 +495,7 @@ struct MapView: View {
         let mapItem = MKMapItem(placemark: placemark)
         mapItem.name = cityName
         prefilledLocationData = (location: mapItem, name: cityName, country: countryName, category: category)
-        showingAddDestination = true
+        // 不需要再次设置 showingAddDestination，界面已经显示
     }
 
     // 使用简化中国多边形进行判断（点在多边形内）

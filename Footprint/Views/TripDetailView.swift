@@ -17,6 +17,7 @@ struct TripDetailView: View {
     @State private var showingAddDestination = false
     @State private var showingDeleteAlert = false
     @State private var shareItem: TripShareItem?
+    @State private var shareFileItem: TripShareItem?
     
     var sortedDestinations: [TravelDestination] {
         trip.destinations?.sorted { $0.visitDate < $1.visitDate } ?? []
@@ -172,6 +173,12 @@ struct TripDetailView: View {
                         Label("分享旅程", systemImage: "square.and.arrow.up")
                     }
                     
+                    Button {
+                        shareTripToTeam()
+                    } label: {
+                        Label("分享给队友", systemImage: "person.2.fill")
+                    }
+                    
                     Divider()
                     
                     Button {
@@ -212,6 +219,13 @@ struct TripDetailView: View {
                 SystemShareSheet(items: [item.text])
             }
         }
+        .sheet(item: $shareFileItem) { item in
+            if let url = item.url {
+                SystemShareSheet(items: [url])
+            } else {
+                SystemShareSheet(items: [item.text])
+            }
+        }
         .alert("删除旅程", isPresented: $showingDeleteAlert) {
             Button("取消", role: .cancel) { }
             Button("删除", role: .destructive) {
@@ -233,6 +247,20 @@ struct TripDetailView: View {
         
         // 只分享图片，不分享文字（因为所有信息都已经包含在图片中）
         shareItem = TripShareItem(text: "", image: tripImage)
+    }
+    
+    private func shareTripToTeam() {
+        // 导出旅程数据为JSON文件
+        guard let fileURL = TripDataExporter.exportTrip(trip) else {
+            // 导出失败，显示错误提示
+            return
+        }
+        
+        // 生成分享文本
+        let shareText = TripDataExporter.generateShareText(for: trip)
+        
+        // 创建分享项
+        shareFileItem = TripShareItem(text: shareText, image: nil, url: fileURL)
     }
 }
 

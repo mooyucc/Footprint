@@ -248,19 +248,32 @@ struct ProfileView: View {
                             }
                             
                             ForEach(years.keys.sorted(by: >), id: \.self) { year in
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("\(year)年")
-                                        .font(.headline)
-                                        .foregroundColor(.blue)
-                                    
-                                    Text("\(years[year]?.count ?? 0) 个目的地")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
+                                NavigationLink {
+                                    YearFilteredDestinationView(year: year)
+                                } label: {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        HStack {
+                                            Text("\(year)年")
+                                                .font(.headline)
+                                                .foregroundColor(.blue)
+                                            
+                                            Spacer()
+                                            
+                                            Image(systemName: "chevron.right")
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        
+                                        Text("\(years[year]?.count ?? 0) 个目的地")
+                                            .font(.subheadline)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding()
+                                    .background(Color(.tertiarySystemBackground))
+                                    .cornerRadius(10)
                                 }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding()
-                                .background(Color(.tertiarySystemBackground))
-                                .cornerRadius(10)
+                                .buttonStyle(PlainButtonStyle())
                             }
                         }
                     }
@@ -278,7 +291,7 @@ struct ProfileView: View {
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
                         
-                        Text("Version 1.0.0")
+                        Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }

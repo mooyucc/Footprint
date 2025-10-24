@@ -10,9 +10,15 @@ import SwiftData
 
 struct TripListView: View {
     @Query(sort: \TravelTrip.startDate, order: .reverse) private var trips: [TravelTrip]
+    @Environment(\.modelContext) private var modelContext
     @State private var showingAddTrip = false
     @State private var searchText = ""
     @State private var shareItem: TripShareItem?
+    @State private var showingImportAlert = false
+    @State private var showingFilePicker = false
+    @State private var importResult: ImportResult?
+    @State private var showingImportResult = false
+    @State private var selectedURL: URL?
     
     var filteredTrips: [TravelTrip] {
         if searchText.isEmpty {
@@ -59,8 +65,18 @@ struct TripListView: View {
             .searchable(text: $searchText, prompt: "搜索旅程")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showingAddTrip = true
+                    Menu {
+                        Button {
+                            showingAddTrip = true
+                        } label: {
+                            Label("创建旅程", systemImage: "plus.circle.fill")
+                        }
+                        
+                        Button {
+                            showingFilePicker = true
+                        } label: {
+                            Label("导入旅程", systemImage: "square.and.arrow.down")
+                        }
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.title2)
@@ -83,6 +99,28 @@ struct TripListView: View {
                     SystemShareSheet(items: [item.text])
                 }
             }
+            .sheet(isPresented: $showingFilePicker) {
+                DocumentPicker(selectedURL: $selectedURL)
+            }
+            .alert("导入结果", isPresented: $showingImportResult) {
+                Button("确定") { }
+            } message: {
+                if let result = importResult {
+                    switch result {
+                    case .success(let trip):
+                        Text("成功导入旅程：\(trip.name)")
+                    case .duplicate(let trip):
+                        Text("旅程已存在：\(trip.name)")
+                    case .error(let message):
+                        Text("导入失败：\(message)")
+                    }
+                }
+            }
+            .onChange(of: selectedURL) { oldValue, newValue in
+                if let url = newValue {
+                    importTripFromURL(url)
+                }
+            }
         }
     }
     
@@ -101,6 +139,15 @@ struct TripListView: View {
         
         // 只分享图片，不分享文字（因为所有信息都已经包含在图片中）
         shareItem = TripShareItem(text: "", image: tripImage)
+    }
+    
+    private func importTripFromURL(_ url: URL) {
+        // 导入旅程
+        importResult = TripDataImporter.importTrip(from: url, modelContext: modelContext)
+        showingImportResult = true
+        
+        // 重置selectedURL
+        selectedURL = nil
     }
 }
 
