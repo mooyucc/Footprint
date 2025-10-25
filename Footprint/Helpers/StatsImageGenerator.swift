@@ -164,7 +164,7 @@ struct StatsImageGenerator {
             .font: UIFont.systemFont(ofSize: 24, weight: .regular),
             .foregroundColor: UIColor.white.withAlphaComponent(0.9)
         ]
-        let subtitleString = NSAttributedString(string: "我的旅行足迹", attributes: subtitleAttributes)
+        let subtitleString = NSAttributedString(string: "stats_share_my_travel_footprint".localized, attributes: subtitleAttributes)
         let subtitleSize = subtitleString.size()
         subtitleString.draw(at: CGPoint(x: (width - subtitleSize.width) / 2, y: currentY))
         
@@ -204,7 +204,7 @@ struct StatsImageGenerator {
             .font: UIFont.systemFont(ofSize: 28, weight: .medium),
             .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0)
         ]
-        let labelString = NSAttributedString(string: "个旅行目的地", attributes: labelAttributes)
+        let labelString = NSAttributedString(string: "stats_share_destinations_count".localized, attributes: labelAttributes)
         let labelSize = labelString.size()
         labelString.draw(at: CGPoint(x: cardRect.midX - labelSize.width / 2, y: cardRect.minY + 135))
         
@@ -233,9 +233,9 @@ struct StatsImageGenerator {
         
         // 绘制三个统计项
         let items: [(icon: String, value: Int, label: String, color: UIColor)] = [
-            ("globe.asia.australia.fill", stats.countries, "个国家", UIColor.systemGreen),
-            ("house.fill", stats.domesticDestinations, "国内", UIColor.systemRed),
-            ("airplane", stats.internationalDestinations, "国外", UIColor.systemBlue)
+            ("globe.asia.australia.fill", stats.countries, "stats_share_countries_count".localized, UIColor.systemGreen),
+            ("house.fill", stats.domesticDestinations, "domestic".localized, UIColor.systemRed),
+            ("airplane", stats.internationalDestinations, "international".localized, UIColor.systemBlue)
         ]
         
         for (index, item) in items.enumerated() {
@@ -312,7 +312,7 @@ struct StatsImageGenerator {
             tintedIcon.draw(in: iconRect)
         }
         
-        let titleString = NSAttributedString(string: "旅行时间线", attributes: titleAttributes)
+        let titleString = NSAttributedString(string: "stats_share_travel_timeline".localized, attributes: titleAttributes)
         titleString.draw(at: CGPoint(x: cardRect.minX + 65, y: currentY))
         
         currentY += 50
@@ -396,13 +396,13 @@ struct StatsImageGenerator {
             .font: UIFont.systemFont(ofSize: 22, weight: .semibold),
             .foregroundColor: UIColor.white
         ]
-        let footerString = NSAttributedString(string: "✨ Footprint • 记录每一步旅程", attributes: footerAttributes)
+        let footerString = NSAttributedString(string: "stats_share_footer".localized, attributes: footerAttributes)
         let footerSize = footerString.size()
         footerString.draw(at: CGPoint(x: (width - footerSize.width) / 2, y: y))
         
         // 绘制日期
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "yyyy年MM月dd日"
+        let dateFormatter = LanguageManager.shared.localizedDateFormatter()
+        dateFormatter.dateFormat = LanguageManager.shared.localizedDateFormat()
         let dateString = dateFormatter.string(from: Date())
         
         let dateAttributes: [NSAttributedString.Key: Any] = [

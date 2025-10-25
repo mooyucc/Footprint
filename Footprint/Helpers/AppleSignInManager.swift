@@ -10,7 +10,7 @@ import AuthenticationServices
 import SwiftUI
 import Combine
 
-class AppleSignInManager: NSObject, ObservableObject {
+class AppleSignInManager: NSObject, ObservableObject, ASAuthorizationControllerDelegate {
     @Published var isSignedIn: Bool = false
     @Published var userID: String = ""
     @Published var userName: String = ""
@@ -137,6 +137,16 @@ class AppleSignInManager: NSObject, ObservableObject {
         userEmail = ""
         customUserName = ""
     }
+    
+    // MARK: - ASAuthorizationControllerDelegate
+    
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+        handleSignInSuccess(authorization: authorization)
+    }
+    
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
+        print("Apple Sign In 失败: \(error.localizedDescription)")
+    }
 }
 
 // Apple Sign In 按钮视图
@@ -145,21 +155,30 @@ struct AppleSignInButton: View {
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
-        SignInWithAppleButton(
-            onRequest: { request in
-                request.requestedScopes = [.fullName, .email]
-                // 确保请求用户的姓名和邮箱信息
-            },
-            onCompletion: { result in
-                switch result {
-                case .success(let authorization):
-                    signInManager.handleSignInSuccess(authorization: authorization)
-                case .failure(let error):
-                    print("Apple Sign In 失败: \(error.localizedDescription)")
-                }
+        Button(action: {
+            performAppleSignIn()
+        }) {
+            HStack {
+                Image(systemName: "applelogo")
+                    .font(.system(size: 16, weight: .medium))
+                Text("sign_in_with_apple".localized)
+                    .font(.system(size: 16, weight: .medium))
             }
-        )
-        .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
-        .frame(height: 50)
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .frame(height: 50)
+            .background(Color.black)
+            .cornerRadius(8)
+        }
+    }
+    
+    private func performAppleSignIn() {
+        let provider = ASAuthorizationAppleIDProvider()
+        let request = provider.createRequest()
+        request.requestedScopes = [.fullName, .email]
+        
+        let authorizationController = ASAuthorizationController(authorizationRequests: [request])
+        authorizationController.delegate = signInManager
+        authorizationController.performRequests()
     }
 }

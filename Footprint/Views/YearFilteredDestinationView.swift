@@ -14,6 +14,8 @@ struct YearFilteredDestinationView: View {
     @State private var searchText = ""
     @State private var filterCategory: String? = nil
     @State private var editingDestination: TravelDestination?
+    @EnvironmentObject var languageManager: LanguageManager
+    @State private var refreshID = UUID()
     
     init(year: Int) {
         self.year = year
@@ -49,8 +51,8 @@ struct YearFilteredDestinationView: View {
     
     var statistics: (total: Int, domestic: Int, international: Int, countries: Int) {
         let total = allDestinations.count
-        let domestic = allDestinations.filter { $0.category == "国内" }.count
-        let international = allDestinations.filter { $0.category == "国外" }.count
+        let domestic = allDestinations.filter { $0.category == "domestic" }.count
+        let international = allDestinations.filter { $0.category == "international" }.count
         let countries = Set(allDestinations.map { $0.country }).count
         return (total, domestic, international, countries)
     }
@@ -67,10 +69,10 @@ struct YearFilteredDestinationView: View {
                 
                 // 筛选器
                 Section {
-                    Picker("筛选", selection: $filterCategory) {
-                        Text("全部").tag(nil as String?)
-                        Text("国内").tag("国内" as String?)
-                        Text("国外").tag("国外" as String?)
+                    Picker("filter".localized, selection: $filterCategory) {
+                        Text("all".localized).tag(nil as String?)
+                        Text("domestic".localized).tag("domestic" as String?)
+                        Text("international".localized).tag("international" as String?)
                     }
                     .pickerStyle(.segmented)
                 }
@@ -87,7 +89,7 @@ struct YearFilteredDestinationView: View {
                             Button {
                                 editingDestination = destination
                             } label: {
-                                Label("编辑", systemImage: "pencil")
+                                Label("edit".localized, systemImage: "pencil")
                             }
                             .tint(.blue)
                         }
@@ -95,16 +97,16 @@ struct YearFilteredDestinationView: View {
                             Button(role: .destructive) {
                                 deleteDestination(destination)
                             } label: {
-                                Label("删除", systemImage: "trash")
+                                Label("delete".localized, systemImage: "trash")
                             }
                         }
                     }
                     .onDelete(perform: deleteDestinations)
                 }
             }
-            .navigationTitle("\(year)年旅行记录")
+            .navigationTitle(languageManager.currentLanguage == .chinese ? "\(year)年旅行记录" : "\(year) Travel Records")
             .navigationBarTitleDisplayMode(.large)
-            .searchable(text: $searchText, prompt: "搜索地点、国家或笔记")
+            .searchable(text: $searchText, prompt: "search_places_countries_notes".localized)
             .sheet(item: $editingDestination) { destination in
                 EditDestinationView(destination: destination)
             }
@@ -113,6 +115,11 @@ struct YearFilteredDestinationView: View {
                     EmptyYearStateView(year: year)
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { _ in
+                // 语言变化时刷新界面
+                refreshID = UUID()
+            }
+            .id(refreshID)
         }
     }
     
@@ -135,6 +142,7 @@ struct YearFilteredDestinationView: View {
 struct YearStatisticsCard: View {
     let year: Int
     let statistics: (total: Int, domestic: Int, international: Int, countries: Int)
+    @EnvironmentObject var languageManager: LanguageManager
     
     var body: some View {
         VStack(spacing: 16) {
@@ -142,15 +150,15 @@ struct YearStatisticsCard: View {
                 Image(systemName: "calendar")
                     .foregroundColor(.blue)
                     .font(.title2)
-                Text("\(year)年旅行统计")
+                Text(languageManager.currentLanguage == .chinese ? "\(year)年旅行统计" : "\(year) Travel Statistics")
                     .font(.headline)
             }
             
             HStack(spacing: 20) {
-                StatItem(title: "总计", value: "\(statistics.total)", icon: "map.fill", color: .purple)
-                StatItem(title: "国内", value: "\(statistics.domestic)", icon: "house.fill", color: .red)
-                StatItem(title: "国外", value: "\(statistics.international)", icon: "airplane", color: .blue)
-                StatItem(title: "国家", value: "\(statistics.countries)", icon: "globe.asia.australia.fill", color: .green)
+                StatItem(title: "total".localized, value: "\(statistics.total)", icon: "map.fill", color: .purple)
+                StatItem(title: "domestic".localized, value: "\(statistics.domestic)", icon: "house.fill", color: .red)
+                StatItem(title: "international".localized, value: "\(statistics.international)", icon: "airplane", color: .blue)
+                StatItem(title: "countries".localized, value: "\(statistics.countries)", icon: "globe.asia.australia.fill", color: .green)
             }
         }
         .padding()
@@ -165,6 +173,7 @@ struct YearStatisticsCard: View {
 
 struct EmptyYearStateView: View {
     let year: Int
+    @EnvironmentObject var languageManager: LanguageManager
     
     var body: some View {
         VStack(spacing: 20) {
@@ -172,11 +181,11 @@ struct EmptyYearStateView: View {
                 .font(.system(size: 80))
                 .foregroundColor(.gray.opacity(0.5))
             
-            Text("\(year)年还没有旅行记录")
+            Text(languageManager.currentLanguage == .chinese ? "\(year)年还没有旅行记录" : "No travel records for \(year)")
                 .font(.title2)
                 .fontWeight(.semibold)
             
-            Text("去添加你的\(year)年旅行足迹吧！")
+            Text(languageManager.currentLanguage == .chinese ? "去添加你的\(year)年旅行足迹吧！" : "Start adding your \(year) travel footprints!")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -188,4 +197,5 @@ struct EmptyYearStateView: View {
 #Preview {
     YearFilteredDestinationView(year: 2024)
         .modelContainer(for: TravelDestination.self, inMemory: true)
+        .environmentObject(LanguageManager.shared)
 }

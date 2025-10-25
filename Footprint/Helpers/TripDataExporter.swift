@@ -95,7 +95,7 @@ struct TripDataExporter {
         return """
         🗺️ 旅程分享：\(trip.name)
         
-        📅 行程时间：\(trip.startDate.formatted(date: .abbreviated, time: .omitted)) - \(trip.endDate.formatted(date: .abbreviated, time: .omitted))
+        📅 行程时间：\(trip.startDate.localizedFormatted(dateStyle: .short)) - \(trip.endDate.localizedFormatted(dateStyle: .short))
         📍 目的地数量：\(destinationCount) 个地点
         
         使用 Footprint 应用导入此旅程，即可获得完整的行程安排！

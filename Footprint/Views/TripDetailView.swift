@@ -18,6 +18,7 @@ struct TripDetailView: View {
     @State private var showingDeleteAlert = false
     @State private var shareItem: TripShareItem?
     @State private var shareFileItem: TripShareItem?
+    @EnvironmentObject var languageManager: LanguageManager
     
     var sortedDestinations: [TravelDestination] {
         trip.destinations?.sorted { $0.visitDate < $1.visitDate } ?? []
@@ -79,30 +80,30 @@ struct TripDetailView: View {
                     // 时间信息卡片
                     HStack(spacing: 20) {
                         VStack(alignment: .leading, spacing: 8) {
-                            Label("开始", systemImage: "calendar.badge.plus")
+                            Label("start".localized, systemImage: "calendar.badge.plus")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            Text(trip.startDate, style: .date)
+                            Text(trip.startDate.localizedFormatted(dateStyle: .medium))
                                 .font(.headline)
                         }
                         
                         Divider()
                         
                         VStack(alignment: .leading, spacing: 8) {
-                            Label("结束", systemImage: "calendar.badge.minus")
+                            Label("end".localized, systemImage: "calendar.badge.minus")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            Text(trip.endDate, style: .date)
+                            Text(trip.endDate.localizedFormatted(dateStyle: .medium))
                                 .font(.headline)
                         }
                         
                         Divider()
                         
                         VStack(alignment: .leading, spacing: 8) {
-                            Label("时长", systemImage: "clock")
+                            Label("duration".localized, systemImage: "clock")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            Text("\(trip.durationDays) 天")
+                            Text("\(trip.durationDays) \("days".localized)")
                                 .font(.headline)
                         }
                     }
@@ -113,12 +114,12 @@ struct TripDetailView: View {
                     // 目的地列表
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
-                            Label("行程路线", systemImage: "location.fill")
+                            Label("trip_route".localized, systemImage: "location.fill")
                                 .font(.headline)
                             
                             Spacer()
                             
-                            Text("\(sortedDestinations.count) 个地点")
+                            Text("\(sortedDestinations.count) \("locations".localized)")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -129,13 +130,13 @@ struct TripDetailView: View {
                                     .font(.system(size: 50))
                                     .foregroundColor(.gray.opacity(0.5))
                                 
-                                Text("还没有添加目的地")
+                                Text("no_destinations_added".localized)
                                     .foregroundColor(.secondary)
                                 
                                 Button {
                                     showingAddDestination = true
                                 } label: {
-                                    Label("添加目的地", systemImage: "plus.circle.fill")
+                                    Label("add_destination".localized, systemImage: "plus.circle.fill")
                                         .font(.headline)
                                         .foregroundColor(.white)
                                         .padding()
@@ -170,13 +171,13 @@ struct TripDetailView: View {
                     Button {
                         shareTrip()
                     } label: {
-                        Label("分享旅程", systemImage: "square.and.arrow.up")
+                        Label("share_trip".localized, systemImage: "square.and.arrow.up")
                     }
                     
                     Button {
                         shareTripToTeam()
                     } label: {
-                        Label("分享给队友", systemImage: "person.2.fill")
+                        Label("share_to_team".localized, systemImage: "person.2.fill")
                     }
                     
                     Divider()
@@ -184,13 +185,13 @@ struct TripDetailView: View {
                     Button {
                         showingEditSheet = true
                     } label: {
-                        Label("编辑旅程", systemImage: "pencil")
+                        Label("edit_trip".localized, systemImage: "pencil")
                     }
                     
                     Button {
                         showingAddDestination = true
                     } label: {
-                        Label("添加目的地", systemImage: "plus")
+                        Label("add_destination".localized, systemImage: "plus")
                     }
                     
                     Divider()
@@ -198,7 +199,7 @@ struct TripDetailView: View {
                     Button(role: .destructive) {
                         showingDeleteAlert = true
                     } label: {
-                        Label("删除旅程", systemImage: "trash")
+                        Label("delete_trip".localized, systemImage: "trash")
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
@@ -226,13 +227,13 @@ struct TripDetailView: View {
                 SystemShareSheet(items: [item.text])
             }
         }
-        .alert("删除旅程", isPresented: $showingDeleteAlert) {
-            Button("取消", role: .cancel) { }
-            Button("删除", role: .destructive) {
+        .alert("delete_trip".localized, isPresented: $showingDeleteAlert) {
+            Button("cancel".localized, role: .cancel) { }
+            Button("delete".localized, role: .destructive) {
                 deleteTrip()
             }
         } message: {
-            Text("确定要删除这个旅程吗？关联的目的地不会被删除。")
+            Text("confirm_delete_trip".localized)
         }
     }
     
@@ -292,11 +293,11 @@ struct TripDestinationRow: View {
             } else {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8)
-                        .fill(destination.category == "国内" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
+                        .fill(destination.category == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
                         .frame(width: 50, height: 50)
                     
                     Image(systemName: "location.fill")
-                        .foregroundColor(destination.category == "国内" ? .red : .blue)
+                        .foregroundColor(destination.category == "domestic" ? .red : .blue)
                 }
             }
             
@@ -314,10 +315,10 @@ struct TripDestinationRow: View {
                         .foregroundColor(.secondary)
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(destination.visitDate, style: .date)
+                        Text(destination.visitDate.localizedFormatted(dateStyle: .medium))
                             .font(.caption)
                             .foregroundColor(.secondary)
-                        Text(destination.visitDate.formatted(date: .omitted, time: .shortened))
+                        Text(destination.visitDate.localizedFormatted(dateStyle: .none, timeStyle: .short))
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }

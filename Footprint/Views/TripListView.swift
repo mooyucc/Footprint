@@ -19,6 +19,8 @@ struct TripListView: View {
     @State private var importResult: ImportResult?
     @State private var showingImportResult = false
     @State private var selectedURL: URL?
+    @EnvironmentObject var languageManager: LanguageManager
+    @State private var refreshID = UUID()
     
     var filteredTrips: [TravelTrip] {
         if searchText.isEmpty {
@@ -53,7 +55,7 @@ struct TripListView: View {
                             Button {
                                 shareTrip(trip)
                             } label: {
-                                Label("分享", systemImage: "square.and.arrow.up")
+                                Label("share".localized, systemImage: "square.and.arrow.up")
                             }
                             .tint(.blue)
                         }
@@ -61,21 +63,21 @@ struct TripListView: View {
                     .onDelete(perform: deleteTrips)
                 }
             }
-            .navigationTitle("我的旅程")
-            .searchable(text: $searchText, prompt: "搜索旅程")
+            .navigationTitle("my_trips".localized)
+            .searchable(text: $searchText, prompt: "search_trips".localized)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Button {
                             showingAddTrip = true
                         } label: {
-                            Label("创建旅程", systemImage: "plus.circle.fill")
+                            Label("create_trip".localized, systemImage: "plus.circle.fill")
                         }
                         
                         Button {
                             showingFilePicker = true
                         } label: {
-                            Label("导入旅程", systemImage: "square.and.arrow.down")
+                            Label("import_trip".localized, systemImage: "square.and.arrow.down")
                         }
                     } label: {
                         Image(systemName: "plus.circle.fill")
@@ -102,17 +104,17 @@ struct TripListView: View {
             .sheet(isPresented: $showingFilePicker) {
                 DocumentPicker(selectedURL: $selectedURL)
             }
-            .alert("导入结果", isPresented: $showingImportResult) {
-                Button("确定") { }
+            .alert("import_result".localized, isPresented: $showingImportResult) {
+                Button("ok".localized) { }
             } message: {
                 if let result = importResult {
                     switch result {
                     case .success(let trip):
-                        Text("成功导入旅程：\(trip.name)")
+                        Text("import_success".localized + ": \(trip.name)")
                     case .duplicate(let trip):
-                        Text("旅程已存在：\(trip.name)")
+                        Text("trip_exists".localized + ": \(trip.name)")
                     case .error(let message):
-                        Text("导入失败：\(message)")
+                        Text("import_failed".localized + ": \(message)")
                     }
                 }
             }
@@ -121,6 +123,11 @@ struct TripListView: View {
                     importTripFromURL(url)
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { _ in
+                // 语言变化时刷新界面
+                refreshID = UUID()
+            }
+            .id(refreshID)
         }
     }
     
@@ -193,11 +200,11 @@ struct TripRow: View {
                 }
                 
                 HStack(spacing: 12) {
-                    Label("\(trip.durationDays)天", systemImage: "calendar")
+                    Label("\(trip.durationDays) \("days".localized)", systemImage: "calendar")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     
-                    Label("\(trip.destinationCount)个地点", systemImage: "location.fill")
+                    Label("\(trip.destinationCount) \("locations".localized)", systemImage: "location.fill")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -209,6 +216,7 @@ struct TripRow: View {
 
 struct TripStatisticsCard: View {
     let trips: [TravelTrip]
+    @EnvironmentObject var languageManager: LanguageManager
     
     var statistics: (total: Int, totalDays: Int, totalDestinations: Int) {
         let total = trips.count
@@ -219,13 +227,13 @@ struct TripStatisticsCard: View {
     
     var body: some View {
         VStack(spacing: 16) {
-            Text("旅程统计")
+            Text("trip_statistics".localized)
                 .font(.headline)
             
             HStack(spacing: 20) {
-                TripStatItem(title: "旅程", value: "\(statistics.total)", icon: "suitcase.fill", color: .blue)
-                TripStatItem(title: "天数", value: "\(statistics.totalDays)", icon: "calendar", color: .green)
-                TripStatItem(title: "地点", value: "\(statistics.totalDestinations)", icon: "location.fill", color: .orange)
+                TripStatItem(title: "trips".localized, value: "\(statistics.total)", icon: "suitcase.fill", color: .blue)
+                TripStatItem(title: "days".localized, value: "\(statistics.totalDays)", icon: "calendar", color: .green)
+                TripStatItem(title: "locations".localized, value: "\(statistics.totalDestinations)", icon: "location.fill", color: .orange)
             }
         }
         .padding()
@@ -264,6 +272,7 @@ struct TripStatItem: View {
 
 struct EmptyTripView: View {
     @Binding var showingAddTrip: Bool
+    @EnvironmentObject var languageManager: LanguageManager
     
     var body: some View {
         VStack(spacing: 20) {
@@ -271,11 +280,11 @@ struct EmptyTripView: View {
                 .font(.system(size: 80))
                 .foregroundColor(.gray.opacity(0.5))
             
-            Text("还没有旅程记录")
+            Text("no_trip_records".localized)
                 .font(.title2)
                 .fontWeight(.semibold)
             
-            Text("点击右上角的 + 按钮\n创建你的第一个旅程吧！")
+            Text(languageManager.currentLanguage == .chinese ? "点击右上角的 + 按钮\n创建你的第一个旅程吧！" : "Tap the + button in the top right\nto create your first trip!")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -283,7 +292,7 @@ struct EmptyTripView: View {
             Button {
                 showingAddTrip = true
             } label: {
-                Label("创建第一个旅程", systemImage: "plus.circle.fill")
+                Label("create_first_trip".localized, systemImage: "plus.circle.fill")
                     .font(.headline)
                     .foregroundColor(.white)
                     .padding()
@@ -298,5 +307,6 @@ struct EmptyTripView: View {
 #Preview {
     TripListView()
         .modelContainer(for: TravelTrip.self, inMemory: true)
+        .environmentObject(LanguageManager.shared)
 }
 

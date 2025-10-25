@@ -10,30 +10,31 @@ import SwiftData
 
 struct ContentView: View {
     @State private var selectedTab = 0
+    @EnvironmentObject var languageManager: LanguageManager
     
     var body: some View {
         TabView(selection: $selectedTab) {
             MapView()
                 .tabItem {
-                    Label("地图", systemImage: "map.fill")
+                    Label("map".localized, systemImage: "map.fill")
                 }
                 .tag(0)
             
             DestinationListView()
                 .tabItem {
-                    Label("足迹", systemImage: "location.fill")
+                    Label("destinations".localized, systemImage: "location.fill")
                 }
                 .tag(1)
             
             TripListView()
                 .tabItem {
-                    Label("旅程", systemImage: "suitcase.fill")
+                    Label("trips".localized, systemImage: "suitcase.fill")
                 }
                 .tag(2)
             
             ProfileView()
                 .tabItem {
-                    Label("我的", systemImage: "person.fill")
+                    Label("profile".localized, systemImage: "person.fill")
                 }
                 .tag(3)
         }
@@ -42,17 +43,19 @@ struct ContentView: View {
 
 struct ProfileView: View {
     @EnvironmentObject var appleSignInManager: AppleSignInManager
+    @EnvironmentObject var languageManager: LanguageManager
     @Query private var destinations: [TravelDestination]
     @Query private var trips: [TravelTrip]
     @State private var showSettings = false
     @State private var showShareSheet = false
     @State private var shareImage: UIImage?
     @State private var pendingShare = false
+    @State private var refreshID = UUID()
     
     var statistics: (total: Int, domestic: Int, international: Int, countries: Int, continents: Int) {
         let total = destinations.count
-        let domestic = destinations.filter { $0.category == "国内" }.count
-        let international = destinations.filter { $0.category == "国外" }.count
+        let domestic = destinations.filter { $0.category == "domestic" }.count
+        let international = destinations.filter { $0.category == "international" }.count
         let countries = Set(destinations.map { $0.country }).count
         
         // 简单的大洲判断逻辑
@@ -83,7 +86,7 @@ struct ProfileView: View {
                             HStack(spacing: 4) {
                                 Image(systemName: "checkmark.icloud.fill")
                                     .foregroundColor(.green)
-                                Text("iCloud 已同步")
+                                Text("iCloud_synced".localized)
                                     .font(.subheadline)
                                     .foregroundColor(.secondary)
                             }
@@ -92,11 +95,11 @@ struct ProfileView: View {
                                 .font(.system(size: 80))
                                 .foregroundStyle(.blue.gradient)
                             
-                            Text("我的旅行足迹")
+                            Text("my_travel_footprint".localized)
                                 .font(.title)
                                 .fontWeight(.bold)
                             
-                            Text("记录每一次精彩的旅程")
+                            Text("record_every_journey".localized)
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -114,12 +117,12 @@ struct ProfileView: View {
                                         Image(systemName: "icloud.fill")
                                             .foregroundStyle(.blue.gradient)
                                             .font(.title2)
-                                        Text("登录 Apple ID")
+                                        Text("sign_in_apple_id".localized)
                                             .font(.headline)
                                             .foregroundColor(.primary)
                                     }
                                     
-                                    Text("开启 iCloud 同步，保护你的旅行数据")
+                                    Text("enable_icloud_sync".localized)
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
@@ -139,7 +142,7 @@ struct ProfileView: View {
                     // 统计卡片
                     VStack(spacing: 16) {
                         HStack {
-                            Text("旅行统计")
+                            Text("travel_statistics".localized)
                                 .font(.headline)
                             
                             Spacer()
@@ -149,7 +152,7 @@ struct ProfileView: View {
                             } label: {
                                 HStack(spacing: 6) {
                                     Image(systemName: "square.and.arrow.up")
-                                    Text("分享")
+                                    Text("share".localized)
                                 }
                                 .font(.subheadline)
                                 .fontWeight(.medium)
@@ -175,28 +178,28 @@ struct ProfileView: View {
                             ProfileStatCard(
                                 icon: "flag.fill",
                                 value: "\(statistics.total)",
-                                label: "总目的地",
+                                label: "total_destinations".localized,
                                 color: .purple
                             )
                             
                             ProfileStatCard(
                                 icon: "globe.asia.australia.fill",
                                 value: "\(statistics.countries)",
-                                label: "访问国家",
+                                label: "countries_visited".localized,
                                 color: .green
                             )
                             
                             ProfileStatCard(
                                 icon: "house.fill",
                                 value: "\(statistics.domestic)",
-                                label: "国内旅行",
+                                label: "domestic_travel".localized,
                                 color: .red
                             )
                             
                             ProfileStatCard(
                                 icon: "airplane",
                                 value: "\(statistics.international)",
-                                label: "国外旅行",
+                                label: "international_travel".localized,
                                 color: .blue
                             )
                         }
@@ -211,7 +214,7 @@ struct ProfileView: View {
                             HStack {
                                 Image(systemName: "star.fill")
                                     .foregroundColor(.yellow)
-                                Text("我的最爱")
+                                Text("my_favorites".localized)
                                     .font(.headline)
                             }
                             
@@ -233,12 +236,12 @@ struct ProfileView: View {
                         HStack {
                             Image(systemName: "clock.fill")
                                 .foregroundColor(.orange)
-                            Text("旅行时间线")
+                            Text("travel_timeline".localized)
                                 .font(.headline)
                         }
                         
                         if destinations.isEmpty {
-                            Text("还没有旅行记录")
+                            Text("no_travel_records".localized)
                                 .foregroundColor(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .center)
                                 .padding()
@@ -253,7 +256,7 @@ struct ProfileView: View {
                                 } label: {
                                     VStack(alignment: .leading, spacing: 8) {
                                         HStack {
-                                            Text("\(year)年")
+                                            Text(languageManager.currentLanguage == .chinese ? "\(year)年" : "\(year)")
                                                 .font(.headline)
                                                 .foregroundColor(.blue)
                                             
@@ -264,7 +267,7 @@ struct ProfileView: View {
                                                 .foregroundColor(.secondary)
                                         }
                                         
-                                        Text("\(years[year]?.count ?? 0) 个目的地")
+                                        Text("\(years[year]?.count ?? 0) \("destinations_count".localized)")
                                             .font(.subheadline)
                                             .foregroundColor(.secondary)
                                     }
@@ -283,10 +286,10 @@ struct ProfileView: View {
                     
                     // 关于
                     VStack(spacing: 12) {
-                        Text("Footprint - 旅行足迹")
+                        Text("footprint_app".localized)
                             .font(.headline)
                         
-                        Text("记录你的精彩旅程，留下美好回忆")
+                        Text("record_journey_memories".localized)
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.center)
@@ -299,7 +302,7 @@ struct ProfileView: View {
                 }
                 .padding()
             }
-            .navigationTitle("我的")
+            .navigationTitle("profile".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -325,6 +328,11 @@ struct ProfileView: View {
                     pendingShare = false
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { _ in
+                // 语言变化时刷新界面
+                refreshID = UUID()
+            }
+            .id(refreshID)
         }
     }
     
@@ -363,7 +371,7 @@ struct ProfileView: View {
         var continents = Set<String>()
         
         for destination in destinations {
-            if asianCountries.contains(destination.country) || destination.category == "国内" {
+            if asianCountries.contains(destination.country) || destination.category == "domestic" {
                 continents.insert("Asia")
             } else if europeanCountries.contains(destination.country) {
                 continents.insert("Europe")
@@ -422,11 +430,11 @@ struct FavoriteDestinationRow: View {
             } else {
                 ZStack {
                     Circle()
-                        .fill(destination.category == "国内" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
+                        .fill(destination.category == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
                         .frame(width: 50, height: 50)
                     
                     Image(systemName: "location.fill")
-                        .foregroundColor(destination.category == "国内" ? .red : .blue)
+                        .foregroundColor(destination.category == "domestic" ? .red : .blue)
                 }
             }
             
@@ -453,4 +461,6 @@ struct FavoriteDestinationRow: View {
 #Preview {
     ContentView()
         .modelContainer(for: TravelDestination.self, inMemory: true)
+        .environmentObject(LanguageManager.shared)
+        .environmentObject(AppleSignInManager.shared)
 }

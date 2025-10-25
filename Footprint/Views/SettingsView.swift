@@ -10,9 +10,13 @@ import AuthenticationServices
 
 struct SettingsView: View {
     @EnvironmentObject var appleSignInManager: AppleSignInManager
+    @EnvironmentObject var languageManager: LanguageManager
+    @EnvironmentObject var countryManager: CountryManager
     @Environment(\.dismiss) var dismiss
     @State private var showingEditName = false
     @State private var editingName = ""
+    @State private var showingLanguagePicker = false
+    @State private var showingCountryPicker = false
     
     var body: some View {
         NavigationStack {
@@ -47,7 +51,7 @@ struct SettingsView: View {
                                             .foregroundColor(.secondary)
                                     }
                                     
-                                    Label("iCloud 已同步", systemImage: "checkmark.icloud.fill")
+                                    Label("iCloud_synced".localized, systemImage: "checkmark.icloud.fill")
                                         .font(.caption)
                                         .foregroundColor(.green)
                                 }
@@ -64,10 +68,10 @@ struct SettingsView: View {
                                     .foregroundColor(.secondary)
                                 
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text("未登录")
+                                    Text("not_logged_in".localized)
                                         .font(.headline)
                                     
-                                    Text("登录后数据自动同步到 iCloud")
+                                    Text("login_sync_description".localized)
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
@@ -81,56 +85,96 @@ struct SettingsView: View {
                         }
                     }
                 } header: {
-                    Text("账户")
+                    Text("account".localized)
                 }
                 
                 // iCloud 同步状态
                 Section {
                     HStack {
-                        Label("iCloud 同步", systemImage: "icloud")
+                        Label("icloud_sync".localized, systemImage: "icloud")
                         Spacer()
                         if appleSignInManager.isSignedIn {
-                            Text("已启用")
+                            Text("enabled".localized)
                                 .foregroundColor(.green)
                         } else {
-                            Text("未启用")
+                            Text("not_enabled".localized)
                                 .foregroundColor(.secondary)
                         }
                     }
                     
                     HStack {
-                        Label("数据存储", systemImage: "externaldrive.fill.badge.icloud")
+                        Label("data_storage".localized, systemImage: "externaldrive.fill.badge.icloud")
                         Spacer()
-                        Text(appleSignInManager.isSignedIn ? "iCloud" : "本地")
+                        Text(appleSignInManager.isSignedIn ? "icloud".localized : "local".localized)
                             .foregroundColor(.secondary)
                     }
                 } header: {
-                    Text("数据同步")
+                    Text("data_sync".localized)
                 } footer: {
                     if appleSignInManager.isSignedIn {
-                        Text("你的旅行数据正在自动同步到 iCloud，可以在所有设备上访问。")
+                        Text("sync_description_logged_in".localized)
                     } else {
-                        Text("登录 Apple ID 后，数据将自动同步到 iCloud，并在你的所有设备间保持同步。")
+                        Text("sync_description_not_logged_in".localized)
                     }
+                }
+                
+                // 语言设置
+                Section {
+                    Button(action: {
+                        showingLanguagePicker = true
+                    }) {
+                        HStack {
+                            Label("language".localized, systemImage: "globe")
+                            Spacer()
+                            HStack {
+                                Text(languageManager.currentLanguage.flag)
+                                Text(languageManager.currentLanguage.displayName)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("language".localized)
+                }
+                
+                // 国家设置
+                Section {
+                    Button(action: {
+                        showingCountryPicker = true
+                    }) {
+                        HStack {
+                            Label("country".localized, systemImage: "flag")
+                            Spacer()
+                            HStack {
+                                Text(countryManager.currentCountry.flag)
+                                Text(countryManager.currentCountry.displayName)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("country".localized)
+                } footer: {
+                    Text("country_description".localized)
                 }
                 
                 // 关于应用
                 Section {
                     HStack {
-                        Label("版本", systemImage: "info.circle")
+                        Label("version".localized, systemImage: "info.circle")
                         Spacer()
                         Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")
                             .foregroundColor(.secondary)
                     }
                     
                     HStack {
-                        Label("应用名称", systemImage: "app.badge")
+                        Label("app_name".localized, systemImage: "app.badge")
                         Spacer()
-                        Text("Footprint")
+                        Text("footprint".localized)
                             .foregroundColor(.secondary)
                     }
                 } header: {
-                    Text("关于")
+                    Text("about".localized)
                 }
                 
                 // 退出登录
@@ -141,18 +185,18 @@ struct SettingsView: View {
                         } label: {
                             HStack {
                                 Spacer()
-                                Label("退出登录", systemImage: "rectangle.portrait.and.arrow.right")
+                                Label("sign_out".localized, systemImage: "rectangle.portrait.and.arrow.right")
                                 Spacer()
                             }
                         }
                     }
                 }
             }
-            .navigationTitle("设置")
+            .navigationTitle("settings".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("完成") {
+                    Button("done".localized) {
                         dismiss()
                     }
                 }
@@ -168,6 +212,12 @@ struct SettingsView: View {
                         showingEditName = false
                     }
                 )
+            }
+            .sheet(isPresented: $showingLanguagePicker) {
+                LanguageSelectionView()
+            }
+            .sheet(isPresented: $showingCountryPicker) {
+                CountrySelectionView()
             }
         }
     }
@@ -186,16 +236,16 @@ struct EditUserNameView: View {
         NavigationStack {
             VStack(spacing: 20) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("自定义用户名")
+                    Text("custom_username".localized)
                         .font(.headline)
                     
-                    Text("设置一个你喜欢的显示名称")
+                    Text("username_description".localized)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 
-                TextField("请输入用户名", text: $editedName)
+                TextField("enter_username".localized, text: $editedName)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .focused($isTextFieldFocused)
                     .onAppear {
@@ -206,17 +256,17 @@ struct EditUserNameView: View {
                 Spacer()
             }
             .padding()
-            .navigationTitle("编辑用户名")
+            .navigationTitle("edit_username".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
+                    Button("cancel".localized) {
                         onCancel()
                     }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("保存") {
+                    Button("save".localized) {
                         onSave(editedName)
                     }
                     .disabled(editedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -229,4 +279,6 @@ struct EditUserNameView: View {
 #Preview {
     SettingsView()
         .environmentObject(AppleSignInManager.shared)
+        .environmentObject(LanguageManager.shared)
+        .environmentObject(CountryManager.shared)
 }

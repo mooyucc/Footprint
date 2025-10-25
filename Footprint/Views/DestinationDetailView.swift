@@ -13,6 +13,7 @@ struct DestinationDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showingEditSheet = false
     @State private var cameraPosition: MapCameraPosition
+    @StateObject private var languageManager = LanguageManager.shared
     
     init(destination: TravelDestination) {
         self.destination = destination
@@ -45,7 +46,7 @@ struct DestinationDetailView: View {
                     } else {
                         ZStack {
                             Rectangle()
-                                .fill(destination.category == "国内" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
+                                .fill(destination.category == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
                                 .frame(width: geometry.size.width)
                                 .frame(height: imageHeight)
                             
@@ -53,7 +54,7 @@ struct DestinationDetailView: View {
                                 Image(systemName: "photo")
                                     .font(.system(size: 60))
                                     .foregroundColor(.gray)
-                                Text("暂无照片")
+                                Text("no_photo".localized)
                                     .foregroundColor(.secondary)
                             }
                         }
@@ -87,8 +88,8 @@ struct DestinationDetailView: View {
                             .font(.headline)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
-                            .background(destination.category == "国内" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
-                            .foregroundColor(destination.category == "国内" ? .red : .blue)
+                            .background(destination.category == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
+                            .foregroundColor(destination.category == "domestic" ? .red : .blue)
                             .cornerRadius(10)
                     }
                     
@@ -97,9 +98,9 @@ struct DestinationDetailView: View {
                         Image(systemName: "calendar")
                             .foregroundColor(.blue)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(destination.visitDate.formatted(date: .complete, time: .omitted))
+                            Text(destination.visitDate.localizedFormatted(dateStyle: .full))
                                 .font(.headline)
-                            Text(destination.visitDate.formatted(date: .omitted, time: .shortened))
+                            Text(destination.visitDate.localizedFormatted(dateStyle: .none, timeStyle: .short))
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -116,7 +117,7 @@ struct DestinationDetailView: View {
                                 Image(systemName: "suitcase.fill")
                                     .foregroundColor(.purple)
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text("所属旅程")
+                                    Text("belongs_to_trip".localized)
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                     Text(trip.name)
@@ -139,18 +140,18 @@ struct DestinationDetailView: View {
                         HStack {
                             Image(systemName: "location.fill")
                                 .foregroundColor(.red)
-                            Text("位置坐标")
+                            Text("location_coordinates".localized)
                                 .font(.headline)
                         }
                         
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("纬度: \(destination.latitude, specifier: "%.6f")")
+                            Text("\("latitude".localized): \(destination.latitude, specifier: "%.6f")")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.8)
                             
-                            Text("经度: \(destination.longitude, specifier: "%.6f")")
+                            Text("\("longitude".localized): \(destination.longitude, specifier: "%.6f")")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                                 .lineLimit(1)
@@ -163,7 +164,7 @@ struct DestinationDetailView: View {
                         Annotation(destination.name, coordinate: destination.coordinate) {
                             ZStack {
                                 Circle()
-                                    .fill(destination.category == "国内" ? Color.red : Color.blue)
+                                    .fill(destination.category == "domestic" ? Color.red : Color.blue)
                                     .frame(width: 30, height: 30)
                                     .overlay(
                                         Circle()
@@ -182,7 +183,7 @@ struct DestinationDetailView: View {
                             HStack {
                                 Image(systemName: "note.text")
                                     .foregroundColor(.orange)
-                                Text("旅行笔记")
+                                Text("travel_notes".localized)
                                     .font(.headline)
                             }
                             
@@ -217,6 +218,9 @@ struct DestinationDetailView: View {
             .sheet(isPresented: $showingEditSheet) {
                 EditDestinationView(destination: destination)
             }
+            .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { _ in
+                // 语言变化时刷新界面
+            }
         }
     }
 }
@@ -231,7 +235,7 @@ struct DestinationDetailView: View {
             longitude: -21.9426,
             visitDate: Date(),
             notes: "美丽的北极光和温泉体验",
-            category: "国外",
+            category: "international",
             isFavorite: true
         ))
     }

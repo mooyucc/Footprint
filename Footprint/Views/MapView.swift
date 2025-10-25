@@ -15,6 +15,8 @@ struct MapView: View {
     @Query private var destinations: [TravelDestination]
     @Query private var trips: [TravelTrip]
     @Environment(\.colorScheme) private var colorScheme // 检测颜色模式
+    @StateObject private var languageManager = LanguageManager.shared
+    @StateObject private var countryManager = CountryManager.shared
     @State private var position: MapCameraPosition = .automatic
     @State private var selectedDestination: TravelDestination?
     @State private var showingAddDestination = false
@@ -33,6 +35,7 @@ struct MapView: View {
     
     // 缓存用户国家信息
     @State private var userCountryRegion: MKCoordinateRegion?
+    @State private var refreshID = UUID()
     
     // 简化版中国国界多边形（近似，覆盖中国大陆与海南一带；仅作兜底使用）
     private static let chinaMainlandPolygon: [CLLocationCoordinate2D] = [
@@ -124,6 +127,11 @@ struct MapView: View {
                 precalculateUserCountryRegion(location: location)
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { _ in
+            // 语言变化时刷新界面
+            refreshID = UUID()
+        }
+        .id(refreshID)
     }
     
     // 地图层
@@ -273,7 +281,7 @@ struct MapView: View {
                     
                     Button {
                         withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
-                            centerMapOnUserCountry()
+                            centerMapOnSelectedCountry()
                             selectedDestination = nil
                             mapSelection = nil
                         }
@@ -306,10 +314,10 @@ struct MapView: View {
             VStack(spacing: 20) {
                 ProgressView()
                     .scaleEffect(1.2)
-                Text("正在获取位置信息...")
+                Text("getting_location_info".localized)
                     .font(.headline)
                     .foregroundColor(.secondary)
-                Text("请稍候，我们正在识别您选择的位置")
+                Text("identifying_location".localized)
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -412,10 +420,10 @@ struct MapView: View {
 
         func succeed(with placemark: CLPlacemark) {
             isGeocodingLocation = false
-            let cityName = placemark.locality ?? placemark.administrativeArea ?? "未知城市"
-            let countryName = placemark.country ?? "未知国家"
+            let cityName = placemark.locality ?? placemark.administrativeArea ?? "unknown_city".localized
+            let countryName = placemark.country ?? "unknown_country".localized
             let isoCountryCode = placemark.isoCountryCode ?? ""
-            let category = (isoCountryCode == "CN" || countryName == "中国" || countryName == "China") ? "国内" : "国外"
+            let category = (isoCountryCode == "CN" || countryName == "中国" || countryName == "China") ? "domestic" : "international"
             print("✅ 反向地理编码成功:\n   城市: \(cityName)\n   国家: \(countryName)\n   ISO代码: \(isoCountryCode)\n   分类: \(category)")
             let mkPlacemark = MKPlacemark(placemark: placemark)
             let mapItem = MKMapItem(placemark: mkPlacemark)
@@ -447,7 +455,7 @@ struct MapView: View {
                 DispatchQueue.main.async { succeed(with: placemark) }
                 return
             }
-            print("❌ 反向地理编码失败: \(error?.localizedDescription ?? "未知错误")，尝试备用方案…")
+            print("❌ " + "reverse_geocoding_failed".localized(with: error?.localizedDescription ?? "未知错误"))
             failoverToAlternateLocales()
         }
     }
@@ -465,11 +473,11 @@ struct MapView: View {
         let search = MKLocalSearch(request: request)
         search.start { response, error in
             if let item = response?.mapItems.first {
-                let cityName = item.name ?? item.placemark.locality ?? "所选位置"
-                let countryName = item.placemark.country ?? "未知国家"
+                let cityName = item.name ?? item.placemark.locality ?? "selected_location".localized
+                let countryName = item.placemark.country ?? "unknown_country".localized
                 let isoCountryCode = item.placemark.isoCountryCode ?? ""
-                let category = (isoCountryCode == "CN" || countryName == "中国" || countryName == "China") ? "国内" : "国外"
-                print("✅ 附近搜索成功，使用邻近地点推断: \(cityName) - \(countryName)")
+                let category = (isoCountryCode == "CN" || countryName == "中国" || countryName == "China") ? "domestic" : "international"
+                print("✅ " + "nearby_search_success".localized(with: cityName, countryName))
                 let mapItem = item
                 mapItem.name = cityName
                 DispatchQueue.main.async {
@@ -478,7 +486,7 @@ struct MapView: View {
                     // 不需要再次设置 showingAddDestination，界面已经显示
                 }
             } else {
-                print("⚠️ 附近搜索失败: \(error?.localizedDescription ?? "无结果")，继续使用坐标兜底…")
+                print("⚠️ " + "nearby_search_failed".localized(with: error?.localizedDescription ?? "无结果"))
                 DispatchQueue.main.async { self.fallbackWithCoordinateOnly(coordinate: coordinate) }
             }
         }
@@ -487,10 +495,10 @@ struct MapView: View {
     // 备用方案2：仅根据坐标进行国内/国外判断并提供占位名称
     private func fallbackWithCoordinateOnly(coordinate: CLLocationCoordinate2D) {
         isGeocodingLocation = false
-        let category = isInChinaBoundingBox(coordinate) ? "国内" : "国外"
-        let countryName = category == "国内" ? "中国" : "Unknown"
-        let cityName = category == "国内" ? "所选位置" : "Selected Location"
-        print("🛟 使用坐标兜底: \(cityName) - \(countryName) [分类: \(category)]")
+        let category = isInChinaBoundingBox(coordinate) ? "domestic" : "international"
+        let countryName = category == "domestic" ? "中国" : "unknown_country".localized
+        let cityName = "selected_location".localized
+        print("🛟 " + "coordinate_fallback".localized(with: cityName, countryName, category))
         let placemark = MKPlacemark(coordinate: coordinate)
         let mapItem = MKMapItem(placemark: placemark)
         mapItem.name = cityName
@@ -568,7 +576,7 @@ struct MapView: View {
                 
                 DispatchQueue.main.async {
                     self.userCountryRegion = self.getRegionForCountry(countryCode: countryCode, userLocation: location)
-                    print("📍 已预加载国家区域: \(placemark.country ?? "未知国家") (\(countryCode))")
+                    print("📍 " + "preloaded_country_region".localized(with: placemark.country ?? "unknown_country".localized, countryCode))
                 }
             }
         }
@@ -634,6 +642,17 @@ struct MapView: View {
         }
     }
     
+    // 将地图定位到用户选择的国家
+    private func centerMapOnSelectedCountry() {
+        let countryCode = countryManager.currentCountry.rawValue
+        let region = getRegionForCountry(countryCode: countryCode, userLocation: CLLocationCoordinate2D(latitude: 0, longitude: 0))
+        
+        withAnimation(.easeInOut(duration: 0.5)) {
+            mapCameraPosition = .region(region)
+        }
+        print("📍 地图定位到用户选择的国家: \(countryManager.currentCountry.displayName) (\(countryCode))")
+    }
+    
     // 将地图定位到用户所在国家（即时响应，使用缓存）
     private func centerMapOnUserCountry() {
         // 如果已有缓存的区域，立即使用
@@ -642,7 +661,7 @@ struct MapView: View {
             withAnimation(.easeInOut(duration: 0.5)) {
                 mapCameraPosition = .region(region)
             }
-            print("📍 使用缓存的国家区域")
+            print("📍 " + "using_cached_country_region".localized)
             return
         }
         
@@ -672,7 +691,7 @@ struct MapView: View {
                         withAnimation(.easeInOut(duration: 0.6)) {
                             self.mapCameraPosition = .region(region)
                         }
-                        print("📍 地图定位到: \(placemark.country ?? "未知国家") (\(countryCode))")
+                        print("📍 " + "map_positioned_to".localized(with: placemark.country ?? "unknown_country".localized, countryCode))
                     }
                 }
             }
@@ -684,7 +703,7 @@ struct MapView: View {
             withAnimation(.easeInOut(duration: 0.4)) {
                 mapCameraPosition = .automatic
             }
-            print("⚠️ 正在获取用户位置...")
+            print("⚠️ " + "getting_user_location".localized)
         }
     }
 }
@@ -708,7 +727,7 @@ struct ClusterAnnotation: Identifiable, Equatable {
     }
     
     var title: String {
-        destinations.count == 1 ? destinations[0].name : "\(destinations.count) 个地点"
+        destinations.count == 1 ? destinations[0].name : "\(destinations.count) " + "locations_count".localized
     }
     
     // 实现 Equatable 协议
@@ -745,7 +764,7 @@ struct ClusterAnnotationView: View, Equatable {
             if destination.trip != nil {
                 return .blue // 旅程地点使用蓝色
             }
-            return destination.category == "国内" ? .red : .blue
+            return destination.category == "domestic" ? .red : .blue
         } else {
             // 聚合标记：检查是否有共同旅程
             let tripIds = cluster.destinations.compactMap { $0.trip?.id }
@@ -754,7 +773,7 @@ struct ClusterAnnotationView: View, Equatable {
             }
             
             // 没有共同旅程，使用国内/国外混合颜色
-            let domesticCount = cluster.destinations.filter { $0.category == "国内" }.count
+            let domesticCount = cluster.destinations.filter { $0.category == "domestic" }.count
             let ratio = Double(domesticCount) / Double(cluster.destinations.count)
             if ratio > 0.7 { return .red }
             else if ratio < 0.3 { return .blue }
@@ -963,10 +982,10 @@ struct DestinationPreviewCard: View {
                     .foregroundColor(.secondary)
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(destination.visitDate, style: .date)
+                    Text(destination.visitDate.localizedFormatted(dateStyle: .medium))
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text(destination.visitDate.formatted(date: .omitted, time: .shortened))
+                    Text(destination.visitDate.localizedFormatted(dateStyle: .none, timeStyle: .short))
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
@@ -1038,13 +1057,13 @@ struct DestinationPreviewCard: View {
         .sheet(isPresented: $showEditSheet) {
             EditDestinationView(destination: destination)
         }
-        .confirmationDialog("删除地点", isPresented: $showDeleteConfirmation) {
-            Button("删除", role: .destructive) {
+        .confirmationDialog("delete_destination".localized, isPresented: $showDeleteConfirmation) {
+            Button("delete".localized, role: .destructive) {
                 deleteDestination()
             }
-            Button("取消", role: .cancel) { }
+            Button("cancel".localized, role: .cancel) { }
         } message: {
-            Text("确定要删除「\(destination.name)」吗？此操作无法撤销。")
+            Text("confirm_delete_destination".localized(with: destination.name))
         }
     }
     
@@ -1061,6 +1080,7 @@ struct DestinationPreviewCard: View {
 #Preview {
     MapView()
         .modelContainer(for: TravelDestination.self, inMemory: true)
+        .environmentObject(CountryManager.shared)
 }
 
 // 位置管理器
@@ -1092,17 +1112,17 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         if let location = locations.last {
             lastKnownLocation = location.coordinate
-            print("📍 获取到用户位置: \(location.coordinate.latitude), \(location.coordinate.longitude)")
+            print("📍 " + "user_location_obtained".localized(with: location.coordinate.latitude, location.coordinate.longitude))
         }
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        print("❌ 获取位置失败: \(error.localizedDescription)")
+        print("❌ " + "location_permission_denied".localized(with: error.localizedDescription))
     }
     
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         authorizationStatus = manager.authorizationStatus
-        print("📍 位置授权状态变更: \(authorizationStatus.rawValue)")
+        print("📍 " + "location_authorization_changed".localized(with: authorizationStatus.rawValue))
         
         // 如果已授权，立即请求位置
         if authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways {
@@ -1111,18 +1131,42 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
 }
 
-// 地图浮动按钮样式 - 与系统按钮一致的效果
+// 地图浮动按钮样式 - 玻璃质感效果
 struct MapFloatingButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .frame(width: 44, height: 44)
             .background(
-                Circle()
-                    .fill(.ultraThinMaterial)
-                    .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+                GlassButtonBackground()
             )
-            .scaleEffect(configuration.isPressed ? 0.85 : 1.0)
-            .animation(.spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
+            .animation(.spring(response: 0.2, dampingFraction: 0.8), value: configuration.isPressed)
+    }
+}
+
+struct GlassButtonBackground: View {
+    var body: some View {
+        ZStack {
+            // 模糊效果
+            Circle()
+                .fill(.ultraThinMaterial)
+                .opacity(0.8)
+            
+            // 边框渐变
+            Circle()
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            .white.opacity(0.3),
+                            .white.opacity(0.1)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        }
+        .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 2)
     }
 }
 

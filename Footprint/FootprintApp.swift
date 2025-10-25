@@ -11,6 +11,8 @@ import SwiftData
 @main
 struct FootprintApp: App {
     @StateObject private var appleSignInManager = AppleSignInManager.shared
+    @StateObject private var languageManager = LanguageManager.shared
+    @StateObject private var countryManager = CountryManager.shared
     
     var sharedModelContainer: ModelContainer = {
         // 启用 iCloud CloudKit 同步
@@ -33,6 +35,8 @@ struct FootprintApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(appleSignInManager)
+                .environmentObject(languageManager)
+                .environmentObject(countryManager)
         }
         .modelContainer(sharedModelContainer)
     }

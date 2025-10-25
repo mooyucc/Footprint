@@ -16,6 +16,7 @@ struct AddDestinationView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \TravelTrip.startDate, order: .reverse) private var trips: [TravelTrip]
+    @StateObject private var languageManager = LanguageManager.shared
     
     // 支持从外部传入预填充数据
     var prefilledLocation: MKMapItem?
@@ -27,7 +28,7 @@ struct AddDestinationView: View {
     @State private var country = ""
     @State private var visitDate = Date()
     @State private var notes = ""
-    @State private var category = "国内"
+    @State private var category = "domestic"
     @State private var isFavorite = false
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var photoData: Data?
@@ -37,7 +38,7 @@ struct AddDestinationView: View {
     @State private var isSearching = false
     @State private var selectedTrip: TravelTrip?
     
-    let categories = ["国内", "国外"]
+    let categories = ["domestic", "international"]
     
     // 常用国际城市坐标库（解决在中国无法搜索国外地点的问题）
     // 参考 iPhone 地图应用的国际城市数据，手动维护热门目的地
@@ -75,27 +76,28 @@ struct AddDestinationView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("基本信息") {
-                    TextField("地点名称", text: $name)
+                Section("basic_info".localized) {
+                    TextField("place_name".localized, text: $name)
                     
-                    Picker("分类", selection: $category) {
-                        ForEach(categories, id: \.self) { category in
-                            Text(category).tag(category)
+                    Picker("category".localized, selection: $category) {
+                        ForEach(categories, id: \.self) { categoryKey in
+                            Text(categoryKey.localized).tag(categoryKey)
                         }
                     }
                     .pickerStyle(.segmented)
                     
-                    TextField("国家/地区", text: $country)
+                    TextField("country_region".localized, text: $country)
                     
-                    DatePicker("访问日期", selection: $visitDate, displayedComponents: [.date, .hourAndMinute])
+                    DatePicker("visit_date".localized, selection: $visitDate, displayedComponents: [.date, .hourAndMinute])
+                        .environment(\.locale, Locale(identifier: languageManager.currentLanguage.rawValue))
                     
-                    Toggle("标记为喜爱", isOn: $isFavorite)
+                    Toggle("mark_as_favorite".localized, isOn: $isFavorite)
                 }
                 
                 if !trips.isEmpty {
-                    Section("所属旅程（可选）") {
-                        Picker("选择旅程", selection: $selectedTrip) {
-                            Text("无").tag(nil as TravelTrip?)
+                    Section("belongs_to_trip_optional".localized) {
+                        Picker("select_trip".localized, selection: $selectedTrip) {
+                            Text("none".localized).tag(nil as TravelTrip?)
                             ForEach(trips) { trip in
                                 Text(trip.name).tag(trip as TravelTrip?)
                             }
@@ -108,7 +110,7 @@ struct AddDestinationView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(trip.name)
                                         .font(.caption)
-                                    Text("\(trip.startDate, style: .date) - \(trip.endDate, style: .date)")
+                                    Text("\(trip.startDate.localizedFormatted(dateStyle: .medium)) - \(trip.endDate.localizedFormatted(dateStyle: .medium))")
                                         .font(.caption2)
                                         .foregroundColor(.secondary)
                                 }
@@ -117,13 +119,13 @@ struct AddDestinationView: View {
                     }
                 }
                 
-                Section("位置搜索") {
+                Section("location_search".localized) {
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            TextField("搜索地点...", text: $searchText)
+                            TextField("search_place".localized, text: $searchText)
                                 .textFieldStyle(.roundedBorder)
                             
-                            Button("搜索") {
+                            Button("search".localized) {
                                 searchLocation()
                             }
                             .disabled(searchText.isEmpty)
@@ -132,30 +134,30 @@ struct AddDestinationView: View {
                         // 搜索提示（根据分类显示不同的提示）
                         if searchText.isEmpty {
                             VStack(alignment: .leading, spacing: 4) {
-                                if category == "国内" {
-                                    Text("🇨🇳 搜索国内地点:")
+                                if category == "domestic".localized {
+                                    Text("search_domestic_places".localized)
                                         .font(.caption)
                                         .foregroundColor(.blue)
-                                    Text("• 使用高德地图数据，搜索中国境内地点")
+                                    Text("use_amap_data".localized)
                                         .font(.caption2)
                                         .foregroundColor(.green)
-                                    Text("• 直接输入城市名，如\"北京\"、\"上海\"、\"杭州\"")
+                                    Text("input_city_names".localized)
                                         .font(.caption2)
                                         .foregroundColor(.secondary)
-                                    Text("• 输入景点名，如\"故宫\"、\"西湖\"、\"外滩\"")
+                                    Text("input_attractions".localized)
                                         .font(.caption2)
                                         .foregroundColor(.secondary)
                                 } else {
-                                    Text("🌍 搜索国外地点:")
+                                    Text("search_international_places".localized)
                                         .font(.caption)
                                         .foregroundColor(.blue)
-                                    Text("• 使用 Apple 国际数据，搜索全球地点")
+                                    Text("use_apple_international".localized)
                                         .font(.caption2)
                                         .foregroundColor(.green)
-                                    Text("• ⭐ 热门城市快速搜索：London/伦敦、Paris/巴黎、Tokyo/东京等")
+                                    Text("hot_cities_quick_search".localized)
                                         .font(.caption2)
                                         .foregroundColor(.orange)
-                                    Text("• 支持英文和中文输入，通过网络获取最新数据")
+                                    Text("support_multilingual".localized)
                                         .font(.caption2)
                                         .foregroundColor(.secondary)
                                 }
@@ -167,7 +169,7 @@ struct AddDestinationView: View {
                     if isSearching {
                         HStack {
                             ProgressView()
-                            Text("搜索\(category)地点中...")
+                            Text("searching_places".localized(with: category))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -181,7 +183,7 @@ struct AddDestinationView: View {
                             } label: {
                                 HStack {
                                     VStack(alignment: .leading, spacing: 4) {
-                                        Text(item.name ?? item.placemark.locality ?? "未知地点")
+                                        Text(item.name ?? item.placemark.locality ?? "unknown_place".localized)
                                             .foregroundColor(.primary)
                                             .font(.body)
                                         
@@ -217,21 +219,21 @@ struct AddDestinationView: View {
                             HStack {
                                 Image(systemName: "exclamationmark.triangle.fill")
                                     .foregroundColor(.orange)
-                                Text("未找到结果")
+                                Text("no_results_found".localized)
                                     .font(.subheadline)
                                     .foregroundColor(.orange)
                             }
                             
-                            Text("建议：")
+                            Text("suggestions".localized)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            Text("1. 尝试使用英文地名搜索")
+                            Text("try_english_names".localized)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            Text("2. 输入更具体的地址，如\"London, UK\"")
+                            Text("input_specific_address".localized)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            Text("3. 检查拼写是否正确")
+                            Text("check_spelling".localized)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -244,14 +246,14 @@ struct AddDestinationView: View {
                             HStack {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundColor(.green)
-                                Text("已选择位置")
+                                Text("selected_location".localized)
                                     .font(.subheadline)
                                     .fontWeight(.medium)
                                     .foregroundColor(.green)
                             }
                             
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(location.name ?? location.placemark.locality ?? "未知地点")
+                                Text(location.name ?? location.placemark.locality ?? "unknown_place".localized)
                                     .font(.body)
                                 
                                 if let country = location.placemark.country {
@@ -264,7 +266,7 @@ struct AddDestinationView: View {
                                     .foregroundColor(.secondary)
                                 }
                                 
-                                Text("纬度: \(location.placemark.coordinate.latitude, specifier: "%.4f"), 经度: \(location.placemark.coordinate.longitude, specifier: "%.4f")")
+                                Text("latitude_longitude".localized(with: location.placemark.coordinate.latitude, location.placemark.coordinate.longitude))
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                             }
@@ -275,9 +277,9 @@ struct AddDestinationView: View {
                     }
                 }
                 
-                Section("照片") {
+                Section("photo".localized) {
                     PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                        Label("选择照片", systemImage: "photo")
+                        Label("select_photo".localized, systemImage: "photo")
                     }
                     
                     if let photoData, let uiImage = UIImage(data: photoData) {
@@ -289,22 +291,22 @@ struct AddDestinationView: View {
                     }
                 }
                 
-                Section("笔记") {
+                Section("notes".localized) {
                     TextEditor(text: $notes)
                         .frame(minHeight: 100)
                 }
             }
-            .navigationTitle("添加目的地")
+            .navigationTitle("add_destination".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") {
+                    Button("cancel".localized) {
                         dismiss()
                     }
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("保存") {
+                    Button("save".localized) {
                         saveDestination()
                     }
                     .disabled(!isValid)
@@ -344,7 +346,7 @@ struct AddDestinationView: View {
         searchResults = []
         
         // 🎯 优化策略：根据分类选择不同的搜索方式
-        if category == "国内" {
+        if category == "domestic" {
             // 国内搜索：优先使用高德地图数据（通过 MKLocalSearch）
             searchDomesticWithLocalData()
         } else {
@@ -355,7 +357,7 @@ struct AddDestinationView: View {
     
     // 🇨🇳 国内搜索：使用高德地图数据（通过 MKLocalSearch）
     private func searchDomesticWithLocalData() {
-        print("🇨🇳 使用高德地图数据搜索国内地点: \(searchText)")
+        print("search_domestic_with_amap".localized(with: searchText))
         
         let searchRequest = MKLocalSearch.Request()
         searchRequest.naturalLanguageQuery = searchText
@@ -378,7 +380,7 @@ struct AddDestinationView: View {
                 self.isSearching = false
                 
                 if let error = error {
-                    print("❌ 高德地图搜索错误: \(error.localizedDescription)")
+                    print("amap_search_error".localized(with: error.localizedDescription))
                     // 如果高德搜索失败，尝试 CLGeocoder
                     self.fallbackToCLGeocoderForChina()
                     return
@@ -386,7 +388,7 @@ struct AddDestinationView: View {
                 
                 if let response = response {
                     self.searchResults = response.mapItems
-                    print("✅ 高德地图找到 \(response.mapItems.count) 个国内地点")
+                    print("amap_found_results".localized(with: response.mapItems.count))
                     
                     for (index, item) in response.mapItems.prefix(3).enumerated() {
                         let locality = item.placemark.locality ?? ""

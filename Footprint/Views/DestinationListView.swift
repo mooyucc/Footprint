@@ -14,12 +14,14 @@ struct DestinationListView: View {
     @State private var searchText = ""
     @State private var filterCategory: String? = nil
     @State private var editingDestination: TravelDestination?
+    @StateObject private var languageManager = LanguageManager.shared
+    @State private var refreshID = UUID()
     
     var filteredDestinations: [TravelDestination] {
         var result = destinations
         
         if let category = filterCategory {
-            result = result.filter { $0.category == category }
+            result = result.filter { $0.normalizedCategory == category }
         }
         
         if !searchText.isEmpty {
@@ -35,8 +37,8 @@ struct DestinationListView: View {
     
     var statistics: (total: Int, domestic: Int, international: Int, countries: Int) {
         let total = destinations.count
-        let domestic = destinations.filter { $0.category == "国内" }.count
-        let international = destinations.filter { $0.category == "国外" }.count
+        let domestic = destinations.filter { $0.normalizedCategory == "domestic" }.count
+        let international = destinations.filter { $0.normalizedCategory == "international" }.count
         let countries = Set(destinations.map { $0.country }).count
         return (total, domestic, international, countries)
     }
@@ -53,10 +55,10 @@ struct DestinationListView: View {
                 
                 // 筛选器
                 Section {
-                    Picker("筛选", selection: $filterCategory) {
-                        Text("全部").tag(nil as String?)
-                        Text("国内").tag("国内" as String?)
-                        Text("国外").tag("国外" as String?)
+                    Picker("filter".localized, selection: $filterCategory) {
+                        Text("all".localized).tag(nil as String?)
+                        Text("domestic".localized).tag("domestic" as String?)
+                        Text("international".localized).tag("international" as String?)
                     }
                     .pickerStyle(.segmented)
                 }
@@ -73,7 +75,7 @@ struct DestinationListView: View {
                             Button {
                                 editingDestination = destination
                             } label: {
-                                Label("编辑", systemImage: "pencil")
+                                Label("edit".localized, systemImage: "pencil")
                             }
                             .tint(.blue)
                         }
@@ -81,15 +83,15 @@ struct DestinationListView: View {
                             Button(role: .destructive) {
                                 deleteDestination(destination)
                             } label: {
-                                Label("删除", systemImage: "trash")
+                                Label("delete".localized, systemImage: "trash")
                             }
                         }
                     }
                     .onDelete(perform: deleteDestinations)
                 }
             }
-            .navigationTitle("我的足迹")
-            .searchable(text: $searchText, prompt: "搜索地点、国家或笔记")
+            .navigationTitle("my_footprints".localized)
+            .searchable(text: $searchText, prompt: "search_places_countries_notes".localized)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
@@ -111,6 +113,15 @@ struct DestinationListView: View {
                     EmptyStateView(showingAddDestination: $showingAddDestination)
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { _ in
+                // 语言变化时刷新界面
+                refreshID = UUID()
+            }
+            .onAppear {
+                // 数据迁移：将本地化字符串转换为标准格式
+                migrateCategoryData()
+            }
+            .id(refreshID)
         }
     }
     
@@ -126,6 +137,21 @@ struct DestinationListView: View {
             if let modelContext = destination.modelContext {
                 modelContext.delete(destination)
             }
+        }
+    }
+    
+    private func migrateCategoryData() {
+        // 查找需要迁移的数据（包含本地化字符串的分类）
+        let destinationsToMigrate = destinations.filter { destination in
+            destination.category == "国内" || destination.category == "国外"
+        }
+        
+        if !destinationsToMigrate.isEmpty {
+            print("🔄 发现 \(destinationsToMigrate.count) 个目的地需要数据迁移")
+            for destination in destinationsToMigrate {
+                destination.migrateCategoryToStandard()
+            }
+            print("✅ 数据迁移完成")
         }
     }
 }
@@ -146,11 +172,11 @@ struct DestinationRow: View {
             } else {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(destination.category == "国内" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
+                        .fill(destination.category == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
                         .frame(width: 60, height: 60)
                     
                     Image(systemName: "location.fill")
-                        .foregroundColor(destination.category == "国内" ? .red : .blue)
+                        .foregroundColor(destination.category == "domestic" ? .red : .blue)
                         .font(.title2)
                 }
             }
@@ -186,22 +212,22 @@ struct DestinationRow: View {
                 
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(destination.visitDate, style: .date)
+                        Text(destination.visitDate.localizedFormatted(dateStyle: .medium))
                             .font(.caption)
                             .foregroundColor(.secondary)
-                        Text(destination.visitDate.formatted(date: .omitted, time: .shortened))
+                        Text(destination.visitDate.localizedFormatted(dateStyle: .none, timeStyle: .short))
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
                     
                     Spacer()
                     
-                    Text(destination.category)
+                    Text(destination.localizedCategory)
                         .font(.caption)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(destination.category == "国内" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
-                        .foregroundColor(destination.category == "国内" ? .red : .blue)
+                        .background(destination.category == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
+                        .foregroundColor(destination.category == "domestic" ? .red : .blue)
                         .cornerRadius(8)
                 }
             }
@@ -215,14 +241,14 @@ struct StatisticsCard: View {
     
     var body: some View {
         VStack(spacing: 16) {
-            Text("旅行统计")
+            Text("travel_statistics".localized)
                 .font(.headline)
             
             HStack(spacing: 20) {
-                StatItem(title: "总计", value: "\(statistics.total)", icon: "map.fill", color: .purple)
-                StatItem(title: "国内", value: "\(statistics.domestic)", icon: "house.fill", color: .red)
-                StatItem(title: "国外", value: "\(statistics.international)", icon: "airplane", color: .blue)
-                StatItem(title: "国家", value: "\(statistics.countries)", icon: "globe.asia.australia.fill", color: .green)
+                StatItem(title: "total".localized, value: "\(statistics.total)", icon: "map.fill", color: .purple)
+                StatItem(title: "domestic".localized, value: "\(statistics.domestic)", icon: "house.fill", color: .red)
+                StatItem(title: "international".localized, value: "\(statistics.international)", icon: "airplane", color: .blue)
+                StatItem(title: "countries".localized, value: "\(statistics.countries)", icon: "globe.asia.australia.fill", color: .green)
             }
         }
         .padding()
@@ -268,11 +294,11 @@ struct EmptyStateView: View {
                 .font(.system(size: 80))
                 .foregroundColor(.gray.opacity(0.5))
             
-            Text("还没有旅行记录")
+            Text("no_travel_records".localized)
                 .font(.title2)
                 .fontWeight(.semibold)
             
-            Text("点击右上角的 + 按钮\n开始记录你的旅行足迹吧！")
+            Text("start_recording_footprints".localized)
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -280,7 +306,7 @@ struct EmptyStateView: View {
             Button {
                 showingAddDestination = true
             } label: {
-                Label("添加第一个目的地", systemImage: "plus.circle.fill")
+                Label("add_first_destination".localized, systemImage: "plus.circle.fill")
                     .font(.headline)
                     .foregroundColor(.white)
                     .padding()

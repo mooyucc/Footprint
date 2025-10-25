@@ -16,6 +16,7 @@ struct EditDestinationView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \TravelTrip.startDate, order: .reverse) private var trips: [TravelTrip]
+    @StateObject private var languageManager = LanguageManager.shared
     
     let destination: TravelDestination
     
@@ -23,7 +24,7 @@ struct EditDestinationView: View {
     @State private var country = ""
     @State private var visitDate = Date()
     @State private var notes = ""
-    @State private var category = "国外"
+    @State private var category = "international"
     @State private var isFavorite = false
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var photoData: Data?
@@ -35,7 +36,7 @@ struct EditDestinationView: View {
     @State private var longitude: Double = 0.0
     @State private var selectedTrip: TravelTrip?
     
-    let categories = ["国内", "国外"]
+    let categories = ["domestic", "international"]
     
     // 常用国际城市坐标库（与 AddDestinationView 保持一致）
     let internationalCities: [String: (name: String, country: String, lat: Double, lon: Double)] = [
@@ -76,27 +77,28 @@ struct EditDestinationView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("基本信息") {
-                    TextField("地点名称", text: $name)
+                Section("basic_info".localized) {
+                    TextField("place_name".localized, text: $name)
                     
-                    Picker("分类", selection: $category) {
+                    Picker("category".localized, selection: $category) {
                         ForEach(categories, id: \.self) { category in
                             Text(category).tag(category)
                         }
                     }
                     .pickerStyle(.segmented)
                     
-                    TextField("国家/地区", text: $country)
+                    TextField("country_region".localized, text: $country)
                     
-                    DatePicker("访问日期", selection: $visitDate, displayedComponents: [.date, .hourAndMinute])
+                    DatePicker("visit_date".localized, selection: $visitDate, displayedComponents: [.date, .hourAndMinute])
+                        .environment(\.locale, Locale(identifier: languageManager.currentLanguage.rawValue))
                     
-                    Toggle("标记为喜爱", isOn: $isFavorite)
+                    Toggle("mark_as_favorite".localized, isOn: $isFavorite)
                 }
                 
                 if !trips.isEmpty {
-                    Section("所属旅程（可选）") {
-                        Picker("选择旅程", selection: $selectedTrip) {
-                            Text("无").tag(nil as TravelTrip?)
+                    Section("belongs_to_trip_optional".localized) {
+                        Picker("select_trip".localized, selection: $selectedTrip) {
+                            Text("none".localized).tag(nil as TravelTrip?)
                             ForEach(trips) { trip in
                                 Text(trip.name).tag(trip as TravelTrip?)
                             }
@@ -109,7 +111,7 @@ struct EditDestinationView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(trip.name)
                                         .font(.caption)
-                                    Text("\(trip.startDate, style: .date) - \(trip.endDate, style: .date)")
+                                    Text("\(trip.startDate.localizedFormatted(dateStyle: .medium)) - \(trip.endDate.localizedFormatted(dateStyle: .medium))")
                                         .font(.caption2)
                                         .foregroundColor(.secondary)
                                 }
@@ -118,12 +120,12 @@ struct EditDestinationView: View {
                     }
                 }
                 
-                Section("位置信息") {
+                Section("location_info".localized) {
                     HStack {
-                        TextField("搜索地点...", text: $searchText)
+                        TextField("search_place".localized, text: $searchText)
                             .textFieldStyle(.roundedBorder)
                         
-                        Button("搜索") {
+                        Button("search".localized) {
                             searchLocation()
                         }
                         .disabled(searchText.isEmpty)
@@ -138,7 +140,7 @@ struct EditDestinationView: View {
                             selectLocation(item)
                         } label: {
                             VStack(alignment: .leading) {
-                                Text(item.name ?? "未知地点")
+                                Text(item.name ?? "unknown_place".localized)
                                     .foregroundColor(.primary)
                                 if let address = item.placemark.title {
                                     Text(address)
@@ -154,9 +156,9 @@ struct EditDestinationView: View {
                             Image(systemName: "checkmark.circle.fill")
                                 .foregroundColor(.green)
                             VStack(alignment: .leading) {
-                                Text("已选择：\(location.name ?? "")")
+                                Text("selected".localized + (location.name ?? ""))
                                     .font(.caption)
-                                Text("纬度: \(location.placemark.coordinate.latitude, specifier: "%.4f"), 经度: \(location.placemark.coordinate.longitude, specifier: "%.4f")")
+                                Text("latitude_longitude".localized(with: location.placemark.coordinate.latitude, location.placemark.coordinate.longitude))
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                             }
@@ -167,9 +169,9 @@ struct EditDestinationView: View {
                             Image(systemName: "location.fill")
                                 .foregroundColor(.blue)
                             VStack(alignment: .leading) {
-                                Text("当前位置")
+                                Text("current_location".localized)
                                     .font(.caption)
-                                Text("纬度: \(latitude, specifier: "%.4f"), 经度: \(longitude, specifier: "%.4f")")
+                                Text("latitude_longitude".localized(with: latitude, longitude))
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                             }
@@ -178,7 +180,7 @@ struct EditDestinationView: View {
                     }
                 }
                 
-                Section("照片") {
+                Section("photo".localized) {
                     if let photoData, let uiImage = UIImage(data: photoData) {
                         ZStack(alignment: .topTrailing) {
                             Image(uiImage: uiImage)
@@ -202,26 +204,26 @@ struct EditDestinationView: View {
                     }
                     
                     PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                        Label(photoData == nil ? "添加照片" : "更换照片", systemImage: "photo")
+                        Label(photoData == nil ? "add_photo".localized : "change_photo".localized, systemImage: "photo")
                     }
                 }
                 
-                Section("笔记") {
+                Section("notes".localized) {
                     TextEditor(text: $notes)
                         .frame(minHeight: 100)
                 }
             }
-            .navigationTitle("编辑目的地")
+            .navigationTitle("edit_destination".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") {
+                    Button("cancel".localized) {
                         dismiss()
                     }
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("保存") {
+                    Button("save".localized) {
                         saveChanges()
                     }
                     .disabled(!isValid)
@@ -262,7 +264,7 @@ struct EditDestinationView: View {
         searchResults = []
         
         // 🎯 优化策略：根据分类选择不同的搜索方式
-        if category == "国内" {
+        if category == "domestic" {
             // 国内搜索：优先使用高德地图数据（通过 MKLocalSearch）
             searchDomesticWithLocalData()
         } else {
@@ -498,7 +500,7 @@ struct EditDestinationView: View {
         longitude: 116.4074,
         visitDate: Date(),
         notes: "测试笔记",
-        category: "国内",
+        category: "domestic",
         isFavorite: true
     )
     container.mainContext.insert(destination)

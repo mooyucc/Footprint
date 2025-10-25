@@ -19,7 +19,7 @@ final class TravelDestination {
     var visitDate: Date = Date()
     var notes: String = ""
     var photoData: Data?
-    var category: String = "国外" // 国内 or 国外
+    var category: String = "international" // domestic or international
     var isFavorite: Bool = false
     var trip: TravelTrip? // 所属的旅行组
     
@@ -31,7 +31,7 @@ final class TravelDestination {
         visitDate: Date = Date(),
         notes: String = "",
         photoData: Data? = nil,
-        category: String = "国外",
+        category: String = "international",
         isFavorite: Bool = false
     ) {
         self.name = name
@@ -47,6 +47,43 @@ final class TravelDestination {
     
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+    
+    // 获取本地化的分类显示名称
+    var localizedCategory: String {
+        switch category {
+        case "domestic":
+            return "domestic".localized
+        case "international":
+            return "international".localized
+        case "国内":
+            return "domestic".localized
+        case "国外":
+            return "international".localized
+        default:
+            return category
+        }
+    }
+    
+    // 获取标准化的分类键值（用于筛选）
+    var normalizedCategory: String {
+        switch category {
+        case "domestic", "国内":
+            return "domestic"
+        case "international", "国外":
+            return "international"
+        default:
+            return category
+        }
+    }
+    
+    // 数据迁移：将本地化字符串转换为标准格式
+    func migrateCategoryToStandard() {
+        if category == "国内" {
+            category = "domestic"
+        } else if category == "国外" {
+            category = "international"
+        }
     }
 }
 

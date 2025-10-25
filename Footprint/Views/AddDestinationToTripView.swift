@@ -14,6 +14,7 @@ struct AddDestinationToTripView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query private var allDestinations: [TravelDestination]
+    @StateObject private var languageManager = LanguageManager.shared
     
     @Bindable var trip: TravelTrip
     @State private var selectedMode = 0 // 0 = 创建新目的地, 1 = 从现有目的地添加
@@ -23,7 +24,7 @@ struct AddDestinationToTripView: View {
     @State private var country = ""
     @State private var visitDate = Date()
     @State private var notes = ""
-    @State private var category = "国内"
+    @State private var category = "domestic"
     @State private var isFavorite = false
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var photoData: Data?
@@ -35,7 +36,7 @@ struct AddDestinationToTripView: View {
     // 从现有目的地添加
     @State private var selectedDestinations = Set<TravelDestination>()
     
-    let categories = ["国内", "国外"]
+    let categories = ["domestic", "international"]
     
     // 过滤出未关联到当前旅程的目的地
     var availableDestinations: [TravelDestination] {
@@ -47,9 +48,9 @@ struct AddDestinationToTripView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 // 模式选择器
-                Picker("模式", selection: $selectedMode) {
-                    Text("创建新目的地").tag(0)
-                    Text("添加现有目的地").tag(1)
+                Picker(NSLocalizedString("mode", comment: ""), selection: $selectedMode) {
+                    Text(NSLocalizedString("create_new_destination", comment: "")).tag(0)
+                    Text(NSLocalizedString("add_existing_destination", comment: "")).tag(1)
                 }
                 .pickerStyle(.segmented)
                 .padding()
@@ -60,17 +61,17 @@ struct AddDestinationToTripView: View {
                     selectExistingDestinationsView
                 }
             }
-            .navigationTitle("添加目的地到旅程")
+            .navigationTitle(NSLocalizedString("add_destination_to_trip", comment: ""))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
+                    Button(NSLocalizedString("cancel", comment: "")) {
                         dismiss()
                     }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("保存") {
+                    Button(NSLocalizedString("save", comment: "")) {
                         saveDestinations()
                     }
                     .disabled(!isValid)
@@ -89,29 +90,30 @@ struct AddDestinationToTripView: View {
     
     private var createNewDestinationView: some View {
         Form {
-            Section("基本信息") {
-                TextField("地点名称", text: $name)
+            Section(NSLocalizedString("basic_info", comment: "")) {
+                TextField(NSLocalizedString("place_name", comment: ""), text: $name)
                 
-                Picker("分类", selection: $category) {
+                Picker(NSLocalizedString("category", comment: ""), selection: $category) {
                     ForEach(categories, id: \.self) { category in
-                        Text(category).tag(category)
+                        Text(NSLocalizedString(category, comment: "")).tag(category)
                     }
                 }
                 .pickerStyle(.segmented)
                 
-                TextField("国家/地区", text: $country)
+                TextField(NSLocalizedString("country_region", comment: ""), text: $country)
                 
-                DatePicker("访问日期", selection: $visitDate, displayedComponents: [.date, .hourAndMinute])
+                DatePicker(NSLocalizedString("visit_date", comment: ""), selection: $visitDate, displayedComponents: [.date, .hourAndMinute])
+                    .environment(\.locale, Locale(identifier: languageManager.currentLanguage.rawValue))
                 
-                Toggle("标记为喜爱", isOn: $isFavorite)
+                Toggle(NSLocalizedString("mark_as_favorite", comment: ""), isOn: $isFavorite)
             }
             
-            Section("位置搜索") {
+            Section(NSLocalizedString("location_search", comment: "")) {
                 HStack {
-                    TextField("搜索地点...", text: $searchText)
+                    TextField(NSLocalizedString("search_place", comment: ""), text: $searchText)
                         .textFieldStyle(.roundedBorder)
                     
-                    Button("搜索") {
+                    Button(NSLocalizedString("search", comment: "")) {
                         searchLocation()
                     }
                     .disabled(searchText.isEmpty)
@@ -126,7 +128,7 @@ struct AddDestinationToTripView: View {
                         selectLocation(item)
                     } label: {
                         VStack(alignment: .leading) {
-                            Text(item.name ?? "未知地点")
+                            Text(item.name ?? NSLocalizedString("unknown_place", comment: ""))
                                 .foregroundColor(.primary)
                             if let address = item.placemark.title {
                                 Text(address)
@@ -142,9 +144,9 @@ struct AddDestinationToTripView: View {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(.green)
                         VStack(alignment: .leading) {
-                            Text("已选择：\(location.name ?? "")")
+                            Text("\(NSLocalizedString("selected", comment: ""))\(location.name ?? "")")
                                 .font(.caption)
-                            Text("纬度: \(location.placemark.coordinate.latitude, specifier: "%.4f"), 经度: \(location.placemark.coordinate.longitude, specifier: "%.4f")")
+                            Text(String(format: NSLocalizedString("latitude_longitude", comment: ""), location.placemark.coordinate.latitude, location.placemark.coordinate.longitude))
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         }
@@ -153,9 +155,9 @@ struct AddDestinationToTripView: View {
                 }
             }
             
-            Section("照片") {
+            Section(NSLocalizedString("photo", comment: "")) {
                 PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                    Label("选择照片", systemImage: "photo")
+                    Label(NSLocalizedString("select_photo", comment: ""), systemImage: "photo")
                 }
                 
                 if let photoData, let uiImage = UIImage(data: photoData) {
@@ -167,7 +169,7 @@ struct AddDestinationToTripView: View {
                 }
             }
             
-            Section("笔记") {
+            Section(NSLocalizedString("notes", comment: "")) {
                 TextEditor(text: $notes)
                     .frame(minHeight: 100)
             }
@@ -182,10 +184,10 @@ struct AddDestinationToTripView: View {
                         .font(.system(size: 50))
                         .foregroundColor(.gray.opacity(0.5))
                     
-                    Text("没有可添加的目的地")
+                    Text(NSLocalizedString("no_destinations_to_add", comment: ""))
                         .foregroundColor(.secondary)
                     
-                    Text("所有目的地都已在此旅程中")
+                    Text(NSLocalizedString("all_destinations_in_trip", comment: ""))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -213,11 +215,11 @@ struct AddDestinationToTripView: View {
                             } else {
                                 ZStack {
                                     RoundedRectangle(cornerRadius: 8)
-                                        .fill(destination.category == "国内" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
+                                        .fill(destination.category == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
                                         .frame(width: 50, height: 50)
                                     
                                     Image(systemName: "location.fill")
-                                        .foregroundColor(destination.category == "国内" ? .red : .blue)
+                                        .foregroundColor(destination.category == "domestic" ? .red : .blue)
                                 }
                             }
                             
@@ -235,10 +237,10 @@ struct AddDestinationToTripView: View {
                                         .foregroundColor(.secondary)
                                     
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(destination.visitDate, style: .date)
+                                        Text(destination.visitDate.localizedFormatted(dateStyle: .medium))
                                             .font(.caption)
                                             .foregroundColor(.secondary)
-                                        Text(destination.visitDate.formatted(date: .omitted, time: .shortened))
+                                        Text(destination.visitDate.localizedFormatted(dateStyle: .none, timeStyle: .short))
                                             .font(.caption2)
                                             .foregroundColor(.secondary)
                                     }

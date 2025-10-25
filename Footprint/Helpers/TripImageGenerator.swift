@@ -242,13 +242,11 @@ struct TripImageGenerator {
         context.fillPath()
         
         // 绘制时间信息
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .medium
-        dateFormatter.locale = Locale(identifier: "zh_CN")
+        let dateFormatter = LanguageManager.shared.localizedDateFormatter(dateStyle: .medium)
         
         let startDate = dateFormatter.string(from: trip.startDate)
         let endDate = dateFormatter.string(from: trip.endDate)
-        let duration = "\(trip.durationDays) 天"
+        let duration = "\(trip.durationDays) " + "trip_share_days".localized
         
         let centerY = cardRect.midY
         let itemWidth = width / 3
@@ -268,13 +266,13 @@ struct TripImageGenerator {
         context.strokePath()
         
         // 开始日期
-        drawTimeItem("开始", value: startDate, icon: "calendar.badge.plus", at: CGPoint(x: cardRect.minX + itemWidth/2, y: centerY), context: context)
+        drawTimeItem("trip_share_start".localized, value: startDate, icon: "calendar.badge.plus", at: CGPoint(x: cardRect.minX + itemWidth/2, y: centerY), context: context)
         
         // 结束日期
-        drawTimeItem("结束", value: endDate, icon: "calendar.badge.minus", at: CGPoint(x: cardRect.minX + itemWidth + itemWidth/2, y: centerY), context: context)
+        drawTimeItem("trip_share_end".localized, value: endDate, icon: "calendar.badge.minus", at: CGPoint(x: cardRect.minX + itemWidth + itemWidth/2, y: centerY), context: context)
         
         // 时长
-        drawTimeItem("时长", value: duration, icon: "clock", at: CGPoint(x: cardRect.minX + itemWidth*2 + itemWidth/2, y: centerY), context: context)
+        drawTimeItem("trip_share_duration".localized, value: duration, icon: "clock", at: CGPoint(x: cardRect.minX + itemWidth*2 + itemWidth/2, y: centerY), context: context)
         
         return cardHeight
     }
@@ -343,10 +341,10 @@ struct TripImageGenerator {
         }
         
         // 绘制行程路线文字
-        let titleString = NSAttributedString(string: "行程路线", attributes: titleAttributes)
+        let titleString = NSAttributedString(string: "trip_share_route".localized, attributes: titleAttributes)
         titleString.draw(at: CGPoint(x: point.x + 50, y: currentY))
         
-        let countString = NSAttributedString(string: "\(destinationCount) 个地点", attributes: [
+        let countString = NSAttributedString(string: "\(destinationCount) " + "trip_share_locations_count".localized, attributes: [
             .font: UIFont.systemFont(ofSize: 14),
             .foregroundColor: UIColor.secondaryLabel
         ])
@@ -367,7 +365,7 @@ struct TripImageGenerator {
                 .font: UIFont.systemFont(ofSize: 16),
                 .foregroundColor: UIColor.secondaryLabel
             ]
-            let emptyString = NSAttributedString(string: "还没有添加目的地", attributes: emptyAttributes)
+            let emptyString = NSAttributedString(string: "trip_share_no_destinations".localized, attributes: emptyAttributes)
             let emptySize = emptyString.size()
             emptyString.draw(at: CGPoint(x: point.x + width/2 - emptySize.width/2, y: currentY + 20))
         }
@@ -408,13 +406,13 @@ struct TripImageGenerator {
             let iconRect = CGRect(x: point.x + 50, y: point.y + 8, width: 50, height: 50)
             let path = UIBezierPath(roundedRect: iconRect, cornerRadius: 8)
             context.addPath(path.cgPath)
-            context.setFillColor(destination.category == "国内" ? UIColor.red.withAlphaComponent(0.2).cgColor : UIColor.blue.withAlphaComponent(0.2).cgColor)
+            context.setFillColor(destination.category == "domestic" ? UIColor.red.withAlphaComponent(0.2).cgColor : UIColor.blue.withAlphaComponent(0.2).cgColor)
             context.fillPath()
             
             // 绘制位置图标
             let iconAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 20),
-                .foregroundColor: destination.category == "国内" ? UIColor.red : UIColor.blue
+                .foregroundColor: destination.category == "domestic" ? UIColor.red : UIColor.blue
             ]
             let iconString = NSAttributedString(string: "📍", attributes: iconAttributes)
             let iconSize = iconString.size()
@@ -429,9 +427,7 @@ struct TripImageGenerator {
         let nameString = NSAttributedString(string: destination.name, attributes: nameAttributes)
         nameString.draw(at: CGPoint(x: point.x + 110, y: point.y + 10))
         
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateStyle = .medium
-        dateFormatter.locale = Locale(identifier: "zh_CN")
+        let dateFormatter = LanguageManager.shared.localizedDateFormatter(dateStyle: .medium)
         
         let subtitle = "\(destination.country) • \(dateFormatter.string(from: destination.visitDate))"
         let subtitleAttributes: [NSAttributedString.Key: Any] = [
@@ -447,7 +443,7 @@ struct TripImageGenerator {
             .font: UIFont.systemFont(ofSize: 14),
             .foregroundColor: UIColor.secondaryLabel
         ]
-        let signatureString = NSAttributedString(string: "✨ 来自 Footprint 旅程记录", attributes: signatureAttributes)
+        let signatureString = NSAttributedString(string: "trip_share_signature".localized, attributes: signatureAttributes)
         let signatureSize = signatureString.size()
         signatureString.draw(at: CGPoint(x: point.x - signatureSize.width/2, y: point.y))
         
@@ -455,7 +451,7 @@ struct TripImageGenerator {
             .font: UIFont.systemFont(ofSize: 12),
             .foregroundColor: UIColor.secondaryLabel.withAlphaComponent(0.7)
         ]
-        let subtitleString = NSAttributedString(string: "记录美好旅程，分享精彩瞬间", attributes: subtitleAttributes)
+        let subtitleString = NSAttributedString(string: "trip_share_subtitle".localized, attributes: subtitleAttributes)
         let subtitleSize = subtitleString.size()
         subtitleString.draw(at: CGPoint(x: point.x - subtitleSize.width/2, y: point.y + 25))
     }
@@ -502,10 +498,10 @@ struct TripImageView: View {
                         Image(systemName: "calendar.badge.plus")
                             .font(.system(size: 20))
                             .foregroundColor(.blue)
-                        Text("开始")
+                        Text("trip_share_start".localized)
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
-                        Text(trip.startDate, style: .date)
+                        Text(trip.startDate.localizedFormatted(dateStyle: .medium))
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.primary)
                     }
@@ -519,10 +515,10 @@ struct TripImageView: View {
                         Image(systemName: "calendar.badge.minus")
                             .font(.system(size: 20))
                             .foregroundColor(.red)
-                        Text("结束")
+                        Text("trip_share_end".localized)
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
-                        Text(trip.endDate, style: .date)
+                        Text(trip.endDate.localizedFormatted(dateStyle: .medium))
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.primary)
                     }
@@ -536,10 +532,10 @@ struct TripImageView: View {
                         Image(systemName: "clock")
                             .font(.system(size: 20))
                             .foregroundColor(.green)
-                        Text("时长")
+                        Text("trip_share_duration".localized)
                             .font(.system(size: 12))
                             .foregroundColor(.secondary)
-                        Text("\(trip.durationDays) 天")
+                        Text("\(trip.durationDays) " + "trip_share_days".localized)
                             .font(.system(size: 14, weight: .medium))
                             .foregroundColor(.primary)
                     }
@@ -559,13 +555,13 @@ struct TripImageView: View {
                         Image(systemName: "location.fill")
                             .font(.system(size: 18))
                             .foregroundColor(.blue)
-                        Text("行程路线")
+                        Text("trip_share_route".localized)
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(.primary)
                         
                         Spacer()
                         
-                        Text("\(sortedDestinations.count) 个地点")
+                        Text("\(sortedDestinations.count) " + "trip_share_locations_count".localized)
                             .font(.system(size: 14))
                             .foregroundColor(.secondary)
                     }
@@ -577,7 +573,7 @@ struct TripImageView: View {
                                 .font(.system(size: 40))
                                 .foregroundColor(.gray.opacity(0.5))
                             
-                            Text("还没有添加目的地")
+                            Text("trip_share_no_destinations".localized)
                                 .font(.system(size: 16))
                                 .foregroundColor(.secondary)
                         }
@@ -603,11 +599,11 @@ struct TripImageView: View {
                 
                 // 底部签名
                 VStack(spacing: 8) {
-                    Text("✨ 来自 Footprint 旅程记录")
+                    Text("trip_share_signature".localized)
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
                     
-                    Text("记录美好旅程，分享精彩瞬间")
+                    Text("trip_share_subtitle".localized)
                         .font(.system(size: 12))
                         .foregroundColor(.secondary.opacity(0.7))
                 }
@@ -647,11 +643,11 @@ struct TripDestinationRowView: View {
             } else {
                 ZStack {
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(destination.category == "国内" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
+                        .fill(destination.category == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
                         .frame(width: 40, height: 40)
                     
                     Image(systemName: "location.fill")
-                        .foregroundColor(destination.category == "国内" ? .red : .blue)
+                        .foregroundColor(destination.category == "domestic" ? .red : .blue)
                         .font(.system(size: 16))
                 }
             }
@@ -671,7 +667,7 @@ struct TripDestinationRowView: View {
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                     
-                    Text(destination.visitDate, style: .date)
+                    Text(destination.visitDate.localizedFormatted(dateStyle: .medium))
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                 }

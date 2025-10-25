@@ -1,0 +1,193 @@
+/* 
+  Localizable.strings
+  Footprint
+  
+  Chinese (Simplified) localization
+*/
+
+// Settings View
+"settings" = "设置";
+"done" = "完成";
+"account" = "账户";
+"not_logged_in" = "未登录";
+"login_sync_description" = "登录后数据自动同步到 iCloud";
+"data_sync" = "数据同步";
+"icloud_sync" = "iCloud 同步";
+"enabled" = "已启用";
+"not_enabled" = "未启用";
+"data_storage" = "数据存储";
+"local" = "本地";
+"icloud" = "iCloud";
+"sync_description_logged_in" = "你的旅行数据正在自动同步到 iCloud，可以在所有设备上访问。";
+"sync_description_not_logged_in" = "登录 Apple ID 后，数据将自动同步到 iCloud，并在你的所有设备间保持同步。";
+"about" = "关于";
+"version" = "版本";
+"app_name" = "应用名称";
+"sign_out" = "退出登录";
+"language" = "语言";
+"language_selection" = "语言选择";
+
+// Edit User Name
+"edit_username" = "编辑用户名";
+"custom_username" = "自定义用户名";
+"username_description" = "设置一个你喜欢的显示名称";
+"enter_username" = "请输入用户名";
+"cancel" = "取消";
+"save" = "保存";
+"iCloud_synced" = "iCloud 已同步";
+
+// Common
+"footprint" = "Footprint";
+
+// Destination Detail View
+"no_photo" = "暂无照片";
+"visit_date" = "访问日期";
+"belongs_to_trip" = "所属旅程";
+"location_coordinates" = "位置坐标";
+"latitude" = "纬度";
+"longitude" = "经度";
+"travel_notes" = "旅行笔记";
+
+// Destination List View
+"my_footprints" = "我的足迹";
+"search_places_countries_notes" = "搜索地点、国家或笔记";
+"filter" = "筛选";
+"all" = "全部";
+"domestic" = "国内";
+"international" = "国外";
+"edit" = "编辑";
+"delete" = "删除";
+"travel_statistics" = "旅行统计";
+"total" = "总计";
+"countries" = "国家";
+"no_travel_records" = "还没有旅行记录";
+"add_first_destination" = "添加第一个目的地";
+"start_recording_footprints" = "点击右上角的 + 按钮开始记录你的旅行足迹吧！";
+
+// Edit Destination View
+"edit_destination" = "编辑目的地";
+"basic_info" = "基本信息";
+"place_name" = "地点名称";
+"category" = "分类";
+"country_region" = "国家/地区";
+"visit_date" = "访问日期";
+"mark_as_favorite" = "标记为喜爱";
+"belongs_to_trip_optional" = "所属旅程（可选）";
+"select_trip" = "选择旅程";
+"none" = "无";
+"location_info" = "位置信息";
+"search_place" = "搜索地点...";
+"search" = "搜索";
+"selected" = "已选择：";
+"current_location" = "当前位置";
+"photo" = "照片";
+"add_photo" = "添加照片";
+"change_photo" = "更换照片";
+"notes" = "笔记";
+"unknown_place" = "未知地点";
+"latitude_longitude" = "纬度: %.4f, 经度: %.4f";
+
+// Map View
+"getting_location_info" = "正在获取位置信息...";
+"identifying_location" = "请稍候，我们正在识别您选择的位置";
+"unknown_city" = "未知城市";
+"unknown_country" = "未知国家";
+"selected_location" = "所选位置";
+"locations_count" = "个地点";
+"delete_destination" = "删除地点";
+"confirm_delete_destination" = "确定要删除「%@」吗？此操作无法撤销。";
+"reverse_geocoding_failed" = "反向地理编码失败: %@，尝试备用方案…";
+"nearby_search_success" = "附近搜索成功，使用邻近地点推断: %@ - %@";
+"nearby_search_failed" = "附近搜索失败: %@，继续使用坐标兜底…";
+"coordinate_fallback" = "使用坐标兜底: %@ - %@ [分类: %@]";
+"user_location_obtained" = "获取到用户位置: %f, %f";
+"location_permission_denied" = "获取位置失败: %@";
+"location_authorization_changed" = "位置授权状态变更: %d";
+"using_cached_country_region" = "使用缓存的国家区域";
+"map_positioned_to" = "地图定位到: %@ (%@)";
+"getting_user_location" = "正在获取用户位置...";
+"preloaded_country_region" = "已预加载国家区域: %@ (%@)";
+
+// Add Destination View
+"add_destination" = "添加目的地";
+"search" = "搜索";
+"search_domestic_places" = "🇨🇳 搜索国内地点:";
+"use_amap_data" = "• 使用高德地图数据，搜索中国境内地点";
+"input_city_names" = "• 直接输入城市名，如\"北京\"、\"上海\"、\"杭州\"";
+"input_attractions" = "• 输入景点名，如\"故宫\"、\"西湖\"、\"外滩\"";
+"search_international_places" = "🌍 搜索国外地点:";
+"use_apple_international" = "• 使用 Apple 国际数据，搜索全球地点";
+"hot_cities_quick_search" = "• ⭐ 热门城市快速搜索：London/伦敦、Paris/巴黎、Tokyo/东京等";
+"support_multilingual" = "• 支持英文和中文输入，通过网络获取最新数据";
+"searching_places" = "搜索%@地点中...";
+"no_results_found" = "未找到结果";
+"suggestions" = "建议：";
+"try_english_names" = "1. 尝试使用英文地名搜索";
+"input_specific_address" = "2. 输入更具体的地址，如\"London, UK\"";
+"check_spelling" = "3. 检查拼写是否正确";
+"selected_location" = "已选择位置";
+"select_photo" = "选择照片";
+"search_domestic_with_amap" = "🇨🇳 使用高德地图数据搜索国内地点: %@";
+"amap_search_error" = "❌ 高德地图搜索错误: %@";
+"fallback_to_clgeocoder" = "🔄 备用搜索：使用 CLGeocoder 搜索国内地点";
+"amap_found_results" = "✅ 高德地图找到 %d 个国内地点";
+"clgeocoder_found_results" = "✅ CLGeocoder 找到 %d 个国内地点";
+"no_domestic_results" = "❌ 未找到国内地点";
+"clgeocoder_search_failed" = "❌ CLGeocoder 搜索失败";
+"search_international_with_apple" = "🌍 使用 Apple 国际数据搜索国外地点: %@";
+"device_region" = "📱 设备区域设置: %@";
+"device_language" = "📱 设备语言: %@";
+"device_country" = "📱 设备国家: %@";
+"found_in_preset_cities" = "✅ 从预设城市库找到: %@, %@";
+"using_preset_coordinates" = "✅ 使用预设坐标: (%.4f, %.4f)";
+"not_found_in_preset" = "🔍 预设库中未找到，尝试使用 Apple 国际数据...";
+"apple_international_api_error" = "❌ Apple 国际数据 API 错误: %@";
+"apple_api_returned_results" = "📍 Apple 国际数据 API 返回 %d 个原始结果:";
+"raw_result_info" = "  原始结果 %d:";
+"name_info" = "    - 名称: %@";
+"country_info" = "    - 国家: %@";
+"iso_code_info" = "    - ISO代码: %@";
+"city_info" = "    - 城市: %@";
+"filtered_international_count" = "🔍 过滤后的国外地点数量: %d";
+"apple_final_results" = "✅ Apple 国际数据最终显示 %d 个地点";
+"display_result_info" = "显示结果 %d: %@ - %@";
+"apple_api_no_results" = "⚠️ Apple 国际数据 API 未找到结果";
+"mksearch_error" = "❌ MKLocalSearch 搜索错误: %@";
+"mksearch_found_results" = "✅ MKLocalSearch 搜索到 %d 个结果";
+"location_selected" = "✅ 已选择位置:";
+"selected_name" = "   名称: %@";
+"selected_country" = "   国家: %@";
+"selected_coordinates" = "   坐标: (%.4f, %.4f)";
+
+// Add Destination To Trip View
+"add_destination_to_trip" = "添加目的地到旅程";
+"mode" = "模式";
+"create_new_destination" = "创建新目的地";
+"add_existing_destination" = "添加现有目的地";
+"no_destinations_to_add" = "没有可添加的目的地";
+"all_destinations_in_trip" = "所有目的地都已在此旅程中";
+"searching" = "搜索中...";
+
+// Trip Share Image
+"trip_share_start" = "开始";
+"trip_share_end" = "结束";
+"trip_share_duration" = "时长";
+"trip_share_days" = "天";
+"trip_share_route" = "行程路线";
+"trip_share_locations_count" = "个地点";
+"trip_share_no_destinations" = "还没有添加目的地";
+"trip_share_signature" = "✨ 来自 Footprint 旅程记录";
+"trip_share_subtitle" = "记录美好旅程，分享精彩瞬间";
+
+// Travel Stats Share Image
+"stats_share_my_travel_footprint" = "我的旅行足迹";
+"stats_share_destinations_count" = "个旅行目的地";
+"stats_share_countries_count" = "个国家";
+"stats_share_travel_timeline" = "旅行时间线";
+"stats_share_footer" = "✨ Footprint • 记录每一步旅程";
+
+// Country Settings
+"country" = "所在国家";
+"country_selection" = "国家选择";
+"country_description" = "设置你所在的国家，用于区分国内和国外旅行";
+"search_countries" = "搜索国家...";

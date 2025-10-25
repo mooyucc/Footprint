@@ -20,21 +20,24 @@ struct AddTripView: View {
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var coverPhotoData: Data?
     @State private var showingImagePicker = false
+    @EnvironmentObject var languageManager: LanguageManager
     
     var body: some View {
         NavigationStack {
             Form {
-                Section(header: Text("旅程信息")) {
-                    TextField("旅程名称", text: $name)
+                Section(header: Text("trip_info".localized)) {
+                    TextField("trip_name".localized, text: $name)
                         .textInputAutocapitalization(.words)
                     
-                    TextField("描述（可选）", text: $desc, axis: .vertical)
+                    TextField("description_optional".localized, text: $desc, axis: .vertical)
                         .lineLimit(3...6)
                 }
                 
-                Section(header: Text("时间")) {
-                    DatePicker("开始日期", selection: $startDate, displayedComponents: .date)
-                    DatePicker("结束日期", selection: $endDate, displayedComponents: .date)
+                Section(header: Text("time".localized)) {
+                    DatePicker("start_date".localized, selection: $startDate, displayedComponents: .date)
+                        .environment(\.locale, Locale(identifier: languageManager.currentLanguage.rawValue))
+                    DatePicker("end_date".localized, selection: $endDate, displayedComponents: .date)
+                        .environment(\.locale, Locale(identifier: languageManager.currentLanguage.rawValue))
                 }
                 .onChange(of: startDate) { oldValue, newValue in
                     if newValue > endDate {
@@ -42,7 +45,7 @@ struct AddTripView: View {
                     }
                 }
                 
-                Section(header: Text("封面图片（可选）")) {
+                Section(header: Text("cover_image_optional".localized)) {
                     if let photoData = coverPhotoData,
                        let uiImage = UIImage(data: photoData) {
                         ZStack(alignment: .topTrailing) {
@@ -69,7 +72,7 @@ struct AddTripView: View {
                     Button {
                         showingImagePicker = true
                     } label: {
-                        Label(coverPhotoData == nil ? "添加封面图片" : "更换封面图片", systemImage: "photo.on.rectangle.angled")
+                        Label(coverPhotoData == nil ? "add_cover_image".localized : "change_cover_image".localized, systemImage: "photo.on.rectangle.angled")
                     }
                 }
                 
@@ -77,23 +80,23 @@ struct AddTripView: View {
                     HStack {
                         Image(systemName: "calendar")
                             .foregroundColor(.blue)
-                        Text("行程时长：")
-                        Text("\(durationDays)天")
+                        Text("trip_duration".localized + ":")
+                        Text("\(durationDays) \("days".localized)")
                             .fontWeight(.semibold)
                     }
                 }
             }
-            .navigationTitle("创建旅程")
+            .navigationTitle("create_trip".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("取消") {
+                    Button("cancel".localized) {
                         dismiss()
                     }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("保存") {
+                    Button("save".localized) {
                         saveTrip()
                     }
                     .disabled(name.isEmpty)

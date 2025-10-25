@@ -1,0 +1,193 @@
+/* 
+  Localizable.strings
+  Footprint
+  
+  English localization
+*/
+
+// Settings View
+"settings" = "Settings";
+"done" = "Done";
+"account" = "Account";
+"not_logged_in" = "Not logged in";
+"login_sync_description" = "Data will automatically sync to iCloud after logging in";
+"data_sync" = "Data Sync";
+"icloud_sync" = "iCloud Sync";
+"enabled" = "Enabled";
+"not_enabled" = "Not enabled";
+"data_storage" = "Data Storage";
+"local" = "Local";
+"icloud" = "iCloud";
+"sync_description_logged_in" = "Your travel data is automatically syncing to iCloud and accessible on all your devices.";
+"sync_description_not_logged_in" = "After logging in with Apple ID, data will automatically sync to iCloud and remain synchronized across all your devices.";
+"about" = "About";
+"version" = "Version";
+"app_name" = "App Name";
+"sign_out" = "Sign Out";
+"language" = "Language";
+"language_selection" = "Language Selection";
+
+// Edit User Name
+"edit_username" = "Edit Username";
+"custom_username" = "Custom Username";
+"username_description" = "Set a display name you prefer";
+"enter_username" = "Enter username";
+"cancel" = "Cancel";
+"save" = "Save";
+"iCloud_synced" = "iCloud Synced";
+
+// Common
+"footprint" = "Footprint";
+
+// Destination Detail View
+"no_photo" = "No Photo";
+"visit_date" = "Visit Date";
+"belongs_to_trip" = "Belongs to Trip";
+"location_coordinates" = "Location Coordinates";
+"latitude" = "Latitude";
+"longitude" = "Longitude";
+"travel_notes" = "Travel Notes";
+
+// Destination List View
+"my_footprints" = "My Footprints";
+"search_places_countries_notes" = "Search places, countries or notes";
+"filter" = "Filter";
+"all" = "All";
+"domestic" = "Domestic";
+"international" = "Overseas";
+"edit" = "Edit";
+"delete" = "Delete";
+"travel_statistics" = "Travel Statistics";
+"total" = "Total";
+"countries" = "Countries";
+"no_travel_records" = "No travel records yet";
+"add_first_destination" = "Add First Destination";
+"start_recording_footprints" = "Tap the + button in the top right to start recording your travel footprints!";
+
+// Edit Destination View
+"edit_destination" = "Edit Destination";
+"basic_info" = "Basic Information";
+"place_name" = "Place Name";
+"category" = "Category";
+"country_region" = "Country/Region";
+"visit_date" = "Visit Date";
+"mark_as_favorite" = "Mark as Favorite";
+"belongs_to_trip_optional" = "Belongs to Trip (Optional)";
+"select_trip" = "Select Trip";
+"none" = "None";
+"location_info" = "Location Information";
+"search_place" = "Search place...";
+"search" = "Search";
+"selected" = "Selected: ";
+"current_location" = "Current Location";
+"photo" = "Photo";
+"add_photo" = "Add Photo";
+"change_photo" = "Change Photo";
+"notes" = "Notes";
+"unknown_place" = "Unknown Place";
+"latitude_longitude" = "Latitude: %.4f, Longitude: %.4f";
+
+// Map View
+"getting_location_info" = "Getting location information...";
+"identifying_location" = "Please wait, we are identifying your selected location";
+"unknown_city" = "Unknown City";
+"unknown_country" = "Unknown Country";
+"selected_location" = "Selected Location";
+"locations_count" = "locations";
+"delete_destination" = "Delete Destination";
+"confirm_delete_destination" = "Are you sure you want to delete '%@'? This action cannot be undone.";
+"reverse_geocoding_failed" = "Reverse geocoding failed: %@, trying fallback...";
+"nearby_search_success" = "Nearby search successful, using nearby location inference: %@ - %@";
+"nearby_search_failed" = "Nearby search failed: %@, continuing with coordinate fallback...";
+"coordinate_fallback" = "Using coordinate fallback: %@ - %@ [Category: %@]";
+"user_location_obtained" = "User location obtained: %f, %f";
+"location_permission_denied" = "Failed to get location: %@";
+"location_authorization_changed" = "Location authorization status changed: %d";
+"using_cached_country_region" = "Using cached country region";
+"map_positioned_to" = "Map positioned to: %@ (%@)";
+"getting_user_location" = "Getting user location...";
+"preloaded_country_region" = "Preloaded country region: %@ (%@)";
+
+// Add Destination View
+"add_destination" = "Add Destination";
+"search" = "Search";
+"search_domestic_places" = "🇨🇳 Search domestic places:";
+"use_amap_data" = "• Use Amap data to search places in China";
+"input_city_names" = "• Enter city names directly, such as \"Beijing\", \"Shanghai\", \"Hangzhou\"";
+"input_attractions" = "• Enter attraction names, such as \"Forbidden City\", \"West Lake\", \"The Bund\"";
+"search_international_places" = "🌍 Search overseas places:";
+"use_apple_international" = "• Use Apple international data to search global places";
+"hot_cities_quick_search" = "• ⭐ Hot cities quick search: London/伦敦、Paris/巴黎、Tokyo/东京 etc.";
+"support_multilingual" = "• Support English and Chinese input, get latest data via network";
+"searching_places" = "Searching %@ places...";
+"no_results_found" = "No results found";
+"suggestions" = "Suggestions:";
+"try_english_names" = "1. Try searching with English place names";
+"input_specific_address" = "2. Enter more specific address, such as \"London, UK\"";
+"check_spelling" = "3. Check if spelling is correct";
+"selected_location" = "Selected Location";
+"select_photo" = "Select Photo";
+"search_domestic_with_amap" = "🇨🇳 Using Amap data to search domestic places: %@";
+"amap_search_error" = "❌ Amap search error: %@";
+"fallback_to_clgeocoder" = "🔄 Fallback search: Using CLGeocoder to search domestic places";
+"amap_found_results" = "✅ Amap found %d domestic places";
+"clgeocoder_found_results" = "✅ CLGeocoder found %d domestic places";
+"no_domestic_results" = "❌ No domestic places found";
+"clgeocoder_search_failed" = "❌ CLGeocoder search failed";
+"search_international_with_apple" = "🌍 Using Apple international data to search overseas places: %@";
+"device_region" = "📱 Device region setting: %@";
+"device_language" = "📱 Device language: %@";
+"device_country" = "📱 Device country: %@";
+"found_in_preset_cities" = "✅ Found in preset cities: %@, %@";
+"using_preset_coordinates" = "✅ Using preset coordinates: (%.4f, %.4f)";
+"not_found_in_preset" = "🔍 Not found in preset, trying Apple international data...";
+"apple_international_api_error" = "❌ Apple international data API error: %@";
+"apple_api_returned_results" = "📍 Apple international data API returned %d raw results:";
+"raw_result_info" = "  Raw result %d:";
+"name_info" = "    - Name: %@";
+"country_info" = "    - Country: %@";
+"iso_code_info" = "    - ISO Code: %@";
+"city_info" = "    - City: %@";
+"filtered_international_count" = "🔍 Filtered international places count: %d";
+"apple_final_results" = "✅ Apple international data finally shows %d places";
+"display_result_info" = "Display result %d: %@ - %@";
+"apple_api_no_results" = "⚠️ Apple international data API found no results";
+"mksearch_error" = "❌ MKLocalSearch error: %@";
+"mksearch_found_results" = "✅ MKLocalSearch found %d results";
+"location_selected" = "✅ Location selected:";
+"selected_name" = "   Name: %@";
+"selected_country" = "   Country: %@";
+"selected_coordinates" = "   Coordinates: (%.4f, %.4f)";
+
+// Add Destination To Trip View
+"add_destination_to_trip" = "Add Destination to Trip";
+"mode" = "Mode";
+"create_new_destination" = "Create New Destination";
+"add_existing_destination" = "Add Existing Destination";
+"no_destinations_to_add" = "No destinations to add";
+"all_destinations_in_trip" = "All destinations are already in this trip";
+"searching" = "Searching...";
+
+// Trip Share Image
+"trip_share_start" = "Start";
+"trip_share_end" = "End";
+"trip_share_duration" = "Duration";
+"trip_share_days" = "days";
+"trip_share_route" = "Trip Route";
+"trip_share_locations_count" = "locations";
+"trip_share_no_destinations" = "No destinations added yet";
+"trip_share_signature" = "✨ From Footprint Journey";
+"trip_share_subtitle" = "Record wonderful journeys, share beautiful moments";
+
+// Travel Stats Share Image
+"stats_share_my_travel_footprint" = "My Travel Footprint";
+"stats_share_destinations_count" = "Travel Destinations";
+"stats_share_countries_count" = "Countries";
+"stats_share_travel_timeline" = "Travel Timeline";
+"stats_share_footer" = "✨ Footprint • Record Every Journey";
+
+// Country Settings
+"country" = "Country";
+"country_selection" = "Country Selection";
+"country_description" = "Set your country to distinguish between domestic and international travel";
+"search_countries" = "Search countries...";
