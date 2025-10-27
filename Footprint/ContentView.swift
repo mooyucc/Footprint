@@ -44,6 +44,7 @@ struct ContentView: View {
 struct ProfileView: View {
     @EnvironmentObject var appleSignInManager: AppleSignInManager
     @EnvironmentObject var languageManager: LanguageManager
+    @StateObject private var countryManager = CountryManager.shared
     @Query private var destinations: [TravelDestination]
     @Query private var trips: [TravelTrip]
     @State private var showSettings = false
@@ -54,8 +55,9 @@ struct ProfileView: View {
     
     var statistics: (total: Int, domestic: Int, international: Int, countries: Int, continents: Int) {
         let total = destinations.count
-        let domestic = destinations.filter { $0.category == "domestic" }.count
-        let international = destinations.filter { $0.category == "international" }.count
+        // 使用 CountryManager 来判断是否为国内
+        let domestic = destinations.filter { countryManager.isDomestic(country: $0.country) }.count
+        let international = destinations.filter { !countryManager.isDomestic(country: $0.country) }.count
         let countries = Set(destinations.map { $0.country }).count
         
         // 简单的大洲判断逻辑
@@ -430,11 +432,11 @@ struct FavoriteDestinationRow: View {
             } else {
                 ZStack {
                     Circle()
-                        .fill(destination.category == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
+                        .fill(destination.normalizedCategory == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
                         .frame(width: 50, height: 50)
                     
                     Image(systemName: "location.fill")
-                        .foregroundColor(destination.category == "domestic" ? .red : .blue)
+                        .foregroundColor(destination.normalizedCategory == "domestic" ? .red : .blue)
                 }
             }
             

@@ -77,7 +77,7 @@ struct TripDataExporter {
             let jsonData = try JSONEncoder().encode(exportData)
             
             // 创建临时文件
-            let fileName = "\(trip.name)_Footprint.json"
+            let fileName = "\(trip.name)_MooyuFootprint.json"
             let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
             
             try jsonData.write(to: tempURL)
@@ -98,7 +98,7 @@ struct TripDataExporter {
         📅 行程时间：\(trip.startDate.localizedFormatted(dateStyle: .short)) - \(trip.endDate.localizedFormatted(dateStyle: .short))
         📍 目的地数量：\(destinationCount) 个地点
         
-        使用 Footprint 应用导入此旅程，即可获得完整的行程安排！
+        使用墨鱼足迹应用导入此旅程，即可获得完整的行程安排！
         """
     }
 }

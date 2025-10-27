@@ -37,7 +37,7 @@
 "iCloud_synced" = "iCloud 已同步";
 
 // Common
-"footprint" = "Footprint";
+"footprint" = "墨鱼足迹";
 
 // Destination Detail View
 "no_photo" = "暂无照片";
@@ -176,7 +176,7 @@
 "trip_share_route" = "行程路线";
 "trip_share_locations_count" = "个地点";
 "trip_share_no_destinations" = "还没有添加目的地";
-"trip_share_signature" = "✨ 来自 Footprint 旅程记录";
+"trip_share_signature" = "✨ 墨鱼足迹 · 记录每一步旅程";
 "trip_share_subtitle" = "记录美好旅程，分享精彩瞬间";
 
 // Travel Stats Share Image
@@ -191,3 +191,16 @@
 "country_selection" = "国家选择";
 "country_description" = "设置你所在的国家，用于区分国内和国外旅行";
 "search_countries" = "搜索国家...";
+
+// Map Style
+"map_style_title" = "地图样式";
+"map_style_standard" = "标准地图";
+"map_style_satellite" = "卫星地图";
+"map_style_hybrid" = "混合地图";
+"map_style_imagery" = "卫星图像";
+
+// Duplicate Destination Check
+"duplicate_destination_title" = "重复的目的地";
+"duplicate_destination_message" = "已存在名为「%@」的目的地，是否要覆盖原有目的地？\n\n现有目的地信息：\n国家：%@\n访问日期：%@%@\n\n原则上不允许出现同名的目的地";
+"duplicate_destination_overwrite" = "覆盖";
+"duplicate_destination_cancel" = "取消";

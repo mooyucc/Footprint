@@ -15,13 +15,18 @@ struct DestinationListView: View {
     @State private var filterCategory: String? = nil
     @State private var editingDestination: TravelDestination?
     @StateObject private var languageManager = LanguageManager.shared
+    @StateObject private var countryManager = CountryManager.shared
     @State private var refreshID = UUID()
     
     var filteredDestinations: [TravelDestination] {
         var result = destinations
         
         if let category = filterCategory {
-            result = result.filter { $0.normalizedCategory == category }
+            // 使用 CountryManager 来判断是否为国内
+            result = result.filter { destination in
+                let isDomestic = countryManager.isDomestic(country: destination.country)
+                return category == "domestic" ? isDomestic : !isDomestic
+            }
         }
         
         if !searchText.isEmpty {
@@ -37,8 +42,9 @@ struct DestinationListView: View {
     
     var statistics: (total: Int, domestic: Int, international: Int, countries: Int) {
         let total = destinations.count
-        let domestic = destinations.filter { $0.normalizedCategory == "domestic" }.count
-        let international = destinations.filter { $0.normalizedCategory == "international" }.count
+        // 使用 CountryManager 来判断是否为国内
+        let domestic = destinations.filter { countryManager.isDomestic(country: $0.country) }.count
+        let international = destinations.filter { !countryManager.isDomestic(country: $0.country) }.count
         let countries = Set(destinations.map { $0.country }).count
         return (total, domestic, international, countries)
     }
@@ -172,11 +178,11 @@ struct DestinationRow: View {
             } else {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(destination.category == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
+                        .fill(destination.normalizedCategory == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
                         .frame(width: 60, height: 60)
                     
                     Image(systemName: "location.fill")
-                        .foregroundColor(destination.category == "domestic" ? .red : .blue)
+                        .foregroundColor(destination.normalizedCategory == "domestic" ? .red : .blue)
                         .font(.title2)
                 }
             }
@@ -226,8 +232,8 @@ struct DestinationRow: View {
                         .font(.caption)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(destination.category == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
-                        .foregroundColor(destination.category == "domestic" ? .red : .blue)
+                        .background(destination.normalizedCategory == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
+                        .foregroundColor(destination.normalizedCategory == "domestic" ? .red : .blue)
                         .cornerRadius(8)
                 }
             }

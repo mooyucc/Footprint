@@ -37,7 +37,7 @@
 "iCloud_synced" = "iCloud Synced";
 
 // Common
-"footprint" = "Footprint";
+"footprint" = "Mooyu Footprint";
 
 // Destination Detail View
 "no_photo" = "No Photo";
@@ -176,7 +176,7 @@
 "trip_share_route" = "Trip Route";
 "trip_share_locations_count" = "locations";
 "trip_share_no_destinations" = "No destinations added yet";
-"trip_share_signature" = "✨ From Footprint Journey";
+"trip_share_signature" = "✨ Mooyu Footprint • Record Every Journey";
 "trip_share_subtitle" = "Record wonderful journeys, share beautiful moments";
 
 // Travel Stats Share Image
@@ -191,3 +191,16 @@
 "country_selection" = "Country Selection";
 "country_description" = "Set your country to distinguish between domestic and international travel";
 "search_countries" = "Search countries...";
+
+// Map Style
+"map_style_title" = "Map Style";
+"map_style_standard" = "Standard";
+"map_style_satellite" = "Satellite";
+"map_style_hybrid" = "Hybrid";
+"map_style_imagery" = "Imagery";
+
+// Duplicate Destination Check
+"duplicate_destination_title" = "Duplicate Destination";
+"duplicate_destination_message" = "A destination named '%@' already exists. Do you want to overwrite the existing destination?\n\nExisting destination info:\nCountry: %@\nVisit Date: %@%@\n\nDuplicate destination names are not allowed in principle";
+"duplicate_destination_overwrite" = "Overwrite";
+"duplicate_destination_cancel" = "Cancel";

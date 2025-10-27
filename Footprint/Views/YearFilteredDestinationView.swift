@@ -15,6 +15,7 @@ struct YearFilteredDestinationView: View {
     @State private var filterCategory: String? = nil
     @State private var editingDestination: TravelDestination?
     @EnvironmentObject var languageManager: LanguageManager
+    @StateObject private var countryManager = CountryManager.shared
     @State private var refreshID = UUID()
     
     init(year: Int) {
@@ -35,7 +36,11 @@ struct YearFilteredDestinationView: View {
         var result = allDestinations
         
         if let category = filterCategory {
-            result = result.filter { $0.category == category }
+            // 使用 CountryManager 来判断是否为国内
+            result = result.filter { destination in
+                let isDomestic = countryManager.isDomestic(country: destination.country)
+                return category == "domestic" ? isDomestic : !isDomestic
+            }
         }
         
         if !searchText.isEmpty {
@@ -51,8 +56,9 @@ struct YearFilteredDestinationView: View {
     
     var statistics: (total: Int, domestic: Int, international: Int, countries: Int) {
         let total = allDestinations.count
-        let domestic = allDestinations.filter { $0.category == "domestic" }.count
-        let international = allDestinations.filter { $0.category == "international" }.count
+        // 使用 CountryManager 来判断是否为国内
+        let domestic = allDestinations.filter { countryManager.isDomestic(country: $0.country) }.count
+        let international = allDestinations.filter { !countryManager.isDomestic(country: $0.country) }.count
         let countries = Set(allDestinations.map { $0.country }).count
         return (total, domestic, international, countries)
     }

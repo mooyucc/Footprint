@@ -406,13 +406,13 @@ struct TripImageGenerator {
             let iconRect = CGRect(x: point.x + 50, y: point.y + 8, width: 50, height: 50)
             let path = UIBezierPath(roundedRect: iconRect, cornerRadius: 8)
             context.addPath(path.cgPath)
-            context.setFillColor(destination.category == "domestic" ? UIColor.red.withAlphaComponent(0.2).cgColor : UIColor.blue.withAlphaComponent(0.2).cgColor)
+            context.setFillColor(destination.normalizedCategory == "domestic" ? UIColor.red.withAlphaComponent(0.2).cgColor : UIColor.blue.withAlphaComponent(0.2).cgColor)
             context.fillPath()
             
             // 绘制位置图标
             let iconAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 20),
-                .foregroundColor: destination.category == "domestic" ? UIColor.red : UIColor.blue
+                .foregroundColor: destination.normalizedCategory == "domestic" ? UIColor.red : UIColor.blue
             ]
             let iconString = NSAttributedString(string: "📍", attributes: iconAttributes)
             let iconSize = iconString.size()
@@ -643,11 +643,11 @@ struct TripDestinationRowView: View {
             } else {
                 ZStack {
                     RoundedRectangle(cornerRadius: 6)
-                        .fill(destination.category == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
+                        .fill(destination.normalizedCategory == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
                         .frame(width: 40, height: 40)
                     
                     Image(systemName: "location.fill")
-                        .foregroundColor(destination.category == "domestic" ? .red : .blue)
+                        .foregroundColor(destination.normalizedCategory == "domestic" ? .red : .blue)
                         .font(.system(size: 16))
                 }
             }

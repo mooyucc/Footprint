@@ -9,6 +9,7 @@ import SwiftUI
 
 struct CountrySelectionView: View {
     @EnvironmentObject var countryManager: CountryManager
+    @EnvironmentObject var languageManager: LanguageManager
     @Environment(\.dismiss) var dismiss
     @State private var searchText = ""
     
@@ -36,13 +37,20 @@ struct CountrySelectionView: View {
                                 .font(.title2)
                             
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(country.displayName)
+                                Text(countryManager.getLocalizedCountryName(for: country))
                                     .font(.body)
                                     .foregroundColor(.primary)
                                 
-                                Text(country.englishName)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                                // 显示另一种语言的名称作为副标题
+                                if languageManager.currentLanguage == .chinese {
+                                    Text(country.englishName)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                } else {
+                                    Text(country.displayName)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
                             }
                             
                             Spacer()
@@ -75,4 +83,5 @@ struct CountrySelectionView: View {
 #Preview {
     CountrySelectionView()
         .environmentObject(CountryManager.shared)
+        .environmentObject(LanguageManager.shared)
 }

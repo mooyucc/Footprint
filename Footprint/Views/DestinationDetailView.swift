@@ -46,7 +46,7 @@ struct DestinationDetailView: View {
                     } else {
                         ZStack {
                             Rectangle()
-                                .fill(destination.category == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
+                                .fill(destination.normalizedCategory == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
                                 .frame(width: geometry.size.width)
                                 .frame(height: imageHeight)
                             
@@ -84,12 +84,12 @@ struct DestinationDetailView: View {
                         
                         Spacer()
                         
-                        Text(destination.category)
+                        Text(destination.localizedCategory)
                             .font(.headline)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)
-                            .background(destination.category == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
-                            .foregroundColor(destination.category == "domestic" ? .red : .blue)
+                            .background(destination.normalizedCategory == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
+                            .foregroundColor(destination.normalizedCategory == "domestic" ? .red : .blue)
                             .cornerRadius(10)
                     }
                     
@@ -164,7 +164,7 @@ struct DestinationDetailView: View {
                         Annotation(destination.name, coordinate: destination.coordinate) {
                             ZStack {
                                 Circle()
-                                    .fill(destination.category == "domestic" ? Color.red : Color.blue)
+                                    .fill(destination.normalizedCategory == "domestic" ? Color.red : Color.blue)
                                     .frame(width: 30, height: 30)
                                     .overlay(
                                         Circle()

@@ -147,7 +147,7 @@ struct SettingsView: View {
                             Spacer()
                             HStack {
                                 Text(countryManager.currentCountry.flag)
-                                Text(countryManager.currentCountry.displayName)
+                                Text(countryManager.currentCountryLocalizedName)
                                     .foregroundColor(.secondary)
                             }
                         }

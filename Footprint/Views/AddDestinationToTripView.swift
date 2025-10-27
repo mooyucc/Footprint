@@ -215,11 +215,11 @@ struct AddDestinationToTripView: View {
                             } else {
                                 ZStack {
                                     RoundedRectangle(cornerRadius: 8)
-                                        .fill(destination.category == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
+                                        .fill(destination.normalizedCategory == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
                                         .frame(width: 50, height: 50)
                                     
                                     Image(systemName: "location.fill")
-                                        .foregroundColor(destination.category == "domestic" ? .red : .blue)
+                                        .foregroundColor(destination.normalizedCategory == "domestic" ? .red : .blue)
                                 }
                             }
                             

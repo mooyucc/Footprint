@@ -16,6 +16,7 @@ struct AddDestinationView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \TravelTrip.startDate, order: .reverse) private var trips: [TravelTrip]
+    @Query private var allDestinations: [TravelDestination]
     @StateObject private var languageManager = LanguageManager.shared
     
     // 支持从外部传入预填充数据
@@ -37,41 +38,14 @@ struct AddDestinationView: View {
     @State private var selectedLocation: MKMapItem?
     @State private var isSearching = false
     @State private var selectedTrip: TravelTrip?
+    @State private var showDuplicateAlert = false
+    @State private var duplicateDestinationName = ""
+    @State private var existingDestination: TravelDestination?
     
     let categories = ["domestic", "international"]
     
-    // 常用国际城市坐标库（解决在中国无法搜索国外地点的问题）
-    // 参考 iPhone 地图应用的国际城市数据，手动维护热门目的地
-    let internationalCities: [String: (name: String, country: String, lat: Double, lon: Double)] = [
-        "london": ("London", "United Kingdom", 51.5074, -0.1278),
-        "伦敦": ("London", "United Kingdom", 51.5074, -0.1278),
-        "paris": ("Paris", "France", 48.8566, 2.3522),
-        "巴黎": ("Paris", "France", 48.8566, 2.3522),
-        "tokyo": ("Tokyo", "Japan", 35.6762, 139.6503),
-        "东京": ("Tokyo", "Japan", 35.6762, 139.6503),
-        "newyork": ("New York", "United States", 40.7128, -74.0060),
-        "纽约": ("New York", "United States", 40.7128, -74.0060),
-        "sydney": ("Sydney", "Australia", -33.8688, 151.2093),
-        "悉尼": ("Sydney", "Australia", -33.8688, 151.2093),
-        "rome": ("Rome", "Italy", 41.9028, 12.4964),
-        "罗马": ("Rome", "Italy", 41.9028, 12.4964),
-        "dubai": ("Dubai", "United Arab Emirates", 25.2048, 55.2708),
-        "迪拜": ("Dubai", "United Arab Emirates", 25.2048, 55.2708),
-        "singapore": ("Singapore", "Singapore", 1.3521, 103.8198),
-        "新加坡": ("Singapore", "Singapore", 1.3521, 103.8198),
-        "losangeles": ("Los Angeles", "United States", 34.0522, -118.2437),
-        "洛杉矶": ("Los Angeles", "United States", 34.0522, -118.2437),
-        "barcelona": ("Barcelona", "Spain", 41.3851, 2.1734),
-        "巴塞罗那": ("Barcelona", "Spain", 41.3851, 2.1734),
-        "amsterdam": ("Amsterdam", "Netherlands", 52.3676, 4.9041),
-        "阿姆斯特丹": ("Amsterdam", "Netherlands", 52.3676, 4.9041),
-        "bangkok": ("Bangkok", "Thailand", 13.7563, 100.5018),
-        "曼谷": ("Bangkok", "Thailand", 13.7563, 100.5018),
-        "seoul": ("Seoul", "South Korea", 37.5665, 126.9780),
-        "首尔": ("Seoul", "South Korea", 37.5665, 126.9780),
-        "moscow": ("Moscow", "Russia", 55.7558, 37.6173),
-        "莫斯科": ("Moscow", "Russia", 55.7558, 37.6173)
-    ]
+    // 城市数据管理器实例
+    private let cityDataManager = CityDataManager.shared
     
     var body: some View {
         NavigationStack {
@@ -334,11 +308,35 @@ struct AddDestinationView: View {
                     category = prefilledCategory
                 }
             }
+            .alert("duplicate_destination_title".localized, isPresented: $showDuplicateAlert) {
+                Button("duplicate_destination_overwrite".localized, role: .destructive) {
+                    overwriteExistingDestination()
+                }
+                Button("duplicate_destination_cancel".localized, role: .cancel) {
+                    // 取消操作，不做任何处理
+                }
+            } message: {
+                Text(alertMessage)
+            }
         }
     }
     
     private var isValid: Bool {
         !name.isEmpty && !country.isEmpty && selectedLocation != nil
+    }
+    
+    private var alertMessage: String {
+        guard let existing = existingDestination else {
+            return "duplicate_destination_message".localized(with: duplicateDestinationName, "", "", "")
+        }
+        
+        let notesText = existing.notes.isEmpty ? "" : "\n备注：\(existing.notes)"
+        return "duplicate_destination_message".localized(
+            with: duplicateDestinationName,
+            existing.country,
+            existing.visitDate.localizedFormatted(dateStyle: .medium),
+            notesText
+        )
     }
     
     private func searchLocation() {
@@ -449,23 +447,22 @@ struct AddDestinationView: View {
         print("📱 设备国家: \(Locale.current.regionCode ?? "未知")")
         
         // 🔑 策略1：先检查预设城市库（快速响应）
-        let searchKey = searchText.lowercased().replacingOccurrences(of: " ", with: "")
-        if let cityInfo = internationalCities[searchKey] {
-            print("✅ 从预设城市库找到: \(cityInfo.name), \(cityInfo.country)")
+        if let cityInfo = cityDataManager.findCity(by: searchText) {
+            print("✅ 从预设城市库找到: \(cityInfo.localizedName), \(cityInfo.localizedCountry)")
             
             // 创建 MKPlacemark 和 MKMapItem
-            let coordinate = CLLocationCoordinate2D(latitude: cityInfo.lat, longitude: cityInfo.lon)
+            let coordinate = CLLocationCoordinate2D(latitude: cityInfo.latitude, longitude: cityInfo.longitude)
             let placemark = MKPlacemark(coordinate: coordinate, addressDictionary: [
-                CNPostalAddressCountryKey: cityInfo.country,
-                CNPostalAddressCityKey: cityInfo.name
+                CNPostalAddressCountryKey: cityInfo.localizedCountry,
+                CNPostalAddressCityKey: cityInfo.localizedName
             ])
             let mapItem = MKMapItem(placemark: placemark)
-            mapItem.name = cityInfo.name
+            mapItem.name = cityInfo.localizedName
             
             DispatchQueue.main.async {
                 self.searchResults = [mapItem]
                 self.isSearching = false
-                print("✅ 使用预设坐标: (\(cityInfo.lat), \(cityInfo.lon))")
+                print("✅ 使用预设坐标: (\(cityInfo.latitude), \(cityInfo.longitude))")
             }
             return
         }
@@ -566,15 +563,20 @@ struct AddDestinationView: View {
     private func selectLocation(_ item: MKMapItem) {
         selectedLocation = item
         
-        // 自动填充地点名称
-        if name.isEmpty {
-            // 优先使用 name，否则使用 locality（城市名）
-            name = item.name ?? item.placemark.locality ?? ""
-        }
+        // 🎯 新功能：点击新搜索地点时覆盖现有页面中的相关信息
+        // 优先使用 name，否则使用 locality（城市名）
+        name = item.name ?? item.placemark.locality ?? ""
         
         // 自动填充国家/地区
-        if country.isEmpty {
-            country = item.placemark.country ?? ""
+        country = item.placemark.country ?? ""
+        
+        // 根据国家信息自动判断分类
+        if let countryCode = item.placemark.isoCountryCode {
+            if countryCode == "CN" || country == "中国" || country == "China" {
+                category = "domestic"
+            } else {
+                category = "international"
+            }
         }
         
         // 清空搜索结果和搜索文本
@@ -585,10 +587,32 @@ struct AddDestinationView: View {
         print("✅ 已选择位置:")
         print("   名称: \(name)")
         print("   国家: \(country)")
+        print("   分类: \(category)")
         print("   坐标: (\(item.placemark.coordinate.latitude), \(item.placemark.coordinate.longitude))")
     }
     
     private func saveDestination() {
+        guard let location = selectedLocation else { return }
+        
+        // 检查是否存在同名目的地
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let existingDestination = allDestinations.first { destination in
+            destination.name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == trimmedName.lowercased()
+        }
+        
+        if let existing = existingDestination {
+            // 发现重复名称，显示确认对话框
+            self.existingDestination = existing
+            duplicateDestinationName = trimmedName
+            showDuplicateAlert = true
+            return
+        }
+        
+        // 没有重复，直接保存
+        createAndSaveDestination()
+    }
+    
+    private func createAndSaveDestination() {
         guard let location = selectedLocation else { return }
         
         let destination = TravelDestination(
@@ -609,6 +633,26 @@ struct AddDestinationView: View {
         }
         
         modelContext.insert(destination)
+        dismiss()
+    }
+    
+    private func overwriteExistingDestination() {
+        guard let existing = existingDestination else { return }
+        
+        // 更新现有目的地的信息
+        existing.name = name
+        existing.country = country
+        existing.latitude = selectedLocation?.placemark.coordinate.latitude ?? existing.latitude
+        existing.longitude = selectedLocation?.placemark.coordinate.longitude ?? existing.longitude
+        existing.visitDate = visitDate
+        existing.notes = notes
+        existing.photoData = photoData
+        existing.category = category
+        existing.isFavorite = isFavorite
+        
+        // 更新旅程关联
+        existing.trip = selectedTrip
+        
         dismiss()
     }
 }

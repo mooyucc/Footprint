@@ -885,7 +885,22 @@ class CountryManager: ObservableObject {
     
     // 判断是否为国内旅行（相对于用户所在国家）
     func isDomestic(country: String) -> Bool {
-        return country == currentCountry.rawValue
+        // 匹配 ISO 国家代码
+        if country == currentCountry.rawValue {
+            return true
+        }
+        
+        // 匹配中文名称
+        if country == currentCountry.displayName {
+            return true
+        }
+        
+        // 匹配英文名称
+        if country == currentCountry.englishName {
+            return true
+        }
+        
+        return false
     }
     
     // 获取当前国家的显示名称
@@ -896,6 +911,31 @@ class CountryManager: ObservableObject {
     // 获取当前国家的英文名称
     var currentCountryEnglishName: String {
         return currentCountry.englishName
+    }
+    
+    // 根据当前语言设置获取国家显示名称
+    func getLocalizedCountryName(for country: Country) -> String {
+        // 获取当前语言设置
+        if let savedLanguage = UserDefaults.standard.string(forKey: "SelectedLanguage") {
+            if savedLanguage == "en" {
+                return country.englishName
+            } else {
+                return country.displayName
+            }
+        } else {
+            // 如果没有保存的语言设置，根据系统语言判断
+            let systemLanguage = Locale.current.language.languageCode?.identifier ?? "en"
+            if systemLanguage.hasPrefix("zh") {
+                return country.displayName
+            } else {
+                return country.englishName
+            }
+        }
+    }
+    
+    // 获取当前国家的本地化显示名称
+    var currentCountryLocalizedName: String {
+        return getLocalizedCountryName(for: currentCountry)
     }
 }
 
