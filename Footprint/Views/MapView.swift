@@ -14,6 +14,7 @@ import AudioToolbox
 
 // 地图样式枚举
 enum MapStyle: String, CaseIterable {
+    case muted = "muted"
     case standard = "standard"
     case hybrid = "hybrid"
     case imagery = "imagery"
@@ -22,6 +23,8 @@ enum MapStyle: String, CaseIterable {
         switch self {
         case .standard:
             return "map_style_standard"
+        case .muted:
+            return "map_style_muted"
         case .hybrid:
             return "map_style_hybrid"
         case .imagery:
@@ -33,6 +36,8 @@ enum MapStyle: String, CaseIterable {
         switch self {
         case .standard:
             return "map"
+        case .muted:
+            return "map.fill"
         case .hybrid:
             return "globe.americas"
         case .imagery:
@@ -44,8 +49,10 @@ enum MapStyle: String, CaseIterable {
         switch self {
         case .standard:
             return .standard(elevation: .realistic)
+        case .muted:
+            return .standard(elevation: .flat, emphasis: .muted)  // 静音模式：道路不明显
         case .hybrid:
-            return .hybrid(elevation: .realistic)  // 混合地图：卫星图像+标注
+            return .hybrid(elevation: .realistic)  // 混合地图：卫星图像+标注，支持地球视图
         case .imagery:
             return .imagery(elevation: .realistic) // 卫星图像：纯卫星图像，无标注
         }
@@ -54,7 +61,7 @@ enum MapStyle: String, CaseIterable {
 
 struct MapView: View {
     @Query private var destinations: [TravelDestination]
-    @Query private var trips: [TravelTrip]
+    @Query(sort: \TravelTrip.startDate, order: .reverse) private var trips: [TravelTrip]
     @Environment(\.colorScheme) private var colorScheme // 检测颜色模式
     @StateObject private var languageManager = LanguageManager.shared
     @StateObject private var countryManager = CountryManager.shared
@@ -63,11 +70,18 @@ struct MapView: View {
     @State private var showingAddDestination = false
     @State private var mapCameraPosition: MapCameraPosition = .automatic
     @State private var visibleRegion: MKCoordinateRegion?
-    @State private var showTripConnections = true // 是否显示旅程连线
+    @State private var showTripConnections = false // 是否显示旅程连线
     @State private var updateTimer: Timer? // 用于防抖
     @State private var pendingRegion: MKCoordinateRegion? // 待处理的区域更新
     @State private var mapSelection: TravelDestination? // 地图的选择状态
     @StateObject private var locationManager = LocationManager()
+    @StateObject private var routeManager = RouteManager.shared
+    // 详情弹窗（由父级统一展示，避免子视图被移除导致弹窗不出现）
+    @State private var showingDestinationDetail = false
+    @State private var detailDestinationForSheet: TravelDestination?
+    
+    // 存储每个旅程的路线数据 [tripId: [routeIndex: route]]
+    @State private var tripRoutes: [UUID: [MKRoute]] = [:]
     
     // 性能优化：缓存聚合结果
     @State private var cachedClusterAnnotations: [ClusterAnnotation] = []
@@ -76,20 +90,15 @@ struct MapView: View {
     @State private var lastCalculationTime: Date = Date()
     
     // 地图样式相关状态
-    @State private var currentMapStyle: MapStyle = .standard
+    @State private var currentMapStyle: MapStyle = .muted
     @State private var showingMapStylePicker = false
     
     // 长按添加目的地相关状态
     @State private var longPressLocation: CLLocationCoordinate2D?
     @State private var isGeocodingLocation = false
     @State private var prefilledLocationData: (location: MKMapItem, name: String, country: String, category: String)?
+    @State private var isWaitingForLocation = false // 等待定位状态（用于打卡功能）
     
-    // 打卡功能相关状态
-    @State private var isCheckingIn = false
-    @State private var checkInLocation: CLLocationCoordinate2D?
-    
-    // 缓存用户国家信息
-    @State private var userCountryRegion: MKCoordinateRegion?
     @State private var refreshID = UUID()
     
     // 回忆泡泡相关状态
@@ -98,14 +107,20 @@ struct MapView: View {
     @State private var bubbleAnimationOffset: CGFloat = 0
     @State private var bubbleScale: CGFloat = 0
     
-    // 右上角图标折叠/展开状态
-    @State private var isTopRightIconsCollapsed = true
-    
     // 搜索相关状态
     @State private var searchText = ""
     @State private var searchResults: [MKMapItem] = []
     @State private var isSearching = false
     @State private var showSearchResults = false
+    @FocusState private var isSearchFieldFocused: Bool
+    
+    // 线路卡片相关状态
+    @State private var showRouteCards = false
+    @State private var selectedTripId: UUID? // 当前选中的旅程ID（用于显示连线和地图跟随）
+    @State private var cardSwitchTask: DispatchWorkItem? // 用于取消之前的切换任务
+    @State private var isScrolling = false // 是否正在滚动
+    @State private var snapTask: DispatchWorkItem? // 磁吸任务
+    var autoShowRouteCards: Bool = false // 是否自动显示线路卡片
     
     // 简化版中国国界多边形（近似，覆盖中国大陆与海南一带；仅作兜底使用）
     private static let chinaMainlandPolygon: [CLLocationCoordinate2D] = [
@@ -181,24 +196,39 @@ struct MapView: View {
     // 根据地图样式返回图标颜色
     private var iconColor: Color {
         switch currentMapStyle {
-        case .standard:
+        case .standard, .muted:
             return .blue
         case .hybrid, .imagery:
             return .white
         }
     }
     
+    // 判断是否是深色地图样式
+    private var isDarkMapStyle: Bool {
+        switch currentMapStyle {
+        case .standard, .muted:
+            return false
+        case .hybrid, .imagery:
+            return true
+        }
+    }
+    
     var body: some View {
         ZStack {
             mapLayer
-            dismissOverlay
             previewCard
+            routeCardsOverlay
             memoryBubbleOverlay
             floatingButtons
-            collapseOverlay
+        }
+        .sheet(isPresented: $showingDestinationDetail) {
+            if let dest = detailDestinationForSheet {
+                DestinationDetailView(destination: dest)
+            }
         }
         .sheet(isPresented: $showingAddDestination, onDismiss: {
             prefilledLocationData = nil
+            isWaitingForLocation = false
         }) {
             destinationSheet
         }
@@ -206,16 +236,48 @@ struct MapView: View {
             mapStylePicker
         }
         .onAppear {
-            preloadUserLocation()
+            // 地图视图加载完成
+            // 如果设置了自动显示线路卡片，则自动显示
+            if autoShowRouteCards {
+                // 找到第一个有效的旅程（至少2个地点）- 使用排序后的列表
+                let validTrips = trips.filter { trip in
+                    if let destinations = trip.destinations,
+                       !destinations.isEmpty,
+                       destinations.count >= 2 {
+                        return true
+                    }
+                    return false
+                }
+                
+                if let firstValidTrip = validTrips.first,
+                   let tripDestinations = firstValidTrip.destinations?.sorted(by: { $0.visitDate < $1.visitDate }),
+                   tripDestinations.count >= 2 {
+                    
+                    // 1. 设置选中的旅程ID
+                    selectedTripId = firstValidTrip.id
+                    
+                    // 2. 缩放地图到该旅程的范围
+                    zoomToTripDestinations(tripDestinations)
+                    
+                    // 3. 开启地点连线显示并立即计算路线
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        showTripConnections = true
+                    }
+                    // 立即开始计算路线，不等待 onChange 触发
+                    calculateRoutesForAllTrips()
+                    
+                    // 4. 延迟一小段时间后显示路线卡片，确保地图缩放完成
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            showRouteCards = true
+                        }
+                    }
+                }
+            }
         }
         .onDisappear {
             updateTimer?.invalidate()
             updateTimer = nil
-        }
-        .onChange(of: locationManager.lastKnownLocation?.latitude) { _, _ in
-            if let location = locationManager.lastKnownLocation, userCountryRegion == nil {
-                precalculateUserCountryRegion(location: location)
-            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { _ in
             // 语言变化时刷新界面
@@ -224,12 +286,36 @@ struct MapView: View {
         .onChange(of: destinations.count) { _, _ in
             // 地点数量变化时清除缓存
             clearClusterCache()
+            // 如果显示连线，重新计算路线
+            if showTripConnections {
+                calculateRoutesForAllTrips()
+            }
         }
         .onChange(of: currentZoomLevelEnum) { oldValue, newValue in
             // 缩放级别变化时清除缓存，触发重新计算
             if oldValue != newValue {
                 print("📏 缩放级别变化: \(oldValue.description) → \(newValue.description)")
                 clearClusterCache()
+            }
+        }
+        .onChange(of: showTripConnections) { _, newValue in
+            if newValue {
+                // 显示连线时计算路线
+                calculateRoutesForAllTrips()
+            }
+        }
+        .onChange(of: trips.count) { _, _ in
+            // 旅程变化时重新计算路线
+            if showTripConnections {
+                calculateRoutesForAllTrips()
+            }
+        }
+        .onChange(of: locationManager.lastKnownLocation) { oldValue, newValue in
+            // 监听位置更新：如果正在等待位置（打卡功能），则开始反向地理编码
+            if isWaitingForLocation, let newLocation = newValue {
+                print("✅ 位置更新，开始打卡反向地理编码: (\(newLocation.latitude), \(newLocation.longitude))")
+                isWaitingForLocation = false
+                reverseGeocodeLocation(coordinate: newLocation)
             }
         }
         .id(refreshID)
@@ -241,6 +327,7 @@ struct MapView: View {
             Map(position: $mapCameraPosition, selection: $mapSelection) {
                 tripConnections
                 clusterMarkers
+                userLocationMarker
             }
             .mapStyle(currentMapStyle.toMapKitStyle())
             .onMapCameraChange(frequency: .continuous) { context in
@@ -265,12 +352,57 @@ struct MapView: View {
     // 旅程连线
     @MapContentBuilder
     private var tripConnections: some MapContent {
-        if showTripConnections {
-            ForEach(trips) { trip in
-                if let destinations = trip.destinations?.sorted(by: { $0.visitDate < $1.visitDate }),
-                   destinations.count > 1 {
-                    MapPolyline(coordinates: destinations.map { $0.coordinate })
-                        .stroke(tripConnectionColor, style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round, dash: [1, 2]))
+        if !showTripConnections {
+            // 不显示连线时返回空内容
+        } else {
+            // 如果设置了选中的旅程ID，只显示该旅程的连线；否则显示所有旅程的连线
+            let tripsToShow = selectedTripId != nil 
+                ? trips.filter { $0.id == selectedTripId }
+                : trips
+            
+            ForEach(tripsToShow) { trip in
+                if let tripDestinations = trip.destinations?.sorted(by: { $0.visitDate < $1.visitDate }),
+                   tripDestinations.count > 1 {
+                    let visibleDestinations: [TravelDestination] = tripDestinations
+                    
+                    if visibleDestinations.count > 1 {
+                        // 如果有计算好的路线，显示实际路线
+                        if let routes = tripRoutes[trip.id], !routes.isEmpty {
+                            ForEach(Array(routes.enumerated()), id: \.offset) { index, route in
+                                // 检查起点和终点是否在同一个聚合中
+                                let sourceDestination = visibleDestinations[index]
+                                let destinationDestination = visibleDestinations[index + 1]
+                                
+                                // 如果不在同一个聚合中，才显示路线
+                                if !areDestinationsInSameCluster(sourceDestination, destinationDestination) {
+                                    // 路线
+                                    MapPolyline(route.polyline)
+                                        .stroke(tripConnectionColor, style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                                    
+                                    // 距离标注
+                                    if let midpoint = midpointOfPolyline(route.polyline) {
+                                        Annotation("", coordinate: midpoint) {
+                                            RouteDistanceLabel(distance: route.distance)
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            // 如果没有路线，先显示直线作为占位，但也要检查聚合
+                            ForEach(Array(visibleDestinations.enumerated()), id: \.offset) { index, _ in
+                                if index < visibleDestinations.count - 1 {
+                                    let source = visibleDestinations[index]
+                                    let destination = visibleDestinations[index + 1]
+                                    
+                                    // 如果不在同一个聚合中，才显示占位线
+                                    if !areDestinationsInSameCluster(source, destination) {
+                                        MapPolyline(coordinates: [source.coordinate, destination.coordinate])
+                                            .stroke(tripConnectionColor.opacity(0.3), style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round, dash: [1, 2]))
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -297,6 +429,16 @@ struct MapView: View {
                         }
                     }
                 }
+            }
+        }
+    }
+    
+    // 用户位置标记
+    @MapContentBuilder
+    private var userLocationMarker: some MapContent {
+        if let userLocation = locationManager.lastKnownLocation {
+            Annotation("", coordinate: userLocation) {
+                UserLocationAnnotationView()
             }
         }
     }
@@ -335,33 +477,42 @@ struct MapView: View {
         }
     }
     
-    // 折叠覆盖层 - 点击外部区域自动折叠图标
-    @ViewBuilder
-    private var collapseOverlay: some View {
-        if !isTopRightIconsCollapsed {
-            Color.clear
-                .contentShape(Rectangle())
-                .ignoresSafeArea()
-                .onTapGesture {
-                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                        isTopRightIconsCollapsed = true
-                    }
-                }
-                .zIndex(2) // 确保在其他内容之上，但在浮动按钮之下
-        }
-    }
-    
     // 预览卡片
     private var previewCard: some View {
         VStack {
             Spacer()
             if let selected = selectedDestination {
-                DestinationPreviewCard(destination: selected) {
+                DestinationPreviewCard(destination: selected, onDelete: {
                     // 删除回调：关闭弹窗
                     withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
                         selectedDestination = nil
                         mapSelection = nil
                     }
+                }, onOpenDetail: {
+                    // 父级弹出详情页，并隐藏小弹窗
+                    detailDestinationForSheet = selected
+                    showingDestinationDetail = true
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                        selectedDestination = nil
+                        mapSelection = nil
+                    }
+                })
+                .overlay(alignment: .topTrailing) {
+                    Button {
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                            selectedDestination = nil
+                            mapSelection = nil
+                        }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.secondary)
+                            .padding(6)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(8)
                 }
                 .padding()
                 .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -370,135 +521,425 @@ struct MapView: View {
         .zIndex(2)
     }
     
+    // 线路卡片覆盖层
+    private var routeCardsOverlay: some View {
+        VStack {
+            Spacer()
+            if showRouteCards {
+                // 获取有效的旅程列表（用于显示卡片）
+                let validTrips = trips.filter { trip in
+                    if let destinations = trip.destinations,
+                       !destinations.isEmpty,
+                       destinations.count >= 2 {
+                        return true
+                    }
+                    return false
+                }
+                
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 12) {
+                            ForEach(Array(validTrips.enumerated()), id: \.element.id) { index, trip in
+                                if let tripDestinations = trip.destinations,
+                                   !tripDestinations.isEmpty,
+                                   tripDestinations.count >= 2 {
+                                    RouteCard(
+                                        trip: trip,
+                                        destinations: tripDestinations.sorted(by: { $0.visitDate < $1.visitDate })
+                                    )
+                                    .id(trip.id)
+                                    .background(
+                                        GeometryReader { geometry in
+                                            Color.clear
+                                                .preference(
+                                                    key: ScrollOffsetPreferenceKey.self,
+                                                    value: [ScrollOffsetInfo(
+                                                        tripId: trip.id,
+                                                        offset: geometry.frame(in: .named("scroll")).minX
+                                                    )]
+                                                )
+                                        }
+                                    )
+                                    .onAppear {
+                                        // 当卡片出现时，如果这是第一个卡片且没有选中，则选中它
+                                        if index == 0 && selectedTripId == nil {
+                                            handleCardAppear(trip: trip, destinations: tripDestinations.sorted(by: { $0.visitDate < $1.visitDate }))
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                    .coordinateSpace(name: "scroll")
+                    .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offsets in
+                        // 取消之前的任务
+                        cardSwitchTask?.cancel()
+                        snapTask?.cancel()
+                        
+                        // 创建新的切换任务（防抖）
+                        let switchTask = DispatchWorkItem {
+                            let (closestId, _) = findClosestCardToCenter(offsets: offsets)
+                            
+                            // 如果找到最接近中心的卡片，且不是当前选中的，则切换
+                            if let closestId = closestId,
+                               closestId != selectedTripId,
+                               let trip = validTrips.first(where: { $0.id == closestId }),
+                               let destinations = trip.destinations?.sorted(by: { $0.visitDate < $1.visitDate }),
+                               destinations.count >= 2 {
+                                handleCardAppear(trip: trip, destinations: destinations)
+                            }
+                        }
+                        
+                        // 创建磁吸任务（滚动停止后自动居中）- 使用更短的延迟实现丝滑效果
+                        let snapTaskWorkItem = DispatchWorkItem {
+                            let (closestId, minDistance) = findClosestCardToCenter(offsets: offsets)
+                            
+                            // 如果找到最接近中心的卡片，且距离中心超过阈值，则自动吸附到中心
+                            if let closestId = closestId,
+                               minDistance > 5 { // 降低阈值到5点，让吸附更敏感、更及时
+                                // 使用更流畅的弹簧动画实现Q弹效果
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8, blendDuration: 0.15)) {
+                                    proxy.scrollTo(closestId, anchor: .center)
+                                }
+                                
+                                // 更新选中状态
+                                if closestId != selectedTripId,
+                                   let trip = validTrips.first(where: { $0.id == closestId }),
+                                   let destinations = trip.destinations?.sorted(by: { $0.visitDate < $1.visitDate }),
+                                   destinations.count >= 2 {
+                                    handleCardAppear(trip: trip, destinations: destinations)
+                                }
+                            }
+                            
+                            // 标记滚动结束
+                            isScrolling = false
+                        }
+                        
+                        // 保存任务引用
+                        cardSwitchTask = switchTask
+                        self.snapTask = snapTaskWorkItem
+                        
+                        // 延迟执行切换任务（防抖：避免快速滚动时频繁切换）
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: switchTask)
+                        
+                        // 延迟执行磁吸任务（使用很短的延迟实现丝滑效果，接近即时响应）
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08, execute: snapTaskWorkItem)
+                    }
+                    .padding(.bottom, 20)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .onAppear {
+                        // 初始显示时，定位到第一个卡片并居中
+                        if let firstTrip = validTrips.first {
+                            // 确保第一个旅程的路线已计算
+                            if tripRoutes[firstTrip.id] == nil || tripRoutes[firstTrip.id]?.isEmpty == true,
+                               let destinations = firstTrip.destinations?.sorted(by: { $0.visitDate < $1.visitDate }),
+                               destinations.count >= 2 {
+                                let coordinates = destinations.map { $0.coordinate }
+                                Task {
+                                    await calculateRoutesForTrip(tripId: firstTrip.id, coordinates: coordinates)
+                                }
+                            }
+                            
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                                    proxy.scrollTo(firstTrip.id, anchor: .center)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .zIndex(3)
+    }
+    
+    // 处理卡片出现（切换地图视图和连线）
+    private func handleCardAppear(trip: TravelTrip, destinations: [TravelDestination]) {
+        // 如果已经是当前选中的旅程，直接返回
+        if selectedTripId == trip.id {
+            return
+        }
+        
+        print("🔄 切换到旅程: \(trip.name)，包含 \(destinations.count) 个地点")
+        
+        // 更新选中的旅程ID
+        selectedTripId = trip.id
+        
+        // 缩放地图到该旅程的范围
+        zoomToTripDestinations(destinations)
+        
+        // 确保该旅程的路线已计算（如果还没有计算）
+        if tripRoutes[trip.id] == nil || tripRoutes[trip.id]?.isEmpty == true {
+            let coordinates = destinations.map { $0.coordinate }
+            Task {
+                await calculateRoutesForTrip(tripId: trip.id, coordinates: coordinates)
+            }
+        }
+    }
+    
+    // 查找最接近屏幕中心的卡片
+    private func findClosestCardToCenter(offsets: [ScrollOffsetInfo]) -> (UUID?, CGFloat) {
+        let screenWidth = UIScreen.main.bounds.width
+        let centerX = screenWidth / 2
+        let cardWidth: CGFloat = 320 // 卡片宽度
+        let cardCenterOffset = cardWidth / 2 // 卡片中心偏移量
+        
+        var closestTripId: UUID?
+        var minDistance: CGFloat = .infinity
+        
+        for offsetInfo in offsets {
+            // 计算卡片中心距离屏幕中心的距离
+            // 卡片中心 = offset + cardCenterOffset
+            let cardCenterX = offsetInfo.offset + cardCenterOffset
+            let distance = abs(cardCenterX - centerX)
+            
+            // 只考虑在屏幕可见范围内的卡片（offset 在 -200 到 screenWidth+200 之间）
+            if offsetInfo.offset > -200 && offsetInfo.offset < screenWidth + 200 {
+                if distance < minDistance {
+                    minDistance = distance
+                    closestTripId = offsetInfo.tripId
+                }
+            }
+        }
+        
+        return (closestTripId, minDistance)
+    }
+    
     // 浮动按钮
     private var floatingButtons: some View {
         ZStack {
-            // 左上角：折叠/展开按钮和功能按钮组
-            VStack {
-                HStack {
-                    VStack(spacing: 12) {
-                        // 折叠/展开按钮
-                        Button {
-                            withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
-                                isTopRightIconsCollapsed.toggle()
-                            }
-                        } label: {
-                            Image(systemName: isTopRightIconsCollapsed ? "chevron.down.circle.fill" : "chevron.up.circle.fill")
-                                .font(.system(size: 28))
-                                .foregroundColor(iconColor)
-                        }
-                        .buttonStyle(MapFloatingButtonStyle(mapStyle: currentMapStyle))
-                        
-                        // 功能按钮组（可折叠）
-                        if !isTopRightIconsCollapsed {
-                            Button {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    showTripConnections.toggle()
-                                }
-                            } label: {
-                                Image(systemName: "point.3.connected.trianglepath.dotted")
-                                    .font(.system(size: 24))
-                                    .foregroundColor(showTripConnections ? iconColor : .gray)
-                            }
-                            .buttonStyle(MapFloatingButtonStyle(mapStyle: currentMapStyle))
-                            .transition(.scale.combined(with: .opacity))
-                            
-                            Button {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    showingMapStylePicker.toggle()
-                                }
-                            } label: {
-                                Image(systemName: currentMapStyle.iconName)
-                                    .font(.system(size: 24))
-                                    .foregroundColor(iconColor)
-                            }
-                            .buttonStyle(MapFloatingButtonStyle(mapStyle: currentMapStyle))
-                            .transition(.scale.combined(with: .opacity))
-                        }
-                    }
-                    .padding(.leading)
-                    .padding(.top)
-                    
-                    Spacer()
-                }
-                Spacer()
-            }
-            
-            // 顶部中央：搜索框
-            VStack {
-                HStack {
-                    Spacer()
-                    
+            // 搜索框（点击搜索按钮时显示）
+            if showSearchResults {
+                VStack {
                     searchBox
-                        .padding(.horizontal, 60) // 增加左右边距，避免与按钮重叠
-                    
+                        .padding(.horizontal, 60)
+                        .padding(.top, 15)
                     Spacer()
                 }
-                .padding(.top, 15) // 调整顶部边距，使搜索框中心线与按钮中心线对齐
-                
-                Spacer()
             }
             
-            // 右上角：拖动打卡按钮
-            VStack {
-                HStack {
-                    Spacer()
-                    
-                    DragCheckInButton(
-                        isCheckingIn: $isCheckingIn,
-                        onCheckIn: {
-                            handleCheckIn()
-                        },
-                        normalImageName: "ImageDaka",
-                        successImageName: "ImageDaka",
-                        mapStyle: currentMapStyle
-                    )
-                    .padding(.trailing)
-                    .padding(.top)
-                }
-                Spacer()
-            }
-            
-            // 右下角：回忆泡泡按钮和定位到国家按钮
+            // 右下角：TabView 按钮组
             VStack {
                 Spacer()
                 HStack {
                     Spacer()
                     
-                    VStack(spacing: 12) {
-                        // 回忆泡泡按钮
-                        Button {
-                            triggerMemoryBubble()
-                        } label: {
-                            CustomBubbleIcon(iconColor: iconColor)
-                                .frame(width: 28, height: 28)
-                        }
-                        .buttonStyle(MapFloatingButtonStyle(mapStyle: currentMapStyle))
-                        
-                        // 定位到国家按钮
-                        Button {
-                            withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
-                                centerMapOnSelectedCountry()
-                                selectedDestination = nil
-                                mapSelection = nil
-                            }
-                        } label: {
-                            Image(systemName: "flag.fill")
-                                .font(.system(size: 24))
-                                .foregroundColor(iconColor)
-                        }
-                        .buttonStyle(MapFloatingButtonStyle(mapStyle: currentMapStyle))
+                    // 当地点预览卡片出现时，或线路卡片显示时，隐藏按钮容器
+                    if selectedDestination == nil && !showRouteCards {
+                    bottomRightTabView
+                        .padding(.trailing)
+                            .padding(.bottom, 20)
+                            .transition(.opacity)
                     }
-                    .padding(.trailing)
-                    .padding(.bottom, selectedDestination != nil ? 140 : 20) // 当预览卡片出现时，增加底部边距
-                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: selectedDestination != nil)
                 }
             }
         }
         .zIndex(4) // 确保浮动按钮在折叠覆盖层之上
     }
     
-    // 搜索框
+    // 右下角按钮组：参考iPhone地图应用的紧凑样式，支持滑动
+    private var bottomRightTabView: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 8) {
+                // 定位按钮
+                buttonGroupItem(
+                    icon: "location.fill",
+                    title: "定位",
+                    isActive: false,
+                    action: {
+                        centerMapOnCurrentLocation()
+                    }
+                )
+                
+                // 打卡按钮
+                buttonGroupItem(
+                    icon: "DakaIcon",
+                    title: "打卡",
+                    isActive: false,
+                    action: {
+                        handleCheckIn()
+                    }
+                )
+                
+                // 回忆泡泡按钮
+                buttonGroupItem(
+                    icon: "PaopaoIcon",
+                    title: "回忆",
+                    isActive: false,
+                    action: {
+                        triggerMemoryBubble()
+                    }
+                )
+                
+                // 行程连接按钮
+                buttonGroupItem(
+                    icon: "LinkLineIcon",
+                    title: "连接",
+                    isActive: showTripConnections,
+                    action: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            showTripConnections.toggle()
+                        }
+                    }
+                )
+                
+                // 搜索按钮
+                buttonGroupItem(
+                    icon: "magnifyingglass",
+                    title: "搜索",
+                    isActive: showSearchResults,
+                    action: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            if showSearchResults {
+                                // 如果搜索已显示，则关闭
+                                searchText = ""
+                                searchResults = []
+                                showSearchResults = false
+                                isSearchFieldFocused = false
+                            } else {
+                                // 如果搜索未显示，则显示搜索框
+                                showSearchResults = true
+                                // 延迟一小段时间后激活焦点，确保搜索框已显示
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    isSearchFieldFocused = true
+                                }
+                            }
+                        }
+                    }
+                )
+                
+                // 地图样式切换按钮
+                buttonGroupItem(
+                    icon: currentMapStyle.iconName,
+                    title: "样式",
+                    isActive: false,
+                    action: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            showingMapStylePicker.toggle()
+                        }
+                    }
+                )
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 4)
+        }
+        .frame(height: 200) // 调整容器高度为200
+        .background(
+            containerBackgroundMaterial
+                .overlay(
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .stroke(Color.white.opacity(0.5), lineWidth: 1)
+                )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 2)
+        .shadow(color: .black.opacity(0.05), radius: 3, x: 0, y: 1)
+    }
+    
+    // 按钮组中的单个按钮项（参考iPhone地图应用样式）
+    private func buttonGroupItem(icon: String, title: String, isActive: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 0) {
+                ZStack {
+                    Group {
+                        // 判断是系统图标还是自定义图片资源
+                        if icon == "PaopaoIcon" {
+                            // PaopaoIcon：在深色地图模式下显示为白色
+                            Image(icon)
+                                .resizable()
+                                .renderingMode(.template)
+                                .scaledToFit()
+                                .foregroundColor(buttonIconColor(isActive: isActive))
+                                .frame(width: 22, height: 22)
+                        } else if icon == "LinkLineIcon" {
+                            // LinkLineIcon：在深色地图模式下显示为白色
+                            Image(icon)
+                                .resizable()
+                                .renderingMode(.template)
+                                .scaledToFit()
+                                .foregroundColor(buttonIconColor(isActive: isActive))
+                                .frame(width: 24, height: 24)
+                        } else if icon == "DakaIcon" {
+                            // DakaIcon：打卡按钮自定义图标
+                            // 浅色模式显示实际颜色，系统深色模式显示DakaIcon(D)
+                            Image((colorScheme == .dark) ? "DakaIcon(D)" : icon)
+                                .resizable()
+                                .renderingMode(.original)
+                                .scaledToFit()
+                                .frame(width: 24, height: 24)
+                        } else {
+                            // 系统图标
+                            Image(systemName: icon)
+                                .font(.system(size: 24, weight: isActive ? .semibold : .regular))
+                                .foregroundColor(buttonIconColor(isActive: isActive))
+                        }
+                    }
+                }
+                .frame(width: 44, height: 44)
+                .background(
+                    Group {
+                        if isActive {
+                            Circle()
+                                .fill(activeButtonBackground)
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.white.opacity(isDarkMapStyle ? 0.3 : 0.2), lineWidth: 1.5)
+                                )
+                        }
+                    }
+                )
+                Text(title)
+                    .font(.system(size: 11))
+                    .foregroundColor(isDarkMapStyle ? .white.opacity(0.9) : .primary.opacity(0.9))
+                    .frame(height: 14)
+                    .padding(.top, -4)
+            }
+        }
+        .buttonStyle(.plain)
+    }
+    
+    // 激活状态的按钮背景（深色地图模式使用更明显的背景）
+    private var activeButtonBackground: Color {
+        if isDarkMapStyle {
+            // 深色地图模式：使用灰色背景，提高辨识度
+            return Color.white.opacity(0.25)
+        } else {
+            // 浅色地图模式：使用浅灰色背景
+            return Color.gray.opacity(0.15)
+        }
+    }
+    
+    // 根据地图样式和激活状态返回按钮图标颜色
+    private func buttonIconColor(isActive: Bool) -> Color {
+        if isActive {
+            // 激活状态：深色地图模式使用白色，浅色地图模式使用黑色
+            return isDarkMapStyle ? .white : .black
+        } else {
+            // 非激活状态：深色地图模式下使用白色/浅灰色，浅色地图模式下使用深色
+            return isDarkMapStyle ? .white.opacity(0.9) : .primary
+        }
+    }
+    
+    // 根据地图样式返回容器背景材质（深色地图模式透明度为0.1）
+    @ViewBuilder
+    private var containerBackgroundMaterial: some View {
+        if isDarkMapStyle {
+            // 深色地图模式：使用黑色半透明背景（透明度0.1），叠加超薄材质
+            ZStack {
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .fill(Color.black.opacity(0.1))
+            }
+        } else {
+            // 浅色地图模式：使用标准材质
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(.ultraThinMaterial)
+        }
+    }
+    
+    // 搜索框（仅在showSearchResults为true时显示）
     private var searchBox: some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
@@ -509,26 +950,27 @@ struct MapView: View {
                 TextField(searchPlaceholderText, text: $searchText)
                     .textFieldStyle(PlainTextFieldStyle())
                     .font(.system(size: 16))
+                    .focused($isSearchFieldFocused)
                     .onSubmit {
                         performSearch()
                     }
                     .onChange(of: searchText) { _, newValue in
                         if newValue.isEmpty {
                             searchResults = []
-                            showSearchResults = false
+                        } else {
+                            performSearch()
                         }
                     }
                 
-                if !searchText.isEmpty {
-                    Button {
-                        searchText = ""
-                        searchResults = []
-                        showSearchResults = false
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
-                            .font(.system(size: 15))
-                    }
+                Button {
+                    searchText = ""
+                    searchResults = []
+                    showSearchResults = false
+                    isSearchFieldFocused = false
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                        .font(.system(size: 15))
                 }
             }
             .padding(.horizontal, 16)
@@ -544,7 +986,7 @@ struct MapView: View {
             .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
             
             // 搜索结果列表
-            if showSearchResults && !searchResults.isEmpty {
+            if !searchResults.isEmpty {
                 VStack(spacing: 0) {
                     ForEach(Array(searchResults.prefix(5).enumerated()), id: \.offset) { index, result in
                         SearchResultRow(mapItem: result) {
@@ -574,13 +1016,12 @@ struct MapView: View {
     // 地图样式选择器
     private var mapStylePicker: some View {
         NavigationView {
-            VStack(spacing: 20) {
+            VStack(spacing: 16) {
                 Text("map_style_title".localized)
-                    .font(.title2)
+                    .font(.title3)
                     .fontWeight(.bold)
-                    .padding(.top)
                 
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 16) {
+                HStack(spacing: 12) {
                     ForEach(MapStyle.allCases, id: \.self) { style in
                         MapStyleCard(
                             style: style,
@@ -594,9 +1035,8 @@ struct MapView: View {
                     }
                 }
                 .padding(.horizontal)
-                
-                Spacer()
             }
+            .padding(.vertical, 20)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -606,7 +1046,7 @@ struct MapView: View {
                 }
             }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.height(180)])
     }
     
     // 目的地添加表单
@@ -714,7 +1154,10 @@ struct MapView: View {
     // 计算聚合后的标注点（按级别触发计算）
     private var clusterAnnotations: [ClusterAnnotation] {
         let currentZoomEnum = currentZoomLevelEnum
-        let currentCount = destinations.count
+        
+        let visibleDestinations: [TravelDestination] = destinations
+        
+        let currentCount = visibleDestinations.count
         
         // 检查缓存是否有效：只在缩放级别真正改变时才重新计算
         if !cachedClusterAnnotations.isEmpty &&
@@ -731,10 +1174,10 @@ struct MapView: View {
         
         // 如果聚合距离为0，返回所有单独的点
         if distance == 0 {
-            clusters = destinations.map { ClusterAnnotation(destinations: [$0]) }
+            clusters = visibleDestinations.map { ClusterAnnotation(destinations: [$0]) }
         } else {
             // 优化的聚合算法：减少重复计算
-            clusters = calculateClustersOptimized(distance: distance)
+            clusters = calculateClustersOptimized(distance: distance, from: visibleDestinations)
         }
         
         // 更新缓存
@@ -751,7 +1194,7 @@ struct MapView: View {
     }
     
     // 优化的聚合计算算法
-    private func calculateClustersOptimized(distance: Double) -> [ClusterAnnotation] {
+    private func calculateClustersOptimized(distance: Double, from destinations: [TravelDestination]) -> [ClusterAnnotation] {
         var clusters: [ClusterAnnotation] = []
         var processed: Set<UUID> = []
         
@@ -797,6 +1240,53 @@ struct MapView: View {
         print("🧹 已清除聚合缓存")
     }
     
+    // 为所有旅程计算路线
+    private func calculateRoutesForAllTrips() {
+        print("🗺️ 开始计算所有旅程的路线...")
+        
+        for trip in trips {
+            guard let tripDestinations = trip.destinations?.sorted(by: { $0.visitDate < $1.visitDate }),
+                  tripDestinations.count >= 2 else {
+                continue
+            }
+            
+            let coordinates = tripDestinations.map { $0.coordinate }
+            
+            // 异步计算路线
+            Task {
+                await calculateRoutesForTrip(tripId: trip.id, coordinates: coordinates)
+            }
+        }
+    }
+    
+    // 为单个旅程计算路线
+    private func calculateRoutesForTrip(tripId: UUID, coordinates: [CLLocationCoordinate2D]) async {
+        guard coordinates.count >= 2 else { return }
+        
+        var calculatedRoutes: [MKRoute] = []
+        
+        // 计算每两个连续地点之间的路线
+        for i in 0..<coordinates.count - 1 {
+            let source = coordinates[i]
+            let destination = coordinates[i + 1]
+            
+            await withCheckedContinuation { continuation in
+                routeManager.calculateRoute(from: source, to: destination) { route in
+                    if let route = route {
+                        calculatedRoutes.append(route)
+                    }
+                    continuation.resume()
+                }
+            }
+        }
+        
+        // 更新主线程的状态
+        await MainActor.run {
+            tripRoutes[tripId] = calculatedRoutes
+            print("✅ 旅程 \(tripId.uuidString.prefix(8)) 的路线计算完成，共 \(calculatedRoutes.count) 段路线")
+        }
+    }
+    
     // 处理长按手势
     private func handleLongPress(at coordinate: CLLocationCoordinate2D) {
         print("🗺️ 长按地图位置: (\(coordinate.latitude), \(coordinate.longitude))")
@@ -807,6 +1297,54 @@ struct MapView: View {
         
         // 执行反向地理编码
         reverseGeocodeLocation(coordinate: coordinate)
+    }
+    
+    // 处理打卡功能：使用用户当前位置添加目的地
+    private func handleCheckIn() {
+        print("📍 点击打卡按钮")
+        
+        // 检查是否有已知位置
+        if let userLocation = locationManager.lastKnownLocation {
+            print("✅ 使用已知位置进行打卡: (\(userLocation.latitude), \(userLocation.longitude))")
+            
+            // 立即显示添加目的地界面，显示加载状态
+            showingAddDestination = true
+            
+            // 执行反向地理编码
+            reverseGeocodeLocation(coordinate: userLocation)
+        } else {
+            // 如果没有位置信息，先请求定位
+            print("⏳ 没有已知位置，请求定位中...")
+            
+            // 立即显示添加目的地界面，显示加载状态
+            showingAddDestination = true
+            isGeocodingLocation = true
+            isWaitingForLocation = true
+            
+            // 请求位置更新
+            locationManager.requestLocation()
+            
+            // 使用定时器等待定位更新（等待最多2秒）
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                // 如果还在等待状态，说明定位超时
+                if self.isWaitingForLocation {
+                    print("⏰ 定位超时，使用备用方案")
+                    self.fallbackCheckInWithoutLocation()
+                }
+            }
+        }
+    }
+    
+    // 打卡备用方案：无法获取位置时的处理
+    private func fallbackCheckInWithoutLocation() {
+        isGeocodingLocation = false
+        isWaitingForLocation = false
+        print("❌ 无法获取当前位置，打卡功能需要定位权限")
+        
+        // 关闭弹窗，用户可以重新尝试或使用长按功能
+        showingAddDestination = false
+        
+        // 注意：如果需要，可以在这里添加一个 Alert 提示用户需要定位权限
     }
     
     // 反向地理编码：获取城市和国家信息（带多重回退）
@@ -957,27 +1495,41 @@ struct MapView: View {
         }
     }
     
-    // 预加载用户位置
-    private func preloadUserLocation() {
-        locationManager.requestLocation()
+    // 缩放到旅程的所有地点范围
+    private func zoomToTripDestinations(_ destinations: [TravelDestination]) {
+        guard !destinations.isEmpty else { return }
+        
+        let coordinates = destinations.map { $0.coordinate }
+        
+        // 计算边界
+        let latitudes = coordinates.map { $0.latitude }
+        let longitudes = coordinates.map { $0.longitude }
+        
+        let minLat = latitudes.min() ?? 0
+        let maxLat = latitudes.max() ?? 0
+        let minLon = longitudes.min() ?? 0
+        let maxLon = longitudes.max() ?? 0
+        
+        // 计算中心点
+        let centerLat = (minLat + maxLat) / 2
+        let centerLon = (minLon + maxLon) / 2
+        
+        // 计算跨度，添加一些边距（1.5倍）以确保所有地点都在视野内
+        let latSpan = max((maxLat - minLat) * 1.5, 0.01) // 至少0.01度
+        let lonSpan = max((maxLon - minLon) * 1.5, 0.01)
+        
+        let region = MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: centerLat, longitude: centerLon),
+            span: MKCoordinateSpan(latitudeDelta: latSpan, longitudeDelta: lonSpan)
+        )
+        
+        withAnimation(.easeInOut(duration: 0.8)) {
+            mapCameraPosition = .region(region)
+        }
+        
+        print("🗺️ 地图已缩放到旅程范围，包含 \(destinations.count) 个地点")
     }
     
-    // 预先计算用户国家区域（异步，不阻塞UI）
-    private func precalculateUserCountryRegion(location: CLLocationCoordinate2D) {
-        let geocoder = CLGeocoder()
-        let clLocation = CLLocation(latitude: location.latitude, longitude: location.longitude)
-        
-        geocoder.reverseGeocodeLocation(clLocation) { placemarks, error in
-            if let placemark = placemarks?.first {
-                let countryCode = placemark.isoCountryCode ?? ""
-                
-                DispatchQueue.main.async {
-                    self.userCountryRegion = self.getRegionForCountry(countryCode: countryCode, userLocation: location)
-                    print("📍 " + "preloaded_country_region".localized(with: placemark.country ?? "unknown_country".localized, countryCode))
-                }
-            }
-        }
-    }
     
     // 根据国家代码获取地图区域
     private func getRegionForCountry(countryCode: String, userLocation: CLLocationCoordinate2D) -> MKCoordinateRegion {
@@ -1434,57 +1986,28 @@ struct MapView: View {
         }
     }
     
-    // 将地图定位到用户所在国家（即时响应，使用缓存）
-    private func centerMapOnUserCountry() {
-        // 如果已有缓存的区域，立即使用
-        if let region = userCountryRegion {
-            // 使用更快的 easeInOut 动画，持续时间0.5秒
+    // 将地图定位到当前位置
+    private func centerMapOnCurrentLocation() {
+        if let userLocation = locationManager.lastKnownLocation {
+            // 如果有已知位置，定位到该位置
+            let region = MKCoordinateRegion(
+                center: userLocation,
+                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+            )
+            
             withAnimation(.easeInOut(duration: 0.5)) {
                 mapCameraPosition = .region(region)
             }
-            print("📍 " + "using_cached_country_region".localized)
-            return
-        }
-        
-        // 如果有位置但没有缓存区域，立即计算并显示
-        if let userLocation = locationManager.lastKnownLocation {
-            // 先立即显示用户位置周边
-            let tempRegion = MKCoordinateRegion(
-                center: userLocation,
-                span: MKCoordinateSpan(latitudeDelta: 5.0, longitudeDelta: 5.0)
-            )
-            
-            withAnimation(.easeInOut(duration: 0.4)) {
-                mapCameraPosition = .region(tempRegion)
-            }
-            
-            // 然后异步获取国家信息并调整
-            let geocoder = CLGeocoder()
-            let location = CLLocation(latitude: userLocation.latitude, longitude: userLocation.longitude)
-            
-            geocoder.reverseGeocodeLocation(location) { [self] placemarks, error in
-                if let placemark = placemarks?.first {
-                    let countryCode = placemark.isoCountryCode ?? ""
-                    let region = self.getRegionForCountry(countryCode: countryCode, userLocation: userLocation)
-                    
-                    DispatchQueue.main.async {
-                        self.userCountryRegion = region
-                        withAnimation(.easeInOut(duration: 0.6)) {
-                            self.mapCameraPosition = .region(region)
-                        }
-                        print("📍 " + "map_positioned_to".localized(with: placemark.country ?? "unknown_country".localized, countryCode))
-                    }
-                }
-            }
+            print("📍 定位到当前位置")
         } else {
-            // 没有位置信息，请求位置
+            // 如果没有位置信息，请求位置
             locationManager.requestLocation()
             
-            // 使用自动定位作为临时方案
+            // 使用自动定位
             withAnimation(.easeInOut(duration: 0.4)) {
                 mapCameraPosition = .automatic
             }
-            print("⚠️ " + "getting_user_location".localized)
+            print("⚠️ 正在获取当前位置...")
         }
     }
     
@@ -1627,166 +2150,6 @@ struct MapView: View {
         AudioServicesPlaySystemSound(1105) // 点击音效
     }
     
-    // MARK: - 打卡功能
-    
-    // 处理打卡功能
-    private func handleCheckIn() {
-        print("📍 开始打卡流程...")
-        isCheckingIn = true
-        
-        // 检查位置权限
-        guard locationManager.authorizationStatus == .authorizedWhenInUse || 
-              locationManager.authorizationStatus == .authorizedAlways else {
-            print("❌ 位置权限未授权")
-            requestLocationPermission()
-            isCheckingIn = false
-            return
-        }
-        
-        // 获取当前位置
-        if let currentLocation = locationManager.lastKnownLocation {
-            print("✅ 使用缓存位置: (\(currentLocation.latitude), \(currentLocation.longitude))")
-            performCheckIn(at: currentLocation)
-        } else {
-            print("🔄 请求当前位置...")
-            locationManager.requestLocation()
-            
-            // 监听位置更新
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                if let location = self.locationManager.lastKnownLocation {
-                    self.performCheckIn(at: location)
-                } else {
-                    print("❌ 无法获取当前位置")
-                    self.isCheckingIn = false
-                    // 可以显示错误提示
-                }
-            }
-        }
-    }
-    
-    // 请求位置权限
-    private func requestLocationPermission() {
-        locationManager.requestLocation()
-    }
-    
-    // 执行打卡
-    private func performCheckIn(at coordinate: CLLocationCoordinate2D) {
-        print("📍 执行打卡: (\(coordinate.latitude), \(coordinate.longitude))")
-        checkInLocation = coordinate
-        
-        // 立即显示添加目的地界面，显示加载状态
-        showingAddDestination = true
-        
-        // 执行反向地理编码获取城市信息
-        reverseGeocodeForCheckIn(coordinate: coordinate)
-    }
-    
-    // 为打卡进行反向地理编码
-    private func reverseGeocodeForCheckIn(coordinate: CLLocationCoordinate2D) {
-        isGeocodingLocation = true
-        let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
-        let geocoder = CLGeocoder()
-
-        func succeed(with placemark: CLPlacemark) {
-            isGeocodingLocation = false
-            isCheckingIn = false
-            
-            let cityName = placemark.locality ?? placemark.administrativeArea ?? "unknown_city".localized
-            let countryName = placemark.country ?? "unknown_country".localized
-            let isoCountryCode = placemark.isoCountryCode ?? ""
-            let category = (isoCountryCode == "CN" || countryName == "中国" || countryName == "China") ? "domestic" : "international"
-            
-            print("✅ 打卡反向地理编码成功:")
-            print("   城市: \(cityName)")
-            print("   国家: \(countryName)")
-            print("   ISO代码: \(isoCountryCode)")
-            print("   分类: \(category)")
-            
-            let mkPlacemark = MKPlacemark(placemark: placemark)
-            let mapItem = MKMapItem(placemark: mkPlacemark)
-            mapItem.name = cityName
-            
-            prefilledLocationData = (location: mapItem, name: cityName, country: countryName, category: category)
-            
-            // 播放打卡成功音效
-            AudioServicesPlaySystemSound(1104) // 气泡音效
-        }
-
-        func failoverToAlternateLocales() {
-            // 优先尝试英文，再尝试中文，提升国外/国内识别成功率
-            geocoder.reverseGeocodeLocation(location, preferredLocale: Locale(identifier: "en_US")) { placemarks, _ in
-                if let placemark = placemarks?.first {
-                    DispatchQueue.main.async { succeed(with: placemark) }
-                    return
-                }
-                geocoder.reverseGeocodeLocation(location, preferredLocale: Locale(identifier: "zh_CN")) { placemarks, _ in
-                    if let placemark = placemarks?.first {
-                        DispatchQueue.main.async { succeed(with: placemark) }
-                        return
-                    }
-                    // 继续回退到附近搜索
-                    DispatchQueue.main.async { fallbackSearchForCheckIn(coordinate: coordinate) }
-                }
-            }
-        }
-
-        geocoder.reverseGeocodeLocation(location) { placemarks, error in
-            if let placemark = placemarks?.first {
-                DispatchQueue.main.async { succeed(with: placemark) }
-                return
-            }
-            print("❌ 打卡反向地理编码失败: \(error?.localizedDescription ?? "未知错误")")
-            failoverToAlternateLocales()
-        }
-    }
-    
-    // 打卡备用方案1：在坐标附近做一次本地搜索
-    private func fallbackSearchForCheckIn(coordinate: CLLocationCoordinate2D) {
-        let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = nil
-        let span = MKCoordinateSpan(latitudeDelta: 0.8, longitudeDelta: 0.8)
-        request.region = MKCoordinateRegion(center: coordinate, span: span)
-        if #available(iOS 13.0, *) {
-            request.resultTypes = [.address, .pointOfInterest]
-        }
-        let search = MKLocalSearch(request: request)
-        search.start { response, error in
-            if let item = response?.mapItems.first {
-                let cityName = item.name ?? item.placemark.locality ?? "selected_location".localized
-                let countryName = item.placemark.country ?? "unknown_country".localized
-                let isoCountryCode = item.placemark.isoCountryCode ?? ""
-                let category = (isoCountryCode == "CN" || countryName == "中国" || countryName == "China") ? "domestic" : "international"
-                print("✅ 打卡附近搜索成功: \(cityName), \(countryName)")
-                let mapItem = item
-                mapItem.name = cityName
-                DispatchQueue.main.async {
-                    self.isGeocodingLocation = false
-                    self.isCheckingIn = false
-                    self.prefilledLocationData = (location: mapItem, name: cityName, country: countryName, category: category)
-                    AudioServicesPlaySystemSound(1104) // 气泡音效
-                }
-            } else {
-                print("⚠️ 打卡附近搜索失败: \(error?.localizedDescription ?? "无结果")")
-                DispatchQueue.main.async { self.fallbackCheckInWithCoordinateOnly(coordinate: coordinate) }
-            }
-        }
-    }
-    
-    // 打卡备用方案2：仅根据坐标进行国内/国外判断并提供占位名称
-    private func fallbackCheckInWithCoordinateOnly(coordinate: CLLocationCoordinate2D) {
-        isGeocodingLocation = false
-        isCheckingIn = false
-        let category = isInChinaBoundingBox(coordinate) ? "domestic" : "international"
-        let countryName = category == "domestic" ? "中国" : "unknown_country".localized
-        let cityName = "selected_location".localized
-        print("🛟 打卡坐标回退: \(cityName), \(countryName), \(category)")
-        let placemark = MKPlacemark(coordinate: coordinate)
-        let mapItem = MKMapItem(placemark: placemark)
-        mapItem.name = cityName
-        prefilledLocationData = (location: mapItem, name: cityName, country: countryName, category: category)
-        AudioServicesPlaySystemSound(1104) // 气泡音效
-    }
-    
     // MARK: - 搜索功能
     
     // 执行搜索
@@ -1845,6 +2208,7 @@ struct MapView: View {
         searchText = ""
         searchResults = []
         showSearchResults = false
+        isSearchFieldFocused = false
         
         print("📍 移动到搜索结果: \(mapItem.name ?? "未知地点")")
     }
@@ -1897,24 +2261,25 @@ struct MapStyleCard: View {
     
     var body: some View {
         Button(action: onTap) {
-            VStack(spacing: 12) {
+            VStack(spacing: 8) {
                 Image(systemName: style.iconName)
-                    .font(.system(size: 32))
+                    .font(.system(size: 20))
                     .foregroundColor(isSelected ? .white : .blue)
                 
                 Text(style.displayName.localized)
-                    .font(.caption)
+                    .font(.caption2)
                     .fontWeight(.medium)
                     .foregroundColor(isSelected ? .white : .primary)
                     .multilineTextAlignment(.center)
+                    .lineLimit(2)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 100)
+            .frame(height: 70)
             .background(
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 8)
                     .fill(isSelected ? Color.blue : Color(.systemGray6))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: 8)
                             .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 2)
                     )
             )
@@ -1969,29 +2334,20 @@ struct ClusterAnnotationView: View, Equatable {
         let zoom = zoomLevel
         // 国家和世界/大洲级别使用较小标记，其他级别保持32
         if zoom < 6 { return 20 }  // 世界/大洲级别和国家级别
-        else { return 32 }          // 其他级别
+        else { return 40 }          // 其他级别
     }
     
     private var strokeWidth: CGFloat {
         cluster.destinations.count == 1 ? 2 : 2.5
     }
     
-    // 主颜色：优先使用旅程颜色，没有旅程则使用国内/国外区分
+    // 主颜色：统一使用国内/国外区分（不再因旅程使用渐变或统一蓝色）
     private var mainColor: Color {
         if cluster.destinations.count == 1 {
             let destination = cluster.destinations[0]
-            if destination.trip != nil {
-                return .blue // 旅程地点使用蓝色
-            }
             return destination.normalizedCategory == "domestic" ? .red : .blue
         } else {
-            // 聚合标记：检查是否有共同旅程
-            let tripIds = cluster.destinations.compactMap { $0.trip?.id }
-            if mostFrequent(in: tripIds) != nil {
-                return .blue // 有旅程的聚合使用蓝色
-            }
-            
-            // 没有共同旅程，使用国内/国外混合颜色
+            // 聚合：使用国内/国外比例决定颜色
             let domesticCount = cluster.destinations.filter { $0.category == "domestic" }.count
             let ratio = Double(domesticCount) / Double(cluster.destinations.count)
             if ratio > 0.7 { return .red }
@@ -2042,7 +2398,7 @@ struct ClusterAnnotationView: View, Equatable {
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
-                        lineWidth: 3
+                        lineWidth: 0
                     )
                     .frame(width: markerSize + 8, height: markerSize + 8)
                     .opacity(0.8)
@@ -2052,8 +2408,11 @@ struct ClusterAnnotationView: View, Equatable {
             if cluster.destinations.count == 1 {
                 let destination = cluster.destinations[0]
                 
-                // 如果有照片，显示照片
-                if let photoData = destination.photoData,
+                // 照片显示规则：仅当尺寸较大（>20）且有照片时展示图片；
+                // 尺寸为20时，与无照片一致使用液态玻璃渐变
+                let isDomestic = (destination.normalizedCategory == "domestic")
+                if markerSize > 20,
+                   let photoData = destination.photoData,
                    let uiImage = UIImage(data: photoData) {
                     Image(uiImage: uiImage)
                         .resizable()
@@ -2066,34 +2425,13 @@ struct ClusterAnnotationView: View, Equatable {
                         )
                         .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
                 } else {
-                    // 没有照片，根据是否属于旅程显示不同效果
-                    if belongsToTrip {
-                        // 旅程地点使用蓝紫渐变
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [.blue, .purple],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: markerSize, height: markerSize)
-                            .overlay(
-                                Circle()
-                                    .stroke(.white, lineWidth: strokeWidth)
-                            )
-                            .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
-                    } else {
-                        // 普通地点显示颜色填充的圆点（红色=国内，蓝色=国外）
-                        Circle()
-                            .fill(mainColor)
-                            .frame(width: markerSize, height: markerSize)
-                            .overlay(
-                                Circle()
-                                    .stroke(.white, lineWidth: strokeWidth)
-                            )
-                            .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
-                    }
+                    // 液态玻璃渐变标注（国内：粉→橙；国外：青→蓝）
+                    LiquidGlassMarkerView(
+                        size: markerSize,
+                        startColor: isDomestic ? Color(.systemPink) : Color(.systemTeal),
+                        endColor: isDomestic ? Color(.systemOrange) : Color(.systemBlue),
+                        borderWidth: strokeWidth
+                    )
                 }
                 
                 // 内容图标（收藏心形）
@@ -2104,40 +2442,31 @@ struct ClusterAnnotationView: View, Equatable {
                         .shadow(color: .black.opacity(0.3), radius: 1, x: 0, y: 1)
                 }
             } else {
-                // 聚合地点：根据是否包含旅程地点显示不同效果
-                if hasTripDestinations {
-                    // 包含旅程的聚合使用蓝紫渐变
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [.blue, .purple],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: markerSize, height: markerSize)
-                        .overlay(
-                            Circle()
-                                .stroke(.white, lineWidth: strokeWidth)
-                        )
-                        .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
-                } else {
-                    // 普通聚合显示颜色填充的圆点
-                    Circle()
-                        .fill(mainColor)
-                        .frame(width: markerSize, height: markerSize)
-                        .overlay(
-                            Circle()
-                                .stroke(.white, lineWidth: strokeWidth)
-                        )
-                        .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+                // 聚合地点：使用液态玻璃渐变（国内占比高=粉→橙；国外占比高=青→蓝；混合=紫→蓝紫）
+                let domesticCount = cluster.destinations.filter { $0.category == "domestic" }.count
+                let ratio = Double(domesticCount) / Double(cluster.destinations.count)
+                let (startColor, endColor): (Color, Color) = {
+                    if ratio > 0.7 {
+                        return (Color(.systemPink), Color(.systemOrange))
+                    } else if ratio < 0.3 {
+                        return (Color(.systemTeal), Color(.systemBlue))
+                    } else {
+                        return (.purple, .indigo)
+                    }
+                }()
+                ZStack {
+                    LiquidGlassMarkerView(
+                        size: markerSize,
+                        startColor: startColor,
+                        endColor: endColor,
+                        borderWidth: strokeWidth
+                    )
+                    // 聚合数量文本
+                    Text("\(cluster.destinations.count)")
+                        .font(.system(size: markerSize * 0.45, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                        .shadow(color: .black.opacity(0.3), radius: 1, x: 0, y: 1)
                 }
-                
-                // 聚合地点数量
-                Text("\(cluster.destinations.count)")
-                    .font(.system(size: markerSize * 0.45, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
-                    .shadow(color: .black.opacity(0.3), radius: 1, x: 0, y: 1)
             }
         }
     }
@@ -2152,6 +2481,63 @@ extension CLLocationCoordinate2D {
     }
 }
 
+// 计算多边形中点的辅助函数
+extension MapView {
+    // 计算路线多边形的中点坐标
+    func midpointOfPolyline(_ polyline: MKPolyline) -> CLLocationCoordinate2D? {
+        let pointCount = polyline.pointCount
+        guard pointCount > 0 else { return nil }
+        
+        let midIndex = pointCount / 2
+        let points = polyline.points()
+        guard midIndex < pointCount else { return nil }
+        let mapPoint = points[midIndex]
+        return mapPoint.coordinate
+    }
+    
+    // 检查两个地点是否在同一个聚合中
+    func areDestinationsInSameCluster(_ destination1: TravelDestination, _ destination2: TravelDestination) -> Bool {
+        // 遍历所有聚合，检查两个地点是否在同一个聚合中
+        for cluster in clusterAnnotations {
+            let destinationIds = Set(cluster.destinations.map { $0.id })
+            if destinationIds.contains(destination1.id) && destinationIds.contains(destination2.id) {
+                return true
+            }
+        }
+        return false
+    }
+}
+
+// 路线距离标签视图
+struct RouteDistanceLabel: View {
+    let distance: CLLocationDistance
+    @StateObject private var languageManager = LanguageManager.shared
+    
+    var body: some View {
+        Text(formatDistance(distance))
+            .font(.system(size: 11, weight: .semibold, design: .rounded))
+            .foregroundColor(.white)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(.black.opacity(0.7))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(.white.opacity(0.3), lineWidth: 1)
+                    }
+            }
+            .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+    }
+    
+    private func formatDistance(_ distance: CLLocationDistance) -> String {
+        let formatter = MKDistanceFormatter()
+        formatter.unitStyle = .abbreviated
+        formatter.locale = languageManager.currentLanguage == .chinese ? Locale(identifier: "zh_CN") : Locale(identifier: "en_US")
+        return formatter.string(fromDistance: distance)
+    }
+}
+
 // CLLocationCoordinate2D 扩展：Equatable 支持
 extension CLLocationCoordinate2D: Equatable {
     public static func == (lhs: CLLocationCoordinate2D, rhs: CLLocationCoordinate2D) -> Bool {
@@ -2162,7 +2548,7 @@ extension CLLocationCoordinate2D: Equatable {
 struct DestinationPreviewCard: View {
     let destination: TravelDestination
     let onDelete: () -> Void
-    @State private var showDetail = false
+    let onOpenDetail: () -> Void
     @State private var showEditSheet = false
     @State private var showDeleteConfirmation = false
     @Environment(\.modelContext) private var modelContext
@@ -2208,6 +2594,15 @@ struct DestinationPreviewCard: View {
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
+                
+                // 显示笔记
+                if !destination.notes.isEmpty {
+                    Text(destination.notes)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                        .padding(.top, 4)
+                }
             }
             
             Spacer()
@@ -2247,31 +2642,38 @@ struct DestinationPreviewCard: View {
                 Button {
                     showEditSheet = true
                 } label: {
-                    Image(systemName: "pencil.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(.orange)
+                    Image(systemName: "pencil")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.black)
+                        .padding(10)
+                        .background(
+                            Circle().fill(Color.white.opacity(0.5))
+                        )
                 }
                 
                 // 删除按钮
                 Button {
                     showDeleteConfirmation = true
                 } label: {
-                    Image(systemName: "trash.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(.red)
+                    Image(systemName: "trash")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.black)
+                        .padding(10)
+                        .background(
+                            Circle().fill(Color.white.opacity(0.5))
+                        )
                 }
             }
         }
         .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(15)
+        .background(
+            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .fill(.ultraThinMaterial)
+        )
         .shadow(radius: 10)
         .contentShape(Rectangle()) // 确保整个区域可点击
         .onTapGesture {
-            showDetail = true
-        }
-        .sheet(isPresented: $showDetail) {
-            DestinationDetailView(destination: destination)
+            onOpenDetail()
         }
         .sheet(isPresented: $showEditSheet) {
             EditDestinationView(destination: destination)
@@ -2330,18 +2732,22 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     // CLLocationManagerDelegate 方法
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         if let location = locations.last {
-            lastKnownLocation = location.coordinate
-            print("📍 " + "user_location_obtained".localized(with: location.coordinate.latitude, location.coordinate.longitude))
+            let wgsCoord = location.coordinate
+            // 将WGS84坐标转换为GCJ02（火星坐标）以适应中国地图显示
+            let gcjCoord = CoordinateConverter.wgs84ToGCJ02(wgsCoord)
+            lastKnownLocation = gcjCoord
+            
+            print("📍 获取到用户位置: WGS84(\(wgsCoord.latitude), \(wgsCoord.longitude)) -> GCJ02(\(gcjCoord.latitude), \(gcjCoord.longitude))")
         }
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        print("❌ " + "location_permission_denied".localized(with: error.localizedDescription))
+        print("❌ 获取位置失败: \(error.localizedDescription)")
     }
     
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         authorizationStatus = manager.authorizationStatus
-        print("📍 " + "location_authorization_changed".localized(with: authorizationStatus.rawValue))
+        print("📍 位置授权状态变更: \(authorizationStatus.rawValue)")
         
         // 如果已授权，立即请求位置
         if authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways {
@@ -2350,94 +2756,6 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
 }
 
-// 地图浮动按钮样式 - 玻璃质感效果
-struct MapFloatingButtonStyle: ButtonStyle {
-    let mapStyle: MapStyle
-    
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .frame(width: 44, height: 44)
-            .background(
-                GlassButtonBackground(mapStyle: mapStyle)
-            )
-            .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
-            .animation(.spring(response: 0.2, dampingFraction: 0.8), value: configuration.isPressed)
-    }
-}
-
-struct GlassButtonBackground: View {
-    @Environment(\.colorScheme) private var colorScheme
-    let mapStyle: MapStyle
-    
-    // 判断是否是深色地图样式
-    private var isDarkMapStyle: Bool {
-        switch mapStyle {
-        case .standard:
-            return false
-        case .hybrid, .imagery:
-            return true
-        }
-    }
-    
-    var body: some View {
-        ZStack {
-            // 主背景 - 根据地图样式调整不透明度和模糊效果
-            if isDarkMapStyle {
-                // 混合/卫星地图：半透明深色背景（平板磨砂玻璃效果）
-                ZStack {
-                    // 底层深色背景
-                    Circle()
-                        .fill(Color.black.opacity(0.65))
-                    
-                    // 顶层磨砂材质（平板玻璃质感）
-                    Circle()
-                        .fill(.thinMaterial.opacity(0.8))
-                }
-            } else {
-                // 标准地图：使用白色背景
-                Circle()
-                    .fill(Color.white.opacity(0.9))
-            }
-            
-            // 顶部的光泽效果
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            .white.opacity(isDarkMapStyle ? 0.15 : 0.5),
-                            .clear
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .center
-                    )
-                )
-            
-            // 底部的阴影效果
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            .clear,
-                            .black.opacity(isDarkMapStyle ? 0.25 : 0.05)
-                        ],
-                        startPoint: .center,
-                        endPoint: .bottomTrailing
-                    )
-                )
-            
-            // 边框 - 根据地图样式调整
-            Circle()
-                .stroke(
-                    isDarkMapStyle 
-                    ? Color.white.opacity(0.25)
-                    : Color.black.opacity(0.1),
-                    lineWidth: 0.5
-                )
-        }
-        .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 4)
-        .shadow(color: .black.opacity(0.08), radius: 3, x: 0, y: 1)
-    }
-}
 
 // 回忆泡泡视图
 struct MemoryBubbleView: View {
@@ -2582,3 +2900,240 @@ struct CustomBubbleIcon: View {
     }
 }
 
+// 用户位置标记视图
+struct UserLocationAnnotationView: View {
+    @State private var pulseScale: CGFloat = 1.0
+    @State private var pulseOpacity: Double = 0.6
+    
+    var body: some View {
+        ZStack {
+            // 外圈脉冲动画
+            Circle()
+                .fill(Color.blue.opacity(0.2))
+                .frame(width: 44, height: 44)
+                .scaleEffect(pulseScale)
+                .opacity(pulseOpacity)
+            
+            // 中间圈
+            Circle()
+                .fill(Color.white)
+                .frame(width: 20, height: 20)
+            
+            // 内圈
+            Circle()
+                .fill(Color.blue)
+                .frame(width: 14, height: 14)
+        }
+        .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+        .onAppear {
+            // 脉冲动画
+            withAnimation(.easeOut(duration: 2.0).repeatForever(autoreverses: false)) {
+                pulseScale = 1.5
+                pulseOpacity = 0.0
+            }
+        }
+    }
+}
+
+// 滚动偏移信息
+struct ScrollOffsetInfo: Equatable {
+    let tripId: UUID
+    let offset: CGFloat
+}
+
+// PreferenceKey 用于传递滚动偏移信息
+struct ScrollOffsetPreferenceKey: PreferenceKey {
+    static var defaultValue: [ScrollOffsetInfo] = []
+    
+    static func reduce(value: inout [ScrollOffsetInfo], nextValue: () -> [ScrollOffsetInfo]) {
+        value.append(contentsOf: nextValue())
+    }
+}
+
+// 线路卡片组件
+struct RouteCard: View {
+    let trip: TravelTrip
+    let destinations: [TravelDestination]
+    @StateObject private var routeManager = RouteManager.shared
+    @StateObject private var languageManager = LanguageManager.shared
+    @State private var routes: [MKRoute] = []
+    @State private var isLoadingRoutes = false
+    @State private var totalDistance: CLLocationDistance = 0
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // 旅程名称和日期
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(trip.name)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    
+                    HStack(spacing: 8) {
+                        Image(systemName: "calendar")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        Text(formatDateRange(trip.startDate, trip.endDate))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Spacer()
+            }
+            
+            // 线路信息
+            HStack(spacing: 16) {
+                // 地点数量
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "mappin.circle.fill")
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                        Text("\(destinations.count)")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                    }
+                    Text("地点")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                
+                // 总距离
+                if totalDistance > 0 {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "road.lanes")
+                                .font(.caption)
+                                .foregroundColor(.green)
+                            Text(formatDistance(totalDistance))
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                        }
+                        Text("总距离")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                } else if isLoadingRoutes {
+                    HStack(spacing: 4) {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                        Text("计算中...")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            
+            // 起点和终点
+            if let start = destinations.first, let end = destinations.last {
+                HStack(spacing: 8) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(Color.red)
+                                .frame(width: 6, height: 6)
+                            Text(start.name)
+                                .font(.caption)
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
+                        }
+                        Text("起点")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Image(systemName: "arrow.right")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(Color.blue)
+                                .frame(width: 6, height: 6)
+                            Text(end.name)
+                                .font(.caption)
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
+                        }
+                        Text("终点")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                }
+            }
+        }
+        .padding()
+        .frame(width: 320)
+        .background(
+            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .fill(.ultraThinMaterial)
+        )
+        .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 2)
+        .onAppear {
+            calculateRoutes()
+        }
+    }
+    
+    // 计算路线
+    private func calculateRoutes() {
+        guard destinations.count >= 2 else {
+            routes = []
+            totalDistance = 0
+            return
+        }
+        
+        isLoadingRoutes = true
+        
+        let coordinates = destinations.map { $0.coordinate }
+        
+        Task {
+            var calculatedRoutes: [MKRoute] = []
+            
+            // 计算每两个连续地点之间的路线
+            for i in 0..<coordinates.count - 1 {
+                let source = coordinates[i]
+                let destination = coordinates[i + 1]
+                
+                await withCheckedContinuation { continuation in
+                    routeManager.calculateRoute(from: source, to: destination) { route in
+                        if let route = route {
+                            calculatedRoutes.append(route)
+                        }
+                        continuation.resume()
+                    }
+                }
+            }
+            
+            await MainActor.run {
+                routes = calculatedRoutes
+                totalDistance = calculatedRoutes.reduce(0) { $0 + $1.distance }
+                isLoadingRoutes = false
+            }
+        }
+    }
+    
+    // 格式化日期范围
+    private func formatDateRange(_ start: Date, _ end: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = languageManager.currentLanguage == .chinese ? Locale(identifier: "zh_CN") : Locale(identifier: "en_US")
+        formatter.dateStyle = .short
+        formatter.timeStyle = .none
+        
+        let startString = formatter.string(from: start)
+        let endString = formatter.string(from: end)
+        
+        return "\(startString) - \(endString)"
+    }
+    
+    // 格式化距离
+    private func formatDistance(_ distance: CLLocationDistance) -> String {
+        let formatter = MKDistanceFormatter()
+        formatter.unitStyle = .abbreviated
+        formatter.locale = languageManager.currentLanguage == .chinese ? Locale(identifier: "zh_CN") : Locale(identifier: "en_US")
+        return formatter.string(fromDistance: distance)
+    }
+}

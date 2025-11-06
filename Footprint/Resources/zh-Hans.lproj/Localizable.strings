@@ -107,6 +107,7 @@
 "map_positioned_to" = "地图定位到: %@ (%@)";
 "getting_user_location" = "正在获取用户位置...";
 "preloaded_country_region" = "已预加载国家区域: %@ (%@)";
+"user_location" = "我的位置";
 
 // Add Destination View
 "add_destination" = "添加目的地";
@@ -195,6 +196,7 @@
 // Map Style
 "map_style_title" = "地图样式";
 "map_style_standard" = "标准地图";
+"map_style_muted" = "默认地图";
 "map_style_satellite" = "卫星地图";
 "map_style_hybrid" = "混合地图";
 "map_style_imagery" = "卫星图像";
@@ -204,3 +206,20 @@
 "duplicate_destination_message" = "已存在名为「%@」的目的地，是否要覆盖原有目的地？\n\n现有目的地信息：\n国家：%@\n访问日期：%@%@\n\n原则上不允许出现同名的目的地";
 "duplicate_destination_overwrite" = "覆盖";
 "duplicate_destination_cancel" = "取消";
+
+// Timeline Player
+"timeline_mode" = "重温模式";
+"timeline_play" = "播放";
+"timeline_pause" = "暂停";
+"timeline_reset" = "重置";
+"timeline_speed" = "播放速度";
+"timeline_current_date" = "当前日期";
+"timeline_current_location" = "当前位置";
+"timeline_progress" = "进度";
+"timeline_follow_camera" = "相机跟随";
+
+// Trip Route Map
+"route_map" = "线路地图";
+"routes" = "线路";
+"no_routes_available" = "暂无线路";
+"create_trip_with_at_least_two_destinations" = "创建包含至少两个目的地的旅程后，将在这里显示线路信息";

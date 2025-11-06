@@ -31,8 +31,8 @@ struct AddDestinationView: View {
     @State private var notes = ""
     @State private var category = "domestic"
     @State private var isFavorite = false
-    @State private var selectedPhoto: PhotosPickerItem?
-    @State private var photoData: Data?
+    @State private var selectedPhotos: [PhotosPickerItem] = []
+    @State private var photoDatas: [Data] = []
     @State private var searchText = ""
     @State private var searchResults: [MKMapItem] = []
     @State private var selectedLocation: MKMapItem?
@@ -104,40 +104,7 @@ struct AddDestinationView: View {
                             }
                             .disabled(searchText.isEmpty)
                         }
-                        
-                        // 搜索提示（根据分类显示不同的提示）
-                        if searchText.isEmpty {
-                            VStack(alignment: .leading, spacing: 4) {
-                                if category == "domestic".localized {
-                                    Text("search_domestic_places".localized)
-                                        .font(.caption)
-                                        .foregroundColor(.blue)
-                                    Text("use_amap_data".localized)
-                                        .font(.caption2)
-                                        .foregroundColor(.green)
-                                    Text("input_city_names".localized)
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                    Text("input_attractions".localized)
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                } else {
-                                    Text("search_international_places".localized)
-                                        .font(.caption)
-                                        .foregroundColor(.blue)
-                                    Text("use_apple_international".localized)
-                                        .font(.caption2)
-                                        .foregroundColor(.green)
-                                    Text("hot_cities_quick_search".localized)
-                                        .font(.caption2)
-                                        .foregroundColor(.orange)
-                                    Text("support_multilingual".localized)
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            .padding(.vertical, 4)
-                        }
+                        // 已移除：搜索框下方提示文字
                     }
                     
                     if isSearching {
@@ -252,16 +219,34 @@ struct AddDestinationView: View {
                 }
                 
                 Section("photo".localized) {
-                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                    PhotosPicker(selection: $selectedPhotos, maxSelectionCount: 10, matching: .images) {
                         Label("select_photo".localized, systemImage: "photo")
                     }
                     
-                    if let photoData, let uiImage = UIImage(data: photoData) {
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(maxHeight: 200)
-                            .cornerRadius(10)
+                    if !photoDatas.isEmpty {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 90), spacing: 8)], spacing: 8) {
+                            ForEach(Array(photoDatas.enumerated()), id: \.offset) { index, data in
+                                if let uiImage = UIImage(data: data) {
+                                    ZStack(alignment: .topTrailing) {
+                                        Image(uiImage: uiImage)
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 100, height: 100)
+                                            .clipped()
+                                            .cornerRadius(8)
+                                        Button {
+                                            photoDatas.remove(at: index)
+                                        } label: {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .foregroundColor(.white)
+                                                .background(Circle().fill(Color.black.opacity(0.5)))
+                                        }
+                                        .padding(4)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.vertical, 4)
                     }
                 }
                 
@@ -286,10 +271,16 @@ struct AddDestinationView: View {
                     .disabled(!isValid)
                 }
             }
-            .onChange(of: selectedPhoto) { oldValue, newValue in
+            .onChange(of: selectedPhotos) { oldValue, newValue in
                 Task {
-                    if let data = try? await newValue?.loadTransferable(type: Data.self) {
-                        photoData = data
+                    var loaded: [Data] = []
+                    for item in newValue {
+                        if let data = try? await item.loadTransferable(type: Data.self) {
+                            loaded.append(data)
+                        }
+                    }
+                    if !loaded.isEmpty {
+                        photoDatas.append(contentsOf: loaded)
                     }
                 }
             }
@@ -622,7 +613,8 @@ struct AddDestinationView: View {
             longitude: location.placemark.coordinate.longitude,
             visitDate: visitDate,
             notes: notes,
-            photoData: photoData,
+            photoData: photoDatas.first,
+            photoDatas: photoDatas,
             category: category,
             isFavorite: isFavorite
         )
@@ -633,6 +625,8 @@ struct AddDestinationView: View {
         }
         
         modelContext.insert(destination)
+        // 立即保存，确保 @Query 与统计更新
+        try? modelContext.save()
         dismiss()
     }
     
@@ -646,13 +640,16 @@ struct AddDestinationView: View {
         existing.longitude = selectedLocation?.placemark.coordinate.longitude ?? existing.longitude
         existing.visitDate = visitDate
         existing.notes = notes
-        existing.photoData = photoData
+        existing.photoData = photoDatas.first
+        existing.photoDatas = photoDatas
         existing.category = category
         existing.isFavorite = isFavorite
         
         // 更新旅程关联
         existing.trip = selectedTrip
         
+        // 保存更新
+        try? modelContext.save()
         dismiss()
     }
 }

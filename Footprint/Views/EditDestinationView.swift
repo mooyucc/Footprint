@@ -11,6 +11,7 @@ import PhotosUI
 import MapKit
 import CoreLocation
 import Contacts
+// import removed: UniformTypeIdentifiers (不再需要拖拽)
 
 struct EditDestinationView: View {
     @Environment(\.modelContext) private var modelContext
@@ -26,8 +27,14 @@ struct EditDestinationView: View {
     @State private var notes = ""
     @State private var category = "international"
     @State private var isFavorite = false
-    @State private var selectedPhoto: PhotosPickerItem?
-    @State private var photoData: Data?
+    @State private var selectedPhotos: [PhotosPickerItem] = []
+    // 为每张图片分配唯一 ID，避免 ForEach 标识冲突
+    struct PhotoItem: Identifiable, Equatable {
+        let id: UUID
+        let data: Data
+        static func == (lhs: PhotoItem, rhs: PhotoItem) -> Bool { lhs.id == rhs.id }
+    }
+    @State private var photoItems: [PhotoItem] = []
     @State private var searchText = ""
     @State private var searchResults: [MKMapItem] = []
     @State private var selectedLocation: MKMapItem?
@@ -37,6 +44,7 @@ struct EditDestinationView: View {
     @State private var selectedTrip: TravelTrip?
     
     let categories = ["domestic", "international"]
+    private let maxPhotos = 9
     
     // 城市数据管理器实例
     private let cityDataManager = CityDataManager.shared
@@ -102,6 +110,26 @@ struct EditDestinationView: View {
                         .disabled(searchText.isEmpty)
                     }
                     
+                    NavigationLink {
+                        MapCoordinatePickerView(
+                            initialCoordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+                        ) { item in
+                            // 从地图选点回填
+                            self.selectedLocation = item
+                            self.latitude = item.placemark.coordinate.latitude
+                            self.longitude = item.placemark.coordinate.longitude
+                            if let countryName = item.placemark.country, !countryName.isEmpty {
+                                self.country = countryName
+                            }
+                            // 名称不强制覆盖，保留用户原名称
+                        }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "mappin.and.ellipse")
+                            Text("在地图上选点")
+                        }
+                    }
+                    
                     if isSearching {
                         ProgressView()
                     }
@@ -152,31 +180,45 @@ struct EditDestinationView: View {
                 }
                 
                 Section("photo".localized) {
-                    if let photoData, let uiImage = UIImage(data: photoData) {
-                        ZStack(alignment: .topTrailing) {
-                            Image(uiImage: uiImage)
-                                .resizable()
-                                .scaledToFill()
-                                .frame(maxWidth: .infinity)
-                                .frame(height: 200)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                            
-                            Button {
-                                self.photoData = nil
-                                selectedPhoto = nil
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.title2)
-                                    .foregroundColor(.white)
-                                    .background(Circle().fill(Color.black.opacity(0.5)))
+                    if !photoItems.isEmpty {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 90), spacing: 8)], spacing: 8) {
+                            ForEach(photoItems) { item in
+                                if let uiImage = UIImage(data: item.data) {
+                                    ZStack(alignment: .topTrailing) {
+                                        Image(uiImage: uiImage)
+                                            .resizable()
+                                            .scaledToFill()
+                                            .frame(width: 100, height: 100)
+                                            .clipped()
+                                            .cornerRadius(8)
+                                            .contentShape(Rectangle())
+
+                                        // ❌ 删除单张照片
+                                        Button {
+                                            if let index = photoItems.firstIndex(where: { $0.id == item.id }) {
+                                                photoItems.remove(at: index)
+                                            }
+                                        } label: {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .foregroundColor(.white)
+                                                .frame(width: 24, height: 24)
+                                                .background(Circle().fill(Color.black.opacity(0.5)))
+                                        }
+                                        .contentShape(Circle())
+                                        .buttonStyle(.plain)
+                                        .padding(4)
+                                    }
+                                }
                             }
-                            .padding(8)
                         }
+                        .padding(.vertical, 4)
                     }
                     
-                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                        Label(photoData == nil ? "add_photo".localized : "change_photo".localized, systemImage: "photo")
+                    let remaining = max(0, maxPhotos - photoItems.count)
+                    PhotosPicker(selection: $selectedPhotos, maxSelectionCount: remaining == 0 ? 1 : remaining, matching: .images) {
+                        Label("add_photo".localized, systemImage: "photo")
                     }
+                    .disabled(remaining == 0)
                 }
                 
                 Section("notes".localized) {
@@ -203,11 +245,31 @@ struct EditDestinationView: View {
             .onAppear {
                 loadDestinationData()
             }
-            .onChange(of: selectedPhoto) { oldValue, newValue in
+            .onChange(of: selectedPhotos) { oldValue, newValue in
                 Task {
-                    if let data = try? await newValue?.loadTransferable(type: Data.self) {
-                        photoData = data
+                    // 载入当前选择的所有图片数据
+                    var loaded: [Data] = []
+                    for item in newValue {
+                        if let data = try? await item.loadTransferable(type: Data.self) {
+                            loaded.append(data)
+                        }
                     }
+                    // 去重并截断到上限：避免同一张图片重复加入，且不超过 9 张
+                    if !loaded.isEmpty {
+                        let filtered = loaded.filter { data in
+                            !photoItems.contains(where: { $0.data == data })
+                        }
+                        if !filtered.isEmpty {
+                            let capacity = max(0, maxPhotos - photoItems.count)
+                            if capacity > 0 {
+                                let limited = Array(filtered.prefix(capacity))
+                                let newItems = limited.map { PhotoItem(id: UUID(), data: $0) }
+                                await MainActor.run { photoItems.append(contentsOf: newItems) }
+                            }
+                        }
+                    }
+                    // 清空选择，避免 PhotosPicker 维持累积选择导致再次触发重复添加
+                    await MainActor.run { selectedPhotos = [] }
                 }
             }
         }
@@ -224,7 +286,10 @@ struct EditDestinationView: View {
         notes = destination.notes
         category = destination.category
         isFavorite = destination.isFavorite
-        photoData = destination.photoData
+        // 兼容旧数据：若数组为空但有单张照片，则填充为数组
+        var datas = destination.photoDatas
+        if datas.isEmpty, let single = destination.photoData { datas = [single] }
+        photoItems = datas.map { PhotoItem(id: UUID(), data: $0) }
         latitude = destination.latitude
         longitude = destination.longitude
         selectedTrip = destination.trip
@@ -446,7 +511,9 @@ struct EditDestinationView: View {
         destination.notes = notes
         destination.category = category
         destination.isFavorite = isFavorite
-        destination.photoData = photoData
+        let datasToSave = photoItems.map { $0.data }
+        destination.photoDatas = datasToSave
+        destination.photoData = datasToSave.first
         destination.trip = selectedTrip
         
         // 如果选择了新位置，更新坐标
@@ -459,6 +526,8 @@ struct EditDestinationView: View {
         dismiss()
     }
 }
+
+// 拖拽排序功能已取消
 
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)

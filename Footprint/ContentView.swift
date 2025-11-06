@@ -12,6 +12,7 @@ struct ContentView: View {
     @State private var selectedTab = 0
     @EnvironmentObject var languageManager: LanguageManager
     
+    
     var body: some View {
         TabView(selection: $selectedTab) {
             MapView()
@@ -20,15 +21,15 @@ struct ContentView: View {
                 }
                 .tag(0)
             
-            DestinationListView()
+            FootprintView()
                 .tabItem {
-                    Label("destinations".localized, systemImage: "location.fill")
+                    Label("destinations".localized, systemImage: "figure.walk.circle.fill")
                 }
                 .tag(1)
             
-            TripListView()
+            RoutesView()
                 .tabItem {
-                    Label("trips".localized, systemImage: "suitcase.fill")
+                    Label("trips".localized, systemImage: "road.lanes")
                 }
                 .tag(2)
             
@@ -40,6 +41,8 @@ struct ContentView: View {
         }
     }
 }
+
+ 
 
 struct ProfileView: View {
     @EnvironmentObject var appleSignInManager: AppleSignInManager

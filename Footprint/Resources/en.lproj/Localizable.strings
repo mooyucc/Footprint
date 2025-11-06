@@ -107,6 +107,7 @@
 "map_positioned_to" = "Map positioned to: %@ (%@)";
 "getting_user_location" = "Getting user location...";
 "preloaded_country_region" = "Preloaded country region: %@ (%@)";
+"user_location" = "My Location";
 
 // Add Destination View
 "add_destination" = "Add Destination";
@@ -195,6 +196,7 @@
 // Map Style
 "map_style_title" = "Map Style";
 "map_style_standard" = "Standard";
+"map_style_muted" = "Default";
 "map_style_satellite" = "Satellite";
 "map_style_hybrid" = "Hybrid";
 "map_style_imagery" = "Imagery";
@@ -204,3 +206,20 @@
 "duplicate_destination_message" = "A destination named '%@' already exists. Do you want to overwrite the existing destination?\n\nExisting destination info:\nCountry: %@\nVisit Date: %@%@\n\nDuplicate destination names are not allowed in principle";
 "duplicate_destination_overwrite" = "Overwrite";
 "duplicate_destination_cancel" = "Cancel";
+
+// Timeline Player
+"timeline_mode" = "Timeline Mode";
+"timeline_play" = "Play";
+"timeline_pause" = "Pause";
+"timeline_reset" = "Reset";
+"timeline_speed" = "Playback Speed";
+"timeline_current_date" = "Current Date";
+"timeline_current_location" = "Current Location";
+"timeline_progress" = "Progress";
+"timeline_follow_camera" = "Follow Camera";
+
+// Trip Route Map
+"route_map" = "Route Map";
+"routes" = "Routes";
+"no_routes_available" = "No Routes Available";
+"create_trip_with_at_least_two_destinations" = "Create a trip with at least two destinations to see route information here";

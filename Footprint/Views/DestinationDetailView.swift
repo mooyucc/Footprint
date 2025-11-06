@@ -7,13 +7,17 @@
 
 import SwiftUI
 import MapKit
+import SwiftData
 
 struct DestinationDetailView: View {
     let destination: TravelDestination
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @State private var showingEditSheet = false
     @State private var cameraPosition: MapCameraPosition
     @StateObject private var languageManager = LanguageManager.shared
+    @State private var selectedPhotoIndex: Int = 0
+    @State private var photosLocal: [Data] = []
     
     init(destination: TravelDestination) {
         self.destination = destination
@@ -31,18 +35,43 @@ struct DestinationDetailView: View {
         GeometryReader { geometry in
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    // 照片
+                    // 照片与缩略图
                     let imageHeight = geometry.size.width * 2 / 3
+                    let allPhotos: [Data] = photosLocal
                     
-                    if let photoData = destination.photoData,
-                       let uiImage = UIImage(data: photoData) {
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: geometry.size.width)
-                            .frame(height: imageHeight)
-                            .clipped()
-                            .cornerRadius(15)
+                    if !allPhotos.isEmpty, let mainImage = UIImage(data: allPhotos[min(selectedPhotoIndex, allPhotos.count - 1)]) {
+                        VStack(spacing: 10) {
+                            Image(uiImage: mainImage)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: geometry.size.width)
+                                .frame(height: imageHeight)
+                                .clipped()
+                                .cornerRadius(15)
+                            
+                            if allPhotos.count > 1 {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 8) {
+                                        ForEach(Array(allPhotos.enumerated()), id: \.offset) { index, data in
+                                            if let thumb = UIImage(data: data) {
+                                                Image(uiImage: thumb)
+                                                    .resizable()
+                                                    .scaledToFill()
+                                                    .frame(width: 70, height: 70)
+                                                    .clipped()
+                                                    .overlay(
+                                                        RoundedRectangle(cornerRadius: 8)
+                                                            .stroke(index == selectedPhotoIndex ? Color.accentColor : Color.clear, lineWidth: 2)
+                                                    )
+                                                    .cornerRadius(8)
+                                                    .onTapGesture { selectedPhotoIndex = index }
+                                                    // 详情页不支持排序，仅支持选择预览
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     } else {
                         ZStack {
                             Rectangle()
@@ -218,12 +247,20 @@ struct DestinationDetailView: View {
             .sheet(isPresented: $showingEditSheet) {
                 EditDestinationView(destination: destination)
             }
+            .onAppear {
+                photosLocal = !destination.photoDatas.isEmpty ? destination.photoDatas : (destination.photoData.map { [$0] } ?? [])
+            }
+            .onChange(of: destination.photoDatas) { _, newValue in
+                if !newValue.isEmpty { photosLocal = newValue }
+            }
             .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { _ in
                 // 语言变化时刷新界面
             }
         }
     }
 }
+
+// 详情页已移除拖拽排序能力，排序请前往编辑页处理
 
 
 #Preview {

@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "FootprintLogo.jpg",
+      "filename" : "Artwork.jpg",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -13,7 +13,7 @@
           "value" : "dark"
         }
       ],
-      "filename" : "FootprintLogo 1.jpg",
+      "filename" : "Artwork 1.jpg",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -25,7 +25,7 @@
           "value" : "tinted"
         }
       ],
-      "filename" : "FootprintLogo 2.jpg",
+      "filename" : "Artwork 2.jpg",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

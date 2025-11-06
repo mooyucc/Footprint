@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import MapKit
 
 struct TripDetailView: View {
     @Environment(\.modelContext) private var modelContext
@@ -18,6 +19,8 @@ struct TripDetailView: View {
     @State private var showingDeleteAlert = false
     @State private var shareItem: TripShareItem?
     @State private var shareFileItem: TripShareItem?
+    @StateObject private var routeManager = RouteManager.shared
+    @State private var routeDistances: [UUID: CLLocationDistance] = [:]
     @EnvironmentObject var languageManager: LanguageManager
     
     var sortedDestinations: [TravelDestination] {
@@ -111,6 +114,11 @@ struct TripDetailView: View {
                     .background(Color(.secondarySystemBackground))
                     .cornerRadius(12)
                     
+                    // 线路地图示意图
+                    if !sortedDestinations.isEmpty && sortedDestinations.count >= 2 {
+                        TripRouteMapView(destinations: sortedDestinations, height: 300)
+                    }
+                    
                     // 目的地列表
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
@@ -148,10 +156,37 @@ struct TripDetailView: View {
                             .padding(.vertical, 30)
                         } else {
                             ForEach(Array(sortedDestinations.enumerated()), id: \.element.id) { index, destination in
-                                NavigationLink {
-                                    DestinationDetailView(destination: destination)
-                                } label: {
-                                    TripDestinationRow(destination: destination, index: index + 1)
+                                VStack(spacing: 0) {
+                                    NavigationLink {
+                                        DestinationDetailView(destination: destination)
+                                    } label: {
+                                        TripDestinationRow(destination: destination, index: index + 1)
+                                    }
+                                    
+                                    // 显示到下一个地点的距离
+                                    if index < sortedDestinations.count - 1 {
+                                        let nextDestination = sortedDestinations[index + 1]
+                                        if let distance = routeDistances[destination.id] {
+                                            HStack(spacing: 6) {
+                                                Image(systemName: "arrow.right.circle.fill")
+                                                    .font(.caption2)
+                                                    .foregroundColor(.secondary.opacity(0.6))
+                                                Text(formatDistance(distance))
+                                                    .font(.caption2)
+                                                    .foregroundColor(.secondary)
+                                                Text("→")
+                                                    .font(.caption2)
+                                                    .foregroundColor(.secondary.opacity(0.6))
+                                                Text(nextDestination.name)
+                                                    .font(.caption2)
+                                                    .foregroundColor(.secondary)
+                                                Spacer()
+                                            }
+                                            .padding(.leading, 96) // 与内容对齐
+                                            .padding(.top, 4)
+                                            .padding(.bottom, 8)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -235,6 +270,12 @@ struct TripDetailView: View {
         } message: {
             Text("confirm_delete_trip".localized)
         }
+        .onAppear {
+            calculateRouteDistances()
+        }
+        .onChange(of: sortedDestinations.count) { _, _ in
+            calculateRouteDistances()
+        }
     }
     
     private func deleteTrip() {
@@ -262,6 +303,42 @@ struct TripDetailView: View {
         
         // 创建分享项
         shareFileItem = TripShareItem(text: shareText, image: nil, url: fileURL)
+    }
+    
+    /// 计算所有地点之间的距离
+    private func calculateRouteDistances() {
+        guard sortedDestinations.count >= 2 else {
+            routeDistances = [:]
+            return
+        }
+        
+        routeDistances = [:]
+        
+        Task {
+            for i in 0..<sortedDestinations.count - 1 {
+                let source = sortedDestinations[i]
+                let destination = sortedDestinations[i + 1]
+                
+                await withCheckedContinuation { continuation in
+                    routeManager.calculateRoute(from: source.coordinate, to: destination.coordinate) { route in
+                        if let route = route {
+                            Task { @MainActor in
+                                routeDistances[source.id] = route.distance
+                            }
+                        }
+                        continuation.resume()
+                    }
+                }
+            }
+        }
+    }
+    
+    /// 格式化距离
+    private func formatDistance(_ distance: CLLocationDistance) -> String {
+        let formatter = MKDistanceFormatter()
+        formatter.unitStyle = .abbreviated
+        formatter.locale = languageManager.currentLanguage == .chinese ? Locale(identifier: "zh_CN") : Locale(identifier: "en_US")
+        return formatter.string(fromDistance: distance)
     }
 }
 
