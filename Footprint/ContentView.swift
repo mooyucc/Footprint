@@ -17,7 +17,7 @@ struct ContentView: View {
         TabView(selection: $selectedTab) {
             MapView()
                 .tabItem {
-                    Label("map".localized, systemImage: "map.fill")
+                    Label("map".localized, image: "LocationIcon")
                 }
                 .tag(0)
             
@@ -29,7 +29,7 @@ struct ContentView: View {
             
             RoutesView()
                 .tabItem {
-                    Label("trips".localized, systemImage: "road.lanes")
+                    Label("trips".localized, image: "LinkLineIcon")
                 }
                 .tag(2)
             

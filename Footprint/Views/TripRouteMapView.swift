@@ -90,9 +90,27 @@ struct TripRouteMapView: View {
                 // 显示路线
                 if !routes.isEmpty {
                     ForEach(Array(routes.enumerated()), id: \.offset) { index, route in
-                        // 路线
+                        // 路线 - 使用 Apple 设计标准的样式（白色描边 + 蓝色主体）
+                        // 先绘制白色背景（更粗），创建描边效果
                         MapPolyline(route.polyline)
-                            .stroke(Color.gray.opacity(0.6), style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                            .stroke(
+                                Color.white,
+                                style: StrokeStyle(
+                                    lineWidth: 7,
+                                    lineCap: .round,
+                                    lineJoin: .round
+                                )
+                            )
+                        // 再绘制蓝色主体（较细），叠加在白色背景上
+                        MapPolyline(route.polyline)
+                            .stroke(
+                                Color.blue,
+                                style: StrokeStyle(
+                                    lineWidth: 5,
+                                    lineCap: .round,
+                                    lineJoin: .round
+                                )
+                            )
                         
                         // 距离标注
                         if let midpoint = midpointOfPolyline(route.polyline) {
@@ -163,22 +181,8 @@ struct TripRouteMapView: View {
         let coordinates = sortedDestinations.map { $0.coordinate }
         
         Task {
-            var calculatedRoutes: [MKRoute] = []
-            
-            // 计算每两个连续地点之间的路线
-            for i in 0..<coordinates.count - 1 {
-                let source = coordinates[i]
-                let destination = coordinates[i + 1]
-                
-                await withCheckedContinuation { continuation in
-                    routeManager.calculateRoute(from: source, to: destination) { route in
-                        if let route = route {
-                            calculatedRoutes.append(route)
-                        }
-                        continuation.resume()
-                    }
-                }
-            }
+            // 使用 RouteManager 的并发批量计算
+            let calculatedRoutes = await routeManager.calculateRoutes(for: coordinates)
             
             await MainActor.run {
                 routes = calculatedRoutes

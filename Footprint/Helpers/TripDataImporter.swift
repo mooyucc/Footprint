@@ -14,6 +14,14 @@ struct TripDataImporter {
     
     /// 从URL导入旅程数据
     static func importTrip(from url: URL, modelContext: ModelContext) -> ImportResult {
+        // 获取文件访问权限
+        let hasAccess = url.startAccessingSecurityScopedResource()
+        defer {
+            if hasAccess {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+        
         do {
             // 读取JSON数据
             let jsonData = try Data(contentsOf: url)
@@ -191,6 +199,14 @@ struct TripDataImporter {
     
     /// 验证文件是否为有效的旅程数据
     static func validateTripFile(at url: URL) -> Bool {
+        // 获取文件访问权限
+        let hasAccess = url.startAccessingSecurityScopedResource()
+        defer {
+            if hasAccess {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
+        
         do {
             let jsonData = try Data(contentsOf: url)
             _ = try JSONDecoder().decode(TripExportData.self, from: jsonData)
@@ -273,9 +289,8 @@ struct DocumentPicker: UIViewControllerRepresentable {
         func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
             guard let url = urls.first else { return }
             
-            // 开始访问文件
+            // 开始访问文件（权限会在 importTrip 方法中管理）
             _ = url.startAccessingSecurityScopedResource()
-            defer { url.stopAccessingSecurityScopedResource() }
             
             parent.selectedURL = url
             parent.dismiss()

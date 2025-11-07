@@ -223,3 +223,4 @@
 "routes" = "Routes";
 "no_routes_available" = "No Routes Available";
 "create_trip_with_at_least_two_destinations" = "Create a trip with at least two destinations to see route information here";
+"view_details" = "View Details";

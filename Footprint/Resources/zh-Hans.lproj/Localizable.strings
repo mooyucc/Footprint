@@ -223,3 +223,4 @@
 "routes" = "线路";
 "no_routes_available" = "暂无线路";
 "create_trip_with_at_least_two_destinations" = "创建包含至少两个目的地的旅程后，将在这里显示线路信息";
+"view_details" = "查看详情";

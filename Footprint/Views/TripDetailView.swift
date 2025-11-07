@@ -21,6 +21,7 @@ struct TripDetailView: View {
     @State private var shareFileItem: TripShareItem?
     @StateObject private var routeManager = RouteManager.shared
     @State private var routeDistances: [UUID: CLLocationDistance] = [:]
+    @State private var showingMenu = false // 控制浮动菜单显示
     @EnvironmentObject var languageManager: LanguageManager
     
     var sortedDestinations: [TravelDestination] {
@@ -200,44 +201,43 @@ struct TripDetailView: View {
         }
         }
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Menu {
-                    Button {
-                        shareTrip()
-                    } label: {
-                        Label("share_trip".localized, systemImage: "square.and.arrow.up")
+        .overlay {
+            // 点击外部区域关闭菜单（先添加，在底层）
+            if showingMenu {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .ignoresSafeArea()
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            showingMenu = false
+                        }
                     }
-                    
-                    Button {
-                        shareTripToTeam()
-                    } label: {
-                        Label("share_to_team".localized, systemImage: "person.2.fill")
-                    }
-                    
-                    Divider()
-                    
-                    Button {
-                        showingEditSheet = true
-                    } label: {
-                        Label("edit_trip".localized, systemImage: "pencil")
-                    }
-                    
-                    Button {
-                        showingAddDestination = true
-                    } label: {
-                        Label("add_destination".localized, systemImage: "plus")
-                    }
-                    
-                    Divider()
-                    
-                    Button(role: .destructive) {
-                        showingDeleteAlert = true
-                    } label: {
-                        Label("delete_trip".localized, systemImage: "trash")
+            }
+        }
+        .overlay(alignment: .topTrailing) {
+            // 浮动菜单按钮和菜单（后添加，在上层，确保可点击）
+            VStack(alignment: .trailing, spacing: 0) {
+                // 菜单按钮
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        showingMenu.toggle()
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
+                        .font(.title2)
+                        .foregroundColor(.primary)
+                        .padding(8)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
+                }
+                .padding(.top, 8)
+                .padding(.trailing, 16)
+                
+                // 浮动菜单
+                if showingMenu {
+                    floatingMenu
+                        .transition(.scale.combined(with: .opacity))
                 }
             }
         }
@@ -339,6 +339,122 @@ struct TripDetailView: View {
         formatter.unitStyle = .abbreviated
         formatter.locale = languageManager.currentLanguage == .chinese ? Locale(identifier: "zh_CN") : Locale(identifier: "en_US")
         return formatter.string(fromDistance: distance)
+    }
+    
+    // 浮动菜单
+    private var floatingMenu: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // 分享线路
+            Button {
+                showingMenu = false
+                shareTrip()
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 16))
+                        .foregroundColor(.primary)
+                        .frame(width: 24)
+                    Text("share_trip".localized)
+                        .font(.body)
+                        .foregroundColor(.primary)
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+            
+            Divider()
+                .padding(.horizontal, 8)
+            
+            // 分享给朋友
+            Button {
+                showingMenu = false
+                shareTripToTeam()
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "person.2.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(.primary)
+                        .frame(width: 24)
+                    Text("share_to_team".localized)
+                        .font(.body)
+                        .foregroundColor(.primary)
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+            
+            Divider()
+                .padding(.horizontal, 8)
+            
+            // 编辑线路
+            Button {
+                showingMenu = false
+                showingEditSheet = true
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "pencil")
+                        .font(.system(size: 16))
+                        .foregroundColor(.primary)
+                        .frame(width: 24)
+                    Text("edit_trip".localized)
+                        .font(.body)
+                        .foregroundColor(.primary)
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+            
+            // 添加目的地
+            Button {
+                showingMenu = false
+                showingAddDestination = true
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 16))
+                        .foregroundColor(.primary)
+                        .frame(width: 24)
+                    Text("add_destination".localized)
+                        .font(.body)
+                        .foregroundColor(.primary)
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+            
+            Divider()
+                .padding(.horizontal, 8)
+            
+            // 删除线路
+            Button(role: .destructive) {
+                showingMenu = false
+                showingDeleteAlert = true
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 16))
+                        .foregroundColor(.red)
+                        .frame(width: 24)
+                    Text("delete_trip".localized)
+                        .font(.body)
+                        .foregroundColor(.red)
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+            }
+        }
+        .background(.ultraThinMaterial)
+        .cornerRadius(12)
+        .shadow(color: .black.opacity(0.2), radius: 10, x: 0, y: 4)
+        .padding(.top, 8)
+        .padding(.trailing, 16)
+        .frame(width: 200)
+        .allowsHitTesting(true)
     }
 }
 
