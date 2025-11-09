@@ -31,6 +31,8 @@ struct TripExportData: Codable {
         let visitDate: Date
         let notes: String
         let photoData: Data?
+        let photoThumbnailData: Data?
+        let photoThumbnailDatas: [Data]?
         let category: String
         let isFavorite: Bool
     }
@@ -59,6 +61,8 @@ struct TripDataExporter {
                 visitDate: destination.visitDate,
                 notes: destination.notes,
                 photoData: destination.photoData,
+                photoThumbnailData: destination.photoThumbnailData,
+                photoThumbnailDatas: destination.photoThumbnailDatas.isEmpty ? nil : destination.photoThumbnailDatas,
                 category: destination.category,
                 isFavorite: destination.isFavorite
             )

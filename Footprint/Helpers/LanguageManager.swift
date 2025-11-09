@@ -579,6 +579,7 @@ class LanguageManager: ObservableObject {
 
 extension Notification.Name {
     static let languageChanged = Notification.Name("LanguageChanged")
+    static let openDestinationDrawer = Notification.Name("OpenDestinationDrawer")
 }
 
 // 本地化字符串扩展

@@ -33,6 +33,7 @@ struct AddDestinationView: View {
     @State private var isFavorite = false
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var photoDatas: [Data] = []
+    @State private var photoThumbnailDatas: [Data] = []
     @State private var searchText = ""
     @State private var searchResults: [MKMapItem] = []
     @State private var selectedLocation: MKMapItem?
@@ -226,7 +227,8 @@ struct AddDestinationView: View {
                     if !photoDatas.isEmpty {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 90), spacing: 8)], spacing: 8) {
                             ForEach(Array(photoDatas.enumerated()), id: \.offset) { index, data in
-                                if let uiImage = UIImage(data: data) {
+                                let thumbnailData = index < photoThumbnailDatas.count ? photoThumbnailDatas[index] : data
+                                if let uiImage = UIImage(data: thumbnailData) {
                                     ZStack(alignment: .topTrailing) {
                                         Image(uiImage: uiImage)
                                             .resizable()
@@ -236,6 +238,9 @@ struct AddDestinationView: View {
                                             .cornerRadius(8)
                                         Button {
                                             photoDatas.remove(at: index)
+                                            if index < photoThumbnailDatas.count {
+                                                photoThumbnailDatas.remove(at: index)
+                                            }
                                         } label: {
                                             Image(systemName: "xmark.circle.fill")
                                                 .foregroundColor(.white)
@@ -273,14 +278,20 @@ struct AddDestinationView: View {
             }
             .onChange(of: selectedPhotos) { oldValue, newValue in
                 Task {
-                    var loaded: [Data] = []
+                    var processed: [(Data, Data)] = []
                     for item in newValue {
                         if let data = try? await item.loadTransferable(type: Data.self) {
-                            loaded.append(data)
+                            let result = ImageProcessor.process(data: data)
+                            processed.append(result)
                         }
                     }
-                    if !loaded.isEmpty {
-                        photoDatas.append(contentsOf: loaded)
+                    if !processed.isEmpty {
+                        await MainActor.run {
+                            for (resized, thumbnail) in processed {
+                                photoDatas.append(resized)
+                                photoThumbnailDatas.append(thumbnail)
+                            }
+                        }
                     }
                 }
             }
@@ -615,6 +626,8 @@ struct AddDestinationView: View {
             notes: notes,
             photoData: photoDatas.first,
             photoDatas: photoDatas,
+            photoThumbnailData: photoThumbnailDatas.first,
+            photoThumbnailDatas: photoThumbnailDatas,
             category: category,
             isFavorite: isFavorite
         )
@@ -642,6 +655,8 @@ struct AddDestinationView: View {
         existing.notes = notes
         existing.photoData = photoDatas.first
         existing.photoDatas = photoDatas
+        existing.photoThumbnailData = photoThumbnailDatas.first
+        existing.photoThumbnailDatas = photoThumbnailDatas
         existing.category = category
         existing.isFavorite = isFavorite
         

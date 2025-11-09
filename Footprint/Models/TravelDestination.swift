@@ -19,8 +19,10 @@ final class TravelDestination {
     var visitDate: Date = Date()
     var notes: String = ""
     var photoData: Data?
+    var photoThumbnailData: Data?
     // 新增：支持多张照片
     var photoDatas: [Data] = []
+    var photoThumbnailDatas: [Data] = []
     var category: String = "international" // domestic or international
     var isFavorite: Bool = false
     var trip: TravelTrip? // 所属的旅行组
@@ -34,6 +36,8 @@ final class TravelDestination {
         notes: String = "",
         photoData: Data? = nil,
         photoDatas: [Data] = [],
+        photoThumbnailData: Data? = nil,
+        photoThumbnailDatas: [Data] = [],
         category: String = "international",
         isFavorite: Bool = false
     ) {
@@ -45,6 +49,8 @@ final class TravelDestination {
         self.notes = notes
         self.photoData = photoData
         self.photoDatas = photoDatas
+        self.photoThumbnailData = photoThumbnailData
+        self.photoThumbnailDatas = photoThumbnailDatas
         self.category = category
         self.isFavorite = isFavorite
     }

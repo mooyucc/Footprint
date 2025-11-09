@@ -129,6 +129,7 @@ struct MapView: View {
     @State private var shouldHideRouteCards = false // 是否应该隐藏路线卡片（用于弹窗交互）
     @State private var showingTripDetail = false // 是否显示路线详情sheet
     @State private var detailTripForSheet: TravelTrip? // 用于sheet的路线详情
+    @State private var showingFootprintsDrawer = false // 是否显示“我的足迹”抽屉
     var autoShowRouteCards: Bool = false // 是否自动显示线路卡片
     
     // 滑动优化相关状态
@@ -246,6 +247,26 @@ struct MapView: View {
             if let trip = detailTripForSheet {
                 TripDetailView(trip: trip)
             }
+        }
+        .sheet(isPresented: $showingFootprintsDrawer) {
+            FootprintsDrawerView(
+                destinations: destinations.sorted(by: { $0.visitDate > $1.visitDate }),
+                onSelect: { destination in
+                    showingFootprintsDrawer = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                        detailDestinationForSheet = destination
+                        showingDestinationDetail = true
+                    }
+                },
+                onAdd: {
+                    showingFootprintsDrawer = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                        prefilledLocationData = nil
+                        isWaitingForLocation = false
+                        showingAddDestination = true
+                    }
+                }
+            )
         }
         .sheet(isPresented: $showingAddDestination, onDismiss: {
             prefilledLocationData = nil
@@ -1029,6 +1050,16 @@ struct MapView: View {
                     isActive: false,
                     action: {
                         centerMapOnCurrentLocation()
+                    }
+                )
+
+                // 我的足迹按钮
+                buttonGroupItem(
+                    icon: "figure.walk",
+                    title: "足迹",
+                    isActive: showingFootprintsDrawer,
+                    action: {
+                        showingFootprintsDrawer = true
                     }
                 )
                 
@@ -3688,6 +3719,72 @@ struct RouteCard: View {
         formatter.unitStyle = .abbreviated
         formatter.locale = languageManager.currentLanguage == .chinese ? Locale(identifier: "zh_CN") : Locale(identifier: "en_US")
         return formatter.string(fromDistance: distance)
+    }
+}
+
+// “我的足迹”抽屉视图
+struct FootprintsDrawerView: View {
+    let destinations: [TravelDestination]
+    let onSelect: (TravelDestination) -> Void
+    let onAdd: () -> Void
+    
+    private var orderedDestinations: [TravelDestination] {
+        destinations.sorted { $0.visitDate > $1.visitDate }
+    }
+    
+    var body: some View {
+        NavigationStack {
+            List {
+                if orderedDestinations.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "map")
+                            .font(.system(size: 28, weight: .semibold))
+                            .foregroundColor(.accentColor)
+                        
+                        Text("start_recording_footprints".localized)
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 16)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                } else {
+                    Section {
+                        ForEach(orderedDestinations) { destination in
+                            Button {
+                                onSelect(destination)
+                            } label: {
+                                DestinationRow(destination: destination)
+                                    .padding(.vertical, 4)
+                            }
+                            .buttonStyle(.plain)
+                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                        }
+                    } header: {
+                        Text("\(orderedDestinations.count) " + "destinations".localized)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .listStyle(.insetGrouped)
+            .navigationTitle("my_footprints".localized)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        onAdd()
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .accessibilityLabel("add_destination".localized)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
 }
 

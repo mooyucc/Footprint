@@ -28,6 +28,7 @@ struct AddDestinationToTripView: View {
     @State private var isFavorite = false
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var photoData: Data?
+    @State private var photoThumbnailData: Data?
     @State private var searchText = ""
     @State private var searchResults: [MKMapItem] = []
     @State private var selectedLocation: MKMapItem?
@@ -81,7 +82,9 @@ struct AddDestinationToTripView: View {
             .onChange(of: selectedPhoto) { oldValue, newValue in
                 Task {
                     if let data = try? await newValue?.loadTransferable(type: Data.self) {
-                        photoData = data
+                        let processed = ImageProcessor.process(data: data)
+                        photoData = processed.0
+                        photoThumbnailData = processed.1
                     }
                 }
             }
@@ -160,7 +163,8 @@ struct AddDestinationToTripView: View {
                     Label(NSLocalizedString("select_photo", comment: ""), systemImage: "photo")
                 }
                 
-                if let photoData, let uiImage = UIImage(data: photoData) {
+                if let photoData = photoThumbnailData ?? photoData,
+                   let uiImage = UIImage(data: photoData) {
                     Image(uiImage: uiImage)
                         .resizable()
                         .scaledToFit()
@@ -205,7 +209,7 @@ struct AddDestinationToTripView: View {
                                 .font(.title3)
                             
                             // 照片或图标
-                            if let photoData = destination.photoData,
+                            if let photoData = destination.photoThumbnailData ?? destination.photoData,
                                let uiImage = UIImage(data: photoData) {
                                 Image(uiImage: uiImage)
                                     .resizable()
@@ -312,6 +316,9 @@ struct AddDestinationToTripView: View {
                 visitDate: visitDate,
                 notes: notes,
                 photoData: photoData,
+                photoDatas: photoData.map { [$0] } ?? [],
+                photoThumbnailData: photoThumbnailData,
+                photoThumbnailDatas: photoThumbnailData.map { [$0] } ?? [],
                 category: category,
                 isFavorite: isFavorite
             )

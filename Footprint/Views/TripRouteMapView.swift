@@ -115,7 +115,7 @@ struct TripRouteMapView: View {
                         // 距离标注
                         if let midpoint = midpointOfPolyline(route.polyline) {
                             Annotation("", coordinate: midpoint) {
-                                RouteDistanceLabel(distance: route.distance)
+                                RouteDistanceLabel(distance: route.footprintDistance)
                             }
                         }
                     }

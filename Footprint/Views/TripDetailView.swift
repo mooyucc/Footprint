@@ -323,7 +323,7 @@ struct TripDetailView: View {
                     routeManager.calculateRoute(from: source.coordinate, to: destination.coordinate) { route in
                         if let route = route {
                             Task { @MainActor in
-                                routeDistances[source.id] = route.distance
+                                routeDistances[source.id] = route.footprintDistance
                             }
                         }
                         continuation.resume()
@@ -476,7 +476,7 @@ struct TripDestinationRow: View {
             }
             
             // 照片或图标
-            if let photoData = destination.photoData,
+            if let photoData = destination.photoThumbnailData ?? destination.photoData,
                let uiImage = UIImage(data: photoData) {
                 Image(uiImage: uiImage)
                     .resizable()

@@ -21,23 +21,17 @@ struct ContentView: View {
                 }
                 .tag(0)
             
-            FootprintView()
-                .tabItem {
-                    Label("destinations".localized, systemImage: "figure.walk.circle.fill")
-                }
-                .tag(1)
-            
             RoutesView()
                 .tabItem {
                     Label("trips".localized, image: "LinkLineIcon")
                 }
-                .tag(2)
+                .tag(1)
             
             ProfileView()
                 .tabItem {
                     Label("profile".localized, systemImage: "person.fill")
                 }
-                .tag(3)
+                .tag(2)
         }
     }
 }
@@ -425,7 +419,7 @@ struct FavoriteDestinationRow: View {
     
     var body: some View {
         HStack(spacing: 12) {
-            if let photoData = destination.photoData,
+            if let photoData = destination.photoThumbnailData ?? destination.photoData,
                let uiImage = UIImage(data: photoData) {
                 Image(uiImage: uiImage)
                     .resizable()

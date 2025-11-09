@@ -31,7 +31,8 @@ struct EditDestinationView: View {
     // 为每张图片分配唯一 ID，避免 ForEach 标识冲突
     struct PhotoItem: Identifiable, Equatable {
         let id: UUID
-        let data: Data
+        var data: Data
+        var thumbnailData: Data
         static func == (lhs: PhotoItem, rhs: PhotoItem) -> Bool { lhs.id == rhs.id }
     }
     @State private var photoItems: [PhotoItem] = []
@@ -183,7 +184,7 @@ struct EditDestinationView: View {
                     if !photoItems.isEmpty {
                         LazyVGrid(columns: [GridItem(.adaptive(minimum: 90), spacing: 8)], spacing: 8) {
                             ForEach(photoItems) { item in
-                                if let uiImage = UIImage(data: item.data) {
+                                if let uiImage = UIImage(data: item.thumbnailData) {
                                     ZStack(alignment: .topTrailing) {
                                         Image(uiImage: uiImage)
                                             .resizable()
@@ -248,22 +249,26 @@ struct EditDestinationView: View {
             .onChange(of: selectedPhotos) { oldValue, newValue in
                 Task {
                     // 载入当前选择的所有图片数据
-                    var loaded: [Data] = []
+                    var processed: [(Data, Data)] = []
                     for item in newValue {
                         if let data = try? await item.loadTransferable(type: Data.self) {
-                            loaded.append(data)
+                            let result = ImageProcessor.process(data: data)
+                            processed.append(result)
                         }
                     }
                     // 去重并截断到上限：避免同一张图片重复加入，且不超过 9 张
-                    if !loaded.isEmpty {
-                        let filtered = loaded.filter { data in
-                            !photoItems.contains(where: { $0.data == data })
-                        }
-                        if !filtered.isEmpty {
-                            let capacity = max(0, maxPhotos - photoItems.count)
-                            if capacity > 0 {
-                                let limited = Array(filtered.prefix(capacity))
-                                let newItems = limited.map { PhotoItem(id: UUID(), data: $0) }
+                    if !processed.isEmpty {
+                        let capacity = max(0, maxPhotos - photoItems.count)
+                        if capacity > 0 {
+                            let limited = Array(processed.prefix(capacity))
+                            let newItems = limited.compactMap { pair -> PhotoItem? in
+                                let (data, thumbnail) = pair
+                                if photoItems.contains(where: { $0.data == data }) {
+                                    return nil
+                                }
+                                return PhotoItem(id: UUID(), data: data, thumbnailData: thumbnail)
+                            }
+                            if !newItems.isEmpty {
                                 await MainActor.run { photoItems.append(contentsOf: newItems) }
                             }
                         }
@@ -289,7 +294,17 @@ struct EditDestinationView: View {
         // 兼容旧数据：若数组为空但有单张照片，则填充为数组
         var datas = destination.photoDatas
         if datas.isEmpty, let single = destination.photoData { datas = [single] }
-        photoItems = datas.map { PhotoItem(id: UUID(), data: $0) }
+        var thumbnails = destination.photoThumbnailDatas
+        if thumbnails.isEmpty, let singleThumb = destination.photoThumbnailData { thumbnails = [singleThumb] }
+        
+        photoItems = datas.enumerated().map { index, data in
+            if index < thumbnails.count {
+                return PhotoItem(id: UUID(), data: data, thumbnailData: thumbnails[index])
+            } else {
+                let processed = ImageProcessor.process(data: data)
+                return PhotoItem(id: UUID(), data: processed.0, thumbnailData: processed.1)
+            }
+        }
         latitude = destination.latitude
         longitude = destination.longitude
         selectedTrip = destination.trip
@@ -512,8 +527,11 @@ struct EditDestinationView: View {
         destination.category = category
         destination.isFavorite = isFavorite
         let datasToSave = photoItems.map { $0.data }
+        let thumbnailsToSave = photoItems.map { $0.thumbnailData }
         destination.photoDatas = datasToSave
         destination.photoData = datasToSave.first
+        destination.photoThumbnailDatas = thumbnailsToSave
+        destination.photoThumbnailData = thumbnailsToSave.first
         destination.trip = selectedTrip
         
         // 如果选择了新位置，更新坐标

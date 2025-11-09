@@ -9,13 +9,37 @@ import Foundation
 import MapKit
 import SwiftUI
 import Combine
+import ObjectiveC
 
 /// 路线管理器：用于计算地点之间的实际道路路线
 class RouteManager: ObservableObject {
     static let shared = RouteManager()
     
+    // MARK: - Nested Types
+    private struct PersistedRouteEntry: Codable {
+        struct Coordinate: Codable {
+            let latitude: Double
+            let longitude: Double
+        }
+        
+        let startLatitude: Double
+        let startLongitude: Double
+        let endLatitude: Double
+        let endLongitude: Double
+        let distance: Double
+        let expectedTravelTime: Double
+        let transportTypeRawValue: UInt
+        let timestamp: Date
+        let coordinates: [Coordinate]
+        
+        func isExpired(referenceDate: Date, validity duration: TimeInterval) -> Bool {
+            referenceDate.timeIntervalSince(timestamp) > duration
+        }
+    }
+    
     // 缓存已计算的路线，key 为起点和终点的坐标组合
     private var routeCache: [String: MKRoute] = [:]
+    private var persistedRouteEntries: [String: PersistedRouteEntry] = [:]
     
     // 存储当前计算出的所有路线
     @Published var routes: [String: MKRoute] = [:]
@@ -33,6 +57,7 @@ class RouteManager: ObservableObject {
     private var lastRequestTime: Date = Date.distantPast
     private let minRequestInterval: TimeInterval = 0.1 // 最小请求间隔：100ms
     private let requestThrottleQueue = DispatchQueue(label: "com.footprint.route.throttle")
+    private let persistenceWriteQueue = DispatchQueue(label: "com.footprint.route.persistenceWrite")
     
     // 最大路线计算距离（单位：米）- 超过此距离的路线可能无法计算或成功率低
     // 约 5000 公里，适合大多数情况
@@ -42,7 +67,22 @@ class RouteManager: ObservableObject {
     private var failedRoutes: Set<String> = []
     private let failedRoutesQueue = DispatchQueue(label: "com.footprint.route.failed")
     
-    private init() {}
+    private let cacheFileURL: URL
+    private static let cacheValidityDuration: TimeInterval = 60 * 60 * 24 * 30 // 30 天
+    
+    private init() {
+        let baseDirectory: URL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
+            ?? URL(fileURLWithPath: NSTemporaryDirectory())
+        
+        let directory = baseDirectory.appendingPathComponent("RouteCache", isDirectory: true)
+        if !FileManager.default.fileExists(atPath: directory.path) {
+            try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        }
+        self.cacheFileURL = directory.appendingPathComponent("routes.json")
+        
+        self.persistedRouteEntries = Self.loadPersistedCache(from: cacheFileURL)
+    }
     
     /// 计算两个地点之间的路线
     /// - Parameters:
@@ -95,16 +135,32 @@ class RouteManager: ObservableObject {
                 return
             }
             
-            var cachedRoute: MKRoute?
-            self.cacheQueue.sync {
-                cachedRoute = self.routeCache[cacheKey]
-            }
-            
-            if let cachedRoute = cachedRoute {
+            if let cachedRoute = self.cacheQueue.sync(execute: { self.routeCache[cacheKey] }) {
                 DispatchQueue.main.async {
                     completion(cachedRoute)
                 }
                 return
+            }
+            
+            var persistedEntry: PersistedRouteEntry?
+            self.cacheQueue.sync {
+                persistedEntry = self.persistedRouteEntries[cacheKey]
+            }
+            
+            if let entry = persistedEntry {
+                if entry.isExpired(referenceDate: Date(), validity: Self.cacheValidityDuration) {
+                    self.removePersistedRoute(for: cacheKey)
+                } else if let restoredRoute = self.routeFromPersistedEntry(entry) {
+                    self.cacheQueue.async(flags: .barrier) {
+                        self.routeCache[cacheKey] = restoredRoute
+                    }
+                    DispatchQueue.main.async {
+                        completion(restoredRoute)
+                    }
+                    return
+                } else {
+                    self.removePersistedRoute(for: cacheKey)
+                }
             }
             
             // 请求节流：避免短时间内发送过多请求导致被限流
@@ -209,13 +265,23 @@ class RouteManager: ObservableObject {
                 return
             }
             
-            print("✅ 路线计算成功 [距离: \(String(format: "%.1f", distance/1000))km, 路线距离: \(String(format: "%.1f", route.distance/1000))km, 耗时: \(String(format: "%.2f", elapsedTime))s]")
+            print("✅ 路线计算成功 [距离: \(String(format: "%.1f", distance/1000))km, 路线距离: \(String(format: "%.1f", route.footprintDistance/1000))km, 耗时: \(String(format: "%.2f", elapsedTime))s]")
             
             // 缓存路线（线程安全）
             if let self = self {
+                route.footprintDistance = route.distance
+                route.footprintExpectedTravelTime = route.expectedTravelTime
+                route.footprintTransportType = route.transportType
+                
                 self.cacheQueue.async(flags: .barrier) {
                     self.routeCache[cacheKey] = route
                 }
+                self.persistRoute(
+                    route,
+                    cacheKey: cacheKey,
+                    source: source,
+                    destination: destination
+                )
                 
                 // 更新 published 属性在主线程
                 DispatchQueue.main.async {
@@ -310,14 +376,188 @@ class RouteManager: ObservableObject {
         to destination: CLLocationCoordinate2D
     ) -> MKRoute? {
         let cacheKey = routeKey(from: source, to: destination)
-        return cacheQueue.sync {
-            return routeCache[cacheKey]
+        
+        if let cachedRoute = cacheQueue.sync(execute: { routeCache[cacheKey] }) {
+            return cachedRoute
         }
+        
+        var persistedEntry: PersistedRouteEntry?
+        cacheQueue.sync {
+            persistedEntry = persistedRouteEntries[cacheKey]
+        }
+        
+        guard let entry = persistedEntry else {
+            return nil
+        }
+        
+        if entry.isExpired(referenceDate: Date(), validity: Self.cacheValidityDuration) {
+            removePersistedRoute(for: cacheKey)
+            return nil
+        }
+        
+        guard let route = routeFromPersistedEntry(entry) else {
+            removePersistedRoute(for: cacheKey)
+            return nil
+        }
+        
+        cacheQueue.async(flags: .barrier) {
+            self.routeCache[cacheKey] = route
+        }
+        return route
     }
     
     /// 生成缓存的 key
     private func routeKey(from source: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D) -> String {
         return "\(source.latitude),\(source.longitude)->\(destination.latitude),\(destination.longitude)"
+    }
+    
+    // MARK: - Persistence
+    private static func loadPersistedCache(from fileURL: URL) -> [String: PersistedRouteEntry] {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            return [:]
+        }
+        
+        do {
+            let data = try Data(contentsOf: fileURL)
+            let decoder = JSONDecoder()
+            let originalEntries = try decoder.decode([String: PersistedRouteEntry].self, from: data)
+            let now = Date()
+            let filteredEntries = originalEntries.filter { _, entry in
+                !entry.isExpired(referenceDate: now, validity: cacheValidityDuration)
+                    && entry.coordinates.count >= 2
+            }
+            if filteredEntries.count < originalEntries.count {
+                // 清理过期后立即保存，避免重复加载无效数据
+                savePersistedCache(filteredEntries, to: fileURL)
+            }
+            return filteredEntries
+        } catch {
+            print("⚠️ 路线缓存加载失败: \(error.localizedDescription)")
+            return [:]
+        }
+    }
+    
+    private static func savePersistedCache(_ entries: [String: PersistedRouteEntry], to fileURL: URL) {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted]
+        do {
+            let data = try encoder.encode(entries)
+            try data.write(to: fileURL, options: .atomic)
+        } catch {
+            print("⚠️ 路线缓存写入失败: \(error.localizedDescription)")
+        }
+    }
+    
+    private func persistRoute(
+        _ route: MKRoute,
+        cacheKey: String,
+        source: CLLocationCoordinate2D,
+        destination: CLLocationCoordinate2D
+    ) {
+        guard route.polyline.pointCount >= 2 else { return }
+        
+        var coordinates = [CLLocationCoordinate2D](repeating: kCLLocationCoordinate2DInvalid, count: route.polyline.pointCount)
+        route.polyline.getCoordinates(&coordinates, range: NSRange(location: 0, length: route.polyline.pointCount))
+        
+        let coordinateEntries = coordinates.map {
+            PersistedRouteEntry.Coordinate(latitude: $0.latitude, longitude: $0.longitude)
+        }
+        
+        let entry = PersistedRouteEntry(
+            startLatitude: source.latitude,
+            startLongitude: source.longitude,
+            endLatitude: destination.latitude,
+            endLongitude: destination.longitude,
+            distance: route.footprintDistance,
+            expectedTravelTime: route.footprintExpectedTravelTime,
+            transportTypeRawValue: route.footprintTransportType.rawValue,
+            timestamp: Date(),
+            coordinates: coordinateEntries
+        )
+        
+        cacheQueue.async(flags: .barrier) {
+            self.persistedRouteEntries[cacheKey] = entry
+            let snapshot = self.persistedRouteEntries
+            self.persistenceWriteQueue.async {
+                Self.savePersistedCache(snapshot, to: self.cacheFileURL)
+            }
+        }
+    }
+    
+    private func removePersistedRoute(for cacheKey: String) {
+        cacheQueue.async(flags: .barrier) {
+            self.persistedRouteEntries.removeValue(forKey: cacheKey)
+            let snapshot = self.persistedRouteEntries
+            self.persistenceWriteQueue.async {
+                Self.savePersistedCache(snapshot, to: self.cacheFileURL)
+            }
+        }
+    }
+    
+    private func routeFromPersistedEntry(_ entry: PersistedRouteEntry) -> MKRoute? {
+        let coordinates = entry.coordinates.map {
+            CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
+        }
+        
+        guard coordinates.count >= 2 else {
+            return nil
+        }
+        
+        let polyline = MKPolyline(coordinates: coordinates, count: coordinates.count)
+        let route = MKRoute()
+        route.setValue(polyline, forKey: "polyline")
+        route.footprintDistance = entry.distance
+        route.footprintExpectedTravelTime = entry.expectedTravelTime
+        route.footprintTransportTypeRawValue = entry.transportTypeRawValue
+        return route
+    }
+}
+
+// MARK: - MKRoute Footprint Extensions
+private var footprintDistanceKey: UInt8 = 0
+private var footprintTravelTimeKey: UInt8 = 0
+private var footprintTransportTypeKey: UInt8 = 0
+
+extension MKRoute {
+    var footprintDistance: CLLocationDistance {
+        get {
+            if let value = objc_getAssociatedObject(self, &footprintDistanceKey) as? NSNumber {
+                return value.doubleValue
+            }
+            return distance
+        }
+        set {
+            objc_setAssociatedObject(self, &footprintDistanceKey, NSNumber(value: newValue), .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+    
+    var footprintExpectedTravelTime: TimeInterval {
+        get {
+            if let value = objc_getAssociatedObject(self, &footprintTravelTimeKey) as? NSNumber {
+                return value.doubleValue
+            }
+            return expectedTravelTime
+        }
+        set {
+            objc_setAssociatedObject(self, &footprintTravelTimeKey, NSNumber(value: newValue), .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+    
+    var footprintTransportType: MKDirectionsTransportType {
+        get {
+            if let value = objc_getAssociatedObject(self, &footprintTransportTypeKey) as? NSNumber {
+                return MKDirectionsTransportType(rawValue: value.uintValue)
+            }
+            return transportType
+        }
+        set {
+            objc_setAssociatedObject(self, &footprintTransportTypeKey, NSNumber(value: newValue.rawValue), .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+    
+    fileprivate var footprintTransportTypeRawValue: UInt {
+        get { footprintTransportType.rawValue }
+        set { footprintTransportType = MKDirectionsTransportType(rawValue: newValue) }
     }
 }
 

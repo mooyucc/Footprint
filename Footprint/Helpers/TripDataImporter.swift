@@ -80,6 +80,8 @@ struct TripDataImporter {
                         visitDate: destInfo.visitDate,
                         notes: destInfo.notes,
                         photoData: destInfo.photoData,
+                        photoThumbnailData: destInfo.photoThumbnailData,
+                        photoThumbnailDatas: destInfo.photoThumbnailDatas ?? [],
                         category: destInfo.category,
                         isFavorite: destInfo.isFavorite
                     )
@@ -167,6 +169,8 @@ struct TripDataImporter {
                         visitDate: destInfo.visitDate,
                         notes: destInfo.notes,
                         photoData: destInfo.photoData,
+                        photoThumbnailData: destInfo.photoThumbnailData,
+                        photoThumbnailDatas: destInfo.photoThumbnailDatas ?? [],
                         category: destInfo.category,
                         isFavorite: destInfo.isFavorite
                     )
