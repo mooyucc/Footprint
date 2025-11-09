@@ -67,8 +67,13 @@ struct StatsImageGenerator {
         let imageHeight = calculateImageHeight(stats: stats, width: imageWidth)
         let imageSize = CGSize(width: imageWidth, height: imageHeight)
         
-        // 创建图片渲染器
-        let renderer = UIGraphicsImageRenderer(size: imageSize)
+        // 创建图片渲染器（禁用Alpha通道，避免不必要的透明通道占用）
+        let rendererFormat = UIGraphicsImageRendererFormat.default()
+        rendererFormat.scale = UIScreen.main.scale
+        rendererFormat.opaque = true
+        rendererFormat.prefersExtendedRange = false
+        
+        let renderer = UIGraphicsImageRenderer(size: imageSize, format: rendererFormat)
         
         return renderer.image { context in
             let cgContext = context.cgContext

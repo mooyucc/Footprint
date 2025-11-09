@@ -7,23 +7,34 @@
 
 import SwiftUI
 import SwiftData
+import UIKit
 
 struct ContentView: View {
     @State private var selectedTab = 0
     @EnvironmentObject var languageManager: LanguageManager
-    
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         TabView(selection: $selectedTab) {
             MapView()
                 .tabItem {
-                    Label("map".localized, image: "LocationIcon")
+                    Label {
+                        Text("map".localized)
+                    } icon: {
+                        Image("LocationIcon")
+                            .renderingMode(.template)
+                    }
                 }
                 .tag(0)
             
             RoutesView()
                 .tabItem {
-                    Label("trips".localized, image: "LinkLineIcon")
+                    Label {
+                        Text("trips".localized)
+                    } icon: {
+                        Image("LinkLineIcon")
+                            .renderingMode(.template)
+                    }
                 }
                 .tag(1)
             
@@ -33,6 +44,39 @@ struct ContentView: View {
                 }
                 .tag(2)
         }
+        .onAppear {
+            configureTabBarAppearance(for: colorScheme)
+        }
+        .onChange(of: colorScheme) { newScheme in
+            configureTabBarAppearance(for: newScheme)
+        }
+    }
+    
+    private func configureTabBarAppearance(for scheme: ColorScheme) {
+        let selectedColor: UIColor = scheme == .dark ? .white : UIColor.label
+        let unselectedColor: UIColor = scheme == .dark ? UIColor.white.withAlphaComponent(0.6) : UIColor.secondaryLabel
+        
+        let appearance = UITabBarAppearance()
+        appearance.configureWithTransparentBackground()
+        appearance.backgroundColor = .clear
+        
+        let layouts = [
+            appearance.stackedLayoutAppearance,
+            appearance.inlineLayoutAppearance,
+            appearance.compactInlineLayoutAppearance
+        ]
+        
+        layouts.forEach { layout in
+            layout.selected.iconColor = selectedColor
+            layout.selected.titleTextAttributes = [.foregroundColor: selectedColor]
+            layout.normal.iconColor = unselectedColor
+            layout.normal.titleTextAttributes = [.foregroundColor: unselectedColor]
+        }
+        
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
+        UITabBar.appearance().tintColor = selectedColor
+        UITabBar.appearance().unselectedItemTintColor = unselectedColor
     }
 }
 

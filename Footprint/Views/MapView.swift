@@ -11,6 +11,7 @@ import SwiftData
 import CoreLocation
 import Combine
 import AudioToolbox
+import UIKit
 
 // 地图样式枚举
 enum MapStyle: String, CaseIterable {
@@ -78,7 +79,6 @@ struct MapView: View {
     @StateObject private var locationManager = LocationManager()
     @StateObject private var routeManager = RouteManager.shared
     // 详情弹窗（由父级统一展示，避免子视图被移除导致弹窗不出现）
-    @State private var showingDestinationDetail = false
     @State private var detailDestinationForSheet: TravelDestination?
     
     // 存储每个旅程的路线数据 [tripId: [routeIndex: route]]
@@ -137,6 +137,7 @@ struct MapView: View {
     @State private var scrollVelocity: CGFloat = 0
     @State private var lastScrollTime: Date = Date()
     @State private var isUserScrolling: Bool = false
+    @State private var selectionFeedbackGenerator = UISelectionFeedbackGenerator()
     
     // 简化版中国国界多边形（近似，覆盖中国大陆与海南一带；仅作兜底使用）
     private static let chinaMainlandPolygon: [CLLocationCoordinate2D] = [
@@ -238,14 +239,14 @@ struct MapView: View {
             memoryBubbleOverlay
             floatingButtons
         }
-        .sheet(isPresented: $showingDestinationDetail) {
-            if let dest = detailDestinationForSheet {
-                DestinationDetailView(destination: dest)
-            }
+        .sheet(item: $detailDestinationForSheet) { destination in
+            DestinationDetailView(destination: destination)
         }
         .sheet(isPresented: $showingTripDetail) {
             if let trip = detailTripForSheet {
-                TripDetailView(trip: trip)
+                NavigationStack {
+                    TripDetailView(trip: trip)
+                }
             }
         }
         .sheet(isPresented: $showingFootprintsDrawer) {
@@ -253,10 +254,11 @@ struct MapView: View {
                 destinations: destinations.sorted(by: { $0.visitDate > $1.visitDate }),
                 onSelect: { destination in
                     showingFootprintsDrawer = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                        detailDestinationForSheet = destination
-                        showingDestinationDetail = true
-                    }
+                        let targetDestination = destination
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                            focusMap(on: targetDestination)
+                            detailDestinationForSheet = targetDestination
+                        }
                 },
                 onAdd: {
                     showingFootprintsDrawer = false
@@ -279,6 +281,7 @@ struct MapView: View {
         }
         .onAppear {
             // 地图视图加载完成
+            selectionFeedbackGenerator.prepare()
             // 如果设置了自动显示线路卡片，则自动显示
             if autoShowRouteCards {
                 // 找到所有有效的旅程（至少2个地点）
@@ -671,7 +674,6 @@ struct MapView: View {
                 }, onOpenDetail: {
                     // 父级弹出详情页，并隐藏小弹窗
                     detailDestinationForSheet = selected
-                    showingDestinationDetail = true
                     withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
                         selectedDestination = nil
                         mapSelection = nil
@@ -790,7 +792,7 @@ struct MapView: View {
                             // 计算滚动速度
                             if timeDelta > 0 && timeDelta < 0.5 { // 只在合理的时间范围内计算
                                 let offsetDelta = currentOffset - lastScrollOffset
-                                scrollVelocity = offsetDelta / CGFloat(timeDelta)
+                                scrollVelocity = (offsetDelta / CGFloat(timeDelta)) * 0.6
                             }
                             
                             lastScrollOffset = currentOffset
@@ -830,8 +832,8 @@ struct MapView: View {
                             
                             // 根据滚动速度决定跳转策略
                             // 目标：轻滑只跳一张，快速滑动可以跳多张
-                            let slowSpeedThreshold: CGFloat = 150 // 慢速阈值（点/秒），低于此速度使用最近卡片
-                            let fastSpeedThreshold: CGFloat = 500 // 快速阈值（点/秒），超过此速度可以跳2张
+                            let slowSpeedThreshold: CGFloat = 220 // 慢速阈值（点/秒），低于此速度使用最近卡片
+                            let fastSpeedThreshold: CGFloat = 700 // 快速阈值（点/秒），超过此速度可以跳2张
                             
                             var targetTripId: UUID? = closestId
                             
@@ -954,6 +956,8 @@ struct MapView: View {
         
         // 更新选中的旅程ID
         selectedTripId = trip.id
+        selectionFeedbackGenerator.selectionChanged()
+        selectionFeedbackGenerator.prepare()
         
         // 如果在线路tab，清除聚合缓存，以便重新计算只显示当前线路的地点
         if autoShowRouteCards {
@@ -1448,12 +1452,12 @@ struct MapView: View {
         
         var distance: Double {
             switch self {
-            case .world: return 250000    // 250km
-            case .country: return 100000  // 100km
-            case .province: return 50000   // 50km
-            case .city: return 25000      // 25km
-            case .district: return 5000   // 5km
-            case .street: return 0        // 不聚合
+            case .world: return 180000     // 180km
+            case .country: return 90000    // 90km
+            case .province: return 45000   // 45km
+            case .city: return 12000       // 12km
+            case .district: return 3000    // 3km
+            case .street: return 0         // 不聚合
             }
         }
         
@@ -2648,16 +2652,17 @@ struct MapView: View {
         }
         
         // 将地图移动到该地点
-        let region = MKCoordinateRegion(
-            center: destination.coordinate,
-            span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-        )
+        focusMap(on: destination)
         
+        print("🫧 点击回忆泡泡: \(destination.name)")
+    }
+    
+    // 聚焦地图到指定地点
+    private func focusMap(on destination: TravelDestination, span: MKCoordinateSpan = MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)) {
+        let region = MKCoordinateRegion(center: destination.coordinate, span: span)
         withAnimation(.easeInOut(duration: 0.8)) {
             mapCameraPosition = .region(region)
         }
-        
-        print("🫧 点击回忆泡泡: \(destination.name)")
     }
     
     // 关闭回忆泡泡
@@ -2891,9 +2896,9 @@ struct ClusterAnnotationView: View, Equatable {
     
     private var markerSize: CGFloat {
         let zoom = zoomLevel
-        // 国家和世界/大洲级别使用较小标记，其他级别保持32
-        if zoom < 6 { return 20 }  // 世界/大洲级别和国家级别
-        else { return 40 }          // 其他级别
+        // 世界/国家/省/市级别使用较小标记，区/街道使用较大标记
+        if zoom < 10 { return 20 }  // world、country、province、city
+        else { return 40 }          // district、street
     }
     
     private var strokeWidth: CGFloat {
@@ -3800,7 +3805,7 @@ struct FootprintsDrawerView: View {
                             Button {
                                 onSelect(destination)
                             } label: {
-                                DestinationRow(destination: destination)
+                                DestinationRow(destination: destination, showsDisclosureIndicator: true)
                                     .padding(.vertical, 4)
                             }
                             .buttonStyle(.plain)

@@ -9,6 +9,12 @@ import SwiftUI
 
 struct DestinationRow: View {
     let destination: TravelDestination
+    let showsDisclosureIndicator: Bool
+    
+    init(destination: TravelDestination, showsDisclosureIndicator: Bool = false) {
+        self.destination = destination
+        self.showsDisclosureIndicator = showsDisclosureIndicator
+    }
     
     @StateObject private var countryManager = CountryManager.shared
     
@@ -71,9 +77,11 @@ struct DestinationRow: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
             
-            Image(systemName: "chevron.right")
-                .foregroundColor(Color(.tertiaryLabel))
-                .font(.footnote)
+            if showsDisclosureIndicator {
+                Image(systemName: "chevron.right")
+                    .foregroundColor(Color(.tertiaryLabel))
+                    .font(.footnote)
+            }
         }
         .padding(.vertical, 4)
         .contentShape(Rectangle())

@@ -42,8 +42,13 @@ struct TripImageGenerator {
         let contentHeight = calculateContentHeight(for: trip, width: screenWidth)
         let imageSize = CGSize(width: screenWidth, height: contentHeight)
         
-        // 创建图片渲染器
-        let renderer = UIGraphicsImageRenderer(size: imageSize)
+        // 创建图片渲染器（禁用Alpha通道以减少文件体积）
+        let rendererFormat = UIGraphicsImageRendererFormat.default()
+        rendererFormat.scale = UIScreen.main.scale
+        rendererFormat.opaque = true
+        rendererFormat.prefersExtendedRange = false
+        
+        let renderer = UIGraphicsImageRenderer(size: imageSize, format: rendererFormat)
         
         return renderer.image { context in
             let cgContext = context.cgContext
