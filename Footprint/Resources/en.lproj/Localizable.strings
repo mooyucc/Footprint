@@ -92,6 +92,12 @@
 "identifying_location" = "Please wait, we are identifying your selected location";
 "unknown_city" = "Unknown City";
 "unknown_country" = "Unknown Country";
+"map_button_locate" = "Locate";
+"map_button_check_in" = "Check In";
+"map_button_memory" = "Memories";
+"map_button_footprints" = "Footprints";
+"map_button_search" = "Search";
+"map_button_style" = "Style";
 "selected_location" = "Selected Location";
 "locations_count" = "locations";
 "delete_destination" = "Delete Destination";

@@ -92,6 +92,12 @@
 "identifying_location" = "请稍候，我们正在识别您选择的位置";
 "unknown_city" = "未知城市";
 "unknown_country" = "未知国家";
+"map_button_locate" = "定位";
+"map_button_check_in" = "打卡";
+"map_button_memory" = "回忆";
+"map_button_footprints" = "足迹";
+"map_button_search" = "搜索";
+"map_button_style" = "样式";
 "selected_location" = "所选位置";
 "locations_count" = "个地点";
 "delete_destination" = "删除地点";

@@ -538,7 +538,7 @@ struct MapView: View {
                                             // 距离标注
                                             if let midpoint = midpointOfPolyline(route.polyline) {
                                                 Annotation("", coordinate: midpoint) {
-                                                    RouteDistanceLabel(distance: route.distance)
+                                                    RouteDistanceLabel(distance: route.footprintDistance)
                                                 }
                                             }
                                         } else {
@@ -1020,6 +1020,21 @@ struct MapView: View {
                 }
             }
             
+            // 右上角：TabView 按钮组
+            VStack {
+                HStack {
+                    Spacer()
+                    
+                    if selectedDestination == nil && !showRouteCards {
+                        topRightTabView
+                            .padding(.trailing)
+                            .padding(.top, 20)
+                            .transition(.opacity)
+                    }
+                }
+                Spacer()
+            }
+            
             // 右下角：TabView 按钮组
             VStack {
                 Spacer()
@@ -1028,8 +1043,8 @@ struct MapView: View {
                     
                     // 当地点预览卡片出现时，或线路卡片显示时，隐藏按钮容器
                     if selectedDestination == nil && !showRouteCards {
-                    bottomRightTabView
-                        .padding(.trailing)
+                        bottomRightTabView
+                            .padding(.trailing)
                             .padding(.bottom, 20)
                             .transition(.opacity)
                     }
@@ -1046,27 +1061,17 @@ struct MapView: View {
                 // 定位按钮
                 buttonGroupItem(
                     icon: "location.fill",
-                    title: "定位",
+                    title: "map_button_locate".localized,
                     isActive: false,
                     action: {
                         centerMapOnCurrentLocation()
                     }
                 )
 
-                // 我的足迹按钮
-                buttonGroupItem(
-                    icon: "figure.walk",
-                    title: "足迹",
-                    isActive: showingFootprintsDrawer,
-                    action: {
-                        showingFootprintsDrawer = true
-                    }
-                )
-                
                 // 打卡按钮
                 buttonGroupItem(
                     icon: "DakaIcon",
-                    title: "打卡",
+                    title: "map_button_check_in".localized,
                     isActive: false,
                     action: {
                         handleCheckIn()
@@ -1076,17 +1081,47 @@ struct MapView: View {
                 // 回忆泡泡按钮
                 buttonGroupItem(
                     icon: "PaopaoIcon",
-                    title: "回忆",
+                    title: "map_button_memory".localized,
                     isActive: false,
                     action: {
                         triggerMemoryBubble()
+                    }
+                )
+            }
+            .padding(.vertical, 6)
+            .padding(.horizontal, 4)
+        }
+        .frame(height: 200)
+        .background(
+            containerBackgroundMaterial
+                .overlay(
+                    RoundedRectangle(cornerRadius: 26, style: .continuous)
+                        .stroke(Color.white.opacity(0.5), lineWidth: 1)
+                )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+        .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 2)
+        .shadow(color: .black.opacity(0.05), radius: 3, x: 0, y: 1)
+    }
+    
+    // 右上角按钮组：抽取足迹、搜索、样式
+    private var topRightTabView: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 8) {
+                // 我的足迹按钮
+                buttonGroupItem(
+                    icon: "mappin.and.ellipse",
+                    title: "map_button_footprints".localized,
+                    isActive: showingFootprintsDrawer,
+                    action: {
+                        showingFootprintsDrawer = true
                     }
                 )
                 
                 // 搜索按钮
                 buttonGroupItem(
                     icon: "magnifyingglass",
-                    title: "搜索",
+                    title: "map_button_search".localized,
                     isActive: showSearchResults,
                     action: {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -1111,7 +1146,7 @@ struct MapView: View {
                 // 地图样式切换按钮
                 buttonGroupItem(
                     icon: currentMapStyle.iconName,
-                    title: "样式",
+                    title: "map_button_style".localized,
                     isActive: false,
                     action: {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
@@ -1123,7 +1158,7 @@ struct MapView: View {
             .padding(.vertical, 6)
             .padding(.horizontal, 4)
         }
-        .frame(height: 200) // 调整容器高度为200
+        .frame(height: 200)
         .background(
             containerBackgroundMaterial
                 .overlay(
@@ -1153,12 +1188,20 @@ struct MapView: View {
                                 .frame(width: 22, height: 22)
                         } else if icon == "DakaIcon" {
                             // DakaIcon：打卡按钮自定义图标
-                            // 浅色模式显示实际颜色，系统深色模式显示DakaIcon(D)
-                            Image((colorScheme == .dark) ? "DakaIcon(D)" : icon)
-                                .resizable()
-                                .renderingMode(.original)
-                                .scaledToFit()
-                                .frame(width: 24, height: 24)
+                            if colorScheme == .dark || isDarkMapStyle {
+                                Image(icon)
+                                    .resizable()
+                                    .renderingMode(.template)
+                                    .scaledToFit()
+                                    .foregroundColor(buttonIconColor(isActive: isActive))
+                                    .frame(width: 24, height: 24)
+                            } else {
+                                Image(icon)
+                                    .resizable()
+                                    .renderingMode(.original)
+                                    .scaledToFit()
+                                    .frame(width: 24, height: 24)
+                            }
                         } else {
                             // 系统图标
                             Image(systemName: icon)
@@ -3666,7 +3709,7 @@ struct RouteCard: View {
         // 如果所有路线都已缓存，直接使用缓存（快速更新）
         if allCached && cachedRoutes.count == coordinates.count - 1 {
             routes = cachedRoutes
-            totalDistance = cachedRoutes.reduce(0) { $0 + $1.distance }
+            totalDistance = cachedRoutes.reduce(0) { $0 + $1.footprintDistance }
             lastDestinationsHash = destinationsHash
             return
         }
@@ -3684,7 +3727,7 @@ struct RouteCard: View {
                 // 计算总距离：如果路线计算成功，使用路线距离；否则使用直线距离
                 if calculatedRoutes.count == coordinates.count - 1 {
                     // 所有路线都计算成功，使用路线距离
-                    totalDistance = calculatedRoutes.reduce(0) { $0 + $1.distance }
+                    totalDistance = calculatedRoutes.reduce(0) { $0 + $1.footprintDistance }
                 } else {
                     // 部分或全部路线计算失败，使用直线距离作为备用
                     var straightLineDistance: CLLocationDistance = 0
@@ -3967,7 +4010,7 @@ struct RoutePreviewCard: View {
                 // 计算总距离：如果路线计算成功，使用路线距离；否则使用直线距离
                 if calculatedRoutes.count == coordinates.count - 1 {
                     // 所有路线都计算成功，使用路线距离
-                    totalDistance = calculatedRoutes.reduce(0) { $0 + $1.distance }
+                    totalDistance = calculatedRoutes.reduce(0) { $0 + $1.footprintDistance }
                 } else {
                     // 部分或全部路线计算失败，使用直线距离作为备用
                     var straightLineDistance: CLLocationDistance = 0
