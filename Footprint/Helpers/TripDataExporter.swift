@@ -81,7 +81,7 @@ struct TripDataExporter {
             let jsonData = try JSONEncoder().encode(exportData)
             
             // 创建临时文件
-            let fileName = "\(trip.name)_MooyuFootprint.json"
+            let fileName = "\(trip.name)_MooFootprint.json"
             let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
             
             try jsonData.write(to: tempURL)

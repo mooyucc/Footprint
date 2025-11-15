@@ -69,7 +69,7 @@ struct StatsImageGenerator {
         
         // 创建图片渲染器（禁用Alpha通道，避免不必要的透明通道占用）
         let rendererFormat = UIGraphicsImageRendererFormat.default()
-        rendererFormat.scale = UIScreen.main.scale
+        rendererFormat.scale = 1.0  // 固定为1.0，确保输出图片宽度为1080像素（不受设备屏幕缩放影响）
         rendererFormat.opaque = true
         rendererFormat.prefersExtendedRange = false
         
@@ -110,26 +110,10 @@ struct StatsImageGenerator {
     
     // MARK: - 背景渐变
     private static func drawGradientBackground(in context: CGContext, size: CGSize) {
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        
-        // 使用现代化的渐变色 - 从深蓝到紫色
-        let colors = [
-            UIColor(red: 0.2, green: 0.3, blue: 0.5, alpha: 1.0).cgColor,  // 深蓝
-            UIColor(red: 0.4, green: 0.2, blue: 0.6, alpha: 1.0).cgColor   // 深紫
-        ] as CFArray
-        
-        guard let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: [0.0, 1.0]) else {
-            return
-        }
-        
-        context.saveGState()
-        context.drawLinearGradient(
-            gradient,
-            start: CGPoint(x: 0, y: 0),
-            end: CGPoint(x: size.width, y: size.height),
-            options: []
-        )
-        context.restoreGState()
+        // 使用与"我的"tab一致的浅米白色背景 #f7f3eb
+        let backgroundColor = UIColor(red: 0.969, green: 0.953, blue: 0.922, alpha: 1.0)
+        context.setFillColor(backgroundColor.cgColor)
+        context.fill(CGRect(origin: .zero, size: size))
     }
     
     // MARK: - 顶部标题
@@ -146,17 +130,17 @@ struct StatsImageGenerator {
                 height: iconSize
             )
             
-            // 使用白色渲染图标
-            let tintedIcon = icon.withTintColor(.white, renderingMode: .alwaysOriginal)
+            // 使用深灰色渲染图标，与"我的"tab风格一致
+            let tintedIcon = icon.withTintColor(UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0), renderingMode: .alwaysOriginal)
             tintedIcon.draw(in: iconRect)
         }
         
         currentY += 100
         
-        // 绘制用户名
+        // 绘制用户名 - 使用深灰色 #333333
         let nameAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 42, weight: .bold),
-            .foregroundColor: UIColor.white
+            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
         ]
         let nameString = NSAttributedString(string: userName, attributes: nameAttributes)
         let nameSize = nameString.size()
@@ -164,10 +148,10 @@ struct StatsImageGenerator {
         
         currentY += nameSize.height + 15
         
-        // 绘制副标题
+        // 绘制副标题 - 使用次要文本颜色
         let subtitleAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 24, weight: .regular),
-            .foregroundColor: UIColor.white.withAlphaComponent(0.9)
+            .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // 次要文本
         ]
         let subtitleString = NSAttributedString(string: "stats_share_my_travel_footprint".localized, attributes: subtitleAttributes)
         let subtitleSize = subtitleString.size()
@@ -184,30 +168,31 @@ struct StatsImageGenerator {
         let cardHeight: CGFloat = 200
         let cardX: CGFloat = (width - cardWidth) / 2
         
-        // 绘制白色卡片背景
+        // 绘制卡片背景 - 使用米色背景 #f0e7da
         let cardRect = CGRect(x: cardX, y: y, width: cardWidth, height: cardHeight)
-        let cardPath = UIBezierPath(roundedRect: cardRect, cornerRadius: 25)
+        let cardPath = UIBezierPath(roundedRect: cardRect, cornerRadius: 20) // 使用20圆角，与"我的"tab一致
         
         context.saveGState()
         context.addPath(cardPath.cgPath)
-        context.setFillColor(UIColor.white.cgColor)
-        context.setShadow(offset: CGSize(width: 0, height: 10), blur: 30, color: UIColor.black.withAlphaComponent(0.15).cgColor)
+        context.setFillColor(UIColor(red: 0.941, green: 0.906, blue: 0.855, alpha: 1.0).cgColor) // #f0e7da
+        // 使用与"我的"tab一致的大卡片阴影
+        context.setShadow(offset: CGSize(width: 0, height: 4), blur: 12, color: UIColor.black.withAlphaComponent(0.12).cgColor)
         context.fillPath()
         context.restoreGState()
         
-        // 绘制大数字
+        // 绘制大数字 - 使用深灰色 #333333
         let numberAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 80, weight: .black),
-            .foregroundColor: UIColor(red: 0.2, green: 0.3, blue: 0.5, alpha: 1.0)
+            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
         ]
         let numberString = NSAttributedString(string: "\(stats.totalDestinations)", attributes: numberAttributes)
         let numberSize = numberString.size()
         numberString.draw(at: CGPoint(x: cardRect.midX - numberSize.width / 2, y: cardRect.minY + 40))
         
-        // 绘制标签
+        // 绘制标签 - 使用次要文本颜色
         let labelAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 28, weight: .medium),
-            .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0)
+            .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // 次要文本
         ]
         let labelString = NSAttributedString(string: "stats_share_destinations_count".localized, attributes: labelAttributes)
         let labelSize = labelString.size()
@@ -224,12 +209,13 @@ struct StatsImageGenerator {
         
         // 绘制白色卡片背景
         let cardRect = CGRect(x: cardX, y: y, width: cardWidth, height: cardHeight)
-        let cardPath = UIBezierPath(roundedRect: cardRect, cornerRadius: 25)
+        let cardPath = UIBezierPath(roundedRect: cardRect, cornerRadius: 20) // 使用20圆角，与"我的"tab一致
         
         context.saveGState()
         context.addPath(cardPath.cgPath)
         context.setFillColor(UIColor.white.cgColor)
-        context.setShadow(offset: CGSize(width: 0, height: 10), blur: 30, color: UIColor.black.withAlphaComponent(0.15).cgColor)
+        // 使用与"我的"tab一致的大卡片阴影
+        context.setShadow(offset: CGSize(width: 0, height: 4), blur: 12, color: UIColor.black.withAlphaComponent(0.12).cgColor)
         context.fillPath()
         context.restoreGState()
         
@@ -269,10 +255,10 @@ struct StatsImageGenerator {
             let valueSize = valueString.size()
             valueString.draw(at: CGPoint(x: centerX - valueSize.width / 2, y: centerY - 10))
             
-            // 绘制标签
+            // 绘制标签 - 使用次要文本颜色
             let labelAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 18, weight: .medium),
-                .foregroundColor: UIColor.darkGray
+                .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // 次要文本
             ]
             let labelString = NSAttributedString(string: item.label, attributes: labelAttributes)
             let labelSize = labelString.size()
@@ -292,21 +278,22 @@ struct StatsImageGenerator {
         
         // 绘制白色卡片背景
         let cardRect = CGRect(x: cardX, y: y, width: cardWidth, height: cardHeight)
-        let cardPath = UIBezierPath(roundedRect: cardRect, cornerRadius: 25)
+        let cardPath = UIBezierPath(roundedRect: cardRect, cornerRadius: 20) // 使用20圆角，与"我的"tab一致
         
         context.saveGState()
         context.addPath(cardPath.cgPath)
         context.setFillColor(UIColor.white.cgColor)
-        context.setShadow(offset: CGSize(width: 0, height: 10), blur: 30, color: UIColor.black.withAlphaComponent(0.15).cgColor)
+        // 使用与"我的"tab一致的大卡片阴影
+        context.setShadow(offset: CGSize(width: 0, height: 4), blur: 12, color: UIColor.black.withAlphaComponent(0.12).cgColor)
         context.fillPath()
         context.restoreGState()
         
         var currentY = cardRect.minY + 25
         
-        // 绘制标题
+        // 绘制标题 - 使用深灰色 #333333
         let titleAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 26, weight: .bold),
-            .foregroundColor: UIColor(red: 0.2, green: 0.3, blue: 0.5, alpha: 1.0)
+            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
         ]
         
         // 绘制时钟图标
@@ -326,10 +313,10 @@ struct StatsImageGenerator {
         let sortedYearlyData = yearlyData.sorted { $0.year > $1.year }.prefix(10)
         
         for (index, data) in sortedYearlyData.enumerated() {
-            // 绘制年份
+            // 绘制年份 - 使用深灰色 #333333
             let yearAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 24, weight: .semibold),
-                .foregroundColor: UIColor(red: 0.3, green: 0.3, blue: 0.3, alpha: 1.0)
+                .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
             ]
             let yearString = NSAttributedString(string: "\(data.year)", attributes: yearAttributes)
             yearString.draw(at: CGPoint(x: cardRect.minX + 40, y: currentY))
@@ -340,12 +327,12 @@ struct StatsImageGenerator {
             let barX = cardRect.minX + 160
             let barY = currentY + 8
             
-            // 背景条
+            // 背景条 - 使用米白色背景 #f7f2ea
             let bgBarRect = CGRect(x: barX, y: barY, width: barWidth, height: barHeight)
             let bgBarPath = UIBezierPath(roundedRect: bgBarRect, cornerRadius: barHeight / 2)
             context.saveGState()
             context.addPath(bgBarPath.cgPath)
-            context.setFillColor(UIColor(white: 0.9, alpha: 1.0).cgColor)
+            context.setFillColor(UIColor(red: 0.969, green: 0.949, blue: 0.918, alpha: 1.0).cgColor) // #f7f2ea
             context.fillPath()
             context.restoreGState()
             
@@ -379,10 +366,10 @@ struct StatsImageGenerator {
             )
             context.restoreGState()
             
-            // 绘制数量
+            // 绘制数量 - 使用深灰色 #333333
             let countAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 22, weight: .bold),
-                .foregroundColor: UIColor.systemBlue
+                .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
             ]
             let countString = NSAttributedString(string: "\(data.count)", attributes: countAttributes)
             let countSize = countString.size()
@@ -396,23 +383,23 @@ struct StatsImageGenerator {
     
     // MARK: - 底部标识
     private static func drawFooter(at y: CGFloat, width: CGFloat, context: CGContext) {
-        // 绘制品牌标识
+        // 绘制品牌标识 - 使用深灰色 #333333
         let footerAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 22, weight: .semibold),
-            .foregroundColor: UIColor.white
+            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
         ]
         let footerString = NSAttributedString(string: "stats_share_footer".localized, attributes: footerAttributes)
         let footerSize = footerString.size()
         footerString.draw(at: CGPoint(x: (width - footerSize.width) / 2, y: y))
         
-        // 绘制日期
+        // 绘制日期 - 使用次要文本颜色
         let dateFormatter = LanguageManager.shared.localizedDateFormatter()
         dateFormatter.dateFormat = LanguageManager.shared.localizedDateFormat()
         let dateString = dateFormatter.string(from: Date())
         
         let dateAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 18, weight: .regular),
-            .foregroundColor: UIColor.white.withAlphaComponent(0.8)
+            .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // 次要文本
         ]
         let dateAttributedString = NSAttributedString(string: dateString, attributes: dateAttributes)
         let dateSize = dateAttributedString.size()

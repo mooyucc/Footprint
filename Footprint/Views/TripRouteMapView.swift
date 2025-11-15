@@ -265,7 +265,7 @@ struct TripRouteMapView: View {
     )
     
     let trip = TravelTrip(
-        name: "测试线路",
+        name: "测试旅程",
         desc: "测试描述",
         startDate: Date(),
         endDate: Date().addingTimeInterval(86400 * 7)

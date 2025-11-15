@@ -12,6 +12,9 @@ import CoreLocation
 import Combine
 import AudioToolbox
 import UIKit
+import PhotosUI
+import Photos
+import ImageIO
 
 // 地图样式枚举
 enum MapStyle: String, CaseIterable {
@@ -99,8 +102,12 @@ struct MapView: View {
     // 长按添加目的地相关状态
     @State private var longPressLocation: CLLocationCoordinate2D?
     @State private var isGeocodingLocation = false
-    @State private var prefilledLocationData: (location: MKMapItem, name: String, country: String, category: String)?
+    @State private var addDestinationPrefill: AddDestinationPrefill?
     @State private var isWaitingForLocation = false // 等待定位状态（用于打卡功能）
+    @State private var pendingPhotoPrefill: PendingPhotoPrefill?
+    @State private var showingPhotoImportPicker = false
+    @State private var photoImportItem: PhotosPickerItem?
+    @State private var photoImportError: PhotoImportError?
     
     @State private var refreshID = UUID()
     
@@ -200,6 +207,40 @@ struct MapView: View {
         CLLocationCoordinate2D(latitude: 53.55, longitude: 73.50)
     ]
     
+    private struct PendingPhotoPrefill {
+        var visitDate: Date?
+        var photoData: Data
+        var thumbnailData: Data
+    }
+    
+    private struct PhotoMetadata {
+        var coordinate: CLLocationCoordinate2D?
+        var captureDate: Date?
+    }
+    
+    private enum PhotoImportError: Identifiable {
+        case failedToLoad
+        case missingLocation
+        
+        var id: String {
+            switch self {
+            case .failedToLoad:
+                return "failedToLoad"
+            case .missingLocation:
+                return "missingLocation"
+            }
+        }
+        
+        var messageKey: String {
+            switch self {
+            case .failedToLoad:
+                return "photo_import_failed_message"
+            case .missingLocation:
+                return "photo_import_missing_location_message"
+            }
+        }
+    }
+    
     // 根据颜色模式返回不同的连线颜色
     private var tripConnectionColor: Color {
         colorScheme == .dark ? .white.opacity(0.6) : .black.opacity(0.5)
@@ -238,6 +279,8 @@ struct MapView: View {
             routeCardsOverlay
             memoryBubbleOverlay
             floatingButtons
+            // 键盘显示时，添加覆盖层阻止地图交互
+            keyboardOverlay
         }
         .sheet(item: $detailDestinationForSheet) { destination in
             DestinationDetailView(destination: destination)
@@ -263,29 +306,58 @@ struct MapView: View {
                 onAdd: {
                     showingFootprintsDrawer = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                        prefilledLocationData = nil
+                        addDestinationPrefill = nil
+                        pendingPhotoPrefill = nil
                         isWaitingForLocation = false
                         showingAddDestination = true
+                    }
+                },
+                onImportPhoto: {
+                    showingFootprintsDrawer = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                        addDestinationPrefill = nil
+                        pendingPhotoPrefill = nil
+                        photoImportItem = nil
+                        isGeocodingLocation = false
+                        isWaitingForLocation = false
+                        showingPhotoImportPicker = true
                     }
                 }
             )
         }
         .sheet(isPresented: $showingAddDestination, onDismiss: {
-            prefilledLocationData = nil
+            addDestinationPrefill = nil
+            pendingPhotoPrefill = nil
             isWaitingForLocation = false
+            isGeocodingLocation = false
         }) {
             destinationSheet
         }
         .sheet(isPresented: $showingMapStylePicker) {
             mapStylePicker
         }
+        .photosPicker(isPresented: $showingPhotoImportPicker, selection: $photoImportItem, matching: .images)
+        .onChange(of: photoImportItem) { _, newValue in
+            if let item = newValue {
+                handlePhotoImportSelection(item)
+            }
+        }
+        .alert(item: $photoImportError) { error in
+            Alert(
+                title: Text("photo_import_error_title".localized),
+                message: Text(error.messageKey.localized),
+                dismissButton: .default(Text("ok".localized))
+            )
+        }
         .onAppear {
             // 地图视图加载完成
             selectionFeedbackGenerator.prepare()
             // 如果设置了自动显示线路卡片，则自动显示
             if autoShowRouteCards {
+                let allTrips = trips
+                
                 // 找到所有有效的旅程（至少2个地点）
-                let validTrips = trips.filter { trip in
+                let validTrips = allTrips.filter { trip in
                     if let destinations = trip.destinations,
                        !destinations.isEmpty,
                        destinations.count >= 2 {
@@ -336,6 +408,35 @@ struct MapView: View {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             showRouteCards = true
                         }
+                    }
+                } else {
+                    // 没有满足路线条件的旅程，也需要展示线路卡片
+                    let fallbackTrip = allTrips.first { trip in
+                        if let selectedId = selectedTripId {
+                            return trip.id == selectedId
+                        }
+                        return true
+                    }
+                    
+                    if let fallbackTrip {
+                        if selectedTripId != fallbackTrip.id {
+                            selectedTripId = fallbackTrip.id
+                        }
+                        
+                        // 当旅程地点不足时，不显示连线，只展示卡片
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            showTripConnections = false
+                        }
+                        
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                showRouteCards = true
+                            }
+                        }
+                    } else {
+                        // 没有任何旅程，隐藏卡片并清空选中状态
+                        showRouteCards = false
+                        selectedTripId = nil
                     }
                 }
             }
@@ -480,6 +581,8 @@ struct MapView: View {
                 }
             }
             .gesture(longPressGesture(proxy: proxy))
+            // 当搜索框有焦点时，禁用地图交互
+            .allowsHitTesting(!isSearchFieldFocused)
         }
     }
     
@@ -660,18 +763,38 @@ struct MapView: View {
         }
     }
     
+    // 键盘覆盖层：当搜索框有焦点时，阻止地图交互
+    @ViewBuilder
+    private var keyboardOverlay: some View {
+        if isSearchFieldFocused {
+            // 使用 GeometryReader 来覆盖键盘区域
+            GeometryReader { geometry in
+                VStack {
+                    Spacer()
+                    // 覆盖键盘区域，阻止地图交互
+                    // 使用 clear 颜色但拦截事件，阻止传递到地图
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .frame(height: max(geometry.size.height * 0.45, 350)) // 覆盖键盘区域（约屏幕高度的45%，至少350点）
+                        .allowsHitTesting(true) // 允许接收事件，阻止事件传递到地图
+                        .onTapGesture {
+                            // 空手势处理，拦截点击事件，阻止传递到地图层
+                            // 这样点击键盘区域时不会关闭搜索框
+                        }
+                }
+            }
+            .ignoresSafeArea(.keyboard, edges: .bottom)
+            .allowsHitTesting(true) // 确保覆盖层可以接收事件
+            .zIndex(1.5) // 在地图之上（zIndex 0），但在搜索框和按钮容器之下（zIndex 4）
+        }
+    }
+    
     // 预览卡片
     private var previewCard: some View {
         VStack {
             Spacer()
             if let selected = selectedDestination {
-                DestinationPreviewCard(destination: selected, onDelete: {
-                    // 删除回调：关闭弹窗
-                    withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
-                        selectedDestination = nil
-                        mapSelection = nil
-                    }
-                }, onOpenDetail: {
+                DestinationPreviewCard(destination: selected, onOpenDetail: {
                     // 父级弹出详情页，并隐藏小弹窗
                     detailDestinationForSheet = selected
                     withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
@@ -679,23 +802,6 @@ struct MapView: View {
                         mapSelection = nil
                     }
                 })
-                .overlay(alignment: .topTrailing) {
-                    Button {
-                        withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
-                            selectedDestination = nil
-                            mapSelection = nil
-                        }
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.secondary)
-                            .padding(6)
-                            .background(.ultraThinMaterial)
-                            .clipShape(Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .padding(8)
-                }
                 .padding()
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
@@ -708,55 +814,45 @@ struct MapView: View {
         VStack {
             Spacer()
             if showRouteCards {
-                // 获取有效的旅程列表（用于显示卡片）
-                let validTrips = trips.filter { trip in
-                    if let destinations = trip.destinations,
-                       !destinations.isEmpty,
-                       destinations.count >= 2 {
-                        return true
-                    }
-                    return false
-                }
+                let displayTrips = trips
                 
                 ScrollViewReader { proxy in
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
-                            ForEach(Array(validTrips.enumerated()), id: \.element.id) { index, trip in
-                                if let tripDestinations = trip.destinations,
-                                   !tripDestinations.isEmpty,
-                                   tripDestinations.count >= 2 {
-                                    // 使用容器包装卡片，确保阴影有足够空间不被裁剪
-                                    ZStack {
-                                        RouteCard(
-                                            trip: trip,
-                                            destinations: tripDestinations.sorted(by: { $0.visitDate < $1.visitDate }),
-                                            onTap: {
-                                                // 点击路线卡片，直接打开详情页并隐藏路线卡片列表
-                                                detailTripForSheet = trip
-                                                showingTripDetail = true
-                                            }
-                                        )
-                                    }
-                                    .frame(width: 336) // 卡片宽度 320 + 左右阴影空间 16
-                                    .padding(.vertical, 4) // 为上下阴影留出空间
-                                    .id(trip.id)
-                                    .background(
-                                        GeometryReader { geometry in
-                                            Color.clear
-                                                .preference(
-                                                    key: ScrollOffsetPreferenceKey.self,
-                                                    value: [ScrollOffsetInfo(
-                                                        tripId: trip.id,
-                                                        offset: geometry.frame(in: .named("scroll")).minX
-                                                    )]
-                                                )
+                            ForEach(Array(displayTrips.enumerated()), id: \.element.id) { index, trip in
+                                let sortedDestinations = (trip.destinations ?? []).sorted(by: { $0.visitDate < $1.visitDate })
+                                
+                                // 使用容器包装卡片，确保阴影有足够空间不被裁剪
+                                ZStack {
+                                    RouteCard(
+                                        trip: trip,
+                                        destinations: sortedDestinations,
+                                        onTap: {
+                                            // 点击路线卡片，直接打开详情页并隐藏路线卡片列表
+                                            detailTripForSheet = trip
+                                            showingTripDetail = true
                                         }
                                     )
-                                    .onAppear {
-                                        // 当卡片出现时，如果这是第一个卡片且没有选中，则选中它
-                                        if index == 0 && selectedTripId == nil {
-                                            handleCardAppear(trip: trip, destinations: tripDestinations.sorted(by: { $0.visitDate < $1.visitDate }))
-                                        }
+                                }
+                                .frame(width: 336) // 卡片宽度 320 + 左右阴影空间 16
+                                .padding(.vertical, 4) // 为上下阴影留出空间
+                                .id(trip.id)
+                                .background(
+                                    GeometryReader { geometry in
+                                        Color.clear
+                                            .preference(
+                                                key: ScrollOffsetPreferenceKey.self,
+                                                value: [ScrollOffsetInfo(
+                                                    tripId: trip.id,
+                                                    offset: geometry.frame(in: .named("scroll")).minX
+                                                )]
+                                            )
+                                    }
+                                )
+                                .onAppear {
+                                    // 当卡片出现时，如果这是第一个卡片且没有选中，则选中它
+                                    if index == 0 && selectedTripId == nil {
+                                        handleCardAppear(trip: trip, destinations: sortedDestinations)
                                     }
                                 }
                             }
@@ -811,9 +907,8 @@ struct MapView: View {
                             // 如果找到最接近中心的卡片，且不是当前选中的，则切换
                             if let closestId = closestId,
                                closestId != selectedTripId,
-                               let trip = validTrips.first(where: { $0.id == closestId }),
-                               let destinations = trip.destinations?.sorted(by: { $0.visitDate < $1.visitDate }),
-                               destinations.count >= 2 {
+                               let trip = displayTrips.first(where: { $0.id == closestId }) {
+                                let destinations = (trip.destinations ?? []).sorted(by: { $0.visitDate < $1.visitDate })
                                 handleCardAppear(trip: trip, destinations: destinations)
                             }
                         }
@@ -823,12 +918,11 @@ struct MapView: View {
                             // 标记用户滚动结束
                             isUserScrolling = false
                             
-                            let (closestId, minDistance) = findClosestCardToCenter(offsets: offsets)
+                            let (closestId, _) = findClosestCardToCenter(offsets: offsets)
                             
                             // 计算应该跳转到哪张卡片
                             let cardWidth: CGFloat = 320
                             let cardSpacing: CGFloat = 12
-                            let cardStep = cardWidth + cardSpacing
                             
                             // 根据滚动速度决定跳转策略
                             // 目标：轻滑只跳一张，快速滑动可以跳多张
@@ -838,7 +932,7 @@ struct MapView: View {
                             var targetTripId: UUID? = closestId
                             
                             // 如果滚动速度较快，根据速度决定跳转几张卡片
-                            if let currentIndex = validTrips.firstIndex(where: { $0.id == selectedTripId }) {
+                            if let currentIndex = displayTrips.firstIndex(where: { $0.id == selectedTripId }) {
                                 let absVelocity = abs(scrollVelocity)
                                 
                                 if absVelocity > fastSpeedThreshold {
@@ -847,16 +941,16 @@ struct MapView: View {
                                     // 速度越快，跳转越多（但最多2张）
                                     let speedFactor = min(2.0, (absVelocity - fastSpeedThreshold) / 300 + 1.0)
                                     let jumpCount = max(1, Int(round(speedFactor)))
-                                    let targetIndex = max(0, min(validTrips.count - 1, currentIndex + (jumpCount * direction)))
-                                    if targetIndex < validTrips.count && targetIndex != currentIndex {
-                                        targetTripId = validTrips[targetIndex].id
+                                    let targetIndex = max(0, min(displayTrips.count - 1, currentIndex + (jumpCount * direction)))
+                                    if targetIndex < displayTrips.count && targetIndex != currentIndex {
+                                        targetTripId = displayTrips[targetIndex].id
                                     }
                                 } else if absVelocity > slowSpeedThreshold {
                                     // 中等速度：跳转1张卡片（确保轻滑只跳一张）
                                     let direction = scrollVelocity < 0 ? -1 : 1
-                                    let targetIndex = max(0, min(validTrips.count - 1, currentIndex + direction))
-                                    if targetIndex < validTrips.count && targetIndex != currentIndex {
-                                        targetTripId = validTrips[targetIndex].id
+                                    let targetIndex = max(0, min(displayTrips.count - 1, currentIndex + direction))
+                                    if targetIndex < displayTrips.count && targetIndex != currentIndex {
+                                        targetTripId = displayTrips[targetIndex].id
                                     }
                                 }
                                 // 慢速滑动（absVelocity <= slowSpeedThreshold）：使用最近的卡片（closestId），自动吸附
@@ -864,9 +958,8 @@ struct MapView: View {
                             
                             // 如果找到目标卡片，且距离中心超过阈值，则自动吸附到中心
                             if let targetId = targetTripId,
-                               let targetTrip = validTrips.first(where: { $0.id == targetId }),
-                               let destinations = targetTrip.destinations?.sorted(by: { $0.visitDate < $1.visitDate }),
-                               destinations.count >= 2 {
+                               let targetTrip = displayTrips.first(where: { $0.id == targetId }) {
+                                let destinations = (targetTrip.destinations ?? []).sorted(by: { $0.visitDate < $1.visitDate })
                                 
                                 // 检查是否需要吸附（距离中心超过阈值）
                                 let (_, targetDistance) = findClosestCardToCenter(offsets: offsets.filter { $0.tripId == targetId })
@@ -903,35 +996,32 @@ struct MapView: View {
                     .onAppear {
                         // 在线路tab视图，确保卡片滚动位置与选中的旅程一致
                         if let currentSelectedId = selectedTripId,
-                           let selectedTrip = validTrips.first(where: { $0.id == currentSelectedId }),
-                           let destinations = selectedTrip.destinations?.sorted(by: { $0.visitDate < $1.visitDate }),
-                           destinations.count >= 2 {
+                           displayTrips.contains(where: { $0.id == currentSelectedId }) {
                             // 如果已经有选中的卡片，滚动到该卡片并居中（保持地图和卡片一致）
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
                                     proxy.scrollTo(currentSelectedId, anchor: .center)
                                 }
                             }
-                        } else if selectedTripId == nil, let firstTrip = validTrips.first {
+                        } else if selectedTripId == nil, let firstTrip = displayTrips.first {
                             // 如果没有选中的卡片，选中第一个
-                            let destinations = firstTrip.destinations?.sorted(by: { $0.visitDate < $1.visitDate }) ?? []
-                            if destinations.count >= 2 {
-                                handleCardAppear(trip: firstTrip, destinations: destinations)
-                                
-                                // 确保第一个旅程的路线已计算（使用incremental模式检查缓存）
-                                if tripRoutes[firstTrip.id] == nil || tripRoutes[firstTrip.id]?.isEmpty == true {
-                                    let coordinates = destinations.map { $0.coordinate }
-                                    Task {
-                                        // 使用incremental模式，会先检查缓存，避免重复计算
-                                        await calculateRoutesForTrip(tripId: firstTrip.id, coordinates: coordinates, incremental: true)
-                                    }
+                            let destinations = (firstTrip.destinations ?? []).sorted(by: { $0.visitDate < $1.visitDate })
+                            handleCardAppear(trip: firstTrip, destinations: destinations)
+                            
+                            // 确保第一个旅程的路线已计算（使用incremental模式检查缓存）
+                            if destinations.count >= 2,
+                               tripRoutes[firstTrip.id] == nil || tripRoutes[firstTrip.id]?.isEmpty == true {
+                                let coordinates = destinations.map { $0.coordinate }
+                                Task {
+                                    // 使用incremental模式，会先检查缓存，避免重复计算
+                                    await calculateRoutesForTrip(tripId: firstTrip.id, coordinates: coordinates, incremental: true)
                                 }
-                                
-                                // 滚动到第一个卡片并居中（首次显示）
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                    withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
-                                        proxy.scrollTo(firstTrip.id, anchor: .center)
-                                    }
+                            }
+                            
+                            // 滚动到第一个卡片并居中（首次显示）
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
+                                    proxy.scrollTo(firstTrip.id, anchor: .center)
                                 }
                             }
                         }
@@ -962,10 +1052,16 @@ struct MapView: View {
         // 如果在线路tab，清除聚合缓存，以便重新计算只显示当前线路的地点
         if autoShowRouteCards {
             clearClusterCache()
-            // 确保显示旅程连线
-            if !showTripConnections {
+            if destinations.count >= 2 {
+                // 确保显示旅程连线
+                if !showTripConnections {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        showTripConnections = true
+                    }
+                }
+            } else if showTripConnections {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    showTripConnections = true
+                    showTripConnections = false
                 }
             }
         }
@@ -1024,12 +1120,12 @@ struct MapView: View {
                 }
             }
             
-            // 右上角：TabView 按钮组
+            // 右上角：TabView 按钮组（搜索时隐藏）
             VStack {
                 HStack {
                     Spacer()
                     
-                    if selectedDestination == nil && !showRouteCards {
+                    if selectedDestination == nil && !showRouteCards && !showSearchResults {
                         topRightTabView
                             .padding(.trailing)
                             .padding(.top, 20)
@@ -1039,14 +1135,14 @@ struct MapView: View {
                 Spacer()
             }
             
-            // 右下角：TabView 按钮组
+            // 右下角：TabView 按钮组（搜索时隐藏）
             VStack {
                 Spacer()
                 HStack {
                     Spacer()
                     
-                    // 当地点预览卡片出现时，或线路卡片显示时，隐藏按钮容器
-                    if selectedDestination == nil && !showRouteCards {
+                    // 当地点预览卡片出现时，或线路卡片显示时，或搜索时，隐藏按钮容器
+                    if selectedDestination == nil && !showRouteCards && !showSearchResults {
                         bottomRightTabView
                             .padding(.trailing)
                             .padding(.bottom, 20)
@@ -1198,18 +1294,18 @@ struct MapView: View {
                                     .renderingMode(.template)
                                     .scaledToFit()
                                     .foregroundColor(buttonIconColor(isActive: isActive))
-                                    .frame(width: 24, height: 24)
+                                    .frame(width: 22, height: 22)
                             } else {
                                 Image(icon)
                                     .resizable()
                                     .renderingMode(.original)
                                     .scaledToFit()
-                                    .frame(width: 24, height: 24)
+                                    .frame(width: 22, height: 22)
                             }
                         } else {
                             // 系统图标
                             Image(systemName: icon)
-                                .font(.system(size: 24, weight: isActive ? .semibold : .regular))
+                                .font(.system(size: 22, weight: isActive ? .semibold : .regular))
                                 .foregroundColor(buttonIconColor(isActive: isActive))
                         }
                     }
@@ -1280,48 +1376,63 @@ struct MapView: View {
     // 搜索框（仅在showSearchResults为true时显示）
     private var searchBox: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
-                    .font(.system(size: 15, weight: .medium))
-                
-                TextField(searchPlaceholderText, text: $searchText)
-                    .textFieldStyle(PlainTextFieldStyle())
-                    .font(.system(size: 16))
-                    .focused($isSearchFieldFocused)
-                    .onSubmit {
-                        performSearch()
-                    }
-                    .onChange(of: searchText) { _, newValue in
-                        if newValue.isEmpty {
-                            searchResults = []
-                        } else {
+            HStack(spacing: 12) {
+                // 搜索输入框：胶囊形状（大圆角，两边半圆形）
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundColor(.secondary)
+                        .font(.system(size: 15, weight: .medium))
+                    
+                    TextField(searchPlaceholderText, text: $searchText)
+                        .textFieldStyle(PlainTextFieldStyle())
+                        .font(.system(size: 16))
+                        .focused($isSearchFieldFocused)
+                        .onSubmit {
                             performSearch()
                         }
-                    }
+                        .onChange(of: searchText) { _, newValue in
+                            if newValue.isEmpty {
+                                searchResults = []
+                            } else {
+                                performSearch()
+                            }
+                        }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .frame(minHeight: 44) // 确保最小高度，与关闭按钮对齐
+                .background(
+                    Capsule()
+                        .fill(.regularMaterial) // iOS 16 标准材质
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.secondary.opacity(0.2), lineWidth: 0.5)
+                        )
+                )
+                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
                 
+                // 关闭按钮：独立的圆形按钮
                 Button {
                     searchText = ""
                     searchResults = []
                     showSearchResults = false
                     isSearchFieldFocused = false
                 } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
-                        .font(.system(size: 15))
+                    Image(systemName: "xmark")
+                        .foregroundColor(.primary)
+                        .font(.system(size: 13, weight: .medium))
+                        .frame(width: 44, height: 44) // 与搜索框高度对齐
+                        .background(
+                            Circle()
+                                .fill(.ultraThinMaterial)
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.secondary.opacity(0.2), lineWidth: 0.5)
+                                )
+                        )
                 }
+                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(
-                RoundedRectangle(cornerRadius: 20)
-                    .fill(.regularMaterial) // iOS 16 标准材质
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20)
-                            .stroke(Color.secondary.opacity(0.2), lineWidth: 0.5)
-                    )
-            )
-            .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
             
             // 搜索结果列表
             if !searchResults.isEmpty {
@@ -1346,7 +1457,7 @@ struct MapView: View {
                         )
                 )
                 .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
-                .padding(.top, 2)
+                .padding(.top, 12)
             }
         }
     }
@@ -1390,13 +1501,8 @@ struct MapView: View {
     // 目的地添加表单
     @ViewBuilder
     private var destinationSheet: some View {
-        if let locationData = prefilledLocationData {
-            AddDestinationView(
-                prefilledLocation: locationData.location,
-                prefilledName: locationData.name,
-                prefilledCountry: locationData.country,
-                prefilledCategory: locationData.category
-            )
+        if let prefill = addDestinationPrefill {
+            AddDestinationView(prefill: prefill)
         } else if isGeocodingLocation {
             // 显示加载状态，等待地理编码完成
             VStack(spacing: 20) {
@@ -1910,6 +2016,27 @@ struct MapView: View {
         // 注意：如果需要，可以在这里添加一个 Alert 提示用户需要定位权限
     }
     
+    private func updateAddDestinationPrefill(
+        mapItem: MKMapItem,
+        name: String,
+        country: String,
+        category: String
+    ) {
+        var prefill = AddDestinationPrefill(
+            location: mapItem,
+            name: name,
+            country: country,
+            category: category
+        )
+        if let pending = pendingPhotoPrefill {
+            prefill.visitDate = pending.visitDate
+            prefill.photoDatas = [pending.photoData]
+            prefill.photoThumbnailDatas = [pending.thumbnailData]
+            pendingPhotoPrefill = nil
+        }
+        addDestinationPrefill = prefill
+    }
+    
     // 反向地理编码：获取城市和国家信息（带多重回退）
     private func reverseGeocodeLocation(coordinate: CLLocationCoordinate2D) {
         isGeocodingLocation = true
@@ -1926,7 +2053,12 @@ struct MapView: View {
             let mkPlacemark = MKPlacemark(placemark: placemark)
             let mapItem = MKMapItem(placemark: mkPlacemark)
             mapItem.name = cityName
-            prefilledLocationData = (location: mapItem, name: cityName, country: countryName, category: category)
+            updateAddDestinationPrefill(
+                mapItem: mapItem,
+                name: cityName,
+                country: countryName,
+                category: category
+            )
             // 不需要再次设置 showingAddDestination，界面已经显示
         }
 
@@ -1980,7 +2112,12 @@ struct MapView: View {
                 mapItem.name = cityName
                 DispatchQueue.main.async {
                     self.isGeocodingLocation = false
-                    self.prefilledLocationData = (location: mapItem, name: cityName, country: countryName, category: category)
+                    self.updateAddDestinationPrefill(
+                        mapItem: mapItem,
+                        name: cityName,
+                        country: countryName,
+                        category: category
+                    )
                     // 不需要再次设置 showingAddDestination，界面已经显示
                 }
             } else {
@@ -2000,7 +2137,12 @@ struct MapView: View {
         let placemark = MKPlacemark(coordinate: coordinate)
         let mapItem = MKMapItem(placemark: placemark)
         mapItem.name = cityName
-        prefilledLocationData = (location: mapItem, name: cityName, country: countryName, category: category)
+        updateAddDestinationPrefill(
+            mapItem: mapItem,
+            name: cityName,
+            country: countryName,
+            category: category
+        )
         // 不需要再次设置 showingAddDestination，界面已经显示
     }
 
@@ -2025,6 +2167,115 @@ struct MapView: View {
             j = i
         }
         return inside
+    }
+    
+    private func handlePhotoImportSelection(_ item: PhotosPickerItem) {
+        Task {
+            guard let data = try? await item.loadTransferable(type: Data.self) else {
+                await MainActor.run {
+                    photoImportError = .failedToLoad
+                    showingAddDestination = false
+                    pendingPhotoPrefill = nil
+                    photoImportItem = nil
+                    showingPhotoImportPicker = false
+                }
+                return
+            }
+            
+            let processed = ImageProcessor.process(data: data)
+            let metadata = extractMetadata(for: item, imageData: data)
+            
+            await MainActor.run {
+                photoImportItem = nil
+                showingPhotoImportPicker = false
+                if let coordinate = metadata.coordinate {
+                    pendingPhotoPrefill = PendingPhotoPrefill(
+                        visitDate: metadata.captureDate,
+                        photoData: processed.0,
+                        thumbnailData: processed.1
+                    )
+                    photoImportError = nil
+                    showingAddDestination = true
+                    addDestinationPrefill = nil
+                    reverseGeocodeLocation(coordinate: coordinate)
+                } else {
+                    pendingPhotoPrefill = nil
+                    addDestinationPrefill = AddDestinationPrefill(
+                        visitDate: metadata.captureDate,
+                        photoDatas: [processed.0],
+                        photoThumbnailDatas: [processed.1]
+                    )
+                    isGeocodingLocation = false
+                    showingAddDestination = true
+                    photoImportError = .missingLocation
+                }
+            }
+        }
+    }
+    
+    private func extractMetadata(for item: PhotosPickerItem, imageData: Data) -> PhotoMetadata {
+        var coordinate: CLLocationCoordinate2D?
+        var captureDate: Date?
+        
+        if let identifier = item.itemIdentifier {
+            let assets = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil)
+            if let asset = assets.firstObject {
+                captureDate = asset.creationDate ?? asset.modificationDate
+                if let location = asset.location {
+                    coordinate = location.coordinate
+                }
+            }
+        }
+        
+        if coordinate == nil || captureDate == nil {
+            if let source = CGImageSourceCreateWithData(imageData as CFData, nil),
+               let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] {
+                if coordinate == nil,
+                   let gps = properties[kCGImagePropertyGPSDictionary] as? [CFString: Any],
+                   let latitude = gps[kCGImagePropertyGPSLatitude] as? Double,
+                   let latitudeRef = gps[kCGImagePropertyGPSLatitudeRef] as? String,
+                   let longitude = gps[kCGImagePropertyGPSLongitude] as? Double,
+                   let longitudeRef = gps[kCGImagePropertyGPSLongitudeRef] as? String {
+                    let latRef = latitudeRef.uppercased()
+                    let lonRef = longitudeRef.uppercased()
+                    let lat = latRef == "S" ? -latitude : latitude
+                    let lon = lonRef == "W" ? -longitude : longitude
+                    coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                }
+                
+                if captureDate == nil {
+                    if let exif = properties[kCGImagePropertyExifDictionary] as? [CFString: Any],
+                       let dateString = exif[kCGImagePropertyExifDateTimeOriginal] as? String {
+                        captureDate = parseExifDateString(dateString)
+                    }
+                    if captureDate == nil,
+                       let tiff = properties[kCGImagePropertyTIFFDictionary] as? [CFString: Any],
+                       let dateString = tiff[kCGImagePropertyTIFFDateTime] as? String {
+                        captureDate = parseExifDateString(dateString)
+                    }
+                }
+            }
+        }
+        
+        return PhotoMetadata(coordinate: coordinate, captureDate: captureDate)
+    }
+    
+    private func parseExifDateString(_ value: String) -> Date? {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        let patterns = ["yyyy:MM:dd HH:mm:ss", "yyyy:MM:dd HH:mm:ssZ"]
+        for pattern in patterns {
+            formatter.dateFormat = pattern
+            if pattern.hasSuffix("Z") {
+                formatter.timeZone = TimeZone(secondsFromGMT: 0)
+            } else {
+                formatter.timeZone = TimeZone.current
+            }
+            if let date = formatter.date(from: value) {
+                return date
+            }
+        }
+        return nil
     }
     
     // 放大到聚合区域
@@ -2812,6 +3063,8 @@ struct SearchResultRow: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle()) // 确保整个矩形区域都可以点击
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -2842,10 +3095,6 @@ struct MapStyleCard: View {
             .background(
                 RoundedRectangle(cornerRadius: 8)
                     .fill(isSelected ? Color.blue : Color(.systemGray6))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 2)
-                    )
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -3119,14 +3368,14 @@ extension CLLocationCoordinate2D: Equatable {
 
 struct DestinationPreviewCard: View {
     let destination: TravelDestination
-    let onDelete: () -> Void
     let onOpenDetail: () -> Void
     @State private var showEditSheet = false
-    @State private var showDeleteConfirmation = false
     @Environment(\.modelContext) private var modelContext
     
     var body: some View {
-        HStack {
+        HStack(alignment: .top, spacing: 12) {
+            photoThumbnail
+            
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text(destination.name)
@@ -3177,36 +3426,7 @@ struct DestinationPreviewCard: View {
                 }
             }
             
-            Spacer()
-            
-            // 圆形照片元素
-            if let photoData = destination.photoData,
-               let uiImage = UIImage(data: photoData) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 50, height: 50)
-                    .clipShape(Circle())
-                    .overlay(
-                        Circle()
-                            .stroke(Color.white, lineWidth: 2)
-                    )
-                    .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
-            } else {
-                // 如果没有照片，显示默认图标
-                Circle()
-                    .fill(Color.gray.opacity(0.3))
-                    .frame(width: 50, height: 50)
-                    .overlay(
-                        Image(systemName: "photo")
-                            .font(.system(size: 20))
-                            .foregroundColor(.gray)
-                    )
-                    .overlay(
-                        Circle()
-                            .stroke(Color.white, lineWidth: 2)
-                    )
-            }
+            Spacer(minLength: 12)
             
             // 按钮组
             HStack(spacing: 8) {
@@ -3223,13 +3443,13 @@ struct DestinationPreviewCard: View {
                         )
                 }
                 
-                // 删除按钮
+                // 喜爱按钮
                 Button {
-                    showDeleteConfirmation = true
+                    toggleFavorite()
                 } label: {
-                    Image(systemName: "trash")
+                    Image(systemName: destination.isFavorite ? "heart.fill" : "heart")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.black)
+                        .foregroundColor(destination.isFavorite ? .red : .black)
                         .padding(10)
                         .background(
                             Circle().fill(Color.white.opacity(0.5))
@@ -3250,22 +3470,39 @@ struct DestinationPreviewCard: View {
         .sheet(isPresented: $showEditSheet) {
             EditDestinationView(destination: destination)
         }
-        .confirmationDialog("delete_destination".localized, isPresented: $showDeleteConfirmation) {
-            Button("delete".localized, role: .destructive) {
-                deleteDestination()
-            }
-            Button("cancel".localized, role: .cancel) { }
-        } message: {
-            Text("confirm_delete_destination".localized(with: destination.name))
-        }
     }
     
-    // 删除地点的方法
-    private func deleteDestination() {
+    private var photoThumbnail: some View {
+        Group {
+            if let photoData = destination.photoData,
+               let uiImage = UIImage(data: photoData) {
+                Image(uiImage: uiImage)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(Color.gray.opacity(0.2))
+                    Image(systemName: "photo")
+                        .font(.system(size: 24, weight: .regular))
+                        .foregroundColor(.gray)
+                }
+            }
+        }
+        .frame(width: 84, height: 84)
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.white.opacity(0.9), lineWidth: 2)
+        )
+        .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
+    }
+    
+    // 切换喜爱状态的方法
+    private func toggleFavorite() {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-            modelContext.delete(destination)
+            destination.isFavorite.toggle()
             try? modelContext.save()
-            onDelete() // 调用回调函数关闭弹窗
         }
     }
 }
@@ -3654,6 +3891,17 @@ struct RouteCard: View {
                     
                     Spacer()
                 }
+            } else {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("trip_share_no_destinations".localized)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                    
+                    Label("add_destination".localized, systemImage: "plus.circle")
+                        .font(.caption)
+                        .foregroundColor(.accentColor)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .padding()
@@ -3775,6 +4023,7 @@ struct FootprintsDrawerView: View {
     let destinations: [TravelDestination]
     let onSelect: (TravelDestination) -> Void
     let onAdd: () -> Void
+    let onImportPhoto: () -> Void
     
     private var orderedDestinations: [TravelDestination] {
         destinations.sorted { $0.visitDate > $1.visitDate }
@@ -3784,21 +4033,23 @@ struct FootprintsDrawerView: View {
         NavigationStack {
             List {
                 if orderedDestinations.isEmpty {
-                    VStack(spacing: 12) {
-                        Image(systemName: "map")
-                            .font(.system(size: 28, weight: .semibold))
-                            .foregroundColor(.accentColor)
-                        
-                        Text("start_recording_footprints".localized)
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 16)
+                    Section {
+                        VStack(spacing: 12) {
+                            Image(systemName: "map")
+                                .font(.system(size: 28, weight: .semibold))
+                                .foregroundColor(.accentColor)
+                            
+                            Text("start_recording_footprints".localized)
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 16)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 40)
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 40)
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
                 } else {
                     Section {
                         ForEach(orderedDestinations) { destination in
@@ -3822,12 +4073,53 @@ struct FootprintsDrawerView: View {
             .navigationTitle("my_footprints".localized)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        onAdd()
-                    } label: {
-                        Image(systemName: "plus")
+                    HStack(spacing: 10) {
+                        // 添加目的地按钮
+                        Button {
+                            onAdd()
+                        } label: {
+                            ZStack {
+                                // 半透明外圈光晕
+                                Circle()
+                                    .fill(Color.black.opacity(0.15))
+                                    .frame(width: 36, height: 36)
+                                // 黑色内圈
+                                Circle()
+                                    .fill(Color.black)
+                                    .frame(width: 28, height: 28)
+                                // 白色图标
+                                Image(systemName: "plus")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.white)
+                            }
+                            .frame(width: 36, height: 36)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.vertical, 2)
+                        
+                        // 导入照片按钮
+                        Button {
+                            onImportPhoto()
+                        } label: {
+                            ZStack {
+                                // 半透明外圈光晕
+                                Circle()
+                                    .fill(Color.black.opacity(0.15))
+                                    .frame(width: 36, height: 36)
+                                // 黑色内圈
+                                Circle()
+                                    .fill(Color.black)
+                                    .frame(width: 28, height: 28)
+                                // 白色图标
+                                Image(systemName: "photo.badge.plus")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(.white)
+                            }
+                            .frame(width: 36, height: 36)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.vertical, 2)
                     }
-                    .accessibilityLabel("add_destination".localized)
                 }
             }
         }

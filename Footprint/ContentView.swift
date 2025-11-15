@@ -32,8 +32,7 @@ struct ContentView: View {
                     Label {
                         Text("trips".localized)
                     } icon: {
-                        Image("LinkLineIcon")
-                            .renderingMode(.template)
+                        Image(systemName: "point.topright.arrow.triangle.backward.to.point.bottomleft.scurvepath")
                     }
                 }
                 .tag(1)
@@ -93,6 +92,71 @@ struct ProfileView: View {
     @State private var shareImage: UIImage?
     @State private var pendingShare = false
     @State private var refreshID = UUID()
+    @Environment(\.colorScheme) var colorScheme
+    
+    // 自定义配色 - 参考附图的米色和优雅配色
+    // 页面背景：非常浅的米白色 #f7f3eb
+    private var pageBackgroundColor: Color {
+        colorScheme == .dark 
+            ? Color(.systemGroupedBackground)
+            : Color(red: 0.969, green: 0.953, blue: 0.922) // #f7f3eb
+    }
+    
+    // 大卡片背景：纯白色 #FFFFFF
+    private var largeCardBackgroundColor: Color {
+        colorScheme == .dark 
+            ? Color(.secondarySystemBackground)
+            : Color.white // #FFFFFF
+    }
+    
+    // 小卡片背景：略偏米色的白色 #f0e7da
+    private var cardBackgroundColor: Color {
+        colorScheme == .dark 
+            ? Color(.secondarySystemBackground)
+            : Color(red: 0.941, green: 0.906, blue: 0.855) // #f0e7da
+    }
+    
+    // 主按钮颜色：深灰/黑色
+    private var primaryButtonColor: Color {
+        colorScheme == .dark ? Color.white : Color(red: 0.2, green: 0.2, blue: 0.2) // #333333
+    }
+    
+    // 按钮文字颜色：根据按钮背景色适配
+    private var buttonTextColor: Color {
+        colorScheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.2) : Color.white // 深色模式背景是白色，文字用深色；浅色模式背景是深色，文字用白色
+    }
+    
+    // 文本颜色：深灰色
+    private var primaryTextColor: Color {
+        colorScheme == .dark ? Color.primary : Color(red: 0.2, green: 0.2, blue: 0.2) // #333333
+    }
+    
+    // 边框颜色：更柔和的边框
+    private var borderColor: Color {
+        colorScheme == .dark 
+            ? Color.white.opacity(0.08)
+            : Color.black.opacity(0.06) // 更柔和的边框
+    }
+    
+    // 大卡片阴影：更明显的阴影效果
+    private var largeCardShadow: (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) {
+        (
+            color: Color.black.opacity(0.12),
+            radius: 12,
+            x: 0,
+            y: 4
+        )
+    }
+    
+    // 小卡片阴影：中等强度的阴影效果
+    private var smallCardShadow: (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) {
+        (
+            color: Color.black.opacity(0.08),
+            radius: 6,
+            x: 0,
+            y: 2
+        )
+    }
     
     var statistics: (total: Int, domestic: Int, international: Int, countries: Int, continents: Int) {
         let total = destinations.count
@@ -114,237 +178,27 @@ struct ProfileView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 24) {
-                    // 头部 - 用户信息
-                    VStack(spacing: 12) {
-                        if appleSignInManager.isSignedIn {
-                            Image(systemName: "person.crop.circle.fill")
-                                .font(.system(size: 80))
-                                .foregroundStyle(.blue.gradient)
-                            
-                            Text(appleSignInManager.displayName)
-                                .font(.title)
-                                .fontWeight(.bold)
-                            
-                            HStack(spacing: 4) {
-                                Image(systemName: "checkmark.icloud.fill")
-                                    .foregroundColor(.green)
-                                Text("iCloud_synced".localized)
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            }
-                        } else {
-                            Image(systemName: "airplane.circle.fill")
-                                .font(.system(size: 80))
-                                .foregroundStyle(.blue.gradient)
-                            
-                            Text("my_travel_footprint".localized)
-                                .font(.title)
-                                .fontWeight(.bold)
-                            
-                            Text("record_every_journey".localized)
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .padding(.top)
+                VStack(spacing: 20) {
+                    profileHeaderView
                     
-                    // 登录提示卡片（仅在未登录时显示）
                     if !appleSignInManager.isSignedIn {
-                        Button {
-                            showSettings = true
-                        } label: {
-                            HStack {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    HStack {
-                                        Image(systemName: "icloud.fill")
-                                            .foregroundStyle(.blue.gradient)
-                                            .font(.title2)
-                                        Text("sign_in_apple_id".localized)
-                                            .font(.headline)
-                                            .foregroundColor(.primary)
-                                    }
-                                    
-                                    Text("enable_icloud_sync".localized)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                                
-                                Spacer()
-                                
-                                Image(systemName: "chevron.right")
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding()
-                            .background(Color.blue.opacity(0.1))
-                            .cornerRadius(12)
-                        }
-                        .buttonStyle(PlainButtonStyle())
+                        signInPromptCard
                     }
                     
-                    // 统计卡片
-                    VStack(spacing: 16) {
-                        HStack {
-                            Text("travel_statistics".localized)
-                                .font(.headline)
-                            
-                            Spacer()
-                            
-                            Button {
-                                generateAndShareStatsImage()
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "square.and.arrow.up")
-                                    Text("share".localized)
-                                }
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(
-                                    LinearGradient(
-                                        colors: [.blue, .purple],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                .cornerRadius(20)
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        
-                        LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: 16) {
-                            ProfileStatCard(
-                                icon: "flag.fill",
-                                value: "\(statistics.total)",
-                                label: "total_destinations".localized,
-                                color: .purple
-                            )
-                            
-                            ProfileStatCard(
-                                icon: "globe.asia.australia.fill",
-                                value: "\(statistics.countries)",
-                                label: "countries_visited".localized,
-                                color: .green
-                            )
-                            
-                            ProfileStatCard(
-                                icon: "house.fill",
-                                value: "\(statistics.domestic)",
-                                label: "domestic_travel".localized,
-                                color: .red
-                            )
-                            
-                            ProfileStatCard(
-                                icon: "airplane",
-                                value: "\(statistics.international)",
-                                label: "international_travel".localized,
-                                color: .blue
-                            )
-                        }
-                    }
-                    .padding()
-                    .background(Color(.secondarySystemBackground))
-                    .cornerRadius(15)
+                    statisticsCard
                     
-                    // 喜爱的目的地
                     if !favoriteDestinations.isEmpty {
-                        VStack(alignment: .leading, spacing: 16) {
-                            HStack {
-                                Image(systemName: "star.fill")
-                                    .foregroundColor(.yellow)
-                                Text("my_favorites".localized)
-                                    .font(.headline)
-                            }
-                            
-                            ForEach(favoriteDestinations.prefix(5)) { destination in
-                                NavigationLink {
-                                    DestinationDetailView(destination: destination)
-                                } label: {
-                                    FavoriteDestinationRow(destination: destination)
-                                }
-                            }
-                        }
-                        .padding()
-                        .background(Color(.secondarySystemBackground))
-                        .cornerRadius(15)
+                        favoritesCard
                     }
                     
-                    // 时间线
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Image(systemName: "clock.fill")
-                                .foregroundColor(.orange)
-                            Text("travel_timeline".localized)
-                                .font(.headline)
-                        }
-                        
-                        if destinations.isEmpty {
-                            Text("no_travel_records".localized)
-                                .foregroundColor(.secondary)
-                                .frame(maxWidth: .infinity, alignment: .center)
-                                .padding()
-                        } else {
-                            let years = Dictionary(grouping: destinations) { destination in
-                                Calendar.current.component(.year, from: destination.visitDate)
-                            }
-                            
-                            ForEach(years.keys.sorted(by: >), id: \.self) { year in
-                                NavigationLink {
-                                    YearFilteredDestinationView(year: year)
-                                } label: {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        HStack {
-                                            Text(languageManager.currentLanguage == .chinese ? "\(year)年" : "\(year)")
-                                                .font(.headline)
-                                                .foregroundColor(.blue)
-                                            
-                                            Spacer()
-                                            
-                                            Image(systemName: "chevron.right")
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                        }
-                                        
-                                        Text("\(years[year]?.count ?? 0) \("destinations_count".localized)")
-                                            .font(.subheadline)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .padding()
-                                    .background(Color(.tertiarySystemBackground))
-                                    .cornerRadius(10)
-                                }
-                                .buttonStyle(PlainButtonStyle())
-                            }
-                        }
-                    }
-                    .padding()
-                    .background(Color(.secondarySystemBackground))
-                    .cornerRadius(15)
+                    timelineCard
                     
-                    // 关于
-                    VStack(spacing: 12) {
-                        Text("footprint_app".localized)
-                            .font(.headline)
-                        
-                        Text("record_journey_memories".localized)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                        
-                        Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding()
+                    aboutSection
                 }
-                .padding()
+                .padding(.horizontal, 16)
+                .padding(.bottom, 20)
             }
+            .background(pageBackgroundColor)
             .navigationTitle("profile".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -353,7 +207,13 @@ struct ProfileView: View {
                         showSettings = true
                     } label: {
                         Image(systemName: "gearshape.fill")
-                            .foregroundStyle(.blue.gradient)
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [.primary, .primary.opacity(0.7)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
                     }
                 }
             }
@@ -372,11 +232,283 @@ struct ProfileView: View {
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { _ in
-                // 语言变化时刷新界面
                 refreshID = UUID()
             }
             .id(refreshID)
         }
+    }
+    
+    // MARK: - 子视图
+    
+    private var profileHeaderView: some View {
+        VStack(spacing: 16) {
+            if appleSignInManager.isSignedIn {
+                Image(systemName: "person.crop.circle.fill")
+                    .font(.system(size: 80))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.primary, .primary.opacity(0.7)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                
+                Text(appleSignInManager.displayName)
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .foregroundColor(primaryTextColor)
+                
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.icloud.fill")
+                        .foregroundColor(.green)
+                        .font(.subheadline)
+                    Text("iCloud_synced".localized)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+            } else {
+                Image(systemName: "airplane.circle.fill")
+                    .font(.system(size: 80))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.primary, .primary.opacity(0.7)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                
+                Text("my_travel_footprint".localized)
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .foregroundColor(primaryTextColor)
+                
+                Text("record_every_journey".localized)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.top, 8)
+        .padding(.bottom, 4)
+    }
+    
+    private var signInPromptCard: some View {
+        Button {
+            showSettings = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "icloud.fill")
+                    .font(.title3)
+                    .foregroundColor(primaryTextColor)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("sign_in_apple_id".localized)
+                        .font(.headline)
+                        .foregroundColor(primaryTextColor)
+                    
+                    Text("enable_icloud_sync".localized)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(16)
+            .background(cardBackgroundColor)
+            .cornerRadius(15)
+            .shadow(color: smallCardShadow.color, radius: smallCardShadow.radius, x: smallCardShadow.x, y: smallCardShadow.y)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+    
+    private var statisticsCard: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Text("travel_statistics".localized)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(primaryTextColor)
+                
+                Spacer()
+                
+                Button {
+                    generateAndShareStatsImage()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "square.and.arrow.up")
+                        Text("share".localized)
+                    }
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(buttonTextColor)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(primaryButtonColor)
+                    .cornerRadius(20)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            
+            LazyVGrid(columns: [
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12)
+            ], spacing: 12) {
+                ProfileStatCard(
+                    icon: "flag.fill",
+                    value: "\(statistics.total)",
+                    label: "total_destinations".localized,
+                    color: .purple,
+                    cardBackground: cardBackgroundColor
+                )
+                
+                ProfileStatCard(
+                    icon: "globe.asia.australia.fill",
+                    value: "\(statistics.countries)",
+                    label: "countries_visited".localized,
+                    color: .green,
+                    cardBackground: cardBackgroundColor
+                )
+                
+                ProfileStatCard(
+                    icon: "house.fill",
+                    value: "\(statistics.domestic)",
+                    label: "domestic_travel".localized,
+                    color: .red,
+                    cardBackground: cardBackgroundColor
+                )
+                
+                ProfileStatCard(
+                    icon: "airplane",
+                    value: "\(statistics.international)",
+                    label: "international_travel".localized,
+                    color: .blue,
+                    cardBackground: cardBackgroundColor
+                )
+            }
+        }
+        .padding(20)
+        .background(cardBackgroundColor)
+        .cornerRadius(20)
+        .shadow(color: largeCardShadow.color, radius: largeCardShadow.radius, x: largeCardShadow.x, y: largeCardShadow.y)
+    }
+    
+    private var favoritesCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 8) {
+                Image(systemName: "star.fill")
+                    .foregroundColor(.yellow)
+                    .font(.headline)
+                Text("my_favorites".localized)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(primaryTextColor)
+            }
+            
+            ForEach(favoriteDestinations.prefix(5)) { destination in
+                NavigationLink {
+                    DestinationDetailView(destination: destination)
+                } label: {
+                    FavoriteDestinationRow(destination: destination)
+                }
+            }
+        }
+        .padding(20)
+        .background(largeCardBackgroundColor)
+        .cornerRadius(20)
+        .shadow(color: largeCardShadow.color, radius: largeCardShadow.radius, x: largeCardShadow.x, y: largeCardShadow.y)
+    }
+    
+    private var timelineCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 8) {
+                Image(systemName: "clock.fill")
+                    .foregroundColor(.orange)
+                    .font(.headline)
+                Text("travel_timeline".localized)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(primaryTextColor)
+            }
+            
+            if destinations.isEmpty {
+                Text("no_travel_records".localized)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 20)
+            } else {
+                timelineYearList
+            }
+        }
+        .padding(20)
+        .background(largeCardBackgroundColor)
+        .cornerRadius(20)
+        .shadow(color: largeCardShadow.color, radius: largeCardShadow.radius, x: largeCardShadow.x, y: largeCardShadow.y)
+    }
+    
+    private var timelineYearList: some View {
+        let years = Dictionary(grouping: destinations) { destination in
+            Calendar.current.component(.year, from: destination.visitDate)
+        }
+        
+        return ForEach(years.keys.sorted(by: >), id: \.self) { year in
+            NavigationLink {
+                YearFilteredDestinationView(year: year)
+            } label: {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(languageManager.currentLanguage == .chinese ? "\(year)年" : "\(year)")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(primaryTextColor)
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Text("\(years[year]?.count ?? 0) \("destinations_count".localized)")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+                .background(
+                    colorScheme == .dark 
+                        ? Color(.tertiarySystemBackground)
+                        : Color(red: 0.969, green: 0.949, blue: 0.918) // #f7f2ea
+                )
+                .cornerRadius(12)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(borderColor, lineWidth: 1)
+                )
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+    }
+    
+    private var aboutSection: some View {
+        VStack(spacing: 12) {
+            Text("footprint_app".localized)
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(primaryTextColor)
+            
+            Text("record_journey_memories".localized)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            
+            Text("Version \(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0")")
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .padding(.vertical, 16)
     }
     
     // MARK: - 生成并分享统计图片
@@ -436,30 +568,80 @@ struct ProfileStatCard: View {
     let value: String
     let label: String
     let color: Color
+    let cardBackground: Color
+    @Environment(\.colorScheme) var colorScheme
+    
+    // 文本颜色：深灰色
+    private var primaryTextColor: Color {
+        colorScheme == .dark ? Color.primary : Color(red: 0.2, green: 0.2, blue: 0.2) // #333333
+    }
+    
+    // 边框颜色：更柔和的边框
+    private var borderColor: Color {
+        colorScheme == .dark 
+            ? Color.white.opacity(0.08)
+            : Color.black.opacity(0.06)
+    }
+    
+    // 小卡片阴影：中等强度的阴影效果
+    private var shadowColor: Color {
+        Color.black.opacity(0.08)
+    }
     
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.title)
-                .foregroundColor(color)
+                .font(.title2)
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [color, color.opacity(0.7)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
             
             Text(value)
-                .font(.title2)
+                .font(.title)
                 .fontWeight(.bold)
+                .foregroundColor(primaryTextColor)
             
             Text(label)
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(12)
+        .padding(.vertical, 16)
+        .padding(.horizontal, 12)
+        .background(
+            colorScheme == .dark 
+                ? Color(.tertiarySystemBackground)
+                : Color(red: 0.969, green: 0.949, blue: 0.918) // #f7f2ea
+        )
+        .cornerRadius(15)
+        .overlay(
+            RoundedRectangle(cornerRadius: 15)
+                .stroke(borderColor, lineWidth: 1)
+        )
+        .shadow(color: shadowColor, radius: 6, x: 0, y: 2)
     }
 }
 
 struct FavoriteDestinationRow: View {
     let destination: TravelDestination
+    @Environment(\.colorScheme) var colorScheme
+    
+    // 文本颜色：深灰色
+    private var primaryTextColor: Color {
+        colorScheme == .dark ? Color.primary : Color(red: 0.2, green: 0.2, blue: 0.2) // #333333
+    }
+    
+    // 边框颜色：更柔和的边框
+    private var borderColor: Color {
+        colorScheme == .dark 
+            ? Color.white.opacity(0.08)
+            : Color.black.opacity(0.06)
+    }
     
     var body: some View {
         HStack(spacing: 12) {
@@ -470,21 +652,30 @@ struct FavoriteDestinationRow: View {
                     .scaledToFill()
                     .frame(width: 50, height: 50)
                     .clipShape(Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(borderColor, lineWidth: 1)
+                    )
             } else {
                 ZStack {
                     Circle()
-                        .fill(destination.normalizedCategory == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
+                        .fill(destination.normalizedCategory == "domestic" ? Color.red.opacity(0.15) : Color.blue.opacity(0.15))
                         .frame(width: 50, height: 50)
                     
                     Image(systemName: "location.fill")
                         .foregroundColor(destination.normalizedCategory == "domestic" ? .red : .blue)
+                        .font(.title3)
                 }
+                .overlay(
+                    Circle()
+                        .stroke(borderColor, lineWidth: 1)
+                )
             }
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(destination.name)
                     .font(.headline)
-                    .foregroundColor(.primary)
+                    .foregroundColor(primaryTextColor)
                 
                 Text(destination.country)
                     .font(.caption)
@@ -497,7 +688,17 @@ struct FavoriteDestinationRow: View {
                 .foregroundColor(.secondary)
                 .font(.caption)
         }
-        .padding(.vertical, 4)
+        .padding(16)
+        .background(
+            colorScheme == .dark 
+                ? Color(.tertiarySystemBackground)
+                : Color(red: 0.969, green: 0.949, blue: 0.918) // #f7f2ea
+        )
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(borderColor, lineWidth: 1)
+        )
     }
 }
 

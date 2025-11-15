@@ -12,6 +12,34 @@ import MapKit
 import CoreLocation
 import Contacts
 
+struct AddDestinationPrefill {
+    var location: MKMapItem?
+    var name: String?
+    var country: String?
+    var category: String?
+    var visitDate: Date?
+    var photoDatas: [Data]
+    var photoThumbnailDatas: [Data]
+    
+    init(
+        location: MKMapItem? = nil,
+        name: String? = nil,
+        country: String? = nil,
+        category: String? = nil,
+        visitDate: Date? = nil,
+        photoDatas: [Data] = [],
+        photoThumbnailDatas: [Data] = []
+    ) {
+        self.location = location
+        self.name = name
+        self.country = country
+        self.category = category
+        self.visitDate = visitDate
+        self.photoDatas = photoDatas
+        self.photoThumbnailDatas = photoThumbnailDatas
+    }
+}
+
 struct AddDestinationView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -20,20 +48,17 @@ struct AddDestinationView: View {
     @StateObject private var languageManager = LanguageManager.shared
     
     // 支持从外部传入预填充数据
-    var prefilledLocation: MKMapItem?
-    var prefilledName: String?
-    var prefilledCountry: String?
-    var prefilledCategory: String?
+    private let prefill: AddDestinationPrefill?
     
-    @State private var name = ""
-    @State private var country = ""
-    @State private var visitDate = Date()
+    @State private var name: String
+    @State private var country: String
+    @State private var visitDate: Date
     @State private var notes = ""
-    @State private var category = "domestic"
+    @State private var category: String
     @State private var isFavorite = false
     @State private var selectedPhotos: [PhotosPickerItem] = []
-    @State private var photoDatas: [Data] = []
-    @State private var photoThumbnailDatas: [Data] = []
+    @State private var photoDatas: [Data]
+    @State private var photoThumbnailDatas: [Data]
     @State private var searchText = ""
     @State private var searchResults: [MKMapItem] = []
     @State private var selectedLocation: MKMapItem?
@@ -47,6 +72,31 @@ struct AddDestinationView: View {
     
     // 城市数据管理器实例
     private let cityDataManager = CityDataManager.shared
+    
+    init(prefill: AddDestinationPrefill? = nil) {
+        self.prefill = prefill
+        let initialName = prefill?.name ?? ""
+        let initialCountry = prefill?.country ?? ""
+        let initialCategory = prefill?.category ?? "domestic"
+        let initialVisitDate = prefill?.visitDate ?? Date()
+        let initialLocation = prefill?.location
+        let initialPhotoDatas = prefill?.photoDatas ?? []
+        let initialThumbnailDatas: [Data]
+        if let prefill = prefill,
+           prefill.photoThumbnailDatas.count == prefill.photoDatas.count {
+            initialThumbnailDatas = prefill.photoThumbnailDatas
+        } else {
+            initialThumbnailDatas = initialPhotoDatas
+        }
+        
+        _name = State(initialValue: initialName)
+        _country = State(initialValue: initialCountry)
+        _visitDate = State(initialValue: initialVisitDate)
+        _category = State(initialValue: initialCategory)
+        _photoDatas = State(initialValue: initialPhotoDatas)
+        _photoThumbnailDatas = State(initialValue: initialThumbnailDatas)
+        _selectedLocation = State(initialValue: initialLocation)
+    }
     
     var body: some View {
         NavigationStack {
@@ -293,21 +343,6 @@ struct AddDestinationView: View {
                             }
                         }
                     }
-                }
-            }
-            .onAppear {
-                // 应用预填充数据
-                if let prefilledLocation = prefilledLocation {
-                    selectedLocation = prefilledLocation
-                }
-                if let prefilledName = prefilledName {
-                    name = prefilledName
-                }
-                if let prefilledCountry = prefilledCountry {
-                    country = prefilledCountry
-                }
-                if let prefilledCategory = prefilledCategory {
-                    category = prefilledCategory
                 }
             }
             .alert("duplicate_destination_title".localized, isPresented: $showDuplicateAlert) {

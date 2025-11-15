@@ -37,7 +37,7 @@
 "iCloud_synced" = "iCloud Synced";
 
 // Common
-"footprint" = "Mooyu Footprint";
+"footprint" = "MooFootprint";
 
 // Destination Detail View
 "no_photo" = "No Photo";
@@ -98,6 +98,11 @@
 "map_button_footprints" = "Footprints";
 "map_button_search" = "Search";
 "map_button_style" = "Style";
+"map_button_import_photo" = "Import Photo";
+"footprints_action_menu" = "Quick Actions";
+"photo_import_error_title" = "Photo Import";
+"photo_import_failed_message" = "Unable to load the selected photo. Please try again.";
+"photo_import_missing_location_message" = "No location metadata was found. The photo was added, please choose a place manually.";
 "selected_location" = "Selected Location";
 "locations_count" = "locations";
 "delete_destination" = "Delete Destination";
@@ -183,7 +188,7 @@
 "trip_share_route" = "Trip Route";
 "trip_share_locations_count" = "locations";
 "trip_share_no_destinations" = "No destinations added yet";
-"trip_share_signature" = "✨ Mooyu Footprint • Record Every Journey";
+"trip_share_signature" = "✨ MooFootprint • Record Every Journey";
 "trip_share_subtitle" = "Record wonderful journeys, share beautiful moments";
 
 // Travel Stats Share Image

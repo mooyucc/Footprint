@@ -53,8 +53,8 @@ struct TripImageGenerator {
         return renderer.image { context in
             let cgContext = context.cgContext
             
-            // 设置背景色
-            cgContext.setFillColor(UIColor.systemBackground.cgColor)
+            // 设置背景色 - 使用与"我的"tab一致的浅米白色背景 #f7f3eb
+            cgContext.setFillColor(UIColor(red: 0.969, green: 0.953, blue: 0.922, alpha: 1.0).cgColor) // #f7f3eb
             cgContext.fill(CGRect(origin: .zero, size: imageSize))
             
             var currentY: CGFloat = 0
@@ -87,9 +87,9 @@ struct TripImageGenerator {
             
             currentY = 250
             
-            // 绘制内容区域背景
+            // 绘制内容区域背景 - 使用与"我的"tab一致的浅米白色背景 #f7f3eb
             let contentRect = CGRect(x: 0, y: currentY, width: screenWidth, height: imageSize.height - currentY)
-            cgContext.setFillColor(UIColor.systemBackground.cgColor)
+            cgContext.setFillColor(UIColor(red: 0.969, green: 0.953, blue: 0.922, alpha: 1.0).cgColor) // #f7f3eb
             cgContext.fill(contentRect)
             
             // 绘制内容
@@ -192,7 +192,7 @@ struct TripImageGenerator {
     private static func drawTitle(_ title: String, at point: CGPoint, width: CGFloat, context: CGContext) {
         let attributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 28, weight: .bold),
-            .foregroundColor: UIColor.label
+            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
         ]
         
         let attributedString = NSAttributedString(string: title, attributes: attributes)
@@ -210,7 +210,7 @@ struct TripImageGenerator {
     private static func drawDescription(_ description: String, at point: CGPoint, width: CGFloat, context: CGContext) {
         let attributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 16),
-            .foregroundColor: UIColor.secondaryLabel
+            .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // 次要文本 #666666
         ]
         
         let attributedString = NSAttributedString(string: description, attributes: attributes)
@@ -229,11 +229,15 @@ struct TripImageGenerator {
         let cardHeight: CGFloat = 100 // 增加卡片高度
         let cardRect = CGRect(x: point.x, y: point.y, width: width, height: cardHeight)
         
-        // 绘制圆角卡片背景
-        let path = UIBezierPath(roundedRect: cardRect, cornerRadius: 12)
+        // 绘制圆角卡片背景 - 使用白色背景，与"我的"tab一致
+        let path = UIBezierPath(roundedRect: cardRect, cornerRadius: 20) // 使用20圆角
+        context.saveGState()
         context.addPath(path.cgPath)
-        context.setFillColor(UIColor.secondarySystemBackground.cgColor)
+        context.setFillColor(UIColor.white.cgColor)
+        // 使用与"我的"tab一致的大卡片阴影
+        context.setShadow(offset: CGSize(width: 0, height: 4), blur: 12, color: UIColor.black.withAlphaComponent(0.12).cgColor)
         context.fillPath()
+        context.restoreGState()
         
         // 绘制时间信息
         let dateFormatter = LanguageManager.shared.localizedDateFormatter(dateStyle: .medium)
@@ -251,7 +255,7 @@ struct TripImageGenerator {
         let lineX1 = cardRect.minX + itemWidth
         let lineX2 = cardRect.minX + itemWidth * 2
         
-        context.setStrokeColor(UIColor.systemGray4.cgColor)
+        context.setStrokeColor(UIColor.black.withAlphaComponent(0.06).cgColor) // 更柔和的边框
         context.setLineWidth(1)
         context.move(to: CGPoint(x: lineX1, y: lineY1))
         context.addLine(to: CGPoint(x: lineX1, y: lineY2))
@@ -277,23 +281,25 @@ struct TripImageGenerator {
         if let iconImage = iconImage {
             let iconSize: CGFloat = 16
             let iconRect = CGRect(x: point.x - iconSize/2, y: point.y - 30, width: iconSize, height: iconSize)
-            iconImage.draw(in: iconRect)
+            // 使用深灰色，与"我的"tab一致
+            let tintedIcon = iconImage.withTintColor(UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0), renderingMode: .alwaysOriginal)
+            tintedIcon.draw(in: iconRect)
         }
         
-        // 绘制标签
+        // 绘制标签 - 使用次要文本颜色
         let labelAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 12),
-            .foregroundColor: UIColor.secondaryLabel
+            .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // 次要文本 #666666
         ]
         let labelString = NSAttributedString(string: label, attributes: labelAttributes)
         let labelSize = labelString.size()
         let labelRect = CGRect(x: point.x - labelSize.width/2, y: point.y - 10, width: labelSize.width, height: labelSize.height)
         labelString.draw(in: labelRect)
         
-        // 绘制值，支持多行显示
+        // 绘制值，支持多行显示 - 使用深灰色
         let valueAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 16, weight: .medium),
-            .foregroundColor: UIColor.label
+            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
         ]
         let valueString = NSAttributedString(string: value, attributes: valueAttributes)
         let maxWidth: CGFloat = 100 // 限制宽度，强制换行
@@ -314,16 +320,20 @@ struct TripImageGenerator {
         let totalHeight = headerHeight + (destinationCount > 0 ? CGFloat(destinationCount) * itemHeight : 80) + 40 // 增加底部padding
         let cardRect = CGRect(x: point.x, y: point.y, width: width, height: totalHeight)
         
-        let path = UIBezierPath(roundedRect: cardRect, cornerRadius: 12)
+        let path = UIBezierPath(roundedRect: cardRect, cornerRadius: 20) // 使用20圆角，与"我的"tab一致
+        context.saveGState()
         context.addPath(path.cgPath)
-        context.setFillColor(UIColor.secondarySystemBackground.cgColor)
+        context.setFillColor(UIColor.white.cgColor)
+        // 使用与"我的"tab一致的大卡片阴影
+        context.setShadow(offset: CGSize(width: 0, height: 4), blur: 12, color: UIColor.black.withAlphaComponent(0.12).cgColor)
         context.fillPath()
+        context.restoreGState()
         
         // 绘制标题
         currentY += 20
         let titleAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 18, weight: .semibold),
-            .foregroundColor: UIColor.label
+            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
         ]
         
         // 绘制行程路线图标
@@ -331,7 +341,9 @@ struct TripImageGenerator {
         if let iconImage = iconImage {
             let iconSize: CGFloat = 16
             let iconRect = CGRect(x: point.x + 20, y: currentY, width: iconSize, height: iconSize)
-            iconImage.draw(in: iconRect)
+            // 使用深灰色，与"我的"tab一致
+            let tintedIcon = iconImage.withTintColor(UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0), renderingMode: .alwaysOriginal)
+            tintedIcon.draw(in: iconRect)
         }
         
         // 绘制行程路线文字
@@ -340,7 +352,7 @@ struct TripImageGenerator {
         
         let countString = NSAttributedString(string: "\(destinationCount) " + "trip_share_locations_count".localized, attributes: [
             .font: UIFont.systemFont(ofSize: 14),
-            .foregroundColor: UIColor.secondaryLabel
+            .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // 次要文本 #666666
         ])
         let countSize = countString.size()
         countString.draw(at: CGPoint(x: point.x + width - countSize.width - 20, y: currentY))
@@ -357,7 +369,7 @@ struct TripImageGenerator {
             // 绘制空状态
             let emptyAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 16),
-                .foregroundColor: UIColor.secondaryLabel
+                .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // 次要文本 #666666
             ]
             let emptyString = NSAttributedString(string: "trip_share_no_destinations".localized, attributes: emptyAttributes)
             let emptySize = emptyString.size()
@@ -413,10 +425,10 @@ struct TripImageGenerator {
             iconString.draw(at: CGPoint(x: point.x + 75 - iconSize.width/2, y: point.y + 33 - iconSize.height/2))
         }
         
-        // 绘制目的地信息
+        // 绘制目的地信息 - 使用深灰色
         let nameAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 16, weight: .medium),
-            .foregroundColor: UIColor.label
+            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
         ]
         let nameString = NSAttributedString(string: destination.name, attributes: nameAttributes)
         nameString.draw(at: CGPoint(x: point.x + 110, y: point.y + 10))
@@ -426,7 +438,7 @@ struct TripImageGenerator {
         let subtitle = "\(destination.country) • \(dateFormatter.string(from: destination.visitDate))"
         let subtitleAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 12),
-            .foregroundColor: UIColor.secondaryLabel
+            .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // 次要文本 #666666
         ]
         let subtitleString = NSAttributedString(string: subtitle, attributes: subtitleAttributes)
         subtitleString.draw(at: CGPoint(x: point.x + 110, y: point.y + 30))
@@ -435,7 +447,7 @@ struct TripImageGenerator {
     private static func drawSignature(at point: CGPoint, width: CGFloat, context: CGContext) {
         let signatureAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 14),
-            .foregroundColor: UIColor.secondaryLabel
+            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
         ]
         let signatureString = NSAttributedString(string: "trip_share_signature".localized, attributes: signatureAttributes)
         let signatureSize = signatureString.size()
@@ -443,7 +455,7 @@ struct TripImageGenerator {
         
         let subtitleAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 12),
-            .foregroundColor: UIColor.secondaryLabel.withAlphaComponent(0.7)
+            .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // 次要文本 #666666
         ]
         let subtitleString = NSAttributedString(string: "trip_share_subtitle".localized, attributes: subtitleAttributes)
         let subtitleSize = subtitleString.size()

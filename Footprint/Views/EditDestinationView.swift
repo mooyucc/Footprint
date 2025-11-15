@@ -43,6 +43,7 @@ struct EditDestinationView: View {
     @State private var latitude: Double = 0.0
     @State private var longitude: Double = 0.0
     @State private var selectedTrip: TravelTrip?
+    @State private var showDeleteConfirmation = false
     
     let categories = ["domestic", "international"]
     private let maxPhotos = 9
@@ -226,6 +227,19 @@ struct EditDestinationView: View {
                     TextEditor(text: $notes)
                         .frame(minHeight: 100)
                 }
+                
+                Section {
+                    Button(role: .destructive) {
+                        showDeleteConfirmation = true
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Image(systemName: "trash")
+                            Text("delete".localized)
+                            Spacer()
+                        }
+                    }
+                }
             }
             .navigationTitle("edit_destination".localized)
             .navigationBarTitleDisplayMode(.inline)
@@ -245,6 +259,14 @@ struct EditDestinationView: View {
             }
             .onAppear {
                 loadDestinationData()
+            }
+            .alert("delete_destination".localized, isPresented: $showDeleteConfirmation) {
+                Button("cancel".localized, role: .cancel) { }
+                Button("delete".localized, role: .destructive) {
+                    deleteDestination()
+                }
+            } message: {
+                Text("confirm_delete_destination".localized(with: destination.name))
             }
             .onChange(of: selectedPhotos) { oldValue, newValue in
                 Task {
@@ -542,6 +564,14 @@ struct EditDestinationView: View {
         
         // SwiftData会自动保存更改
         dismiss()
+    }
+    
+    private func deleteDestination() {
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            modelContext.delete(destination)
+            try? modelContext.save()
+            dismiss()
+        }
     }
 }
 
