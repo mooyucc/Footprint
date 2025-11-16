@@ -19,6 +19,8 @@ struct TripDetailView: View {
     @State private var showingDeleteAlert = false
     @State private var shareItem: TripShareItem?
     @State private var shareFileItem: TripShareItem?
+    @State private var showingLayoutSelection = false // 控制版面选择视图显示
+    @State private var selectedLayout: TripShareLayout = .list // 默认选择清单版面
     @StateObject private var routeManager = RouteManager.shared
     @State private var routeDistances: [UUID: CLLocationDistance] = [:]
     @State private var showingMenu = false // 控制浮动菜单显示
@@ -262,6 +264,9 @@ struct TripDetailView: View {
                 SystemShareSheet(items: [item.text])
             }
         }
+        .sheet(isPresented: $showingLayoutSelection) {
+            TripShareLayoutSelectionView(trip: trip, selectedLayout: $selectedLayout)
+        }
         .alert("delete_trip".localized, isPresented: $showingDeleteAlert) {
             Button("cancel".localized, role: .cancel) { }
             Button("delete".localized, role: .destructive) {
@@ -284,11 +289,8 @@ struct TripDetailView: View {
     }
     
     private func shareTrip() {
-        // 生成旅程图片
-        let tripImage = TripImageGenerator.generateTripImage(from: trip)
-        
-        // 只分享图片，不分享文字（因为所有信息都已经包含在图片中）
-        shareItem = TripShareItem(text: "", image: tripImage)
+        // 显示版面选择视图
+        showingLayoutSelection = true
     }
     
     private func shareTripToTeam() {
@@ -484,14 +486,12 @@ struct TripDestinationRow: View {
                     .frame(width: 50, height: 50)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
             } else {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(destination.normalizedCategory == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
-                        .frame(width: 50, height: 50)
-                    
-                    Image(systemName: "location.fill")
-                        .foregroundColor(destination.normalizedCategory == "domestic" ? .red : .blue)
-                }
+                Image("ImageMooyu")
+                    .renderingMode(.original)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 50, height: 50)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
             }
             
             VStack(alignment: .leading, spacing: 4) {

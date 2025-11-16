@@ -1128,7 +1128,7 @@ struct MapView: View {
                     if selectedDestination == nil && !showRouteCards && !showSearchResults {
                         topRightTabView
                             .padding(.trailing)
-                            .padding(.top, 20)
+                            .padding(.top, 65)
                             .transition(.opacity)
                     }
                 }
@@ -3369,7 +3369,7 @@ extension CLLocationCoordinate2D: Equatable {
 struct DestinationPreviewCard: View {
     let destination: TravelDestination
     let onOpenDetail: () -> Void
-    @State private var showEditSheet = false
+    @State private var shareItem: TripShareItem?
     @Environment(\.modelContext) private var modelContext
     
     var body: some View {
@@ -3430,11 +3430,11 @@ struct DestinationPreviewCard: View {
             
             // 按钮组
             HStack(spacing: 8) {
-                // 编辑按钮
+                // 分享按钮
                 Button {
-                    showEditSheet = true
+                    shareDestination()
                 } label: {
-                    Image(systemName: "pencil")
+                    Image(systemName: "square.and.arrow.up")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.black)
                         .padding(10)
@@ -3467,8 +3467,12 @@ struct DestinationPreviewCard: View {
         .onTapGesture {
             onOpenDetail()
         }
-        .sheet(isPresented: $showEditSheet) {
-            EditDestinationView(destination: destination)
+        .sheet(item: $shareItem) { item in
+            if let image = item.image {
+                SystemShareSheet(items: [image])
+            } else {
+                SystemShareSheet(items: [item.text])
+            }
         }
     }
     
@@ -3480,13 +3484,10 @@ struct DestinationPreviewCard: View {
                     .resizable()
                     .scaledToFill()
             } else {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color.gray.opacity(0.2))
-                    Image(systemName: "photo")
-                        .font(.system(size: 24, weight: .regular))
-                        .foregroundColor(.gray)
-                }
+                Image("ImageMooyu")
+                    .renderingMode(.original)
+                    .resizable()
+                    .scaledToFill()
             }
         }
         .frame(width: 84, height: 84)
@@ -3504,6 +3505,14 @@ struct DestinationPreviewCard: View {
             destination.isFavorite.toggle()
             try? modelContext.save()
         }
+    }
+    
+    // 分享地点图片
+    private func shareDestination() {
+        // 生成地点分享图片
+        let destinationImage = TripImageGenerator.generateDestinationImage(from: destination)
+        // 只分享图片，不分享文字（因为所有信息都已经包含在图片中）
+        shareItem = TripShareItem(text: "", image: destinationImage)
     }
 }
 
@@ -3770,6 +3779,8 @@ struct RouteCard: View {
     @State private var isLoadingRoutes = false
     @State private var totalDistance: CLLocationDistance = 0
     @State private var lastDestinationsHash: Int = 0 // 用于检测 destinations 变化
+    @State private var showingLayoutSelection = false // 控制版面选择视图显示
+    @State private var selectedLayout: TripShareLayout = .list // 默认选择清单版面
     
     init(trip: TravelTrip, destinations: [TravelDestination], onTap: (() -> Void)? = nil) {
         self.trip = trip
@@ -3807,6 +3818,19 @@ struct RouteCard: View {
                 }
                 
                 Spacer()
+                
+                // 分享按钮
+                Button {
+                    showingLayoutSelection = true
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.primary)
+                        .frame(width: 32, height: 32)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
             }
             
             // 线路信息
@@ -3929,6 +3953,9 @@ struct RouteCard: View {
             if oldValue != 0 && oldValue != newValue {
                 calculateRoutes()
             }
+        }
+        .sheet(isPresented: $showingLayoutSelection) {
+            TripShareLayoutSelectionView(trip: trip, selectedLayout: $selectedLayout)
         }
     }
     

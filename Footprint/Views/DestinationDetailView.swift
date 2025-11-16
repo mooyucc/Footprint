@@ -13,6 +13,7 @@ struct DestinationDetailView: View {
     let destination: TravelDestination
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @State private var showingEditSheet = false
     @State private var cameraPosition: MapCameraPosition
     @StateObject private var languageManager = LanguageManager.shared
@@ -41,13 +42,36 @@ struct DestinationDetailView: View {
                     
                     if !allPhotos.isEmpty, let mainImage = UIImage(data: allPhotos[min(selectedPhotoIndex, allPhotos.count - 1)]) {
                         VStack(spacing: 10) {
-                            Image(uiImage: mainImage)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: geometry.size.width)
-                                .frame(height: imageHeight)
-                                .clipped()
-                                .cornerRadius(15)
+                            ZStack(alignment: .topTrailing) {
+                                Image(uiImage: mainImage)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(width: geometry.size.width)
+                                    .frame(height: imageHeight)
+                                    .clipped()
+                                    .cornerRadius(15)
+                                
+                                // 圆形编辑按钮
+                                Button {
+                                    showingEditSheet = true
+                                } label: {
+                                    Image(systemName: "pencil.circle")
+                                        .font(.system(size: 24, weight: .semibold))
+                                        .foregroundColor(colorScheme == .dark ? .white : .black)
+                                        .frame(width: 44, height: 44)
+                                        .background(
+                                            Circle()
+                                                .fill(.ultraThinMaterial)
+                                                .overlay(
+                                                    Circle()
+                                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                                )
+                                        )
+                                        .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 2)
+                                }
+                                .padding(.top, 12)
+                                .padding(.trailing, 12)
+                            }
                             
                             if allPhotos.count > 1 {
                                 ScrollView(.horizontal, showsIndicators: false) {
@@ -73,7 +97,7 @@ struct DestinationDetailView: View {
                             }
                         }
                     } else {
-                        ZStack {
+                        ZStack(alignment: .topTrailing) {
                             Rectangle()
                                 .fill(destination.normalizedCategory == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
                                 .frame(width: geometry.size.width)
@@ -86,6 +110,27 @@ struct DestinationDetailView: View {
                                 Text("no_photo".localized)
                                     .foregroundColor(.secondary)
                             }
+                            
+                            // 圆形编辑按钮（无照片时也显示）
+                            Button {
+                                showingEditSheet = true
+                            } label: {
+                                Image(systemName: "pencil.circle.fill")
+                                    .font(.system(size: 24, weight: .semibold))
+                                    .foregroundColor(colorScheme == .dark ? .white : .black)
+                                    .frame(width: 44, height: 44)
+                                    .background(
+                                        Circle()
+                                            .fill(.ultraThinMaterial)
+                                            .overlay(
+                                                Circle()
+                                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                            )
+                                    )
+                                    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 2)
+                            }
+                            .padding(.top, 12)
+                            .padding(.trailing, 12)
                         }
                         .cornerRadius(15)
                     }
@@ -234,16 +279,6 @@ struct DestinationDetailView: View {
                 Color.clear.frame(height: 20)
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showingEditSheet = true
-                    } label: {
-                        Image(systemName: "pencil.circle.fill")
-                            .font(.title2)
-                    }
-                }
-            }
             .sheet(isPresented: $showingEditSheet) {
                 EditDestinationView(destination: destination)
             }

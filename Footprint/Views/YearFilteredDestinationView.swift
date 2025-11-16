@@ -373,22 +373,10 @@ struct DestinationRowCard: View {
                     .resizable()
                     .scaledToFill()
             } else {
-                ZStack {
-                    LinearGradient(
-                        colors: [
-                            .blue.opacity(0.3),
-                            .purple.opacity(0.2)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                    
-                    Image(systemName: countryManager.isDomestic(country: destination.country) ? "location.fill" : "globe.asia.australia.fill")
-                        .resizable()
-                        .scaledToFit()
-                        .foregroundStyle(.white.opacity(0.9))
-                        .padding(14)
-                }
+                Image("ImageMooyu")
+                    .renderingMode(.original)
+                    .resizable()
+                    .scaledToFill()
             }
         }
     }

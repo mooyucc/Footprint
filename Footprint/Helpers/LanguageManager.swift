@@ -170,7 +170,7 @@ class LanguageManager: ObservableObject {
             "location_coordinates": "位置坐标",
             "latitude": "纬度",
             "longitude": "经度",
-            "travel_notes": "足迹回忆",
+            "travel_notes": "旅行笔记",
             // 目的地列表视图相关
             "my_footprints": "我的足迹",
             "add_first_destination": "添加第一个目的地",
@@ -286,6 +286,14 @@ class LanguageManager: ObservableObject {
             "trip_share_no_destinations": "还没有添加目的地",
             "trip_share_signature": "✨ 墨鱼足迹 · 点亮生命中每一个足迹",
             "trip_share_subtitle": "珍藏美好回忆，分享精彩瞬间",
+            // 版面选择相关
+            "select_layout": "选择分享版面",
+            "trip_share_layout_list": "清单版面",
+            "trip_share_layout_list_desc": "详细展示旅程信息，包含封面、时间卡片和完整行程路线",
+            "trip_share_layout_grid": "九宫格拼图",
+            "trip_share_layout_grid_desc": "以九宫格形式展示目的地照片，适合视觉化分享",
+            "trip_share_layout_extended_grid": "扩展网格",
+            "trip_share_layout_extended_grid_desc": "以网格形式展示所有目的地照片，支持超过9个地点",
             // 旅行统计分享图片相关
             "stats_share_my_travel_footprint": "我的足迹地图",
             "stats_share_destinations_count": "个点亮的地方",
@@ -530,6 +538,14 @@ class LanguageManager: ObservableObject {
             "trip_share_no_destinations": "No destinations added yet",
             "trip_share_signature": "✨ MooFootprint • Light Up Every Footprint",
             "trip_share_subtitle": "Cherish beautiful memories, share wonderful moments",
+            // Layout selection related
+            "select_layout": "Select Share Layout",
+            "trip_share_layout_list": "List Layout",
+            "trip_share_layout_list_desc": "Detailed journey information with cover, time card and complete route",
+            "trip_share_layout_grid": "Grid Layout",
+            "trip_share_layout_grid_desc": "Display destination photos in a 3x3 grid, perfect for visual sharing",
+            "trip_share_layout_extended_grid": "Extended Grid",
+            "trip_share_layout_extended_grid_desc": "Display all destination photos in a grid layout, supports more than 9 locations",
             // Travel stats share image related
             "stats_share_my_travel_footprint": "My Footprint Map",
             "stats_share_destinations_count": "Places Visited",
