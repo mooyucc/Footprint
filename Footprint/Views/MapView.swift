@@ -3370,6 +3370,7 @@ struct DestinationPreviewCard: View {
     let destination: TravelDestination
     let onOpenDetail: () -> Void
     @State private var shareItem: TripShareItem?
+    @State private var showingSelectTrip = false
     @Environment(\.modelContext) private var modelContext
     
     var body: some View {
@@ -3428,32 +3429,55 @@ struct DestinationPreviewCard: View {
             
             Spacer(minLength: 12)
             
-            // 按钮组
-            HStack(spacing: 8) {
-                // 分享按钮
-                Button {
-                    shareDestination()
-                } label: {
-                    Image(systemName: "square.and.arrow.up")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.black)
-                        .padding(10)
-                        .background(
-                            Circle().fill(Color.white.opacity(0.5))
-                        )
+            // 按钮组 - 2x2布局
+            VStack(spacing: 8) {
+                // 第一行：分享和喜欢按钮
+                HStack(spacing: 8) {
+                    // 分享按钮
+                    Button {
+                        shareDestination()
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.black)
+                            .padding(10)
+                            .background(
+                                Circle().fill(Color.white.opacity(0.5))
+                            )
+                    }
+                    
+                    // 喜爱按钮
+                    Button {
+                        toggleFavorite()
+                    } label: {
+                        Image(systemName: destination.isFavorite ? "heart.fill" : "heart")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(destination.isFavorite ? .red : .black)
+                            .padding(10)
+                            .background(
+                                Circle().fill(Color.white.opacity(0.5))
+                            )
+                    }
                 }
                 
-                // 喜爱按钮
-                Button {
-                    toggleFavorite()
-                } label: {
-                    Image(systemName: destination.isFavorite ? "heart.fill" : "heart")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(destination.isFavorite ? .red : .black)
-                        .padding(10)
-                        .background(
-                            Circle().fill(Color.white.opacity(0.5))
-                        )
+                // 第二行：创建/添加旅程按钮
+                HStack(spacing: 8) {
+                    // 创建/添加旅程按钮
+                    Button {
+                        showingSelectTrip = true
+                    } label: {
+                        Image(systemName: "point.topright.arrow.triangle.backward.to.point.bottomleft.filled.scurvepath")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.black)
+                            .padding(10)
+                            .background(
+                                Circle().fill(Color.white.opacity(0.5))
+                            )
+                    }
+                    
+                    // 占位，保持布局对称
+                    Spacer()
+                        .frame(width: 36, height: 36)
                 }
             }
         }
@@ -3473,6 +3497,9 @@ struct DestinationPreviewCard: View {
             } else {
                 SystemShareSheet(items: [item.text])
             }
+        }
+        .sheet(isPresented: $showingSelectTrip) {
+            SelectOrCreateTripView(destination: destination)
         }
     }
     
