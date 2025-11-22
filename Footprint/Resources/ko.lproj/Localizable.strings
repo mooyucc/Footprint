@@ -261,6 +261,11 @@
 "days" = "일";
 "trip_route" = "여행 경로";
 "locations" = "개 장소";
+"share_trip" = "여행 공유";
+"share_to_team" = "친구와 공유";
+"edit_trip" = "여행 편집";
+"delete_trip" = "여행 삭제";
+"confirm_delete_trip" = "이 여행을 삭제하시겠습니까? 이 작업은 실행 취소할 수 없습니다.";
 
 // Trip Share Image
 "select_layout" = "공유 레이아웃 선택";

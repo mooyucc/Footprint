@@ -261,6 +261,11 @@
 "days" = "日";
 "trip_route" = "旅程ルート";
 "locations" = "場所";
+"share_trip" = "旅程を共有";
+"share_to_team" = "友達に共有";
+"edit_trip" = "旅程を編集";
+"delete_trip" = "旅程を削除";
+"confirm_delete_trip" = "この旅程を削除してもよろしいですか？この操作は元に戻せません。";
 
 // Trip Share Image
 "select_layout" = "共有レイアウトを選択";

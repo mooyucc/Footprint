@@ -261,6 +261,11 @@
 "days" = "天";
 "trip_route" = "行程路线";
 "locations" = "个地点";
+"share_trip" = "分享旅程";
+"share_to_team" = "分享给朋友";
+"edit_trip" = "编辑旅程";
+"delete_trip" = "删除旅程";
+"confirm_delete_trip" = "确定要删除此旅程吗？此操作无法撤销。";
 
 // Trip Share Image
 "select_layout" = "选择分享版面";

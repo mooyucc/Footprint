@@ -261,6 +261,11 @@
 "days" = "días";
 "trip_route" = "Ruta del viaje";
 "locations" = "lugares";
+"share_trip" = "Compartir viaje";
+"share_to_team" = "Compartir con amigos";
+"edit_trip" = "Editar viaje";
+"delete_trip" = "Eliminar viaje";
+"confirm_delete_trip" = "¿Estás seguro de que deseas eliminar este viaje? Esta acción no se puede deshacer.";
 
 // Trip Share Image
 "select_layout" = "Seleccionar diseño de compartir";

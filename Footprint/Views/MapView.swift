@@ -283,7 +283,9 @@ struct MapView: View {
             keyboardOverlay
         }
         .sheet(item: $detailDestinationForSheet) { destination in
-            DestinationDetailView(destination: destination)
+            NavigationStack {
+                DestinationDetailView(destination: destination)
+            }
         }
         .sheet(isPresented: $showingTripDetail) {
             if let trip = detailTripForSheet {

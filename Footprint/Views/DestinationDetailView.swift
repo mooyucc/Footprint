@@ -15,6 +15,7 @@ struct DestinationDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @State private var showingEditSheet = false
+    @State private var shareItem: TripShareItem?
     @State private var cameraPosition: MapCameraPosition
     @StateObject private var languageManager = LanguageManager.shared
     @State private var selectedPhotoIndex: Int = 0
@@ -42,36 +43,13 @@ struct DestinationDetailView: View {
                     
                     if !allPhotos.isEmpty, let mainImage = UIImage(data: allPhotos[min(selectedPhotoIndex, allPhotos.count - 1)]) {
                         VStack(spacing: 10) {
-                            ZStack(alignment: .topTrailing) {
-                                Image(uiImage: mainImage)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(width: geometry.size.width)
-                                    .frame(height: imageHeight)
-                                    .clipped()
-                                    .cornerRadius(15)
-                                
-                                // 圆形编辑按钮
-                                Button {
-                                    showingEditSheet = true
-                                } label: {
-                                    Image(systemName: "pencil.circle")
-                                        .font(.system(size: 24, weight: .semibold))
-                                        .foregroundColor(colorScheme == .dark ? .white : .black)
-                                        .frame(width: 44, height: 44)
-                                        .background(
-                                            Circle()
-                                                .fill(.ultraThinMaterial)
-                                                .overlay(
-                                                    Circle()
-                                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                                                )
-                                        )
-                                        .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 2)
-                                }
-                                .padding(.top, 12)
-                                .padding(.trailing, 12)
-                            }
+                            Image(uiImage: mainImage)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: geometry.size.width)
+                                .frame(height: imageHeight)
+                                .clipped()
+                                .cornerRadius(15)
                             
                             if allPhotos.count > 1 {
                                 ScrollView(.horizontal, showsIndicators: false) {
@@ -97,7 +75,7 @@ struct DestinationDetailView: View {
                             }
                         }
                     } else {
-                        ZStack(alignment: .topTrailing) {
+                        ZStack {
                             Rectangle()
                                 .fill(destination.normalizedCategory == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
                                 .frame(width: geometry.size.width)
@@ -110,27 +88,6 @@ struct DestinationDetailView: View {
                                 Text("no_photo".localized)
                                     .foregroundColor(.secondary)
                             }
-                            
-                            // 圆形编辑按钮（无照片时也显示）
-                            Button {
-                                showingEditSheet = true
-                            } label: {
-                                Image(systemName: "pencil.circle.fill")
-                                    .font(.system(size: 24, weight: .semibold))
-                                    .foregroundColor(colorScheme == .dark ? .white : .black)
-                                    .frame(width: 44, height: 44)
-                                    .background(
-                                        Circle()
-                                            .fill(.ultraThinMaterial)
-                                            .overlay(
-                                                Circle()
-                                                    .stroke(Color.white.opacity(0.3), lineWidth: 1)
-                                            )
-                                    )
-                                    .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 2)
-                            }
-                            .padding(.top, 12)
-                            .padding(.trailing, 12)
                         }
                         .cornerRadius(15)
                     }
@@ -279,8 +236,35 @@ struct DestinationDetailView: View {
                 Color.clear.frame(height: 20)
             }
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    HStack(spacing: 16) {
+                        Button {
+                            shareDestination()
+                        } label: {
+                            Image(systemName: "square.and.arrow.up")
+                                .foregroundColor(.primary)
+                        }
+                        
+                        Button {
+                            showingEditSheet = true
+                        } label: {
+                            Image(systemName: "pencil.circle")
+                                .foregroundColor(.primary)
+                        }
+                    }
+                }
+            }
             .sheet(isPresented: $showingEditSheet) {
                 EditDestinationView(destination: destination)
+            }
+            .sheet(item: $shareItem) { item in
+                if let image = item.image {
+                    // 只分享图片，不分享文字（因为所有信息都已经包含在图片中）
+                    SystemShareSheet(items: [image])
+                } else {
+                    SystemShareSheet(items: [item.text])
+                }
             }
             .onAppear {
                 photosLocal = !destination.photoDatas.isEmpty ? destination.photoDatas : (destination.photoData.map { [$0] } ?? [])
@@ -292,6 +276,14 @@ struct DestinationDetailView: View {
                 // 语言变化时刷新界面
             }
         }
+    }
+    
+    // 分享地点图片
+    private func shareDestination() {
+        // 生成地点分享图片
+        let destinationImage = TripImageGenerator.generateDestinationImage(from: destination)
+        // 只分享图片，不分享文字（因为所有信息都已经包含在图片中）
+        shareItem = TripShareItem(text: "", image: destinationImage)
     }
 }
 

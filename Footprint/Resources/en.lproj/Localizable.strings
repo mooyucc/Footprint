@@ -261,6 +261,11 @@
 "days" = "days";
 "trip_route" = "Trip Route";
 "locations" = "locations";
+"share_trip" = "Share Trip";
+"share_to_team" = "Share with Friends";
+"edit_trip" = "Edit Trip";
+"delete_trip" = "Delete Trip";
+"confirm_delete_trip" = "Are you sure you want to delete this trip? This action cannot be undone.";
 
 // Trip Share Image
 "select_layout" = "Select Share Layout";
