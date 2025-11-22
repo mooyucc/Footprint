@@ -243,29 +243,30 @@ struct ProfileView: View {
     private var profileHeaderView: some View {
         VStack(spacing: 16) {
             if appleSignInManager.isSignedIn {
-                Image(systemName: "person.crop.circle.fill")
-                    .font(.system(size: 80))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.primary, .primary.opacity(0.7)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                Group {
+                    if let avatarImage = appleSignInManager.userAvatarImage {
+                        Image(uiImage: avatarImage)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 80, height: 80)
+                            .clipShape(Circle())
+                    } else {
+                        Image(systemName: "person.crop.circle.fill")
+                            .font(.system(size: 80))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [.primary, .primary.opacity(0.7)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                    }
+                }
                 
                 Text(appleSignInManager.displayName)
                     .font(.title)
                     .fontWeight(.bold)
                     .foregroundColor(primaryTextColor)
-                
-                HStack(spacing: 6) {
-                    Image(systemName: "checkmark.icloud.fill")
-                        .foregroundColor(.green)
-                        .font(.subheadline)
-                    Text("iCloud_synced".localized)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                }
             } else {
                 Image(systemName: "airplane.circle.fill")
                     .font(.system(size: 80))

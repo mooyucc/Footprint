@@ -1,0 +1,348 @@
+/* 
+  Localizable.strings
+  Footprint
+  
+  Korean localization
+*/
+
+// Settings View
+"settings" = "설정";
+"done" = "완료";
+"account" = "계정";
+"not_logged_in" = "로그인하지 않음";
+"login_sync_description" = "로그인 후 데이터가 자동으로 iCloud에 동기화됩니다";
+"data_sync" = "데이터 동기화";
+"icloud_sync" = "iCloud 동기화";
+"enabled" = "활성화됨";
+"not_enabled" = "비활성화됨";
+"in_development" = "개발 중";
+"data_storage" = "데이터 저장소";
+"local" = "로컬";
+"icloud" = "iCloud";
+"sync_description_logged_in" = "여행 데이터가 자동으로 iCloud에 동기화되어 모든 기기에서 액세스할 수 있습니다.";
+"sync_description_not_logged_in" = "Apple ID로 로그인하면 데이터가 자동으로 iCloud에 동기화되어 모든 기기 간에 동기화 상태가 유지됩니다.";
+"about" = "정보";
+"version" = "버전";
+"app_name" = "앱 이름";
+"sign_out" = "로그아웃";
+"language" = "언어";
+"language_selection" = "언어 선택";
+
+// Edit User Name
+"edit_username" = "사용자 이름 편집";
+"custom_username" = "사용자 지정 사용자 이름";
+"username_description" = "원하는 표시 이름 설정";
+"enter_username" = "사용자 이름 입력";
+"cancel" = "취소";
+"save" = "저장";
+"iCloud_synced" = "iCloud 동기화됨";
+
+// Edit User Avatar
+"edit_avatar" = "아바타 편집";
+"avatar_description" = "아바타로 사용할 사진 선택";
+"select_photo" = "사진 선택";
+"remove_avatar" = "아바타 제거";
+"restore_avatar" = "아바타 복원";
+"remove_avatar_confirm_title" = "아바타 제거";
+"remove_avatar_confirm_message" = "현재 아바타를 제거하시겠습니까?";
+"remove" = "제거";
+
+// Local Data
+"local_data" = "로컬 데이터";
+"import_local_data" = "로컬 데이터 가져오기";
+"export_local_data" = "로컬 데이터 내보내기";
+"local_data_description" = "로컬 데이터 백업 가져오기 또는 내보내기";
+"optimize_images" = "이미지 최적화";
+"optimize_images_confirm_title" = "이미지 최적화";
+"optimize_images_confirm_message" = "저장된 모든 사진을 압축하고 썸네일을 다시 생성합니다. 처리 중에는 앱을 포그라운드에서 실행하세요.";
+"optimize" = "최적화";
+"optimize_images_result_title" = "최적화 완료";
+"optimize_images_success" = "%d장의 사진을 최적화했습니다";
+"local_import_summary_title" = "가져오기 결과";
+"local_import_summary_success" = "%d개의 여행을 성공적으로 가져왔습니다";
+"local_import_summary_duplicates" = "%d개의 중복 여행을 건너뛰었습니다";
+"local_import_summary_failures" = "%d개 가져오기 실패";
+"local_backup_error_title" = "백업 오류";
+"local_backup_share_text" = "모어풋프린트 데이터 백업";
+"local_backup_no_trips" = "내보낼 여행이 없습니다";
+"local_backup_empty_package" = "패키지가 비어 있습니다";
+"local_backup_read_failed" = "읽기 실패: %@";
+"local_backup_decode_failed" = "디코딩 실패: %@";
+"local_backup_write_failed" = "쓰기 실패: %@";
+"local_backup_unknown_error" = "알 수 없는 오류: %@";
+"local_backup_access_denied" = "액세스가 거부되었습니다";
+
+// Common
+"footprint" = "모어풋프린트";
+"ok" = "확인";
+"map" = "지도";
+"trips" = "여행";
+"profile" = "프로필";
+"create_trip" = "여행 추가";
+"import_trip" = "여행 가져오기";
+"share" = "공유";
+
+// Profile View
+"my_travel_footprint" = "내 발자국 지도";
+"record_every_journey" = "인생의 모든 발자국을 밝히기";
+"sign_in_apple_id" = "Apple ID로 로그인";
+"sign_in_with_apple" = "Apple로 로그인";
+"enable_icloud_sync" = "iCloud 동기화를 활성화하여 발자국 추억을 보호하세요";
+"total_destinations" = "방문한 장소";
+"countries_visited" = "방문한 국가";
+"domestic_travel" = "국내 발자국";
+"international_travel" = "해외 발자국";
+"my_favorites" = "내 즐겨찾기";
+"travel_timeline" = "발자국 타임라인";
+"destinations_count" = "개 목적지";
+"footprint_app" = "모어풋프린트 - 인생 발자국";
+"record_journey_memories" = "인생의 모든 발자국을 밝히고 아름다운 추억을 소중히 하세요";
+
+// Destination Detail View
+"no_photo" = "사진 없음";
+"visit_date" = "방문 날짜";
+"belongs_to_trip" = "소속 여행";
+"location_coordinates" = "위치 좌표";
+"latitude" = "위도";
+"longitude" = "경도";
+"travel_notes" = "여행 노트";
+
+// Destination List View
+"my_footprints" = "내 발자국";
+"search_places_countries_notes" = "장소, 국가 또는 노트 검색";
+"filter" = "필터";
+"all" = "전체";
+"domestic" = "국내";
+"international" = "해외";
+"edit" = "편집";
+"delete" = "삭제";
+"travel_statistics" = "여행 통계";
+"total" = "총계";
+"countries" = "국가";
+"no_travel_records" = "아직 여행 기록이 없습니다";
+"add_first_destination" = "첫 번째 목적지 추가";
+"start_recording_footprints" = "오른쪽 상단의 + 버튼을 탭하여 여행 발자국 기록을 시작하세요!";
+
+// Edit Destination View
+"edit_destination" = "목적지 편집";
+"basic_info" = "기본 정보";
+"place_name" = "장소 이름";
+"category" = "카테고리";
+"country_region" = "국가/지역";
+"visit_date" = "방문 날짜";
+"mark_as_favorite" = "즐겨찾기로 표시";
+"belongs_to_trip_optional" = "소속 여행 (선택사항)";
+"select_trip" = "여행 선택";
+"add_to_trip" = "여행에 추가";
+"no_trips_available" = "아직 여행이 없습니다";
+"none" = "없음";
+"location_info" = "위치 정보";
+"search_place" = "장소 검색...";
+"search" = "검색";
+"selected" = "선택됨: ";
+"current_location" = "현재 위치";
+"photo" = "사진";
+"add_photo" = "사진 추가";
+"change_photo" = "사진 변경";
+"notes" = "노트";
+"unknown_place" = "알 수 없는 장소";
+"latitude_longitude" = "위도: %.4f, 경도: %.4f";
+
+// Map View
+"getting_location_info" = "위치 정보 가져오는 중...";
+"identifying_location" = "잠시만 기다려주세요. 선택한 위치를 식별하고 있습니다";
+"unknown_city" = "알 수 없는 도시";
+"unknown_country" = "알 수 없는 국가";
+"map_button_locate" = "위치";
+"map_button_check_in" = "체크인";
+"map_button_memory" = "추억";
+"map_button_footprints" = "발자국";
+"map_button_search" = "검색";
+"map_button_style" = "스타일";
+"map_button_import_photo" = "사진 가져오기";
+"footprints_action_menu" = "빠른 작업";
+"search_places" = "장소 검색";
+"photo_import_error_title" = "사진 가져오기";
+"photo_import_failed_message" = "선택한 사진을 로드할 수 없습니다. 다시 시도해주세요.";
+"photo_import_missing_location_message" = "사진에 위치 메타데이터가 없습니다. 사진이 추가되었으니 수동으로 장소를 선택해주세요.";
+"selected_location" = "선택한 위치";
+"locations_count" = "개 장소";
+"delete_destination" = "장소 삭제";
+"confirm_delete_destination" = "'%@'을(를) 삭제하시겠습니까? 이 작업은 실행 취소할 수 없습니다.";
+"reverse_geocoding_failed" = "역 지오코딩 실패: %@, 대체 방법 시도 중...";
+"nearby_search_success" = "근처 검색 성공, 근처 위치 추론 사용: %@ - %@";
+"nearby_search_failed" = "근처 검색 실패: %@, 좌표 대체 방법 계속 진행 중...";
+"coordinate_fallback" = "좌표 대체 방법 사용: %@ - %@ [카테고리: %@]";
+"user_location_obtained" = "사용자 위치 획득: %f, %f";
+"location_permission_denied" = "위치 가져오기 실패: %@";
+"location_authorization_changed" = "위치 권한 상태 변경: %d";
+"using_cached_country_region" = "캐시된 국가 지역 사용";
+"map_positioned_to" = "지도 위치 설정: %@ (%@)";
+"getting_user_location" = "사용자 위치 가져오는 중...";
+"preloaded_country_region" = "국가 지역 사전 로드: %@ (%@)";
+"user_location" = "내 위치";
+
+// Add Destination View
+"add_destination" = "목적지 추가";
+"search" = "검색";
+"search_domestic_places" = "🇨🇳 국내 장소 검색:";
+"use_amap_data" = "• 고덕 지도 데이터를 사용하여 중국 내 장소 검색";
+"input_city_names" = "• 도시 이름을 직접 입력, 예: \"베이징\", \"상하이\", \"항저우\"";
+"input_attractions" = "• 명소 이름 입력, 예: \"자금성\", \"서호\", \"외탄\"";
+"search_international_places" = "🌍 해외 장소 검색:";
+"use_apple_international" = "• Apple 국제 데이터를 사용하여 전 세계 장소 검색";
+"hot_cities_quick_search" = "• ⭐ 인기 도시 빠른 검색: London/런던、Paris/파리、Tokyo/도쿄 등";
+"support_multilingual" = "• 영어 및 중국어 입력 지원, 네트워크를 통해 최신 데이터 가져오기";
+"searching_places" = "%@ 장소 검색 중...";
+"no_results_found" = "결과를 찾을 수 없습니다";
+"suggestions" = "제안:";
+"try_english_names" = "1. 영어 지명으로 검색해보세요";
+"input_specific_address" = "2. 더 구체적인 주소 입력, 예: \"London, UK\"";
+"check_spelling" = "3. 철자가 올바른지 확인하세요";
+"selected_location" = "선택한 위치";
+"select_photo" = "사진 선택";
+"search_domestic_with_amap" = "🇨🇳 고덕 지도 데이터를 사용하여 국내 장소 검색: %@";
+"amap_search_error" = "❌ 고덕 지도 검색 오류: %@";
+"fallback_to_clgeocoder" = "🔄 대체 검색: CLGeocoder를 사용하여 국내 장소 검색";
+"amap_found_results" = "✅ 고덕 지도에서 %d개의 국내 장소를 찾았습니다";
+"clgeocoder_found_results" = "✅ CLGeocoder에서 %d개의 국내 장소를 찾았습니다";
+"no_domestic_results" = "❌ 국내 장소를 찾을 수 없습니다";
+"clgeocoder_search_failed" = "❌ CLGeocoder 검색 실패";
+"search_international_with_apple" = "🌍 Apple 국제 데이터를 사용하여 해외 장소 검색: %@";
+"device_region" = "📱 기기 지역 설정: %@";
+"device_language" = "📱 기기 언어: %@";
+"device_country" = "📱 기기 국가: %@";
+"found_in_preset_cities" = "✅ 사전 설정 도시 라이브러리에서 찾음: %@, %@";
+"using_preset_coordinates" = "✅ 사전 설정 좌표 사용: (%.4f, %.4f)";
+"not_found_in_preset" = "🔍 사전 설정에서 찾을 수 없음, Apple 국제 데이터 시도 중...";
+"apple_international_api_error" = "❌ Apple 국제 데이터 API 오류: %@";
+"apple_api_returned_results" = "📍 Apple 국제 데이터 API가 %d개의 원시 결과를 반환했습니다:";
+"raw_result_info" = "  원시 결과 %d:";
+"name_info" = "    - 이름: %@";
+"country_info" = "    - 국가: %@";
+"iso_code_info" = "    - ISO 코드: %@";
+"city_info" = "    - 도시: %@";
+"filtered_international_count" = "🔍 필터링된 해외 장소 수: %d";
+"apple_final_results" = "✅ Apple 국제 데이터가 최종적으로 %d개의 장소를 표시";
+"display_result_info" = "결과 %d 표시: %@ - %@";
+"apple_api_no_results" = "⚠️ Apple 국제 데이터 API에서 결과를 찾을 수 없습니다";
+"mksearch_error" = "❌ MKLocalSearch 오류: %@";
+"mksearch_found_results" = "✅ MKLocalSearch에서 %d개의 결과를 찾았습니다";
+"location_selected" = "✅ 위치 선택됨:";
+"selected_name" = "   이름: %@";
+"selected_country" = "   국가: %@";
+"selected_coordinates" = "   좌표: (%.4f, %.4f)";
+
+// Add Destination To Trip View
+"add_destination_to_trip" = "여행에 목적지 추가";
+"mode" = "모드";
+"create_new_destination" = "새 목적지 만들기";
+"add_existing_destination" = "기존 목적지 추가";
+"no_destinations_to_add" = "추가할 목적지가 없습니다";
+"all_destinations_in_trip" = "모든 목적지가 이미 이 여행에 포함되어 있습니다";
+"searching" = "검색 중...";
+
+// Trip Edit/Add View
+"trip_info" = "여행 정보";
+"trip_name" = "여행 이름";
+"description_optional" = "설명 (선택사항)";
+"time" = "시간";
+"start_date" = "시작 날짜";
+"end_date" = "종료 날짜";
+"cover_image_optional" = "커버 이미지 (선택사항)";
+"add_cover_image" = "커버 이미지 추가";
+"change_cover_image" = "커버 이미지 변경";
+"trip_duration" = "여행 기간";
+
+// Trip Detail View
+"start" = "시작";
+"end" = "종료";
+"duration" = "기간";
+"days" = "일";
+"trip_route" = "여행 경로";
+"locations" = "개 장소";
+
+// Trip Share Image
+"select_layout" = "공유 레이아웃 선택";
+"share" = "공유";
+"trip_share_start" = "시작";
+"trip_share_end" = "종료";
+"trip_share_duration" = "기간";
+"trip_share_days" = "일";
+"trip_share_route" = "여행 경로";
+"trip_share_locations_count" = "개 장소";
+"trip_share_no_destinations" = "아직 목적지가 추가되지 않았습니다";
+"trip_share_signature" = "✨ 모어풋프린트 • 모든 여행 기록";
+"trip_share_subtitle" = "아름다운 여행을 기록하고 멋진 순간을 공유하세요";
+"trip_share_layout_list" = "목록 레이아웃";
+"trip_share_layout_list_desc" = "커버, 시간 카드 및 전체 여행 경로를 포함한 상세한 여행 정보";
+"trip_share_layout_grid" = "그리드 레이아웃";
+"trip_share_layout_grid_desc" = "3x3 그리드로 목적지 사진 표시, 시각적 공유에 적합";
+"trip_share_layout_extended_grid" = "확장 그리드";
+"trip_share_layout_extended_grid_desc" = "그리드 레이아웃으로 모든 목적지 사진 표시, 9개 이상의 장소 지원";
+
+// Travel Stats Share Image
+"stats_share_my_travel_footprint" = "내 여행 발자국";
+"stats_share_destinations_count" = "개 여행 목적지";
+"stats_share_countries_count" = "개 국가";
+"stats_share_travel_timeline" = "여행 타임라인";
+"stats_share_footer" = "✨ Footprint • 모든 여행 기록";
+
+// Country Settings
+"country" = "소재 국가";
+"country_selection" = "국가 선택";
+"country_description" = "소재 국가를 설정하여 국내 및 해외 여행을 구분";
+"search_countries" = "국가 검색...";
+
+// Map Style
+"map_style_title" = "지도 스타일";
+"map_style_standard" = "표준 지도";
+"map_style_muted" = "기본 지도";
+"map_style_satellite" = "위성 지도";
+"map_style_hybrid" = "하이브리드 지도";
+"map_style_imagery" = "위성 이미지";
+
+// Duplicate Destination Check
+"duplicate_destination_title" = "중복된 목적지";
+"duplicate_destination_message" = "'%@'이라는 이름의 목적지가 이미 존재합니다. 기존 목적지를 덮어쓰시겠습니까?\n\n기존 목적지 정보:\n국가: %@\n방문 날짜: %@%@\n\n원칙적으로 동일한 이름의 목적지는 허용되지 않습니다";
+"duplicate_destination_overwrite" = "덮어쓰기";
+"duplicate_destination_cancel" = "취소";
+
+// Timeline Player
+"timeline_mode" = "타임라인 모드";
+"timeline_play" = "재생";
+"timeline_pause" = "일시 정지";
+"timeline_reset" = "재설정";
+"timeline_speed" = "재생 속도";
+"timeline_current_date" = "현재 날짜";
+"timeline_current_location" = "현재 위치";
+"timeline_progress" = "진행률";
+"timeline_follow_camera" = "카메라 따라가기";
+
+// Trip Route Map
+"route_map" = "여행 지도";
+"routes" = "여행";
+"no_routes_available" = "여행이 없습니다";
+"create_trip_with_at_least_two_destinations" = "최소 두 개의 목적지가 포함된 여행을 만들면 여기에서 여행 정보를 볼 수 있습니다";
+"view_details" = "세부 정보 보기";
+
+// Image Optimization
+"optimize_images" = "이미지 최적화";
+"optimize_images_confirm_title" = "이미지 최적화";
+"optimize_images_confirm_message" = "저장된 모든 이미지를 최적화하여 크기를 압축하고 썸네일을 생성합니다. 이 작업에는 시간이 걸릴 수 있습니다.";
+"optimize" = "최적화";
+"optimize_images_result_title" = "최적화 완료";
+"optimize_images_success" = "%d장의 이미지를 최적화했습니다";
+"optimize_images_failed" = "%d장의 이미지 최적화 실패";
+
+// About View
+"about_app" = "정보";
+"feature_introduction" = "기능 소개";
+"version_update" = "버전 업데이트";
+"software_license_agreement" = "《소프트웨어 라이선스 및 서비스 계약》";
+"privacy_policy_summary" = "《개인정보 보호 가이드 요약》";
+"privacy_policy" = "《개인정보 보호 가이드》";
+"customer_service_phone" = "고객 서비스";
+"copyright" = "저작권";
+"all_rights_reserved" = "All Rights Reserved";
+

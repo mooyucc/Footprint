@@ -134,6 +134,7 @@ struct AddTripView: View {
         )
         
         modelContext.insert(newTrip)
+        try? modelContext.save()
         dismiss()
     }
 }

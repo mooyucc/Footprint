@@ -92,6 +92,7 @@ struct TripDetailView: View {
                             Text(trip.startDate.localizedFormatted(dateStyle: .medium))
                                 .font(.headline)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         
                         Divider()
                         
@@ -102,6 +103,7 @@ struct TripDetailView: View {
                             Text(trip.endDate.localizedFormatted(dateStyle: .medium))
                                 .font(.headline)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         
                         Divider()
                         
@@ -112,8 +114,10 @@ struct TripDetailView: View {
                             Text("\(trip.durationDays) \("days".localized)")
                                 .font(.headline)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .padding()
+                    .frame(maxWidth: .infinity)
                     .background(Color(.secondarySystemBackground))
                     .cornerRadius(12)
                     

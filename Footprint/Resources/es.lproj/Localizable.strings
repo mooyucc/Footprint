@@ -1,0 +1,348 @@
+/* 
+  Localizable.strings
+  Footprint
+  
+  Spanish localization
+*/
+
+// Settings View
+"settings" = "Configuración";
+"done" = "Hecho";
+"account" = "Cuenta";
+"not_logged_in" = "No iniciado sesión";
+"login_sync_description" = "Los datos se sincronizarán automáticamente con iCloud después de iniciar sesión";
+"data_sync" = "Sincronización de datos";
+"icloud_sync" = "Sincronización iCloud";
+"enabled" = "Habilitado";
+"not_enabled" = "No habilitado";
+"in_development" = "En desarrollo";
+"data_storage" = "Almacenamiento de datos";
+"local" = "Local";
+"icloud" = "iCloud";
+"sync_description_logged_in" = "Tus datos de viaje se están sincronizando automáticamente con iCloud y son accesibles en todos tus dispositivos.";
+"sync_description_not_logged_in" = "Después de iniciar sesión con Apple ID, los datos se sincronizarán automáticamente con iCloud y permanecerán sincronizados en todos tus dispositivos.";
+"about" = "Acerca de";
+"version" = "Versión";
+"app_name" = "Nombre de la aplicación";
+"sign_out" = "Cerrar sesión";
+"language" = "Idioma";
+"language_selection" = "Selección de idioma";
+
+// Edit User Name
+"edit_username" = "Editar nombre de usuario";
+"custom_username" = "Nombre de usuario personalizado";
+"username_description" = "Establece un nombre para mostrar que prefieras";
+"enter_username" = "Ingresa el nombre de usuario";
+"cancel" = "Cancelar";
+"save" = "Guardar";
+"iCloud_synced" = "Sincronizado con iCloud";
+
+// Edit User Avatar
+"edit_avatar" = "Editar avatar";
+"avatar_description" = "Elige una foto como tu avatar";
+"select_photo" = "Seleccionar foto";
+"remove_avatar" = "Eliminar avatar";
+"restore_avatar" = "Restaurar avatar";
+"remove_avatar_confirm_title" = "Eliminar avatar";
+"remove_avatar_confirm_message" = "¿Estás seguro de que deseas eliminar tu avatar actual?";
+"remove" = "Eliminar";
+
+// Local Data
+"local_data" = "Datos locales";
+"import_local_data" = "Importar datos locales";
+"export_local_data" = "Exportar datos locales";
+"local_data_description" = "Importar o exportar copia de seguridad de datos locales";
+"optimize_images" = "Optimizar imágenes";
+"optimize_images_confirm_title" = "Optimizar imágenes";
+"optimize_images_confirm_message" = "Comprimirá todas las fotos almacenadas y regenerará las miniaturas. Por favor, mantén la aplicación activa durante el proceso.";
+"optimize" = "Optimizar";
+"optimize_images_result_title" = "Optimización completada";
+"optimize_images_success" = "Se optimizaron exitosamente %d fotos";
+"local_import_summary_title" = "Resumen de importación";
+"local_import_summary_success" = "Se importaron exitosamente %d viajes";
+"local_import_summary_duplicates" = "Se omitieron %d viajes duplicados";
+"local_import_summary_failures" = "Error al importar %d";
+"local_backup_error_title" = "Error de copia de seguridad";
+"local_backup_share_text" = "Copia de seguridad de datos de MooFootprint";
+"local_backup_no_trips" = "No hay viajes para exportar";
+"local_backup_empty_package" = "El paquete está vacío";
+"local_backup_read_failed" = "Error de lectura: %@";
+"local_backup_decode_failed" = "Error de decodificación: %@";
+"local_backup_write_failed" = "Error de escritura: %@";
+"local_backup_unknown_error" = "Error desconocido: %@";
+"local_backup_access_denied" = "Acceso denegado";
+
+// Common
+"footprint" = "MooFootprint";
+"ok" = "Aceptar";
+"map" = "Mapa";
+"trips" = "Viajes";
+"profile" = "Perfil";
+"create_trip" = "Agregar viaje";
+"import_trip" = "Importar viaje";
+"share" = "Compartir";
+
+// Profile View
+"my_travel_footprint" = "Mi mapa de huellas";
+"record_every_journey" = "Ilumina cada huella en la vida";
+"sign_in_apple_id" = "Iniciar sesión con Apple ID";
+"sign_in_with_apple" = "Iniciar sesión con Apple";
+"enable_icloud_sync" = "Habilita la sincronización de iCloud para proteger tus recuerdos de huellas";
+"total_destinations" = "Lugares visitados";
+"countries_visited" = "Países visitados";
+"domestic_travel" = "Huellas nacionales";
+"international_travel" = "Huellas internacionales";
+"my_favorites" = "Mis favoritos";
+"travel_timeline" = "Línea de tiempo de huellas";
+"destinations_count" = "destinos";
+"footprint_app" = "MooFootprint - Huella de vida";
+"record_journey_memories" = "Ilumina cada huella en tu vida y atesora hermosos recuerdos";
+
+// Destination Detail View
+"no_photo" = "Sin foto";
+"visit_date" = "Fecha de visita";
+"belongs_to_trip" = "Pertenece al viaje";
+"location_coordinates" = "Coordenadas de ubicación";
+"latitude" = "Latitud";
+"longitude" = "Longitud";
+"travel_notes" = "Notas de viaje";
+
+// Destination List View
+"my_footprints" = "Mis huellas";
+"search_places_countries_notes" = "Buscar lugares, países o notas";
+"filter" = "Filtrar";
+"all" = "Todos";
+"domestic" = "Nacional";
+"international" = "Internacional";
+"edit" = "Editar";
+"delete" = "Eliminar";
+"travel_statistics" = "Estadísticas de viaje";
+"total" = "Total";
+"countries" = "Países";
+"no_travel_records" = "Aún no hay registros de viaje";
+"add_first_destination" = "Agregar primer destino";
+"start_recording_footprints" = "¡Toca el botón + en la esquina superior derecha para comenzar a registrar tus huellas de viaje!";
+
+// Edit Destination View
+"edit_destination" = "Editar destino";
+"basic_info" = "Información básica";
+"place_name" = "Nombre del lugar";
+"category" = "Categoría";
+"country_region" = "País/Región";
+"visit_date" = "Fecha de visita";
+"mark_as_favorite" = "Marcar como favorito";
+"belongs_to_trip_optional" = "Pertenece al viaje (Opcional)";
+"select_trip" = "Seleccionar viaje";
+"add_to_trip" = "Agregar al viaje";
+"no_trips_available" = "Aún no hay viajes";
+"none" = "Ninguno";
+"location_info" = "Información de ubicación";
+"search_place" = "Buscar lugar...";
+"search" = "Buscar";
+"selected" = "Seleccionado: ";
+"current_location" = "Ubicación actual";
+"photo" = "Foto";
+"add_photo" = "Agregar foto";
+"change_photo" = "Cambiar foto";
+"notes" = "Notas";
+"unknown_place" = "Lugar desconocido";
+"latitude_longitude" = "Latitud: %.4f, Longitud: %.4f";
+
+// Map View
+"getting_location_info" = "Obteniendo información de ubicación...";
+"identifying_location" = "Por favor espera, estamos identificando la ubicación seleccionada";
+"unknown_city" = "Ciudad desconocida";
+"unknown_country" = "País desconocido";
+"map_button_locate" = "Localizar";
+"map_button_check_in" = "Registrarse";
+"map_button_memory" = "Recuerdos";
+"map_button_footprints" = "Huellas";
+"map_button_search" = "Buscar";
+"map_button_style" = "Estilo";
+"map_button_import_photo" = "Importar foto";
+"footprints_action_menu" = "Acciones rápidas";
+"search_places" = "Buscar lugares";
+"photo_import_error_title" = "Importación de foto";
+"photo_import_failed_message" = "No se pudo cargar la foto seleccionada. Por favor, inténtalo de nuevo.";
+"photo_import_missing_location_message" = "No se encontraron metadatos de ubicación. Se agregó la foto, por favor elige un lugar manualmente.";
+"selected_location" = "Ubicación seleccionada";
+"locations_count" = "lugares";
+"delete_destination" = "Eliminar destino";
+"confirm_delete_destination" = "¿Estás seguro de que deseas eliminar '%@'? Esta acción no se puede deshacer.";
+"reverse_geocoding_failed" = "Geocodificación inversa falló: %@, intentando alternativa...";
+"nearby_search_success" = "Búsqueda cercana exitosa, usando inferencia de ubicación cercana: %@ - %@";
+"nearby_search_failed" = "Búsqueda cercana falló: %@, continuando con coordenadas alternativas...";
+"coordinate_fallback" = "Usando coordenadas alternativas: %@ - %@ [Categoría: %@]";
+"user_location_obtained" = "Ubicación del usuario obtenida: %f, %f";
+"location_permission_denied" = "Error al obtener la ubicación: %@";
+"location_authorization_changed" = "Estado de autorización de ubicación cambiado: %d";
+"using_cached_country_region" = "Usando región de país en caché";
+"map_positioned_to" = "Mapa posicionado en: %@ (%@)";
+"getting_user_location" = "Obteniendo ubicación del usuario...";
+"preloaded_country_region" = "Región de país precargada: %@ (%@)";
+"user_location" = "Mi ubicación";
+
+// Add Destination View
+"add_destination" = "Agregar destino";
+"search" = "Buscar";
+"search_domestic_places" = "🇨🇳 Buscar lugares nacionales:";
+"use_amap_data" = "• Usar datos de Amap para buscar lugares en China";
+"input_city_names" = "• Ingresa nombres de ciudades directamente, como \"Beijing\", \"Shanghai\", \"Hangzhou\"";
+"input_attractions" = "• Ingresa nombres de atracciones, como \"Ciudad Prohibida\", \"Lago del Oeste\", \"El Bund\"";
+"search_international_places" = "🌍 Buscar lugares internacionales:";
+"use_apple_international" = "• Usar datos internacionales de Apple para buscar lugares globales";
+"hot_cities_quick_search" = "• ⭐ Búsqueda rápida de ciudades populares: London/Londres、Paris/París、Tokyo/Tokio, etc.";
+"support_multilingual" = "• Soporta entrada en inglés y chino, obtiene los últimos datos a través de la red";
+"searching_places" = "Buscando lugares %@...";
+"no_results_found" = "No se encontraron resultados";
+"suggestions" = "Sugerencias:";
+"try_english_names" = "1. Intenta buscar con nombres de lugares en inglés";
+"input_specific_address" = "2. Ingresa una dirección más específica, como \"London, UK\"";
+"check_spelling" = "3. Verifica si la ortografía es correcta";
+"selected_location" = "Ubicación seleccionada";
+"select_photo" = "Seleccionar foto";
+"search_domestic_with_amap" = "🇨🇳 Usando datos de Amap para buscar lugares nacionales: %@";
+"amap_search_error" = "❌ Error de búsqueda de Amap: %@";
+"fallback_to_clgeocoder" = "🔄 Búsqueda alternativa: Usando CLGeocoder para buscar lugares nacionales";
+"amap_found_results" = "✅ Amap encontró %d lugares nacionales";
+"clgeocoder_found_results" = "✅ CLGeocoder encontró %d lugares nacionales";
+"no_domestic_results" = "❌ No se encontraron lugares nacionales";
+"clgeocoder_search_failed" = "❌ Búsqueda de CLGeocoder falló";
+"search_international_with_apple" = "🌍 Usando datos internacionales de Apple para buscar lugares internacionales: %@";
+"device_region" = "📱 Configuración de región del dispositivo: %@";
+"device_language" = "📱 Idioma del dispositivo: %@";
+"device_country" = "📱 País del dispositivo: %@";
+"found_in_preset_cities" = "✅ Encontrado en ciudades preestablecidas: %@, %@";
+"using_preset_coordinates" = "✅ Usando coordenadas preestablecidas: (%.4f, %.4f)";
+"not_found_in_preset" = "🔍 No encontrado en preestablecidos, intentando datos internacionales de Apple...";
+"apple_international_api_error" = "❌ Error de API de datos internacionales de Apple: %@";
+"apple_api_returned_results" = "📍 La API de datos internacionales de Apple devolvió %d resultados originales:";
+"raw_result_info" = "  Resultado original %d:";
+"name_info" = "    - Nombre: %@";
+"country_info" = "    - País: %@";
+"iso_code_info" = "    - Código ISO: %@";
+"city_info" = "    - Ciudad: %@";
+"filtered_international_count" = "🔍 Cantidad de lugares internacionales filtrados: %d";
+"apple_final_results" = "✅ Los datos internacionales de Apple finalmente muestran %d lugares";
+"display_result_info" = "Mostrar resultado %d: %@ - %@";
+"apple_api_no_results" = "⚠️ La API de datos internacionales de Apple no encontró resultados";
+"mksearch_error" = "❌ Error de MKLocalSearch: %@";
+"mksearch_found_results" = "✅ MKLocalSearch encontró %d resultados";
+"location_selected" = "✅ Ubicación seleccionada:";
+"selected_name" = "   Nombre: %@";
+"selected_country" = "   País: %@";
+"selected_coordinates" = "   Coordenadas: (%.4f, %.4f)";
+
+// Add Destination To Trip View
+"add_destination_to_trip" = "Agregar destino al viaje";
+"mode" = "Modo";
+"create_new_destination" = "Crear nuevo destino";
+"add_existing_destination" = "Agregar destino existente";
+"no_destinations_to_add" = "No hay destinos para agregar";
+"all_destinations_in_trip" = "Todos los destinos ya están en este viaje";
+"searching" = "Buscando...";
+
+// Trip Edit/Add View
+"trip_info" = "Información del viaje";
+"trip_name" = "Nombre del viaje";
+"description_optional" = "Descripción (Opcional)";
+"time" = "Tiempo";
+"start_date" = "Fecha de inicio";
+"end_date" = "Fecha de fin";
+"cover_image_optional" = "Imagen de portada (Opcional)";
+"add_cover_image" = "Agregar imagen de portada";
+"change_cover_image" = "Cambiar imagen de portada";
+"trip_duration" = "Duración del viaje";
+
+// Trip Detail View
+"start" = "Inicio";
+"end" = "Fin";
+"duration" = "Duración";
+"days" = "días";
+"trip_route" = "Ruta del viaje";
+"locations" = "lugares";
+
+// Trip Share Image
+"select_layout" = "Seleccionar diseño de compartir";
+"share" = "Compartir";
+"trip_share_start" = "Inicio";
+"trip_share_end" = "Fin";
+"trip_share_duration" = "Duración";
+"trip_share_days" = "días";
+"trip_share_route" = "Ruta del viaje";
+"trip_share_locations_count" = "lugares";
+"trip_share_no_destinations" = "Aún no se han agregado destinos";
+"trip_share_signature" = "✨ MooFootprint • Registra cada viaje";
+"trip_share_subtitle" = "Registra viajes maravillosos, comparte momentos hermosos";
+"trip_share_layout_list" = "Diseño de lista";
+"trip_share_layout_list_desc" = "Información detallada del viaje con portada, tarjeta de tiempo y ruta completa";
+"trip_share_layout_grid" = "Diseño de cuadrícula";
+"trip_share_layout_grid_desc" = "Muestra fotos de destinos en una cuadrícula de 3x3, perfecto para compartir visualmente";
+"trip_share_layout_extended_grid" = "Cuadrícula extendida";
+"trip_share_layout_extended_grid_desc" = "Muestra todas las fotos de destinos en un diseño de cuadrícula, admite más de 9 ubicaciones";
+
+// Travel Stats Share Image
+"stats_share_my_travel_footprint" = "Mi huella de viaje";
+"stats_share_destinations_count" = "Destinos de viaje";
+"stats_share_countries_count" = "Países";
+"stats_share_travel_timeline" = "Línea de tiempo de viaje";
+"stats_share_footer" = "✨ Footprint • Registra cada viaje";
+
+// Country Settings
+"country" = "País";
+"country_selection" = "Selección de país";
+"country_description" = "Establece tu país para distinguir entre viajes nacionales e internacionales";
+"search_countries" = "Buscar países...";
+
+// Map Style
+"map_style_title" = "Estilo de mapa";
+"map_style_standard" = "Estándar";
+"map_style_muted" = "Predeterminado";
+"map_style_satellite" = "Satélite";
+"map_style_hybrid" = "Híbrido";
+"map_style_imagery" = "Imágenes";
+
+// Duplicate Destination Check
+"duplicate_destination_title" = "Destino duplicado";
+"duplicate_destination_message" = "Ya existe un destino llamado '%@'. ¿Deseas sobrescribir el destino existente?\n\nInformación del destino existente:\nPaís: %@\nFecha de visita: %@%@\n\nEn principio no se permiten nombres de destinos duplicados";
+"duplicate_destination_overwrite" = "Sobrescribir";
+"duplicate_destination_cancel" = "Cancelar";
+
+// Timeline Player
+"timeline_mode" = "Modo línea de tiempo";
+"timeline_play" = "Reproducir";
+"timeline_pause" = "Pausar";
+"timeline_reset" = "Restablecer";
+"timeline_speed" = "Velocidad de reproducción";
+"timeline_current_date" = "Fecha actual";
+"timeline_current_location" = "Ubicación actual";
+"timeline_progress" = "Progreso";
+"timeline_follow_camera" = "Seguir cámara";
+
+// Trip Route Map
+"route_map" = "Mapa de ruta";
+"routes" = "Rutas";
+"no_routes_available" = "No hay rutas disponibles";
+"create_trip_with_at_least_two_destinations" = "Crea un viaje con al menos dos destinos para ver la información de la ruta aquí";
+"view_details" = "Ver detalles";
+
+// Image Optimization
+"optimize_images" = "Optimizar imágenes";
+"optimize_images_confirm_title" = "Optimizar imágenes";
+"optimize_images_confirm_message" = "Esto optimizará todas las imágenes almacenadas comprimiendo su tamaño y generando miniaturas. Esta operación puede tomar algún tiempo.";
+"optimize" = "Optimizar";
+"optimize_images_result_title" = "Optimización completada";
+"optimize_images_success" = "Se optimizaron exitosamente %d imágenes";
+"optimize_images_failed" = "Error al optimizar %d imágenes";
+
+// About View
+"about_app" = "Acerca de";
+"feature_introduction" = "Introducción de funciones";
+"version_update" = "Actualización de versión";
+"software_license_agreement" = "Acuerdo de licencia y servicio de software";
+"privacy_policy_summary" = "Resumen de la política de privacidad";
+"privacy_policy" = "Política de privacidad";
+"customer_service_phone" = "Servicio al cliente";
+"copyright" = "Derechos de autor";
+"all_rights_reserved" = "Todos los derechos reservados";
+

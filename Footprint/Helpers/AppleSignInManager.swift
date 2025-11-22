@@ -16,6 +16,7 @@ class AppleSignInManager: NSObject, ObservableObject, ASAuthorizationControllerD
     @Published var userName: String = ""
     @Published var userEmail: String = ""
     @Published var customUserName: String = "" // 自定义用户名
+    @Published var userAvatarData: Data? = nil // 用户头像数据
     
     static let shared = AppleSignInManager()
     
@@ -31,6 +32,7 @@ class AppleSignInManager: NSObject, ObservableObject, ASAuthorizationControllerD
             self.userName = UserDefaults.standard.string(forKey: "appleUserName") ?? "Apple ID 用户"
             self.userEmail = UserDefaults.standard.string(forKey: "appleUserEmail") ?? ""
             self.customUserName = UserDefaults.standard.string(forKey: "customUserName") ?? ""
+            self.userAvatarData = UserDefaults.standard.data(forKey: "userAvatarData")
             
             // 检查凭证状态
             let provider = ASAuthorizationAppleIDProvider()
@@ -115,6 +117,22 @@ class AppleSignInManager: NSObject, ObservableObject, ASAuthorizationControllerD
         UserDefaults.standard.set(customUserName, forKey: "customUserName")
     }
     
+    // 设置用户头像
+    func setUserAvatar(_ imageData: Data?) {
+        userAvatarData = imageData
+        if let data = imageData {
+            UserDefaults.standard.set(data, forKey: "userAvatarData")
+        } else {
+            UserDefaults.standard.removeObject(forKey: "userAvatarData")
+        }
+    }
+    
+    // 获取用户头像图片
+    var userAvatarImage: UIImage? {
+        guard let data = userAvatarData else { return nil }
+        return UIImage(data: data)
+    }
+    
     // 获取显示用户名（优先使用自定义用户名）
     var displayName: String {
         if !customUserName.isEmpty {
@@ -132,10 +150,12 @@ class AppleSignInManager: NSObject, ObservableObject, ASAuthorizationControllerD
         UserDefaults.standard.removeObject(forKey: "appleUserName")
         UserDefaults.standard.removeObject(forKey: "appleUserEmail")
         UserDefaults.standard.removeObject(forKey: "customUserName")
+        UserDefaults.standard.removeObject(forKey: "userAvatarData")
         userID = ""
         userName = ""
         userEmail = ""
         customUserName = ""
+        userAvatarData = nil
     }
     
     // MARK: - ASAuthorizationControllerDelegate
@@ -152,6 +172,7 @@ class AppleSignInManager: NSObject, ObservableObject, ASAuthorizationControllerD
 // Apple Sign In 按钮视图
 struct AppleSignInButton: View {
     @ObservedObject var signInManager: AppleSignInManager
+    @EnvironmentObject private var languageManager: LanguageManager
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
@@ -161,7 +182,7 @@ struct AppleSignInButton: View {
             HStack {
                 Image(systemName: "applelogo")
                     .font(.system(size: 16, weight: .medium))
-                Text("sign_in_with_apple".localized)
+                Text(languageManager.localizedString(for: "sign_in_with_apple"))
                     .font(.system(size: 16, weight: .medium))
             }
             .foregroundColor(.white)

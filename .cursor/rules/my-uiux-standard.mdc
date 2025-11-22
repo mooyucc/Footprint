@@ -6,6 +6,16 @@ alwaysApply: true
 
 本文档定义了Footprint应用应遵循的Apple iOS设计标准和最佳实践，确保应用提供一致、直观且符合Apple设计语言的用户体验。
 
+## 版本与兼容策略（2026）
+
+- **目标平台**：iOS 26 / iPadOS 26，SwiftUI 8+，遵循2026版Human Interface Guidelines。
+- **最低兼容**：iOS 18（SwiftUI 5）。所有新增特性必须提供`if #available(iOS 26, *)`分支。
+- **降级方式**：
+  - UI：优先调用新API（如`toolbarBackground(.visible, for:)`、`SensoryFeedback`修饰符），在旧版使用等价的`Material`、`UIImpactFeedbackGenerator`等。
+  - 动画/手势：若`phaseAnimator`、`scrollTransition`不可用，则回退到`.animation(.spring())`和`.transition(.opacity)`。
+  - 组件：缺失`ContentUnavailableView`等标准视图时，使用自定义容器保持语义一致。
+- **测试矩阵**：至少覆盖iOS 26、iOS 22（中间版本）、iOS 18（最低版本），确认视觉及交互一致。
+
 ## 一、核心设计原则
 
 ### 1.1 三大主旨（Three Themes）
@@ -69,6 +79,9 @@ NavigationStack {
 .navigationTitle("标题")
 .navigationBarTitleDisplayMode(.inline) // 或 .large
 ```
+> **iOS 26+**：多列信息架构使用`NavigationSplitView`或`NavigationStack`+`toolbarBackground(.visible, for: .navigationBar)`以获得透明导航栏和大标题推挤效果。配合`searchable(text:placement:)`的`.navigationBarDrawer`样式。
+>
+> **iOS 18-25**：保留`NavigationStack`基础实现，如需分割导航可用`NavigationSplitView`但禁用透明背景，改用`List`和`NavigationLink`保持兼容。
 
 #### TabView
 ```swift
@@ -79,6 +92,9 @@ TabView(selection: $selectedTab) {
     }
 }
 ```
+> **iOS 26+**：可使用`.tabViewStyle(.expanded)`与`.tabBarToolbar(.visible)`（SwiftUI 8）以获得沉浸式浮动标签栏，必要时叠加`safeAreaInset`提供底部操作区。
+>
+> **iOS 18-25**：维持`.tabViewStyle(.automatic)`；如需浮动效果，改用自定义`Toolbar`或`safeAreaInset`包裹，但保持44pt最小高度。
 
 #### 表单和输入
 - 使用`Form`而非`List`来组织表单内容
@@ -90,6 +106,9 @@ TabView(selection: $selectedTab) {
 - 次要操作使用`.buttonStyle(.bordered)`
 - 文本按钮使用`.buttonStyle(.plain)`
 - 确保按钮有足够的触控目标（最小44x44点）
+> **iOS 26+**：主按钮默认启用`.controlSize(.large)`与`.sensoryFeedback(.impact(flexibility: .medium))`提供系统级触觉。对于多操作区域使用`ControlGroup`或`MenuButton`。
+>
+> **iOS 18-25**：若无`sensoryFeedback`修饰符，在`Button` action内调用`UIImpactFeedbackGenerator`。`ControlGroup`不可用时使用`HStack`显示次操作按钮。
 
 ### 2.2 布局规范
 
@@ -98,6 +117,9 @@ TabView(selection: $selectedTab) {
 - VStack/HStack默认间距为8点，可根据需要调整
 - 卡片内边距通常为16-20点
 - 屏幕边缘安全区域使用`.padding()`
+> **iOS 26+**：优先采用`Spacing.standard(.l)`等系统间距常量（SwiftUI 8），并利用`.containerRelativeFrame(.horizontal)`在分屏或浮窗中自动适配。
+>
+> **iOS 18-25**：继续使用显式值，通过`GeometryReader`或自定义`Spacing`枚举保持一致。
 
 #### 安全区域
 ```swift
@@ -110,6 +132,9 @@ TabView(selection: $selectedTab) {
 - 使用`GeometryReader`处理不同屏幕尺寸
 - 使用`.frame(maxWidth: .infinity)`实现自适应宽度
 - 使用`LazyVGrid`和`LazyHGrid`实现网格布局
+> **iOS 26+**：更多使用`ViewThatFits`、`LayoutThatFits`与`AnyLayout`组合实现自适配，网格优先`Grid`/`GridRow`（SwiftUI 8）。
+>
+> **iOS 18-25**：继续依赖`GeometryReader`和`LazyVGrid`；`Grid`不可用时保持`LazyVGrid`实现。
 
 ### 2.3 颜色系统
 
@@ -121,6 +146,9 @@ TabView(selection: $selectedTab) {
 .background(Color(.systemBackground))        // 背景
 .background(Color(.secondarySystemBackground)) // 卡片背景
 ```
+> **iOS 26+**：优先使用`Color.tint`、`Color.accent`以及`HierarchicalShapeStyle.primary`等层级色；对沉浸式卡片启用`.glassBackgroundEffect(in:)`。
+>
+> **iOS 18-25**：无`glassBackgroundEffect`时使用`.background(.regularMaterial)`；tint不可用时改用`AccentColor`。
 
 #### 系统颜色
 - 使用`.blue`、`.green`、`.red`等系统颜色
@@ -132,6 +160,9 @@ TabView(selection: $selectedTab) {
 .foregroundStyle(.blue.gradient)  // iOS 15+
 .background(.ultraThinMaterial)   // 毛玻璃效果
 ```
+> **iOS 26+**：结合`meshGradient`、`containerBackground(.ultraThinMaterial, for:)`实现沉浸式背景，并通过`prefersMaterialControls`遵循系统亮暗映射。
+>
+> **iOS 18-25**：`meshGradient`不可用时改用`LinearGradient`或`RadialGradient`；`containerBackground`缺失时维持`.background`.
 
 ### 2.4 字体和排版
 
@@ -144,6 +175,9 @@ TabView(selection: $selectedTab) {
 .font(.caption)         // 说明文字
 .font(.caption2)        // 小号说明
 ```
+> **iOS 26+**：启用`.dynamicTypeSize(...).fontDesign(.rounded)`以匹配全新Rounded系统字体，并结合`FontWidth`实现可变字宽。
+>
+> **iOS 18-25**：`fontDesign(.rounded)`不可用时保持默认系统字体，借助`UIFontMetrics`在UIKit桥接中维持动态字体。
 
 #### 字体权重
 - `.regular`：默认
@@ -170,6 +204,9 @@ Image(systemName: "icon.name")
     .foregroundStyle(.blue.gradient)
     .font(.title2)
 ```
+> **iOS 26+**：充分利用多层级彩色Symbols与`animation`变体（如`"location.slash.fill"`的`variableValue`）实现状态反馈。
+>
+> **iOS 18-25**：若`variableValue`不可用，改用不同填充图标区分状态；多色符号不可用则使用单色+渐变。
 
 #### 自定义图标
 - 仅在必要时使用自定义图标
@@ -185,6 +222,9 @@ Image(systemName: "icon.name")
 .cornerRadius(15)  // 或 12、20
 .shadow(color: .black.opacity(0.1), radius: 5, x: 0, y: 2)
 ```
+> **iOS 26+**：可替换为`.background(.quaternarySystemFill)`+`.glassBackgroundEffect()`并开启`.clipShape(.rect(cornerRadius: 18, style: .continuous))`营造连续圆角。
+>
+> **iOS 18-25**：保持`Color(.secondarySystemBackground)`；如需连续圆角使用`RoundedRectangle(cornerRadius:style:)`。
 
 #### 圆角半径
 - 小卡片：12点
@@ -238,6 +278,9 @@ Image(systemName: "icon.name")
 let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
 impactFeedback.impactOccurred()
 ```
+> **iOS 26+**：优先使用`.sensoryFeedback(.impact(flexibility: .soft), trigger: state)`绑定业务状态，减少手动生成器调用。
+>
+> **iOS 18-25**：继续通过`UIImpactFeedbackGenerator`或`UINotificationFeedbackGenerator`提供触觉反馈。
 
 ### 4.3 动画和过渡
 
@@ -257,6 +300,9 @@ impactFeedback.impactOccurred()
 ```swift
 .animation(.spring(response: 0.3, dampingFraction: 0.7), value: state)
 ```
+> **iOS 26+**：可采用`phaseAnimator`、`keyframeAnimator`控制复杂场景；`scrollTransition`让列表滚动动画符合深度感。
+>
+> **iOS 18-25**：使用`.animation`或`withAnimation`配合`.transition(.opacity)`，必要时分解为多个`withAnimation`块。
 
 ## 五、无障碍设计（Accessibility）
 
@@ -334,6 +380,9 @@ ProgressView()
 - 提供有意义的空状态提示
 - 包含图标、文字和可能的操作建议
 - 避免空白页面
+> **iOS 26+**：使用`ContentUnavailableView`（带`.buttonActions`)展示图文组合，并结合`.symbolEffect(.pulse)`突出主操作。
+>
+> **iOS 18-25**：如`ContentUnavailableView`不可用，构建自定义`VStack`，保持相同语义结构（图标、标题、描述、操作）。
 
 ### 7.4 成功反馈
 
@@ -399,18 +448,27 @@ Form {
 - 使用系统提供的MapKit样式
 - 支持标准、混合、卫星等模式
 - 考虑使用静音模式突出用户内容
+> **iOS 26+**：使用`Map`的新`MapStyle.immersive`与`LookAroundPreview`组件，允许在导航栏内联展示预览；结合`mapScope`与`ContentBehavior`实现沉浸式切换。
+>
+> **iOS 18-25**：`MapStyle.immersive`不可用时回退到`MapStyle.standard`，Look Around以`MKLookAroundViewController`模态展示。
 
 ### 10.2 标注和标记
 
 - 使用清晰的标记样式
 - 支持聚类显示大量标记
 - 提供标注详情视图
+> **iOS 26+**：优先使用`Annotation`+`.mapOverlay`创建语义标注，并结合`SpatialTapGesture`实现局部交互。
+>
+> **iOS 18-25**：继续使用`MapAnnotation`、`MapPin`及`MKClusterAnnotation`；无`SpatialTapGesture`时使用标准`TapGesture`。
 
 ### 10.3 用户位置
 
 - 请求位置权限时说明用途
 - 提供位置精度指示
 - 允许用户控制位置共享
+> **iOS 26+**：接入`PreciseLocationControl`面板，使用`locationButton(for:)`系统按钮。
+>
+> **iOS 18-25**：`locationButton`不可用时，使用自定义按钮+`CLLocationManager`权限引导，仍需提供精度标签。
 
 ## 十一、性能优化
 
@@ -526,6 +584,7 @@ struct MyView: View {
 
 ---
 
-**最后更新**：2024年（基于iOS 18设计标准）
-**适用版本**：iOS 15.0+（SwiftUI 3.0+）
+**最后更新**：2025年（基于iOS 26设计标准）
+**适用版本**：iOS 18.0+（SwiftUI 5.0+，iOS 26特性按可用性启用）
+**向后兼容要求**：所有新特性需提供清晰的`if #available`降级路径，并在设计评审中标注。
 **维护者**：开发团队

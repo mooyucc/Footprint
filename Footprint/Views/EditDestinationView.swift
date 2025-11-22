@@ -567,9 +567,12 @@ struct EditDestinationView: View {
     }
     
     private func deleteDestination() {
+        let destinationId = destination.id
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             modelContext.delete(destination)
             try? modelContext.save()
+            // 发送删除通知，通知详情页关闭
+            NotificationCenter.default.post(name: .destinationDeleted, object: nil, userInfo: ["destinationId": destinationId])
             dismiss()
         }
     }

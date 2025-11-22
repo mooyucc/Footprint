@@ -32,6 +32,7 @@ struct TripExportData: Codable {
         let notes: String
         let photoData: Data?
         let photoThumbnailData: Data?
+        let photoDatas: [Data]?
         let photoThumbnailDatas: [Data]?
         let category: String
         let isFavorite: Bool
@@ -40,9 +41,8 @@ struct TripExportData: Codable {
 
 struct TripDataExporter {
     
-    /// 导出旅程数据为JSON格式
-    static func exportTrip(_ trip: TravelTrip) -> URL? {
-        // 准备导出数据
+    /// 构建旅程导出数据
+    static func exportPayload(for trip: TravelTrip) -> TripExportData {
         let tripInfo = TripExportData.TripInfo(
             name: trip.name,
             desc: trip.desc,
@@ -51,7 +51,6 @@ struct TripDataExporter {
             coverPhotoData: trip.coverPhotoData
         )
         
-        // 转换目的地数据
         let destinations = trip.destinations?.map { destination in
             TripExportData.DestinationInfo(
                 name: destination.name,
@@ -62,19 +61,24 @@ struct TripDataExporter {
                 notes: destination.notes,
                 photoData: destination.photoData,
                 photoThumbnailData: destination.photoThumbnailData,
+                photoDatas: destination.photoDatas.isEmpty ? nil : destination.photoDatas,
                 photoThumbnailDatas: destination.photoThumbnailDatas.isEmpty ? nil : destination.photoThumbnailDatas,
                 category: destination.category,
                 isFavorite: destination.isFavorite
             )
         } ?? []
         
-        // 创建导出数据
-        let exportData = TripExportData(
+        return TripExportData(
             trip: tripInfo,
             destinations: destinations,
             exportDate: Date(),
             appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
         )
+    }
+    
+    /// 导出旅程数据为JSON格式
+    static func exportTrip(_ trip: TravelTrip) -> URL? {
+        let exportData = exportPayload(for: trip)
         
         // 序列化为JSON
         do {

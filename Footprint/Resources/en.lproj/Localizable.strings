@@ -15,6 +15,7 @@
 "icloud_sync" = "iCloud Sync";
 "enabled" = "Enabled";
 "not_enabled" = "Not enabled";
+"in_development" = "In Development";
 "data_storage" = "Data Storage";
 "local" = "Local";
 "icloud" = "iCloud";
@@ -36,8 +37,66 @@
 "save" = "Save";
 "iCloud_synced" = "iCloud Synced";
 
+// Edit User Avatar
+"edit_avatar" = "Edit Avatar";
+"avatar_description" = "Choose a photo as your avatar";
+"select_photo" = "Select Photo";
+"remove_avatar" = "Remove Avatar";
+"restore_avatar" = "Restore Avatar";
+"remove_avatar_confirm_title" = "Remove Avatar";
+"remove_avatar_confirm_message" = "Are you sure you want to remove your current avatar?";
+"remove" = "Remove";
+
+// Local Data
+"local_data" = "Local Data";
+"import_local_data" = "Import Local Data";
+"export_local_data" = "Export Local Data";
+"local_data_description" = "Import or export local data backup";
+"optimize_images" = "Optimize Images";
+"optimize_images_confirm_title" = "Optimize Images";
+"optimize_images_confirm_message" = "Compress all stored photos and regenerate thumbnails. Please keep the app active during the process.";
+"optimize" = "Optimize";
+"optimize_images_result_title" = "Optimization Complete";
+"optimize_images_success" = "Successfully optimized %d photos";
+"local_import_summary_title" = "Import Summary";
+"local_import_summary_success" = "Successfully imported %d trips";
+"local_import_summary_duplicates" = "Skipped %d duplicate trips";
+"local_import_summary_failures" = "Failed to import %d";
+"local_backup_error_title" = "Backup Error";
+"local_backup_share_text" = "MooFootprint Data Backup";
+"local_backup_no_trips" = "No trips to export";
+"local_backup_empty_package" = "Package is empty";
+"local_backup_read_failed" = "Read failed: %@";
+"local_backup_decode_failed" = "Decode failed: %@";
+"local_backup_write_failed" = "Write failed: %@";
+"local_backup_unknown_error" = "Unknown error: %@";
+"local_backup_access_denied" = "Access denied";
+
 // Common
 "footprint" = "MooFootprint";
+"ok" = "OK";
+"map" = "Map";
+"trips" = "Trips";
+"profile" = "Profile";
+"create_trip" = "Add Trip";
+"import_trip" = "Import Trip";
+"share" = "Share";
+
+// Profile View
+"my_travel_footprint" = "My Footprint Map";
+"record_every_journey" = "Light up every footprint in life";
+"sign_in_apple_id" = "Sign in with Apple ID";
+"sign_in_with_apple" = "Sign in with Apple";
+"enable_icloud_sync" = "Enable iCloud sync to protect your footprint memories";
+"total_destinations" = "Places Visited";
+"countries_visited" = "Countries Visited";
+"domestic_travel" = "Domestic Footprints";
+"international_travel" = "Overseas Footprints";
+"my_favorites" = "My Favorites";
+"travel_timeline" = "Footprint Timeline";
+"destinations_count" = "destinations";
+"footprint_app" = "MooFootprint - Life Footprint";
+"record_journey_memories" = "Light up every footprint in your life and cherish beautiful memories";
 
 // Destination Detail View
 "no_photo" = "No Photo";
@@ -74,6 +133,8 @@
 "mark_as_favorite" = "Mark as Favorite";
 "belongs_to_trip_optional" = "Belongs to Trip (Optional)";
 "select_trip" = "Select Trip";
+"add_to_trip" = "Add to Trip";
+"no_trips_available" = "No trips available";
 "none" = "None";
 "location_info" = "Location Information";
 "search_place" = "Search place...";
@@ -100,6 +161,7 @@
 "map_button_style" = "Style";
 "map_button_import_photo" = "Import Photo";
 "footprints_action_menu" = "Quick Actions";
+"search_places" = "Search places";
 "photo_import_error_title" = "Photo Import";
 "photo_import_failed_message" = "Unable to load the selected photo. Please try again.";
 "photo_import_missing_location_message" = "No location metadata was found. The photo was added, please choose a place manually.";
@@ -180,7 +242,29 @@
 "all_destinations_in_trip" = "All destinations are already in this trip";
 "searching" = "Searching...";
 
+// Trip Edit/Add View
+"trip_info" = "Route Information";
+"trip_name" = "Route Name";
+"description_optional" = "Description (Optional)";
+"time" = "Time";
+"start_date" = "Start Date";
+"end_date" = "End Date";
+"cover_image_optional" = "Cover Image (Optional)";
+"add_cover_image" = "Add Cover Image";
+"change_cover_image" = "Change Cover Image";
+"trip_duration" = "Trip Duration";
+
+// Trip Detail View
+"start" = "Start";
+"end" = "End";
+"duration" = "Duration";
+"days" = "days";
+"trip_route" = "Trip Route";
+"locations" = "locations";
+
 // Trip Share Image
+"select_layout" = "Select Share Layout";
+"share" = "Share";
 "trip_share_start" = "Start";
 "trip_share_end" = "End";
 "trip_share_duration" = "Duration";
@@ -190,6 +274,12 @@
 "trip_share_no_destinations" = "No destinations added yet";
 "trip_share_signature" = "✨ MooFootprint • Record Every Journey";
 "trip_share_subtitle" = "Record wonderful journeys, share beautiful moments";
+"trip_share_layout_list" = "List Layout";
+"trip_share_layout_list_desc" = "Detailed journey information with cover, time card and complete route";
+"trip_share_layout_grid" = "Grid Layout";
+"trip_share_layout_grid_desc" = "Display destination photos in a 3x3 grid, perfect for visual sharing";
+"trip_share_layout_extended_grid" = "Extended Grid";
+"trip_share_layout_extended_grid_desc" = "Display all destination photos in a grid layout, supports more than 9 locations";
 
 // Travel Stats Share Image
 "stats_share_my_travel_footprint" = "My Travel Footprint";
@@ -235,3 +325,23 @@
 "no_routes_available" = "No Routes Available";
 "create_trip_with_at_least_two_destinations" = "Create a trip with at least two destinations to see route information here";
 "view_details" = "View Details";
+
+// Image Optimization
+"optimize_images" = "Optimize Images";
+"optimize_images_confirm_title" = "Optimize Images";
+"optimize_images_confirm_message" = "This will optimize all stored images by compressing their size and generating thumbnails. This operation may take some time.";
+"optimize" = "Optimize";
+"optimize_images_result_title" = "Optimization Complete";
+"optimize_images_success" = "Successfully optimized %d images";
+"optimize_images_failed" = "Failed to optimize %d images";
+
+// About View
+"about_app" = "About";
+"feature_introduction" = "Feature Introduction";
+"version_update" = "Version Update";
+"software_license_agreement" = "Software License and Service Agreement";
+"privacy_policy_summary" = "Privacy Policy Summary";
+"privacy_policy" = "Privacy Policy";
+"customer_service_phone" = "Customer Service";
+"copyright" = "Copyright";
+"all_rights_reserved" = "All Rights Reserved";

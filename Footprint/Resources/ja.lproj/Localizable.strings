@@ -1,0 +1,348 @@
+/* 
+  Localizable.strings
+  Footprint
+  
+  Japanese localization
+*/
+
+// Settings View
+"settings" = "設定";
+"done" = "完了";
+"account" = "アカウント";
+"not_logged_in" = "ログインしていません";
+"login_sync_description" = "ログイン後、データは自動的にiCloudに同期されます";
+"data_sync" = "データ同期";
+"icloud_sync" = "iCloud同期";
+"enabled" = "有効";
+"not_enabled" = "無効";
+"in_development" = "開発中";
+"data_storage" = "データストレージ";
+"local" = "ローカル";
+"icloud" = "iCloud";
+"sync_description_logged_in" = "旅行データは自動的にiCloudに同期され、すべてのデバイスでアクセスできます。";
+"sync_description_not_logged_in" = "Apple IDでログインすると、データは自動的にiCloudに同期され、すべてのデバイス間で同期が維持されます。";
+"about" = "について";
+"version" = "バージョン";
+"app_name" = "アプリ名";
+"sign_out" = "サインアウト";
+"language" = "言語";
+"language_selection" = "言語選択";
+
+// Edit User Name
+"edit_username" = "ユーザー名を編集";
+"custom_username" = "カスタムユーザー名";
+"username_description" = "お好みの表示名を設定";
+"enter_username" = "ユーザー名を入力";
+"cancel" = "キャンセル";
+"save" = "保存";
+"iCloud_synced" = "iCloud同期済み";
+
+// Edit User Avatar
+"edit_avatar" = "アバターを編集";
+"avatar_description" = "アバターとして使用する写真を選択";
+"select_photo" = "写真を選択";
+"remove_avatar" = "アバターを削除";
+"restore_avatar" = "アバターを復元";
+"remove_avatar_confirm_title" = "アバターを削除";
+"remove_avatar_confirm_message" = "現在のアバターを削除してもよろしいですか？";
+"remove" = "削除";
+
+// Local Data
+"local_data" = "ローカルデータ";
+"import_local_data" = "ローカルデータをインポート";
+"export_local_data" = "ローカルデータをエクスポート";
+"local_data_description" = "ローカルデータのバックアップをインポートまたはエクスポート";
+"optimize_images" = "画像を最適化";
+"optimize_images_confirm_title" = "画像を最適化";
+"optimize_images_confirm_message" = "保存されているすべての写真を圧縮し、サムネイルを再生成します。処理中はアプリをフォアグラウンドで実行してください。";
+"optimize" = "最適化";
+"optimize_images_result_title" = "最適化完了";
+"optimize_images_success" = "%d枚の写真を最適化しました";
+"local_import_summary_title" = "インポート結果";
+"local_import_summary_success" = "%d件の旅程をインポートしました";
+"local_import_summary_duplicates" = "%d件の重複旅程をスキップしました";
+"local_import_summary_failures" = "%d件のインポートに失敗しました";
+"local_backup_error_title" = "バックアップエラー";
+"local_backup_share_text" = "MooFootprintデータバックアップ";
+"local_backup_no_trips" = "エクスポートする旅程がありません";
+"local_backup_empty_package" = "パッケージが空です";
+"local_backup_read_failed" = "読み取り失敗: %@";
+"local_backup_decode_failed" = "デコード失敗: %@";
+"local_backup_write_failed" = "書き込み失敗: %@";
+"local_backup_unknown_error" = "不明なエラー: %@";
+"local_backup_access_denied" = "アクセスが拒否されました";
+
+// Common
+"footprint" = "MooFootprint";
+"ok" = "OK";
+"map" = "地図";
+"trips" = "旅程";
+"profile" = "マイページ";
+"create_trip" = "旅程を追加";
+"import_trip" = "旅程をインポート";
+"share" = "共有";
+
+// Profile View
+"my_travel_footprint" = "私の足跡マップ";
+"record_every_journey" = "人生のすべての足跡を照らす";
+"sign_in_apple_id" = "Apple IDでサインイン";
+"sign_in_with_apple" = "Appleでサインイン";
+"enable_icloud_sync" = "iCloud同期を有効にして、足跡の思い出を保護";
+"total_destinations" = "訪れた場所";
+"countries_visited" = "訪れた国";
+"domestic_travel" = "国内の足跡";
+"international_travel" = "海外の足跡";
+"my_favorites" = "お気に入り";
+"travel_timeline" = "足跡タイムライン";
+"destinations_count" = "目的地";
+"footprint_app" = "MooFootprint - 人生の足跡";
+"record_journey_memories" = "人生のすべての足跡を照らし、美しい思い出を大切に";
+
+// Destination Detail View
+"no_photo" = "写真なし";
+"visit_date" = "訪問日";
+"belongs_to_trip" = "所属旅程";
+"location_coordinates" = "位置座標";
+"latitude" = "緯度";
+"longitude" = "経度";
+"travel_notes" = "旅行ノート";
+
+// Destination List View
+"my_footprints" = "私の足跡";
+"search_places_countries_notes" = "場所、国、またはノートを検索";
+"filter" = "フィルター";
+"all" = "すべて";
+"domestic" = "国内";
+"international" = "海外";
+"edit" = "編集";
+"delete" = "削除";
+"travel_statistics" = "旅行統計";
+"total" = "合計";
+"countries" = "国";
+"no_travel_records" = "まだ旅行記録がありません";
+"add_first_destination" = "最初の目的地を追加";
+"start_recording_footprints" = "右上の+ボタンをタップして、旅行の足跡を記録し始めましょう！";
+
+// Edit Destination View
+"edit_destination" = "目的地を編集";
+"basic_info" = "基本情報";
+"place_name" = "場所名";
+"category" = "カテゴリー";
+"country_region" = "国/地域";
+"visit_date" = "訪問日";
+"mark_as_favorite" = "お気に入りにマーク";
+"belongs_to_trip_optional" = "所属旅程（オプション）";
+"select_trip" = "旅程を選択";
+"add_to_trip" = "旅程に追加";
+"no_trips_available" = "まだ旅程がありません";
+"none" = "なし";
+"location_info" = "位置情報";
+"search_place" = "場所を検索...";
+"search" = "検索";
+"selected" = "選択済み：";
+"current_location" = "現在地";
+"photo" = "写真";
+"add_photo" = "写真を追加";
+"change_photo" = "写真を変更";
+"notes" = "ノート";
+"unknown_place" = "不明な場所";
+"latitude_longitude" = "緯度: %.4f, 経度: %.4f";
+
+// Map View
+"getting_location_info" = "位置情報を取得中...";
+"identifying_location" = "お待ちください。選択した位置を識別しています";
+"unknown_city" = "不明な都市";
+"unknown_country" = "不明な国";
+"map_button_locate" = "位置";
+"map_button_check_in" = "チェックイン";
+"map_button_memory" = "思い出";
+"map_button_footprints" = "足跡";
+"map_button_search" = "検索";
+"map_button_style" = "スタイル";
+"map_button_import_photo" = "写真をインポート";
+"footprints_action_menu" = "クイックアクション";
+"search_places" = "場所を検索";
+"photo_import_error_title" = "写真インポート";
+"photo_import_failed_message" = "選択した写真を読み込めませんでした。もう一度お試しください。";
+"photo_import_missing_location_message" = "位置メタデータが見つかりませんでした。写真は追加されましたが、手動で場所を選択してください。";
+"selected_location" = "選択した位置";
+"locations_count" = "場所";
+"delete_destination" = "場所を削除";
+"confirm_delete_destination" = "「%@」を削除してもよろしいですか？この操作は元に戻せません。";
+"reverse_geocoding_failed" = "逆ジオコーディング失敗: %@、フォールバックを試行中...";
+"nearby_search_success" = "近くの検索成功、近くの場所の推論を使用: %@ - %@";
+"nearby_search_failed" = "近くの検索失敗: %@、座標フォールバックを続行中...";
+"coordinate_fallback" = "座標フォールバックを使用: %@ - %@ [カテゴリー: %@]";
+"user_location_obtained" = "ユーザー位置を取得: %f, %f";
+"location_permission_denied" = "位置の取得に失敗: %@";
+"location_authorization_changed" = "位置認証ステータスが変更されました: %d";
+"using_cached_country_region" = "キャッシュされた国地域を使用";
+"map_positioned_to" = "地図を配置: %@ (%@)";
+"getting_user_location" = "ユーザー位置を取得中...";
+"preloaded_country_region" = "国地域をプリロード: %@ (%@)";
+"user_location" = "現在地";
+
+// Add Destination View
+"add_destination" = "目的地を追加";
+"search" = "検索";
+"search_domestic_places" = "🇨🇳 国内の場所を検索:";
+"use_amap_data" = "• 高德地图データを使用して、中国国内の場所を検索";
+"input_city_names" = "• 都市名を直接入力、例：「北京」「上海」「杭州」";
+"input_attractions" = "• 観光地名を入力、例：「紫禁城」「西湖」「外灘」";
+"search_international_places" = "🌍 海外の場所を検索:";
+"use_apple_international" = "• Apple国際データを使用して、世界中の場所を検索";
+"hot_cities_quick_search" = "• ⭐ 人気都市のクイック検索：London/ロンドン、Paris/パリ、Tokyo/東京など";
+"support_multilingual" = "• 英語と中国語の入力をサポート、ネットワーク経由で最新データを取得";
+"searching_places" = "%@の場所を検索中...";
+"no_results_found" = "結果が見つかりませんでした";
+"suggestions" = "提案：";
+"try_english_names" = "1. 英語の地名で検索してみてください";
+"input_specific_address" = "2. より具体的な住所を入力、例：「London, UK」";
+"check_spelling" = "3. スペルが正しいか確認してください";
+"selected_location" = "選択した位置";
+"select_photo" = "写真を選択";
+"search_domestic_with_amap" = "🇨🇳 高德地图データを使用して国内の場所を検索: %@";
+"amap_search_error" = "❌ 高德地图検索エラー: %@";
+"fallback_to_clgeocoder" = "🔄 フォールバック検索：CLGeocoderを使用して国内の場所を検索";
+"amap_found_results" = "✅ 高德地图が%d件の国内場所を見つけました";
+"clgeocoder_found_results" = "✅ CLGeocoderが%d件の国内場所を見つけました";
+"no_domestic_results" = "❌ 国内の場所が見つかりませんでした";
+"clgeocoder_search_failed" = "❌ CLGeocoder検索に失敗しました";
+"search_international_with_apple" = "🌍 Apple国際データを使用して海外の場所を検索: %@";
+"device_region" = "📱 デバイス地域設定: %@";
+"device_language" = "📱 デバイス言語: %@";
+"device_country" = "📱 デバイス国: %@";
+"found_in_preset_cities" = "✅ プリセット都市ライブラリで見つかりました: %@, %@";
+"using_preset_coordinates" = "✅ プリセット座標を使用: (%.4f, %.4f)";
+"not_found_in_preset" = "🔍 プリセットライブラリで見つかりませんでした。Apple国際データを試行中...";
+"apple_international_api_error" = "❌ Apple国際データAPIエラー: %@";
+"apple_api_returned_results" = "📍 Apple国際データAPIが%d件の生結果を返しました:";
+"raw_result_info" = "  生結果 %d:";
+"name_info" = "    - 名前: %@";
+"country_info" = "    - 国: %@";
+"iso_code_info" = "    - ISOコード: %@";
+"city_info" = "    - 都市: %@";
+"filtered_international_count" = "🔍 フィルター後の海外場所数: %d";
+"apple_final_results" = "✅ Apple国際データが最終的に%d件の場所を表示";
+"display_result_info" = "結果 %d を表示: %@ - %@";
+"apple_api_no_results" = "⚠️ Apple国際データAPIで結果が見つかりませんでした";
+"mksearch_error" = "❌ MKLocalSearchエラー: %@";
+"mksearch_found_results" = "✅ MKLocalSearchが%d件の結果を見つけました";
+"location_selected" = "✅ 位置を選択:";
+"selected_name" = "   名前: %@";
+"selected_country" = "   国: %@";
+"selected_coordinates" = "   座標: (%.4f, %.4f)";
+
+// Add Destination To Trip View
+"add_destination_to_trip" = "旅程に目的地を追加";
+"mode" = "モード";
+"create_new_destination" = "新しい目的地を作成";
+"add_existing_destination" = "既存の目的地を追加";
+"no_destinations_to_add" = "追加する目的地がありません";
+"all_destinations_in_trip" = "すべての目的地がすでにこの旅程に含まれています";
+"searching" = "検索中...";
+
+// Trip Edit/Add View
+"trip_info" = "旅程情報";
+"trip_name" = "旅程名";
+"description_optional" = "説明（オプション）";
+"time" = "時間";
+"start_date" = "開始日";
+"end_date" = "終了日";
+"cover_image_optional" = "カバー画像（オプション）";
+"add_cover_image" = "カバー画像を追加";
+"change_cover_image" = "カバー画像を変更";
+"trip_duration" = "旅程期間";
+
+// Trip Detail View
+"start" = "開始";
+"end" = "終了";
+"duration" = "期間";
+"days" = "日";
+"trip_route" = "旅程ルート";
+"locations" = "場所";
+
+// Trip Share Image
+"select_layout" = "共有レイアウトを選択";
+"share" = "共有";
+"trip_share_start" = "開始";
+"trip_share_end" = "終了";
+"trip_share_duration" = "期間";
+"trip_share_days" = "日";
+"trip_share_route" = "旅程ルート";
+"trip_share_locations_count" = "場所";
+"trip_share_no_destinations" = "まだ目的地が追加されていません";
+"trip_share_signature" = "✨ MooFootprint • すべての旅程を記録";
+"trip_share_subtitle" = "素晴らしい旅程を記録し、美しい瞬間を共有";
+"trip_share_layout_list" = "リストレイアウト";
+"trip_share_layout_list_desc" = "カバー、時間カード、完全な旅程ルートを含む詳細な旅程情報";
+"trip_share_layout_grid" = "グリッドレイアウト";
+"trip_share_layout_grid_desc" = "3x3グリッドで目的地の写真を表示、視覚的な共有に最適";
+"trip_share_layout_extended_grid" = "拡張グリッド";
+"trip_share_layout_extended_grid_desc" = "グリッドレイアウトですべての目的地の写真を表示、9つ以上の場所をサポート";
+
+// Travel Stats Share Image
+"stats_share_my_travel_footprint" = "私の旅行足跡";
+"stats_share_destinations_count" = "旅行目的地";
+"stats_share_countries_count" = "国";
+"stats_share_travel_timeline" = "旅行タイムライン";
+"stats_share_footer" = "✨ Footprint • すべての旅程を記録";
+
+// Country Settings
+"country" = "所在国";
+"country_selection" = "国選択";
+"country_description" = "所在国を設定して、国内と海外の旅行を区別";
+"search_countries" = "国を検索...";
+
+// Map Style
+"map_style_title" = "地図スタイル";
+"map_style_standard" = "標準地図";
+"map_style_muted" = "デフォルト地図";
+"map_style_satellite" = "衛星地図";
+"map_style_hybrid" = "ハイブリッド地図";
+"map_style_imagery" = "衛星画像";
+
+// Duplicate Destination Check
+"duplicate_destination_title" = "重複する目的地";
+"duplicate_destination_message" = "「%@」という名前の目的地が既に存在します。既存の目的地を上書きしますか？\n\n既存の目的地情報：\n国：%@\n訪問日：%@%@\n\n原則として、同名の目的地は許可されていません";
+"duplicate_destination_overwrite" = "上書き";
+"duplicate_destination_cancel" = "キャンセル";
+
+// Timeline Player
+"timeline_mode" = "タイムラインモード";
+"timeline_play" = "再生";
+"timeline_pause" = "一時停止";
+"timeline_reset" = "リセット";
+"timeline_speed" = "再生速度";
+"timeline_current_date" = "現在の日付";
+"timeline_current_location" = "現在の位置";
+"timeline_progress" = "進行状況";
+"timeline_follow_camera" = "カメラを追従";
+
+// Trip Route Map
+"route_map" = "旅程地図";
+"routes" = "旅程";
+"no_routes_available" = "旅程がありません";
+"create_trip_with_at_least_two_destinations" = "少なくとも2つの目的地を含む旅程を作成すると、ここに旅程情報が表示されます";
+"view_details" = "詳細を表示";
+
+// Image Optimization
+"optimize_images" = "画像を最適化";
+"optimize_images_confirm_title" = "画像を最適化";
+"optimize_images_confirm_message" = "保存されているすべての画像を最適化し、サイズを圧縮してサムネイルを生成します。この操作には時間がかかる場合があります。";
+"optimize" = "最適化";
+"optimize_images_result_title" = "最適化完了";
+"optimize_images_success" = "%d枚の画像を最適化しました";
+"optimize_images_failed" = "%d枚の画像の最適化に失敗しました";
+
+// About View
+"about_app" = "について";
+"feature_introduction" = "機能紹介";
+"version_update" = "バージョン更新";
+"software_license_agreement" = "ソフトウェアライセンスおよびサービス契約";
+"privacy_policy_summary" = "プライバシーポリシー要約";
+"privacy_policy" = "プライバシーポリシー";
+"customer_service_phone" = "カスタマーサービス";
+"copyright" = "著作権";
+"all_rights_reserved" = "All Rights Reserved";
+

@@ -19,6 +19,9 @@ struct YearFilteredDestinationView: View {
     @StateObject private var countryManager = CountryManager.shared
     @State private var refreshID = UUID()
     @Environment(\.colorScheme) var colorScheme
+    @State private var shareItem: TripShareItem?
+    @State private var showingLayoutSelection = false
+    @State private var selectedLayout: TripShareLayout = .list
     
     // 自定义配色 - 与"我的"tab保持一致
     // 页面背景：非常浅的米白色 #f7f3eb
@@ -195,9 +198,31 @@ struct YearFilteredDestinationView: View {
             .background(pageBackgroundColor)
             .navigationTitle(languageManager.currentLanguage == .chinese ? "\(year)年旅行记录" : "\(year) Travel Records")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        showingLayoutSelection = true
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .foregroundColor(.primary)
+                    }
+                }
+            }
             .searchable(text: $searchText, prompt: "search_places_countries_notes".localized)
             .sheet(item: $editingDestination) { destination in
                 EditDestinationView(destination: destination)
+            }
+            .sheet(item: $shareItem) { item in
+                if let image = item.image {
+                    SystemShareSheet(items: [image])
+                }
+            }
+            .sheet(isPresented: $showingLayoutSelection) {
+                YearShareLayoutSelectionView(
+                    year: year,
+                    destinations: allDestinations,
+                    selectedLayout: $selectedLayout
+                )
             }
             .overlay {
                 if allDestinations.isEmpty {
@@ -226,6 +251,7 @@ struct YearFilteredDestinationView: View {
             }
         }
     }
+    
 }
 
 struct YearStatisticsCard: View {

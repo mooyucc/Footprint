@@ -1,0 +1,348 @@
+/* 
+  Localizable.strings
+  Footprint
+  
+  Chinese (Traditional) localization
+*/
+
+// Settings View
+"settings" = "設置";
+"done" = "完成";
+"account" = "帳戶";
+"not_logged_in" = "未登錄";
+"login_sync_description" = "登錄後數據自動同步到 iCloud";
+"data_sync" = "數據同步";
+"icloud_sync" = "iCloud 同步";
+"enabled" = "已啟用";
+"not_enabled" = "未啟用";
+"in_development" = "開發中";
+"data_storage" = "數據存儲";
+"local" = "本地";
+"icloud" = "iCloud";
+"sync_description_logged_in" = "你的旅行數據正在自動同步到 iCloud，可以在所有設備上訪問。";
+"sync_description_not_logged_in" = "登錄 Apple ID 後，數據將自動同步到 iCloud，並在你的所有設備間保持同步。";
+"about" = "關於";
+"version" = "版本";
+"app_name" = "應用名稱";
+"sign_out" = "退出登錄";
+"language" = "語言";
+"language_selection" = "語言選擇";
+
+// Edit User Name
+"edit_username" = "編輯用戶名";
+"custom_username" = "自定義用戶名";
+"username_description" = "設置一個你喜歡的顯示名稱";
+"enter_username" = "請輸入用戶名";
+"cancel" = "取消";
+"save" = "保存";
+"iCloud_synced" = "iCloud 已同步";
+
+// Edit User Avatar
+"edit_avatar" = "編輯頭像";
+"avatar_description" = "選擇一張照片作為你的頭像";
+"select_photo" = "選擇照片";
+"remove_avatar" = "刪除頭像";
+"restore_avatar" = "恢復頭像";
+"remove_avatar_confirm_title" = "刪除頭像";
+"remove_avatar_confirm_message" = "確定要刪除當前頭像嗎？";
+"remove" = "刪除";
+
+// Local Data
+"local_data" = "本地數據";
+"import_local_data" = "導入本地數據";
+"export_local_data" = "導出本地數據";
+"local_data_description" = "導入或導出本地數據備份";
+"optimize_images" = "優化圖片";
+"optimize_images_confirm_title" = "優化圖片";
+"optimize_images_confirm_message" = "將對所有已存儲的圖片進行壓縮並重新生成縮略圖，過程中請保持 App 前台運行。";
+"optimize" = "優化";
+"optimize_images_result_title" = "優化完成";
+"optimize_images_success" = "成功優化 %d 張圖片";
+"local_import_summary_title" = "導入結果";
+"local_import_summary_success" = "成功導入 %d 個旅程";
+"local_import_summary_duplicates" = "跳過 %d 個重複旅程";
+"local_import_summary_failures" = "導入失敗 %d 個";
+"local_backup_error_title" = "備份錯誤";
+"local_backup_share_text" = "墨魚足跡數據備份";
+"local_backup_no_trips" = "沒有可導出的旅程";
+"local_backup_empty_package" = "數據包為空";
+"local_backup_read_failed" = "讀取失敗: %@";
+"local_backup_decode_failed" = "解碼失敗: %@";
+"local_backup_write_failed" = "寫入失敗: %@";
+"local_backup_unknown_error" = "未知錯誤: %@";
+"local_backup_access_denied" = "訪問被拒絕";
+
+// Common
+"footprint" = "墨魚足跡";
+"ok" = "確定";
+"map" = "地圖";
+"trips" = "旅程";
+"profile" = "我的";
+"create_trip" = "添加旅程";
+"import_trip" = "導入旅程";
+"share" = "分享";
+
+// Profile View
+"my_travel_footprint" = "我的足跡地圖";
+"record_every_journey" = "點亮生命中每一個足跡";
+"sign_in_apple_id" = "登錄 Apple ID";
+"sign_in_with_apple" = "通過Apple登錄";
+"enable_icloud_sync" = "開啟 iCloud 同步，保護你的足跡回憶";
+"total_destinations" = "點亮的地方";
+"countries_visited" = "去過的國家";
+"domestic_travel" = "國內足跡";
+"international_travel" = "海外足跡";
+"my_favorites" = "我的最愛";
+"travel_timeline" = "足跡時光";
+"destinations_count" = "個目的地";
+"footprint_app" = "墨魚足跡 - 人生足跡";
+"record_journey_memories" = "點亮人生中的每個足跡，珍藏美好回憶";
+
+// Destination Detail View
+"no_photo" = "暫無照片";
+"visit_date" = "訪問日期";
+"belongs_to_trip" = "所屬旅程";
+"location_coordinates" = "位置坐標";
+"latitude" = "緯度";
+"longitude" = "經度";
+"travel_notes" = "旅行筆記";
+
+// Destination List View
+"my_footprints" = "我的足跡";
+"search_places_countries_notes" = "搜索地點、國家或筆記";
+"filter" = "篩選";
+"all" = "全部";
+"domestic" = "國內";
+"international" = "國外";
+"edit" = "編輯";
+"delete" = "刪除";
+"travel_statistics" = "旅行統計";
+"total" = "總計";
+"countries" = "國家";
+"no_travel_records" = "還沒有旅行記錄";
+"add_first_destination" = "添加第一個目的地";
+"start_recording_footprints" = "點擊右上角的 + 按鈕開始記錄你的旅行足跡吧！";
+
+// Edit Destination View
+"edit_destination" = "編輯目的地";
+"basic_info" = "基本信息";
+"place_name" = "地點名稱";
+"category" = "分類";
+"country_region" = "國家/地區";
+"visit_date" = "訪問日期";
+"mark_as_favorite" = "標記為喜愛";
+"belongs_to_trip_optional" = "所屬旅程（可選）";
+"select_trip" = "選擇旅程";
+"add_to_trip" = "添加到旅程";
+"no_trips_available" = "還沒有旅程";
+"none" = "無";
+"location_info" = "位置信息";
+"search_place" = "搜索地點...";
+"search" = "搜索";
+"selected" = "已選擇：";
+"current_location" = "當前位置";
+"photo" = "照片";
+"add_photo" = "添加照片";
+"change_photo" = "更換照片";
+"notes" = "筆記";
+"unknown_place" = "未知地點";
+"latitude_longitude" = "緯度: %.4f, 經度: %.4f";
+
+// Map View
+"getting_location_info" = "正在獲取位置信息...";
+"identifying_location" = "請稍候，我們正在識別您選擇的位置";
+"unknown_city" = "未知城市";
+"unknown_country" = "未知國家";
+"map_button_locate" = "定位";
+"map_button_check_in" = "打卡";
+"map_button_memory" = "回憶";
+"map_button_footprints" = "足跡";
+"map_button_search" = "搜索";
+"map_button_style" = "樣式";
+"map_button_import_photo" = "導入照片";
+"footprints_action_menu" = "快捷操作";
+"search_places" = "搜索地點";
+"photo_import_error_title" = "照片導入";
+"photo_import_failed_message" = "無法加載所選照片，請重試。";
+"photo_import_missing_location_message" = "照片缺少地理信息，已添加照片，請手動選擇地點。";
+"selected_location" = "所選位置";
+"locations_count" = "個地點";
+"delete_destination" = "刪除地點";
+"confirm_delete_destination" = "確定要刪除「%@」嗎？此操作無法撤銷。";
+"reverse_geocoding_failed" = "反向地理編碼失敗: %@，嘗試備用方案…";
+"nearby_search_success" = "附近搜索成功，使用鄰近地點推斷: %@ - %@";
+"nearby_search_failed" = "附近搜索失敗: %@，繼續使用坐標兜底…";
+"coordinate_fallback" = "使用坐標兜底: %@ - %@ [分類: %@]";
+"user_location_obtained" = "獲取到用戶位置: %f, %f";
+"location_permission_denied" = "獲取位置失敗: %@";
+"location_authorization_changed" = "位置授權狀態變更: %d";
+"using_cached_country_region" = "使用緩存的國家區域";
+"map_positioned_to" = "地圖定位到: %@ (%@)";
+"getting_user_location" = "正在獲取用戶位置...";
+"preloaded_country_region" = "已預加載國家區域: %@ (%@)";
+"user_location" = "我的位置";
+
+// Add Destination View
+"add_destination" = "添加目的地";
+"search" = "搜索";
+"search_domestic_places" = "🇨🇳 搜索國內地點:";
+"use_amap_data" = "• 使用高德地圖數據，搜索中國境內地點";
+"input_city_names" = "• 直接輸入城市名，如\"北京\"、\"上海\"、\"杭州\"";
+"input_attractions" = "• 輸入景點名，如\"故宮\"、\"西湖\"、\"外灘\"";
+"search_international_places" = "🌍 搜索國外地點:";
+"use_apple_international" = "• 使用 Apple 國際數據，搜索全球地點";
+"hot_cities_quick_search" = "• ⭐ 熱門城市快速搜索：London/倫敦、Paris/巴黎、Tokyo/東京等";
+"support_multilingual" = "• 支持英文和中文輸入，通過網絡獲取最新數據";
+"searching_places" = "搜索%@地點中...";
+"no_results_found" = "未找到結果";
+"suggestions" = "建議：";
+"try_english_names" = "1. 嘗試使用英文地名搜索";
+"input_specific_address" = "2. 輸入更具體的地址，如\"London, UK\"";
+"check_spelling" = "3. 檢查拼寫是否正確";
+"selected_location" = "已選擇位置";
+"select_photo" = "選擇照片";
+"search_domestic_with_amap" = "🇨🇳 使用高德地圖數據搜索國內地點: %@";
+"amap_search_error" = "❌ 高德地圖搜索錯誤: %@";
+"fallback_to_clgeocoder" = "🔄 備用搜索：使用 CLGeocoder 搜索國內地點";
+"amap_found_results" = "✅ 高德地圖找到 %d 個國內地點";
+"clgeocoder_found_results" = "✅ CLGeocoder 找到 %d 個國內地點";
+"no_domestic_results" = "❌ 未找到國內地點";
+"clgeocoder_search_failed" = "❌ CLGeocoder 搜索失敗";
+"search_international_with_apple" = "🌍 使用 Apple 國際數據搜索國外地點: %@";
+"device_region" = "📱 設備區域設置: %@";
+"device_language" = "📱 設備語言: %@";
+"device_country" = "📱 設備國家: %@";
+"found_in_preset_cities" = "✅ 從預設城市庫找到: %@, %@";
+"using_preset_coordinates" = "✅ 使用預設坐標: (%.4f, %.4f)";
+"not_found_in_preset" = "🔍 預設庫中未找到，嘗試使用 Apple 國際數據...";
+"apple_international_api_error" = "❌ Apple 國際數據 API 錯誤: %@";
+"apple_api_returned_results" = "📍 Apple 國際數據 API 返回 %d 個原始結果:";
+"raw_result_info" = "  原始結果 %d:";
+"name_info" = "    - 名稱: %@";
+"country_info" = "    - 國家: %@";
+"iso_code_info" = "    - ISO代碼: %@";
+"city_info" = "    - 城市: %@";
+"filtered_international_count" = "🔍 過濾後的國外地點數量: %d";
+"apple_final_results" = "✅ Apple 國際數據最終顯示 %d 個地點";
+"display_result_info" = "顯示結果 %d: %@ - %@";
+"apple_api_no_results" = "⚠️ Apple 國際數據 API 未找到結果";
+"mksearch_error" = "❌ MKLocalSearch 搜索錯誤: %@";
+"mksearch_found_results" = "✅ MKLocalSearch 搜索到 %d 個結果";
+"location_selected" = "✅ 已選擇位置:";
+"selected_name" = "   名稱: %@";
+"selected_country" = "   國家: %@";
+"selected_coordinates" = "   坐標: (%.4f, %.4f)";
+
+// Add Destination To Trip View
+"add_destination_to_trip" = "添加目的地到旅程";
+"mode" = "模式";
+"create_new_destination" = "創建新目的地";
+"add_existing_destination" = "添加現有目的地";
+"no_destinations_to_add" = "沒有可添加的目的地";
+"all_destinations_in_trip" = "所有目的地都已在此旅程中";
+"searching" = "搜索中...";
+
+// Trip Edit/Add View
+"trip_info" = "旅程信息";
+"trip_name" = "旅程名稱";
+"description_optional" = "描述（可選）";
+"time" = "時間";
+"start_date" = "開始日期";
+"end_date" = "結束日期";
+"cover_image_optional" = "封面圖片（可選）";
+"add_cover_image" = "添加封面圖片";
+"change_cover_image" = "更換封面圖片";
+"trip_duration" = "行程時長";
+
+// Trip Detail View
+"start" = "開始";
+"end" = "結束";
+"duration" = "時長";
+"days" = "天";
+"trip_route" = "行程路線";
+"locations" = "個地點";
+
+// Trip Share Image
+"select_layout" = "選擇分享版面";
+"share" = "分享";
+"trip_share_start" = "開始";
+"trip_share_end" = "結束";
+"trip_share_duration" = "時長";
+"trip_share_days" = "天";
+"trip_share_route" = "行程路線";
+"trip_share_locations_count" = "個地點";
+"trip_share_no_destinations" = "還沒有添加目的地";
+"trip_share_signature" = "✨ 墨魚足跡 · 記錄每一步旅程";
+"trip_share_subtitle" = "記錄美好旅程，分享精彩瞬間";
+"trip_share_layout_list" = "清單版面";
+"trip_share_layout_list_desc" = "詳細展示旅程信息，包含封面、時間卡片和完整行程路線";
+"trip_share_layout_grid" = "九宮格拼圖";
+"trip_share_layout_grid_desc" = "以九宮格形式展示目的地照片，適合視覺化分享";
+"trip_share_layout_extended_grid" = "擴展網格";
+"trip_share_layout_extended_grid_desc" = "以網格形式展示所有目的地照片，支持超過9個地點";
+
+// Travel Stats Share Image
+"stats_share_my_travel_footprint" = "我的旅行足跡";
+"stats_share_destinations_count" = "個旅行目的地";
+"stats_share_countries_count" = "個國家";
+"stats_share_travel_timeline" = "旅行時間線";
+"stats_share_footer" = "✨ Footprint • 記錄每一步旅程";
+
+// Country Settings
+"country" = "所在國家";
+"country_selection" = "國家選擇";
+"country_description" = "設置你所在的國家，用於區分國內和國外旅行";
+"search_countries" = "搜索國家...";
+
+// Map Style
+"map_style_title" = "地圖樣式";
+"map_style_standard" = "標準地圖";
+"map_style_muted" = "默認地圖";
+"map_style_satellite" = "衛星地圖";
+"map_style_hybrid" = "混合地圖";
+"map_style_imagery" = "衛星圖像";
+
+// Duplicate Destination Check
+"duplicate_destination_title" = "重複的目的地";
+"duplicate_destination_message" = "已存在名為「%@」的目的地，是否要覆蓋原有目的地？\n\n現有目的地信息：\n國家：%@\n訪問日期：%@%@\n\n原則上不允許出現同名的目的地";
+"duplicate_destination_overwrite" = "覆蓋";
+"duplicate_destination_cancel" = "取消";
+
+// Timeline Player
+"timeline_mode" = "重溫模式";
+"timeline_play" = "播放";
+"timeline_pause" = "暫停";
+"timeline_reset" = "重置";
+"timeline_speed" = "播放速度";
+"timeline_current_date" = "當前日期";
+"timeline_current_location" = "當前位置";
+"timeline_progress" = "進度";
+"timeline_follow_camera" = "相機跟隨";
+
+// Trip Route Map
+"route_map" = "旅程地圖";
+"routes" = "旅程";
+"no_routes_available" = "暫無旅程";
+"create_trip_with_at_least_two_destinations" = "創建包含至少兩個目的地的旅程後，將在這裡顯示旅程信息";
+"view_details" = "查看詳情";
+
+// Image Optimization
+"optimize_images" = "優化圖片";
+"optimize_images_confirm_title" = "優化圖片";
+"optimize_images_confirm_message" = "將對所有已存儲的圖片進行優化處理，壓縮圖片大小並生成縮略圖。此操作可能需要一些時間。";
+"optimize" = "優化";
+"optimize_images_result_title" = "優化完成";
+"optimize_images_success" = "成功優化 %d 張圖片";
+"optimize_images_failed" = "優化失敗 %d 張圖片";
+
+// About View
+"about_app" = "關於";
+"feature_introduction" = "功能介紹";
+"version_update" = "版本更新";
+"software_license_agreement" = "《軟件許可及服務協議》";
+"privacy_policy_summary" = "《隱私保護指引摘要》";
+"privacy_policy" = "《隱私保護指引》";
+"customer_service_phone" = "客服電話";
+"copyright" = "版權所有";
+"all_rights_reserved" = "All Rights Reserved";
+
