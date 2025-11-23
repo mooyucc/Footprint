@@ -39,43 +39,103 @@ struct ContentView: View {
             
             ProfileView()
                 .tabItem {
-                    Label("profile".localized, systemImage: "person.fill")
+                    Label {
+                        Text("profile".localized)
+                    } icon: {
+                        Image(systemName: "person.fill")
+                    }
                 }
                 .tag(2)
         }
+        .tint(Color.footprintRed) // 使用品牌红色，确保所有 tab 一致
         .onAppear {
             configureTabBarAppearance(for: colorScheme)
         }
         .onChange(of: colorScheme) { newScheme in
             configureTabBarAppearance(for: newScheme)
         }
+        .onChange(of: selectedTab) { _ in
+            // 当切换 tab 时重新应用配置，确保颜色正确
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                configureTabBarAppearance(for: colorScheme)
+            }
+        }
     }
     
     private func configureTabBarAppearance(for scheme: ColorScheme) {
-        let selectedColor: UIColor = scheme == .dark ? .white : UIColor.label
+        // 使用品牌红色作为选中颜色，确保所有 tab 一致
+        let selectedColor: UIColor = UIColor(Color.footprintRed)
         let unselectedColor: UIColor = scheme == .dark ? UIColor.white.withAlphaComponent(0.6) : UIColor.secondaryLabel
+        
+        // 首先设置全局 tint 颜色，这是最关键的
+        UITabBar.appearance().tintColor = selectedColor
+        UITabBar.appearance().unselectedItemTintColor = unselectedColor
         
         let appearance = UITabBarAppearance()
         appearance.configureWithTransparentBackground()
         appearance.backgroundColor = .clear
         
-        let layouts = [
-            appearance.stackedLayoutAppearance,
-            appearance.inlineLayoutAppearance,
-            appearance.compactInlineLayoutAppearance
-        ]
+        // 配置所有布局样式（stacked 是主要使用的布局）
+        let stackedLayout = appearance.stackedLayoutAppearance
+        let inlineLayout = appearance.inlineLayoutAppearance
+        let compactLayout = appearance.compactInlineLayoutAppearance
         
-        layouts.forEach { layout in
+        // 选中状态：确保图标和文字颜色完全一致
+        [stackedLayout, inlineLayout, compactLayout].forEach { layout in
             layout.selected.iconColor = selectedColor
-            layout.selected.titleTextAttributes = [.foregroundColor: selectedColor]
-            layout.normal.iconColor = unselectedColor
-            layout.normal.titleTextAttributes = [.foregroundColor: unselectedColor]
+            layout.selected.titleTextAttributes = [
+                .foregroundColor: selectedColor,
+                .font: UIFont.systemFont(ofSize: 10, weight: .medium)
+            ]
         }
         
+        // 未选中状态：确保图标和文字颜色完全一致
+        [stackedLayout, inlineLayout, compactLayout].forEach { layout in
+            layout.normal.iconColor = unselectedColor
+            layout.normal.titleTextAttributes = [
+                .foregroundColor: unselectedColor,
+                .font: UIFont.systemFont(ofSize: 10, weight: .regular)
+            ]
+        }
+        
+        // 应用外观配置
         UITabBar.appearance().standardAppearance = appearance
         UITabBar.appearance().scrollEdgeAppearance = appearance
-        UITabBar.appearance().tintColor = selectedColor
-        UITabBar.appearance().unselectedItemTintColor = unselectedColor
+        
+        // 使用 UITabBarItem.appearance 确保所有 TabBarItem 都应用颜色
+        UITabBarItem.appearance().setTitleTextAttributes(
+            [.foregroundColor: selectedColor],
+            for: .selected
+        )
+        UITabBarItem.appearance().setTitleTextAttributes(
+            [.foregroundColor: unselectedColor],
+            for: .normal
+        )
+        
+        // 强制刷新所有现有的 TabBar 实例
+        DispatchQueue.main.async {
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+                windowScene.windows.forEach { window in
+                    window.rootViewController?.view.subviews.forEach { subview in
+                        if let tabBar = subview as? UITabBar {
+                            tabBar.tintColor = selectedColor
+                            tabBar.unselectedItemTintColor = unselectedColor
+                            tabBar.standardAppearance = appearance
+                            tabBar.scrollEdgeAppearance = appearance
+                        }
+                        // 递归查找 TabBar
+                        subview.subviews.forEach { subSubview in
+                            if let tabBar = subSubview as? UITabBar {
+                                tabBar.tintColor = selectedColor
+                                tabBar.unselectedItemTintColor = unselectedColor
+                                tabBar.standardAppearance = appearance
+                                tabBar.scrollEdgeAppearance = appearance
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -94,68 +154,22 @@ struct ProfileView: View {
     @State private var refreshID = UUID()
     @Environment(\.colorScheme) var colorScheme
     
-    // 自定义配色 - 参考附图的米色和优雅配色
-    // 页面背景：非常浅的米白色 #f7f3eb
-    private var pageBackgroundColor: Color {
-        colorScheme == .dark 
-            ? Color(.systemGroupedBackground)
-            : Color(red: 0.969, green: 0.953, blue: 0.922) // #f7f3eb
-    }
+    // MARK: - 配色（使用统一的 AppColorScheme 工具类）
     
-    // 大卡片背景：纯白色 #FFFFFF
-    private var largeCardBackgroundColor: Color {
-        colorScheme == .dark 
-            ? Color(.secondarySystemBackground)
-            : Color.white // #FFFFFF
-    }
-    
-    // 小卡片背景：略偏米色的白色 #f0e7da
-    private var cardBackgroundColor: Color {
-        colorScheme == .dark 
-            ? Color(.secondarySystemBackground)
-            : Color(red: 0.941, green: 0.906, blue: 0.855) // #f0e7da
-    }
-    
-    // 主按钮颜色：深灰/黑色
     private var primaryButtonColor: Color {
-        colorScheme == .dark ? Color.white : Color(red: 0.2, green: 0.2, blue: 0.2) // #333333
+        AppColorScheme.primaryButtonBackground(for: colorScheme)
     }
     
-    // 按钮文字颜色：根据按钮背景色适配
     private var buttonTextColor: Color {
-        colorScheme == .dark ? Color(red: 0.2, green: 0.2, blue: 0.2) : Color.white // 深色模式背景是白色，文字用深色；浅色模式背景是深色，文字用白色
+        AppColorScheme.primaryButtonText(for: colorScheme)
     }
     
-    // 文本颜色：深灰色
     private var primaryTextColor: Color {
-        colorScheme == .dark ? Color.primary : Color(red: 0.2, green: 0.2, blue: 0.2) // #333333
+        AppColorScheme.primaryText(for: colorScheme)
     }
     
-    // 边框颜色：更柔和的边框
     private var borderColor: Color {
-        colorScheme == .dark 
-            ? Color.white.opacity(0.08)
-            : Color.black.opacity(0.06) // 更柔和的边框
-    }
-    
-    // 大卡片阴影：更明显的阴影效果
-    private var largeCardShadow: (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) {
-        (
-            color: Color.black.opacity(0.12),
-            radius: 12,
-            x: 0,
-            y: 4
-        )
-    }
-    
-    // 小卡片阴影：中等强度的阴影效果
-    private var smallCardShadow: (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) {
-        (
-            color: Color.black.opacity(0.08),
-            radius: 6,
-            x: 0,
-            y: 2
-        )
+        AppColorScheme.border(for: colorScheme)
     }
     
     var statistics: (total: Int, domestic: Int, international: Int, countries: Int, continents: Int) {
@@ -198,7 +212,7 @@ struct ProfileView: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 20)
             }
-            .background(pageBackgroundColor)
+            .appPageBackgroundGradient(for: colorScheme)
             .navigationTitle("profile".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -267,16 +281,16 @@ struct ProfileView: View {
                     .font(.title)
                     .fontWeight(.bold)
                     .foregroundColor(primaryTextColor)
+                
+                Text("record_every_journey".localized)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
             } else {
-                Image(systemName: "airplane.circle.fill")
-                    .font(.system(size: 80))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.primary, .primary.opacity(0.7)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                Image("ImageMooyu")
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 80, height: 80)
+                    .clipShape(Circle())
                 
                 Text("my_travel_footprint".localized)
                     .font(.title)
@@ -299,28 +313,26 @@ struct ProfileView: View {
             HStack(spacing: 12) {
                 Image(systemName: "icloud.fill")
                     .font(.title3)
-                    .foregroundColor(primaryTextColor)
+                    .foregroundColor(.white)
                 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("sign_in_apple_id".localized)
                         .font(.headline)
-                        .foregroundColor(primaryTextColor)
+                        .foregroundColor(AppColorScheme.iconColor)
                     
                     Text("enable_icloud_sync".localized)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.white)
                 }
                 
                 Spacer()
                 
                 Image(systemName: "chevron.right")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.white)
             }
             .padding(16)
-            .background(cardBackgroundColor)
-            .cornerRadius(15)
-            .shadow(color: smallCardShadow.color, radius: smallCardShadow.radius, x: smallCardShadow.x, y: smallCardShadow.y)
+            .darkCardStyle(for: colorScheme, cornerRadius: 15)
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -344,10 +356,10 @@ struct ProfileView: View {
                     }
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(buttonTextColor)
+                    .foregroundColor(AppColorScheme.redCardBackground)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
-                    .background(primaryButtonColor)
+                    .background(Color.white)
                     .cornerRadius(20)
                 }
             }
@@ -360,52 +372,42 @@ struct ProfileView: View {
                 ProfileStatCard(
                     icon: "flag.fill",
                     value: "\(statistics.total)",
-                    label: "total_destinations".localized,
-                    color: .purple,
-                    cardBackground: cardBackgroundColor
+                    label: "total_destinations".localized
                 )
                 
                 ProfileStatCard(
                     icon: "globe.asia.australia.fill",
                     value: "\(statistics.countries)",
-                    label: "countries_visited".localized,
-                    color: .green,
-                    cardBackground: cardBackgroundColor
+                    label: "countries_visited".localized
                 )
                 
                 ProfileStatCard(
                     icon: "house.fill",
                     value: "\(statistics.domestic)",
-                    label: "domestic_travel".localized,
-                    color: .red,
-                    cardBackground: cardBackgroundColor
+                    label: "domestic_travel".localized
                 )
                 
                 ProfileStatCard(
                     icon: "airplane",
                     value: "\(statistics.international)",
-                    label: "international_travel".localized,
-                    color: .blue,
-                    cardBackground: cardBackgroundColor
+                    label: "international_travel".localized
                 )
             }
         }
         .padding(20)
-        .background(cardBackgroundColor)
-        .cornerRadius(20)
-        .shadow(color: largeCardShadow.color, radius: largeCardShadow.radius, x: largeCardShadow.x, y: largeCardShadow.y)
+        .whiteCardStyle(for: colorScheme, cornerRadius: 20)
     }
     
     private var favoritesCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 8) {
                 Image(systemName: "star.fill")
-                    .foregroundColor(.yellow)
+                    .foregroundColor(.white)
                     .font(.headline)
                 Text("my_favorites".localized)
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(primaryTextColor)
+                    .foregroundColor(.white)
             }
             
             ForEach(favoriteDestinations.prefix(5)) { destination in
@@ -417,16 +419,14 @@ struct ProfileView: View {
             }
         }
         .padding(20)
-        .background(largeCardBackgroundColor)
-        .cornerRadius(20)
-        .shadow(color: largeCardShadow.color, radius: largeCardShadow.radius, x: largeCardShadow.x, y: largeCardShadow.y)
+        .redCardStyle(cornerRadius: 20)
     }
     
     private var timelineCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 8) {
                 Image(systemName: "clock.fill")
-                    .foregroundColor(.orange)
+                    .foregroundColor(AppColorScheme.iconColor)
                     .font(.headline)
                 Text("travel_timeline".localized)
                     .font(.headline)
@@ -444,9 +444,7 @@ struct ProfileView: View {
             }
         }
         .padding(20)
-        .background(largeCardBackgroundColor)
-        .cornerRadius(20)
-        .shadow(color: largeCardShadow.color, radius: largeCardShadow.radius, x: largeCardShadow.x, y: largeCardShadow.y)
+        .whiteCardStyle(for: colorScheme, cornerRadius: 20)
     }
     
     private var timelineYearList: some View {
@@ -478,16 +476,7 @@ struct ProfileView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
-                .background(
-                    colorScheme == .dark 
-                        ? Color(.tertiarySystemBackground)
-                        : Color(red: 0.969, green: 0.949, blue: 0.918) // #f7f2ea
-                )
-                .cornerRadius(12)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(borderColor, lineWidth: 1)
-                )
+                .beigeCardStyle(for: colorScheme, cornerRadius: 12)
             }
             .buttonStyle(PlainButtonStyle())
         }
@@ -568,43 +557,18 @@ struct ProfileStatCard: View {
     let icon: String
     let value: String
     let label: String
-    let color: Color
-    let cardBackground: Color
     @Environment(\.colorScheme) var colorScheme
-    
-    // 文本颜色：深灰色
-    private var primaryTextColor: Color {
-        colorScheme == .dark ? Color.primary : Color(red: 0.2, green: 0.2, blue: 0.2) // #333333
-    }
-    
-    // 边框颜色：更柔和的边框
-    private var borderColor: Color {
-        colorScheme == .dark 
-            ? Color.white.opacity(0.08)
-            : Color.black.opacity(0.06)
-    }
-    
-    // 小卡片阴影：中等强度的阴影效果
-    private var shadowColor: Color {
-        Color.black.opacity(0.08)
-    }
     
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.title2)
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [color, color.opacity(0.7)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .foregroundColor(AppColorScheme.iconColor)
             
             Text(value)
                 .font(.title)
                 .fontWeight(.bold)
-                .foregroundColor(primaryTextColor)
+                .foregroundColor(.primary)
             
             Text(label)
                 .font(.caption)
@@ -614,35 +578,13 @@ struct ProfileStatCard: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
         .padding(.horizontal, 12)
-        .background(
-            colorScheme == .dark 
-                ? Color(.tertiarySystemBackground)
-                : Color(red: 0.969, green: 0.949, blue: 0.918) // #f7f2ea
-        )
-        .cornerRadius(15)
-        .overlay(
-            RoundedRectangle(cornerRadius: 15)
-                .stroke(borderColor, lineWidth: 1)
-        )
-        .shadow(color: shadowColor, radius: 6, x: 0, y: 2)
+        .beigeCardStyle(for: colorScheme, cornerRadius: 15)
     }
 }
 
 struct FavoriteDestinationRow: View {
     let destination: TravelDestination
     @Environment(\.colorScheme) var colorScheme
-    
-    // 文本颜色：深灰色
-    private var primaryTextColor: Color {
-        colorScheme == .dark ? Color.primary : Color(red: 0.2, green: 0.2, blue: 0.2) // #333333
-    }
-    
-    // 边框颜色：更柔和的边框
-    private var borderColor: Color {
-        colorScheme == .dark 
-            ? Color.white.opacity(0.08)
-            : Color.black.opacity(0.06)
-    }
     
     var body: some View {
         HStack(spacing: 12) {
@@ -655,51 +597,42 @@ struct FavoriteDestinationRow: View {
                     .clipShape(Circle())
                     .overlay(
                         Circle()
-                            .stroke(borderColor, lineWidth: 1)
+                            .stroke(AppColorScheme.glassCardBorder, lineWidth: 1)
                     )
             } else {
                 ZStack {
                     Circle()
-                        .fill(destination.normalizedCategory == "domestic" ? Color.red.opacity(0.15) : Color.blue.opacity(0.15))
+                        .fill(Color.white.opacity(0.2))
                         .frame(width: 50, height: 50)
                     
                     Image(systemName: "location.fill")
-                        .foregroundColor(destination.normalizedCategory == "domestic" ? .red : .blue)
+                        .foregroundColor(.white.opacity(0.9))
                         .font(.title3)
                 }
                 .overlay(
                     Circle()
-                        .stroke(borderColor, lineWidth: 1)
+                        .stroke(AppColorScheme.glassCardBorder, lineWidth: 1)
                 )
             }
             
             VStack(alignment: .leading, spacing: 4) {
                 Text(destination.name)
                     .font(.headline)
-                    .foregroundColor(primaryTextColor)
+                    .foregroundColor(.white)
                 
                 Text(destination.country)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.white.opacity(0.8))
             }
             
             Spacer()
             
             Image(systemName: "chevron.right")
-                .foregroundColor(.secondary)
+                .foregroundColor(.white.opacity(0.7))
                 .font(.caption)
         }
         .padding(16)
-        .background(
-            colorScheme == .dark 
-                ? Color(.tertiarySystemBackground)
-                : Color(red: 0.969, green: 0.949, blue: 0.918) // #f7f2ea
-        )
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(borderColor, lineWidth: 1)
-        )
+        .glassCardStyle(material: .ultraThinMaterial, cornerRadius: 12, for: colorScheme)
     }
 }
 

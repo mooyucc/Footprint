@@ -31,7 +31,16 @@ class AppleSignInManager: NSObject, ObservableObject, ASAuthorizationControllerD
             self.userID = userID
             self.userName = UserDefaults.standard.string(forKey: "appleUserName") ?? "Apple ID 用户"
             self.userEmail = UserDefaults.standard.string(forKey: "appleUserEmail") ?? ""
-            self.customUserName = UserDefaults.standard.string(forKey: "customUserName") ?? ""
+            let savedCustomName = UserDefaults.standard.string(forKey: "customUserName") ?? ""
+            
+            // 如果还没有设置过自定义用户名，但已有Apple ID用户名，则自动使用Apple ID用户名
+            if savedCustomName.isEmpty && !self.userName.isEmpty && self.userName != "Apple ID 用户" {
+                self.customUserName = self.userName
+                UserDefaults.standard.set(self.userName, forKey: "customUserName")
+            } else {
+                self.customUserName = savedCustomName
+            }
+            
             self.userAvatarData = UserDefaults.standard.data(forKey: "userAvatarData")
             
             // 检查凭证状态
@@ -62,31 +71,66 @@ class AppleSignInManager: NSObject, ObservableObject, ASAuthorizationControllerD
             // 保存用户信息
             UserDefaults.standard.set(userID, forKey: "appleUserID")
             
+            // 检查是否已有自定义用户名（保留用户之前的自定义设置）
+            let existingCustomName = UserDefaults.standard.string(forKey: "customUserName") ?? ""
+            
+            // 处理用户名
+            var extractedUserName: String = ""
+            
             if let fullName = appleIDCredential.fullName {
                 let firstName = fullName.givenName ?? ""
                 let lastName = fullName.familyName ?? ""
-                let userName = "\(lastName)\(firstName)".trimmingCharacters(in: .whitespacesAndNewlines)
                 
-                if !userName.isEmpty {
-                    UserDefaults.standard.set(userName, forKey: "appleUserName")
-                    self.userName = userName
-                } else {
-                    // 如果没有姓名信息，使用邮箱的前缀部分
-                    let email = appleIDCredential.email ?? ""
-                    let emailPrefix = email.components(separatedBy: "@").first ?? ""
-                    let fallbackName = emailPrefix.isEmpty ? "Apple ID 用户" : emailPrefix
-                    UserDefaults.standard.set(fallbackName, forKey: "appleUserName")
-                    self.userName = fallbackName
+                // 根据是否有lastName和firstName来组合用户名
+                if !lastName.isEmpty && !firstName.isEmpty {
+                    // 优先使用 "名 姓" 格式（更通用，适用于英文和中文）
+                    // 如果用户更喜欢其他格式，可以后续在设置中手动修改
+                    extractedUserName = "\(firstName) \(lastName)".trimmingCharacters(in: .whitespacesAndNewlines)
+                } else if !firstName.isEmpty {
+                    extractedUserName = firstName
+                } else if !lastName.isEmpty {
+                    extractedUserName = lastName
                 }
-            } else {
-                // 如果没有姓名信息，尝试使用邮箱前缀
-                let email = appleIDCredential.email ?? ""
-                let emailPrefix = email.components(separatedBy: "@").first ?? ""
-                let fallbackName = emailPrefix.isEmpty ? "Apple ID 用户" : emailPrefix
-                UserDefaults.standard.set(fallbackName, forKey: "appleUserName")
-                self.userName = fallbackName
             }
             
+            // 如果没有获取到姓名，尝试使用邮箱前缀
+            if extractedUserName.isEmpty {
+                let email = appleIDCredential.email ?? UserDefaults.standard.string(forKey: "appleUserEmail") ?? ""
+                if !email.isEmpty {
+                    let emailPrefix = email.components(separatedBy: "@").first ?? ""
+                    if !emailPrefix.isEmpty {
+                        extractedUserName = emailPrefix
+                    }
+                }
+            }
+            
+            // 保存Apple ID获取的用户名
+            if !extractedUserName.isEmpty {
+                UserDefaults.standard.set(extractedUserName, forKey: "appleUserName")
+                self.userName = extractedUserName
+                
+                // 如果用户还没有设置过自定义用户名，自动使用Apple ID的用户名
+                if existingCustomName.isEmpty {
+                    self.customUserName = extractedUserName
+                    UserDefaults.standard.set(extractedUserName, forKey: "customUserName")
+                    print("✅ 自动设置Apple ID用户名为应用用户名: \(extractedUserName)")
+                } else {
+                    print("ℹ️ 保留用户已有的自定义用户名: \(existingCustomName)")
+                }
+            } else {
+                // 如果还是没有获取到用户名，使用默认值
+                let defaultName = "Apple ID 用户"
+                UserDefaults.standard.set(defaultName, forKey: "appleUserName")
+                self.userName = defaultName
+                
+                // 如果用户还没有设置过自定义用户名，也使用默认值
+                if existingCustomName.isEmpty {
+                    self.customUserName = defaultName
+                    UserDefaults.standard.set(defaultName, forKey: "customUserName")
+                }
+            }
+            
+            // 处理邮箱
             if let email = appleIDCredential.email {
                 UserDefaults.standard.set(email, forKey: "appleUserEmail")
                 self.userEmail = email
@@ -97,7 +141,8 @@ class AppleSignInManager: NSObject, ObservableObject, ASAuthorizationControllerD
                 print("🔍 从缓存获取邮箱: \(self.userEmail)")
             }
             
-            print("🔍 最终用户名: \(self.userName)")
+            print("🔍 最终Apple ID用户名: \(self.userName)")
+            print("🔍 最终显示用户名: \(self.displayName)")
             print("🔍 最终邮箱: \(self.userEmail)")
             
             self.userID = userID

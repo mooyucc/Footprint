@@ -120,6 +120,11 @@
 "total" = "Total";
 "countries" = "Countries";
 "no_travel_records" = "No travel records yet";
+"year_travel_records" = "%d Travel Records";
+"year_travel_statistics" = "%d Travel Statistics";
+"travel_destinations" = "Travel Destinations";
+"no_travel_records_for_year" = "No travel records for %d";
+"add_year_travel_footprints" = "Start adding your %d travel footprints!";
 "add_first_destination" = "Add First Destination";
 "start_recording_footprints" = "Tap the + button in the top right to start recording your travel footprints!";
 

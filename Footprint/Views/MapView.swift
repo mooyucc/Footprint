@@ -1413,27 +1413,19 @@ struct MapView: View {
                 )
                 .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
                 
-                // 关闭按钮：独立的圆形按钮
-                Button {
+                // 关闭按钮：使用 iOS 26 Liquid Glass 效果
+                IconButton(
+                    icon: "xmark",
+                    size: 44,
+                    iconSize: 13,
+                    iconWeight: .medium,
+                    glassStyle: .ultraThin
+                ) {
                     searchText = ""
                     searchResults = []
                     showSearchResults = false
                     isSearchFieldFocused = false
-                } label: {
-                    Image(systemName: "xmark")
-                        .foregroundColor(.primary)
-                        .font(.system(size: 13, weight: .medium))
-                        .frame(width: 44, height: 44) // 与搜索框高度对齐
-                        .background(
-                            Circle()
-                                .fill(.ultraThinMaterial)
-                                .overlay(
-                                    Circle()
-                                        .stroke(Color.secondary.opacity(0.2), lineWidth: 0.5)
-                                )
-                        )
                 }
-                .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
             }
             
             // 搜索结果列表
@@ -3156,21 +3148,6 @@ struct ClusterAnnotationView: View, Equatable {
         cluster.destinations.count == 1 ? 2 : 2.5
     }
     
-    // 主颜色：统一使用国内/国外区分（不再因旅程使用渐变或统一蓝色）
-    private var mainColor: Color {
-        if cluster.destinations.count == 1 {
-            let destination = cluster.destinations[0]
-            return destination.normalizedCategory == "domestic" ? .red : .blue
-        } else {
-            // 聚合：使用国内/国外比例决定颜色
-            let domesticCount = cluster.destinations.filter { $0.category == "domestic" }.count
-            let ratio = Double(domesticCount) / Double(cluster.destinations.count)
-            if ratio > 0.7 { return .red }
-            else if ratio < 0.3 { return .blue }
-            else { return .purple }
-        }
-    }
-    
     // 边框颜色：如果有旅程，显示与主色不同的亮色边框
     private var borderColor: Color {
         if cluster.destinations.count == 1 {
@@ -3240,11 +3217,11 @@ struct ClusterAnnotationView: View, Equatable {
                         )
                         .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
                 } else {
-                    // 液态玻璃渐变标注（国内：粉→橙；国外：青→蓝）
+                    // 液态玻璃标注（统一使用品牌红色）
                     LiquidGlassMarkerView(
                         size: markerSize,
-                        startColor: isDomestic ? Color(.systemPink) : Color(.systemTeal),
-                        endColor: isDomestic ? Color(.systemOrange) : Color(.systemBlue),
+                        startColor: .footprintRed,
+                        endColor: .footprintRed,
                         borderWidth: strokeWidth
                     )
                 }
@@ -3257,23 +3234,12 @@ struct ClusterAnnotationView: View, Equatable {
                         .shadow(color: .black.opacity(0.3), radius: 1, x: 0, y: 1)
                 }
             } else {
-                // 聚合地点：使用液态玻璃渐变（国内占比高=粉→橙；国外占比高=青→蓝；混合=紫→蓝紫）
-                let domesticCount = cluster.destinations.filter { $0.category == "domestic" }.count
-                let ratio = Double(domesticCount) / Double(cluster.destinations.count)
-                let (startColor, endColor): (Color, Color) = {
-                    if ratio > 0.7 {
-                        return (Color(.systemPink), Color(.systemOrange))
-                    } else if ratio < 0.3 {
-                        return (Color(.systemTeal), Color(.systemBlue))
-                    } else {
-                        return (.purple, .indigo)
-                    }
-                }()
+                // 聚合地点：使用液态玻璃标注（统一使用品牌红色）
                 ZStack {
                     LiquidGlassMarkerView(
                         size: markerSize,
-                        startColor: startColor,
-                        endColor: endColor,
+                        startColor: .footprintRed,
+                        endColor: .footprintRed,
                         borderWidth: strokeWidth
                     )
                     // 聚合数量文本

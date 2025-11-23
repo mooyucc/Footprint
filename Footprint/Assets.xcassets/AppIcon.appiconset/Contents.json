@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "Artwork.jpg",
+      "filename" : "Frame 3.jpg",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -13,7 +13,7 @@
           "value" : "dark"
         }
       ],
-      "filename" : "Artwork 1.jpg",
+      "filename" : "Frame 4.jpg",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -25,7 +25,7 @@
           "value" : "tinted"
         }
       ],
-      "filename" : "Artwork 2.jpg",
+      "filename" : "Frame 5.jpg",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

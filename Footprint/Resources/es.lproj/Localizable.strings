@@ -120,6 +120,11 @@
 "total" = "Total";
 "countries" = "Países";
 "no_travel_records" = "Aún no hay registros de viaje";
+"year_travel_records" = "%d Registros de Viaje";
+"year_travel_statistics" = "%d Estadísticas de Viaje";
+"travel_destinations" = "Destinos de Viaje";
+"no_travel_records_for_year" = "No hay registros de viaje para %d";
+"add_year_travel_footprints" = "¡Comienza a agregar tus huellas de viaje de %d!";
 "add_first_destination" = "Agregar primer destino";
 "start_recording_footprints" = "¡Toca el botón + en la esquina superior derecha para comenzar a registrar tus huellas de viaje!";
 

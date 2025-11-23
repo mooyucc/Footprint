@@ -63,26 +63,15 @@ struct TripRouteMapView: View {
                 ForEach(Array(sortedDestinations.enumerated()), id: \.element.id) { index, destination in
                     Annotation(destination.name, coordinate: destination.coordinate) {
                         ZStack {
-                            // 起点标记为红色，其他为蓝色
-                            if index == 0 {
-                                Circle()
-                                    .fill(Color.red)
-                                    .frame(width: 20, height: 20)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(Color.white, lineWidth: 3)
-                                    )
-                                    .shadow(radius: 3)
-                            } else {
-                                Circle()
-                                    .fill(Color.blue)
-                                    .frame(width: 16, height: 16)
-                                    .overlay(
-                                        Circle()
-                                            .stroke(Color.white, lineWidth: 2)
-                                    )
-                                    .shadow(radius: 2)
-                            }
+                            // 统一使用品牌红色
+                            Circle()
+                                .fill(Color.footprintRed)
+                                .frame(width: index == 0 ? 20 : 16, height: index == 0 ? 20 : 16)
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.white, lineWidth: index == 0 ? 3 : 2)
+                                )
+                                .shadow(radius: index == 0 ? 3 : 2)
                         }
                     }
                 }

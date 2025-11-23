@@ -195,7 +195,7 @@ struct DestinationDetailView: View {
                         Annotation(destination.name, coordinate: destination.coordinate) {
                             ZStack {
                                 Circle()
-                                    .fill(destination.normalizedCategory == "domestic" ? Color.red : Color.blue)
+                                    .fill(Color.footprintRed)
                                     .frame(width: 30, height: 30)
                                     .overlay(
                                         Circle()

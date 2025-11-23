@@ -15,21 +15,14 @@ struct LiquidGlassMarkerView: View {
 
     var body: some View {
         Circle()
-            .fill(
-                LinearGradient(
-                    colors: [startColor, endColor],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
+            .fill(startColor)
             .frame(width: size, height: size)
             .overlay(
                 Circle()
                     .stroke(Color.white, lineWidth: borderWidth)
             )
-            .shadow(color: startColor.opacity(0.6), radius: 8)
             .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
-            .opacity(0.92)
+            .opacity(0.8)
     }
 }
 

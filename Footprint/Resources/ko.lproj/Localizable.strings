@@ -120,6 +120,11 @@
 "total" = "총계";
 "countries" = "국가";
 "no_travel_records" = "아직 여행 기록이 없습니다";
+"year_travel_records" = "%d년 여행 기록";
+"year_travel_statistics" = "%d년 여행 통계";
+"travel_destinations" = "여행 목적지";
+"no_travel_records_for_year" = "%d년에는 아직 여행 기록이 없습니다";
+"add_year_travel_footprints" = "%d년 여행 발자국을 추가하세요!";
 "add_first_destination" = "첫 번째 목적지 추가";
 "start_recording_footprints" = "오른쪽 상단의 + 버튼을 탭하여 여행 발자국 기록을 시작하세요!";
 

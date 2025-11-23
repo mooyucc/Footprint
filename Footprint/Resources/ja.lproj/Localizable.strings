@@ -120,6 +120,11 @@
 "total" = "合計";
 "countries" = "国";
 "no_travel_records" = "まだ旅行記録がありません";
+"year_travel_records" = "%d年旅行記録";
+"year_travel_statistics" = "%d年旅行統計";
+"travel_destinations" = "旅行目的地";
+"no_travel_records_for_year" = "%d年にはまだ旅行記録がありません";
+"add_year_travel_footprints" = "%d年の旅行の足跡を追加しましょう！";
 "add_first_destination" = "最初の目的地を追加";
 "start_recording_footprints" = "右上の+ボタンをタップして、旅行の足跡を記録し始めましょう！";
 

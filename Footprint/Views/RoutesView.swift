@@ -54,6 +54,13 @@ struct RoutesView: View {
                         } label: {
                             Image(systemName: "plus.circle.fill")
                                 .font(.title2)
+                                .foregroundStyle(
+                                    LinearGradient(
+                                        colors: [.primary, .primary.opacity(0.7)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    )
+                                )
                         }
                     }
                 }

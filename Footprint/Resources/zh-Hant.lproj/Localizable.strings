@@ -120,6 +120,11 @@
 "total" = "總計";
 "countries" = "國家";
 "no_travel_records" = "還沒有旅行記錄";
+"year_travel_records" = "%d年旅行記錄";
+"year_travel_statistics" = "%d年旅行統計";
+"travel_destinations" = "旅行目的地";
+"no_travel_records_for_year" = "%d年還沒有旅行記錄";
+"add_year_travel_footprints" = "去添加你的%d年旅行足跡吧！";
 "add_first_destination" = "添加第一個目的地";
 "start_recording_footprints" = "點擊右上角的 + 按鈕開始記錄你的旅行足跡吧！";
 

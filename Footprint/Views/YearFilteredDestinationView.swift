@@ -23,58 +23,26 @@ struct YearFilteredDestinationView: View {
     @State private var showingLayoutSelection = false
     @State private var selectedLayout: TripShareLayout = .list
     
-    // 自定义配色 - 与"我的"tab保持一致
-    // 页面背景：非常浅的米白色 #f7f3eb
-    private var pageBackgroundColor: Color {
-        colorScheme == .dark 
-            ? Color(.systemGroupedBackground)
-            : Color(red: 0.969, green: 0.953, blue: 0.922) // #f7f3eb
-    }
+    // MARK: - 配色（使用统一的 AppColorScheme 工具类）
     
-    // 大卡片背景：纯白色 #FFFFFF
-    private var largeCardBackgroundColor: Color {
-        colorScheme == .dark 
-            ? Color(.secondarySystemBackground)
-            : Color.white // #FFFFFF
-    }
-    
-    // 小卡片背景：略偏米色的白色 #f0e7da
     private var cardBackgroundColor: Color {
-        colorScheme == .dark 
-            ? Color(.secondarySystemBackground)
-            : Color(red: 0.941, green: 0.906, blue: 0.855) // #f0e7da
+        AppColorScheme.whiteCardBackground(for: colorScheme)
     }
     
-    // 文本颜色：深灰色
     private var primaryTextColor: Color {
-        colorScheme == .dark ? Color.primary : Color(red: 0.2, green: 0.2, blue: 0.2) // #333333
+        AppColorScheme.primaryText(for: colorScheme)
     }
     
-    // 边框颜色：更柔和的边框
     private var borderColor: Color {
-        colorScheme == .dark 
-            ? Color.white.opacity(0.08)
-            : Color.black.opacity(0.06) // 更柔和的边框
+        AppColorScheme.border(for: colorScheme)
     }
     
-    // 大卡片阴影：更明显的阴影效果
     private var largeCardShadow: (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) {
-        (
-            color: Color.black.opacity(0.12),
-            radius: 12,
-            x: 0,
-            y: 4
-        )
+        AppColorScheme.largeCardShadow
     }
     
-    // 小卡片阴影：中等强度的阴影效果
     private var smallCardShadow: (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) {
-        (
-            color: Color.black.opacity(0.08),
-            radius: 6,
-            x: 0,
-            y: 2
-        )
+        AppColorScheme.smallCardShadow
     }
     
     init(year: Int) {
@@ -141,24 +109,24 @@ struct YearFilteredDestinationView: View {
                         Text("filter".localized)
                             .font(.headline)
                             .fontWeight(.semibold)
-                            .foregroundColor(primaryTextColor)
+                            .foregroundColor(.white)
                         
-                        Picker("filter".localized, selection: $filterCategory) {
-                            Text("all".localized).tag(nil as String?)
-                            Text("domestic".localized).tag("domestic" as String?)
-                            Text("international".localized).tag("international" as String?)
-                        }
-                        .pickerStyle(.segmented)
+                        SegmentedPickerWithGrayUnselected(
+                            selection: $filterCategory,
+                            options: [
+                                (nil, "all".localized),
+                                ("domestic", "domestic".localized),
+                                ("international", "international".localized)
+                            ]
+                        )
                     }
                     .padding(20)
-                    .background(largeCardBackgroundColor)
-                    .cornerRadius(20)
-                    .shadow(color: largeCardShadow.color, radius: largeCardShadow.radius, x: largeCardShadow.x, y: largeCardShadow.y)
+                    .redCardStyle(cornerRadius: 20)
                     
                     // 目的地列表
                     if !filteredDestinations.isEmpty {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text(languageManager.currentLanguage == .chinese ? "旅行目的地" : "Travel Destinations")
+                            Text("travel_destinations".localized)
                                 .font(.headline)
                                 .fontWeight(.semibold)
                                 .foregroundColor(primaryTextColor)
@@ -187,7 +155,7 @@ struct YearFilteredDestinationView: View {
                             }
                         }
                         .padding(20)
-                        .background(largeCardBackgroundColor)
+                        .background(AppColorScheme.whiteCardBackground(for: colorScheme))
                         .cornerRadius(20)
                         .shadow(color: largeCardShadow.color, radius: largeCardShadow.radius, x: largeCardShadow.x, y: largeCardShadow.y)
                     }
@@ -195,8 +163,8 @@ struct YearFilteredDestinationView: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 20)
             }
-            .background(pageBackgroundColor)
-            .navigationTitle(languageManager.currentLanguage == .chinese ? "\(year)年旅行记录" : "\(year) Travel Records")
+            .appPageBackgroundGradient(for: colorScheme)
+            .navigationTitle("year_travel_records".localized(with: year))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -226,7 +194,7 @@ struct YearFilteredDestinationView: View {
             }
             .overlay {
                 if allDestinations.isEmpty {
-                    EmptyYearStateView(year: year, pageBackgroundColor: pageBackgroundColor)
+                    EmptyYearStateView(year: year, colorScheme: colorScheme)
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { _ in
@@ -261,32 +229,25 @@ struct YearStatisticsCard: View {
     let primaryTextColor: Color
     let borderColor: Color
     let shadow: (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat)
-    @EnvironmentObject var languageManager: LanguageManager
     @Environment(\.colorScheme) var colorScheme
     
     var body: some View {
         VStack(spacing: 20) {
             HStack(spacing: 8) {
                 Image(systemName: "calendar")
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.blue, .blue.opacity(0.7)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
+                    .foregroundColor(AppColorScheme.iconColor)
                     .font(.title2)
-                Text(languageManager.currentLanguage == .chinese ? "\(year)年旅行统计" : "\(year) Travel Statistics")
+                Text("year_travel_statistics".localized(with: year))
                     .font(.headline)
                     .fontWeight(.semibold)
                     .foregroundColor(primaryTextColor)
             }
             
             HStack(spacing: 12) {
-                StatItem(title: "total".localized, value: "\(statistics.total)", icon: "map.fill", color: .purple)
-                StatItem(title: "domestic".localized, value: "\(statistics.domestic)", icon: "house.fill", color: .red)
-                StatItem(title: "international".localized, value: "\(statistics.international)", icon: "airplane", color: .blue)
-                StatItem(title: "countries".localized, value: "\(statistics.countries)", icon: "globe.asia.australia.fill", color: .green)
+                StatItem(title: "total".localized, value: "\(statistics.total)", icon: "map.fill", color: AppColorScheme.iconColor)
+                StatItem(title: "domestic".localized, value: "\(statistics.domestic)", icon: "house.fill", color: AppColorScheme.iconColor)
+                StatItem(title: "international".localized, value: "\(statistics.international)", icon: "airplane", color: AppColorScheme.iconColor)
+                StatItem(title: "countries".localized, value: "\(statistics.countries)", icon: "globe.asia.australia.fill", color: AppColorScheme.iconColor)
             }
         }
         .padding(20)
@@ -302,18 +263,14 @@ struct DestinationRowCard: View {
     @StateObject private var countryManager = CountryManager.shared
     @Environment(\.colorScheme) var colorScheme
     
-    // 小卡片背景：略偏米色的白色 #f0e7da
+    // 小卡片背景：使用浅米色卡片背景色
     private var cardBackgroundColor: Color {
-        colorScheme == .dark 
-            ? Color(.secondarySystemBackground)
-            : Color(red: 0.941, green: 0.906, blue: 0.855) // #f0e7da
+        AppColorScheme.beigeCardBackground(for: colorScheme)
     }
     
-    // 边框颜色：更柔和的边框
+    // 边框颜色：使用浅米色卡片边框颜色
     private var borderColor: Color {
-        colorScheme == .dark 
-            ? Color.white.opacity(0.08)
-            : Color.black.opacity(0.06)
+        AppColorScheme.beigeCardBorder
     }
     
     // 小卡片阴影：中等强度的阴影效果
@@ -364,26 +321,22 @@ struct DestinationRowCard: View {
             
             if countryManager.isDomestic(country: destination.country) {
                 Image(systemName: "house.fill")
-                    .foregroundColor(.red)
+                    .foregroundColor(AppColorScheme.iconColor)
                     .font(.subheadline)
                     .padding(8)
-                    .background(Color.red.opacity(0.12))
+                    .background(AppColorScheme.iconColor.opacity(0.12))
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             } else if !destination.country.isEmpty {
                 Image(systemName: "airplane")
-                    .foregroundColor(.blue)
+                    .foregroundColor(AppColorScheme.iconColor)
                     .font(.subheadline)
                     .padding(8)
-                    .background(Color.blue.opacity(0.12))
+                    .background(AppColorScheme.iconColor.opacity(0.12))
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
         }
         .padding(16)
-        .background(
-            colorScheme == .dark 
-                ? Color(.tertiarySystemBackground)
-                : Color(red: 0.969, green: 0.949, blue: 0.918) // #f7f2ea
-        )
+        .background(cardBackgroundColor)
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -417,8 +370,7 @@ struct DestinationRowCard: View {
 
 struct EmptyYearStateView: View {
     let year: Int
-    let pageBackgroundColor: Color
-    @EnvironmentObject var languageManager: LanguageManager
+    let colorScheme: ColorScheme
     
     var body: some View {
         VStack(spacing: 20) {
@@ -426,18 +378,85 @@ struct EmptyYearStateView: View {
                 .font(.system(size: 80))
                 .foregroundColor(.gray.opacity(0.5))
             
-            Text(languageManager.currentLanguage == .chinese ? "\(year)年还没有旅行记录" : "No travel records for \(year)")
+            Text("no_travel_records_for_year".localized(with: year))
                 .font(.title2)
                 .fontWeight(.semibold)
             
-            Text(languageManager.currentLanguage == .chinese ? "去添加你的\(year)年旅行足迹吧！" : "Start adding your \(year) travel footprints!")
+            Text("add_year_travel_footprints".localized(with: year))
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(pageBackgroundColor)
+        .appPageBackgroundGradient(for: colorScheme)
+    }
+}
+
+// MARK: - 自定义 Segmented Picker（未选中文字为灰色）
+struct SegmentedPickerWithGrayUnselected: UIViewRepresentable {
+    @Binding var selection: String?
+    let options: [(tag: String?, label: String)]
+    
+    func makeUIView(context: Context) -> UISegmentedControl {
+        let segmentedControl = UISegmentedControl(items: options.map { $0.label })
+        
+        // 设置未选中文字颜色：半透明白色（50%不透明度）
+        segmentedControl.setTitleTextAttributes([
+            .foregroundColor: UIColor.white.withAlphaComponent(0.5) // 半透明白色
+        ], for: .normal)
+        
+        // 设置选中文字颜色：黑色（在白色背景上）
+        segmentedControl.setTitleTextAttributes([
+            .foregroundColor: UIColor.black
+        ], for: .selected)
+        
+        // 设置选中背景色：白色
+        segmentedControl.selectedSegmentTintColor = .white
+        
+        // 设置初始选中状态
+        if let index = options.firstIndex(where: { $0.tag == selection }) {
+            segmentedControl.selectedSegmentIndex = index
+        } else {
+            segmentedControl.selectedSegmentIndex = 0
+        }
+        
+        // 添加值变化监听
+        segmentedControl.addTarget(context.coordinator, action: #selector(Coordinator.valueChanged(_:)), for: .valueChanged)
+        
+        return segmentedControl
+    }
+    
+    func updateUIView(_ uiView: UISegmentedControl, context: Context) {
+        // 更新选中状态
+        if let index = options.firstIndex(where: { $0.tag == selection }) {
+            if uiView.selectedSegmentIndex != index {
+                uiView.selectedSegmentIndex = index
+            }
+        } else if uiView.selectedSegmentIndex != 0 {
+            uiView.selectedSegmentIndex = 0
+        }
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(selection: $selection, options: options)
+    }
+    
+    class Coordinator: NSObject {
+        @Binding var selection: String?
+        let options: [(tag: String?, label: String)]
+        
+        init(selection: Binding<String?>, options: [(tag: String?, label: String)]) {
+            _selection = selection
+            self.options = options
+        }
+        
+        @objc func valueChanged(_ sender: UISegmentedControl) {
+            let index = sender.selectedSegmentIndex
+            if index >= 0 && index < options.count {
+                selection = options[index].tag
+            }
+        }
     }
 }
 

@@ -120,6 +120,11 @@
 "total" = "Total";
 "countries" = "Pays";
 "no_travel_records" = "Aucun enregistrement de voyage pour le moment";
+"year_travel_records" = "%d Enregistrements de Voyage";
+"year_travel_statistics" = "%d Statistiques de Voyage";
+"travel_destinations" = "Destinations de Voyage";
+"no_travel_records_for_year" = "Aucun enregistrement de voyage pour %d";
+"add_year_travel_footprints" = "Commencez à ajouter vos empreintes de voyage de %d !";
 "add_first_destination" = "Ajouter la première destination";
 "start_recording_footprints" = "Appuyez sur le bouton + en haut à droite pour commencer à enregistrer vos empreintes de voyage !";
 
