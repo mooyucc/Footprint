@@ -14,6 +14,7 @@ struct SettingsView: View {
     @EnvironmentObject var appleSignInManager: AppleSignInManager
     @EnvironmentObject var languageManager: LanguageManager
     @EnvironmentObject var countryManager: CountryManager
+    @EnvironmentObject var brandColorManager: BrandColorManager
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) var dismiss
     @Query(sort: \TravelTrip.startDate, order: .reverse) private var trips: [TravelTrip]
@@ -131,7 +132,114 @@ struct SettingsView: View {
                     Text("account".localized)
                 }
                 
-                // iCloud 同步状态
+                // 语言设置
+                Section {
+                    Button(action: {
+                        showingLanguagePicker = true
+                    }) {
+                        HStack {
+                            Label("language".localized, systemImage: "globe")
+                            Spacer()
+                            HStack {
+                                Text(languageManager.currentLanguage.flag)
+                                Text(languageManager.currentLanguage.displayName)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("language".localized)
+                }
+                
+                // 国家设置
+                Section {
+                    Button(action: {
+                        showingCountryPicker = true
+                    }) {
+                        HStack {
+                            Label("country".localized, systemImage: "flag")
+                            Spacer()
+                            HStack {
+                                Text(countryManager.currentCountry.flag)
+                                Text(countryManager.currentCountryLocalizedName)
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                    }
+                } header: {
+                    Text("country".localized)
+                } footer: {
+                    Text("country_description".localized)
+                }
+                
+                // 品牌颜色设置（外观）
+                Section {
+                    VStack(spacing: 16) {
+                        // 颜色预览和选择器（同一行）
+                        HStack(spacing: 12) {
+                            // 当前颜色预览
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(brandColorManager.currentBrandColor)
+                                .frame(width: 60, height: 60)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                                )
+                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("brand_color".localized)
+                                    .font(.headline)
+                                
+                                if brandColorManager.isUsingCustomColor {
+                                    Text("custom_color_active".localized)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                } else {
+                                    Text("default_color_active".localized)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            
+                            Spacer()
+                            
+                            // 颜色选择器（放在右侧）
+                            ColorPicker("select_brand_color".localized, selection: Binding(
+                                get: {
+                                    brandColorManager.currentBrandColor
+                                },
+                                set: { newColor in
+                                    brandColorManager.setCustomBrandColor(newColor)
+                                }
+                            ), supportsOpacity: false)
+                            .labelsHidden()
+                        }
+                        .padding(.vertical, 8)
+                        
+                        // 恢复默认按钮（始终显示，但使用自定义颜色时才可点击）
+                        Button(action: {
+                            brandColorManager.resetBrandColorToDefault()
+                        }) {
+                            HStack {
+                                Image(systemName: "arrow.uturn.backward")
+                                Text("reset_to_default_color".localized)
+                            }
+                            .font(.subheadline)
+                            .foregroundColor(brandColorManager.isUsingCustomColor ? .blue : .secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(brandColorManager.isUsingCustomColor ? Color.blue.opacity(0.1) : Color.secondary.opacity(0.05))
+                            .cornerRadius(10)
+                        }
+                        .disabled(!brandColorManager.isUsingCustomColor)
+                    }
+                } header: {
+                    Text("appearance".localized)
+                } footer: {
+                    Text("brand_color_description".localized)
+                }
+                
+                // iCloud 同步状态（数据同步）
                 Section {
                     HStack {
                         Label("icloud_sync".localized, systemImage: "icloud")
@@ -206,46 +314,6 @@ struct SettingsView: View {
                     Text("local_data".localized)
                 } footer: {
                     Text("local_data_description".localized)
-                }
-                
-                // 语言设置
-                Section {
-                    Button(action: {
-                        showingLanguagePicker = true
-                    }) {
-                        HStack {
-                            Label("language".localized, systemImage: "globe")
-                            Spacer()
-                            HStack {
-                                Text(languageManager.currentLanguage.flag)
-                                Text(languageManager.currentLanguage.displayName)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                } header: {
-                    Text("language".localized)
-                }
-                
-                // 国家设置
-                Section {
-                    Button(action: {
-                        showingCountryPicker = true
-                    }) {
-                        HStack {
-                            Label("country".localized, systemImage: "flag")
-                            Spacer()
-                            HStack {
-                                Text(countryManager.currentCountry.flag)
-                                Text(countryManager.currentCountryLocalizedName)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                    }
-                } header: {
-                    Text("country".localized)
-                } footer: {
-                    Text("country_description".localized)
                 }
                 
                 // 关于应用
@@ -673,4 +741,5 @@ struct EditUserNameView: View {
         .environmentObject(AppleSignInManager.shared)
         .environmentObject(LanguageManager.shared)
         .environmentObject(CountryManager.shared)
+        .environmentObject(BrandColorManager.shared)
 }

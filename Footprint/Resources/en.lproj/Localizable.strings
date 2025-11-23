@@ -355,3 +355,12 @@
 "customer_service_phone" = "Customer Service";
 "copyright" = "Copyright";
 "all_rights_reserved" = "All Rights Reserved";
+
+// Brand Color Settings
+"appearance" = "Appearance";
+"brand_color" = "Brand Color";
+"select_brand_color" = "Select Brand Color";
+"custom_color_active" = "Using custom color";
+"default_color_active" = "Using default color";
+"reset_to_default_color" = "Reset to Default";
+"brand_color_description" = "Customize the app's theme color, which will be applied to icons, buttons, and other UI elements";

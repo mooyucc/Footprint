@@ -59,7 +59,7 @@ enum TripShareLayout: String, CaseIterable, Identifiable {
         case .grid:
             return "square.grid.3x3"
         case .extendedGrid:
-            return "square.grid.4x4"
+            return "square.grid.3x3.square.badge.ellipsis"
         }
     }
     

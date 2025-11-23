@@ -13,6 +13,7 @@ struct FootprintApp: App {
     @StateObject private var appleSignInManager = AppleSignInManager.shared
     @StateObject private var languageManager = LanguageManager.shared
     @StateObject private var countryManager = CountryManager.shared
+    @StateObject private var brandColorManager = BrandColorManager.shared
     
     var sharedModelContainer: ModelContainer = {
         // 启用 iCloud CloudKit 同步
@@ -37,6 +38,7 @@ struct FootprintApp: App {
                 .environmentObject(appleSignInManager)
                 .environmentObject(languageManager)
                 .environmentObject(countryManager)
+                .environmentObject(brandColorManager)
         }
         .modelContainer(sharedModelContainer)
     }

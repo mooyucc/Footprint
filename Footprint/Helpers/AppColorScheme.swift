@@ -7,15 +7,26 @@
 //
 
 import SwiftUI
+import UIKit
+import Combine
 
 // MARK: - Color 扩展
 
 extension Color {
     // MARK: - 品牌色
-    /// 品牌红色（强调色）
+    /// 默认品牌红色（强调色）
     /// - 颜色值：`#F75C62` (RGB: 247, 92, 98)
     /// - 用途：强调色、重要操作、品牌标识、图标颜色等
-    static let footprintRed = Color(red: 247/255, green: 92/255, blue: 98/255)
+    static let footprintRedDefault = Color(red: 247/255, green: 92/255, blue: 98/255)
+    
+    /// 品牌红色（强调色）- 支持自定义
+    /// - 如果用户设置了自定义品牌颜色，则返回自定义颜色；否则返回默认颜色
+    /// - 颜色值：默认 `#F75C62` (RGB: 247, 92, 98)
+    /// - 用途：强调色、重要操作、品牌标识、图标颜色等
+    /// - 注意：此属性会从 BrandColorManager 获取当前颜色，确保颜色变化时视图能自动更新
+    static var footprintRed: Color {
+        BrandColorManager.shared.currentBrandColor
+    }
     
     /// 页面背景米色 #F7F3EB
     static let footprintBeige = Color(red: 0.969, green: 0.953, blue: 0.922)
@@ -43,6 +54,89 @@ extension Color {
     static let footprintIconColor = Color.footprintRed
 }
 
+// MARK: - BrandColorManager
+
+/// 品牌颜色管理器，用于管理自定义品牌颜色并通知所有视图更新
+class BrandColorManager: ObservableObject {
+    static let shared = BrandColorManager()
+    
+    /// UserDefaults 键名，用于存储自定义品牌颜色
+    private let customBrandColorKey = "CustomBrandColor"
+    
+    /// 默认品牌颜色（RGB: 247, 92, 98）
+    let defaultBrandColor = Color(red: 247/255, green: 92/255, blue: 98/255)
+    
+    /// 当前品牌颜色（可观察属性，变化时自动通知所有视图）
+    @Published var currentBrandColor: Color
+    
+    /// 是否使用自定义颜色
+    @Published var isUsingCustomColor: Bool
+    
+    private init() {
+        // 先初始化存储属性为默认值
+        self.currentBrandColor = defaultBrandColor
+        self.isUsingCustomColor = false
+        
+        // 然后从 UserDefaults 读取自定义颜色
+        if let customColor = Self.loadCustomColor(key: customBrandColorKey) {
+            self.currentBrandColor = customColor
+            self.isUsingCustomColor = true
+        }
+    }
+    
+    /// 从 UserDefaults 加载自定义颜色（静态方法，不依赖实例）
+    private static func loadCustomColor(key: String) -> Color? {
+        guard let colorData = UserDefaults.standard.data(forKey: key) else {
+            return nil
+        }
+        
+        // 从 Data 中解码颜色
+        if let components = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSArray.self, from: colorData) as? [CGFloat],
+           components.count >= 3 {
+            return Color(red: Double(components[0]), green: Double(components[1]), blue: Double(components[2]))
+        }
+        
+        return nil
+    }
+    
+    /// 设置自定义品牌颜色
+    func setCustomBrandColor(_ color: Color) {
+        // 将 Color 转换为 RGB 组件
+        let uiColor = UIColor(color)
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        
+        uiColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        
+        // 存储 RGB 组件
+        let components = [red, green, blue]
+        if let data = try? NSKeyedArchiver.archivedData(withRootObject: components, requiringSecureCoding: false) {
+            UserDefaults.standard.set(data, forKey: customBrandColorKey)
+        }
+        
+        // 更新状态（会自动通知所有观察者）
+        currentBrandColor = color
+        isUsingCustomColor = true
+        
+        // 发送通知（用于其他需要监听的地方）
+        NotificationCenter.default.post(name: .brandColorChanged, object: nil)
+    }
+    
+    /// 重置品牌颜色为默认值
+    func resetBrandColorToDefault() {
+        UserDefaults.standard.removeObject(forKey: customBrandColorKey)
+        
+        // 更新状态（会自动通知所有观察者）
+        currentBrandColor = defaultBrandColor
+        isUsingCustomColor = false
+        
+        // 发送通知（用于其他需要监听的地方）
+        NotificationCenter.default.post(name: .brandColorChanged, object: nil)
+    }
+}
+
 // MARK: - AppColorScheme 工具类
 
 /// 统一的配色工具类，提供所有视图的配色方案
@@ -50,6 +144,36 @@ extension Color {
 struct AppColorScheme {
     /// 当前颜色模式（需要在View中通过Environment获取）
     static var colorScheme: ColorScheme = .light
+    
+    // MARK: - 自定义品牌颜色（兼容旧代码）
+    
+    /// 默认品牌颜色（RGB: 247, 92, 98）
+    static let defaultBrandColor = Color(red: 247/255, green: 92/255, blue: 98/255)
+    
+    /// 获取自定义品牌颜色（如果已设置）
+    /// - Returns: 自定义颜色，如果未设置则返回 nil
+    static var customBrandColor: Color? {
+        if BrandColorManager.shared.isUsingCustomColor {
+            return BrandColorManager.shared.currentBrandColor
+        }
+        return nil
+    }
+    
+    /// 设置自定义品牌颜色
+    /// - Parameter color: 要设置的颜色
+    static func setCustomBrandColor(_ color: Color) {
+        BrandColorManager.shared.setCustomBrandColor(color)
+    }
+    
+    /// 重置品牌颜色为默认值
+    static func resetBrandColorToDefault() {
+        BrandColorManager.shared.resetBrandColorToDefault()
+    }
+    
+    /// 检查是否使用了自定义品牌颜色
+    static var isUsingCustomBrandColor: Bool {
+        return BrandColorManager.shared.isUsingCustomColor
+    }
     
     // MARK: - 背景色
     
@@ -608,5 +732,28 @@ extension View {
     func smallCardStyle(for colorScheme: ColorScheme, cornerRadius: CGFloat = 12) -> some View {
         whiteCardStyle(for: colorScheme, cornerRadius: cornerRadius)
     }
+}
+
+// MARK: - View 扩展 - 品牌颜色响应
+
+extension View {
+    /// 使视图能够响应品牌颜色变化
+    /// - 使用此修饰符确保视图在品牌颜色改变时自动刷新
+    /// - 示例:
+    ///   ```swift
+    ///   Text("Hello")
+    ///       .foregroundColor(.footprintRed)
+    ///       .brandColorAware()
+    ///   ```
+    func brandColorAware() -> some View {
+        self.environmentObject(BrandColorManager.shared)
+    }
+}
+
+// MARK: - Notification.Name 扩展
+
+extension Notification.Name {
+    /// 品牌颜色更改通知
+    static let brandColorChanged = Notification.Name("brandColorChanged")
 }
 

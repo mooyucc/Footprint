@@ -355,3 +355,12 @@
 "customer_service_phone" = "客服电话";
 "copyright" = "版权所有";
 "all_rights_reserved" = "All Rights Reserved";
+
+// Brand Color Settings
+"appearance" = "外观";
+"brand_color" = "品牌颜色";
+"select_brand_color" = "选择品牌颜色";
+"custom_color_active" = "已使用自定义颜色";
+"default_color_active" = "使用默认颜色";
+"reset_to_default_color" = "恢复默认颜色";
+"brand_color_description" = "自定义应用的主题颜色，将应用于图标、按钮等界面元素";

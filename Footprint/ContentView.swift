@@ -12,6 +12,7 @@ import UIKit
 struct ContentView: View {
     @State private var selectedTab = 0
     @EnvironmentObject var languageManager: LanguageManager
+    @EnvironmentObject var brandColorManager: BrandColorManager
     @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
@@ -47,24 +48,41 @@ struct ContentView: View {
                 }
                 .tag(2)
         }
-        .tint(Color.footprintRed) // 使用品牌红色，确保所有 tab 一致
+        .tint(brandColorManager.currentBrandColor) // 使用品牌红色，确保所有 tab 一致，并响应颜色变化
         .onAppear {
-            configureTabBarAppearance(for: colorScheme)
+            configureTabBarAppearance(for: colorScheme, brandColor: brandColorManager.currentBrandColor)
         }
         .onChange(of: colorScheme) { newScheme in
-            configureTabBarAppearance(for: newScheme)
+            configureTabBarAppearance(for: newScheme, brandColor: brandColorManager.currentBrandColor)
+        }
+        .onChange(of: brandColorManager.currentBrandColor) { newColor in
+            // 当品牌颜色改变时，立即更新 TabBar 外观
+            configureTabBarAppearance(for: colorScheme, brandColor: newColor)
+            // 强制刷新 TabView，确保所有标签页（包括"我的"）都能立即更新
+            DispatchQueue.main.async {
+                // 通过重新设置 selectedTab 来触发 TabView 刷新
+                let currentTab = selectedTab
+                // 先切换到无效的 tab 索引，强制 TabView 刷新
+                selectedTab = -1
+                // 立即切换回原 tab，触发所有标签页的重新渲染
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
+                    selectedTab = currentTab
+                    // 再次确保 TabBar 外观已更新
+                    configureTabBarAppearance(for: colorScheme, brandColor: newColor)
+                }
+            }
         }
         .onChange(of: selectedTab) { _ in
             // 当切换 tab 时重新应用配置，确保颜色正确
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                configureTabBarAppearance(for: colorScheme)
+                configureTabBarAppearance(for: colorScheme, brandColor: brandColorManager.currentBrandColor)
             }
         }
     }
     
-    private func configureTabBarAppearance(for scheme: ColorScheme) {
-        // 使用品牌红色作为选中颜色，确保所有 tab 一致
-        let selectedColor: UIColor = UIColor(Color.footprintRed)
+    private func configureTabBarAppearance(for scheme: ColorScheme, brandColor: Color) {
+        // 使用品牌颜色作为选中颜色，确保所有 tab 一致
+        let selectedColor: UIColor = UIColor(brandColor)
         let unselectedColor: UIColor = scheme == .dark ? UIColor.white.withAlphaComponent(0.6) : UIColor.secondaryLabel
         
         // 首先设置全局 tint 颜色，这是最关键的
@@ -116,22 +134,21 @@ struct ContentView: View {
         DispatchQueue.main.async {
             if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
                 windowScene.windows.forEach { window in
-                    window.rootViewController?.view.subviews.forEach { subview in
-                        if let tabBar = subview as? UITabBar {
+                    // 递归查找并更新所有 TabBar
+                    func updateTabBar(_ view: UIView) {
+                        if let tabBar = view as? UITabBar {
                             tabBar.tintColor = selectedColor
                             tabBar.unselectedItemTintColor = unselectedColor
                             tabBar.standardAppearance = appearance
                             tabBar.scrollEdgeAppearance = appearance
+                            // 强制刷新 TabBar 的布局
+                            tabBar.setNeedsLayout()
+                            tabBar.layoutIfNeeded()
                         }
-                        // 递归查找 TabBar
-                        subview.subviews.forEach { subSubview in
-                            if let tabBar = subSubview as? UITabBar {
-                                tabBar.tintColor = selectedColor
-                                tabBar.unselectedItemTintColor = unselectedColor
-                                tabBar.standardAppearance = appearance
-                                tabBar.scrollEdgeAppearance = appearance
-                            }
-                        }
+                        view.subviews.forEach { updateTabBar($0) }
+                    }
+                    if let rootView = window.rootViewController?.view {
+                        updateTabBar(rootView)
                     }
                 }
             }
@@ -144,6 +161,7 @@ struct ContentView: View {
 struct ProfileView: View {
     @EnvironmentObject var appleSignInManager: AppleSignInManager
     @EnvironmentObject var languageManager: LanguageManager
+    @EnvironmentObject var brandColorManager: BrandColorManager
     @StateObject private var countryManager = CountryManager.shared
     @Query private var destinations: [TravelDestination]
     @Query private var trips: [TravelTrip]
@@ -318,7 +336,7 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("sign_in_apple_id".localized)
                         .font(.headline)
-                        .foregroundColor(AppColorScheme.iconColor)
+                        .foregroundColor(brandColorManager.currentBrandColor)
                     
                     Text("enable_icloud_sync".localized)
                         .font(.caption)
@@ -356,7 +374,7 @@ struct ProfileView: View {
                     }
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(AppColorScheme.redCardBackground)
+                    .foregroundColor(brandColorManager.currentBrandColor)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
                     .background(Color.white)
@@ -426,7 +444,7 @@ struct ProfileView: View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 8) {
                 Image(systemName: "clock.fill")
-                    .foregroundColor(AppColorScheme.iconColor)
+                    .foregroundColor(brandColorManager.currentBrandColor)
                     .font(.headline)
                 Text("travel_timeline".localized)
                     .font(.headline)
@@ -558,12 +576,13 @@ struct ProfileStatCard: View {
     let value: String
     let label: String
     @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject var brandColorManager: BrandColorManager
     
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.title2)
-                .foregroundColor(AppColorScheme.iconColor)
+                .foregroundColor(brandColorManager.currentBrandColor)
             
             Text(value)
                 .font(.title)
@@ -641,4 +660,5 @@ struct FavoriteDestinationRow: View {
         .modelContainer(for: TravelDestination.self, inMemory: true)
         .environmentObject(LanguageManager.shared)
         .environmentObject(AppleSignInManager.shared)
+        .environmentObject(BrandColorManager.shared)
 }
