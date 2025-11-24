@@ -67,6 +67,7 @@ struct MapView: View {
     @Query private var destinations: [TravelDestination]
     @Query(sort: \TravelTrip.startDate, order: .reverse) private var trips: [TravelTrip]
     @Environment(\.colorScheme) private var colorScheme // 检测颜色模式
+    @EnvironmentObject private var brandColorManager: BrandColorManager
     @StateObject private var languageManager = LanguageManager.shared
     @StateObject private var countryManager = CountryManager.shared
     @State private var position: MapCameraPosition = .automatic
@@ -269,6 +270,10 @@ struct MapView: View {
         case .hybrid, .imagery:
             return true
         }
+    }
+    
+    private var brandAccentColor: Color {
+        brandColorManager.currentBrandColor
     }
     
     var body: some View {
@@ -704,7 +709,8 @@ struct MapView: View {
                 ClusterAnnotationView(
                     cluster: cluster,
                     zoomLevel: currentZoomLevel,
-                    tripColorMap: tripColorMapping
+                    tripColorMap: tripColorMapping,
+                    accentColor: brandAccentColor
                 )
                 .equatable()
                 .onTapGesture {
@@ -3238,11 +3244,13 @@ struct ClusterAnnotationView: View, Equatable {
     let cluster: ClusterAnnotation
     let zoomLevel: Double
     let tripColorMap: [UUID: Color]
+    let accentColor: Color
     
     // 实现 Equatable 协议以减少不必要的视图更新
     static func == (lhs: ClusterAnnotationView, rhs: ClusterAnnotationView) -> Bool {
         lhs.cluster.id == rhs.cluster.id &&
-        abs(lhs.zoomLevel - rhs.zoomLevel) < 0.5 // 缩放级别变化小于0.5时不更新
+        abs(lhs.zoomLevel - rhs.zoomLevel) < 0.5 &&
+        lhs.accentColorSignature == rhs.accentColorSignature // 品牌色变化时需要刷新
     }
     
     private var markerSize: CGFloat {
@@ -3287,6 +3295,10 @@ struct ClusterAnnotationView: View, Equatable {
         cluster.destinations.contains { $0.trip != nil }
     }
     
+    private var accentColorSignature: String {
+        UIColor(accentColor).description
+    }
+    
     var body: some View {
         ZStack {
             // 外圈：旅程标识（当包含旅程地点时显示）
@@ -3328,8 +3340,8 @@ struct ClusterAnnotationView: View, Equatable {
                     // 液态玻璃标注（统一使用品牌红色）
                     LiquidGlassMarkerView(
                         size: markerSize,
-                        startColor: .footprintRed,
-                        endColor: .footprintRed,
+                        startColor: accentColor,
+                        endColor: accentColor,
                         borderWidth: strokeWidth
                     )
                 }
@@ -3346,8 +3358,8 @@ struct ClusterAnnotationView: View, Equatable {
                 ZStack {
                     LiquidGlassMarkerView(
                         size: markerSize,
-                        startColor: .footprintRed,
-                        endColor: .footprintRed,
+                        startColor: accentColor,
+                        endColor: accentColor,
                         borderWidth: strokeWidth
                     )
                     // 聚合数量文本
@@ -3622,6 +3634,7 @@ struct DestinationPreviewCard: View {
 #Preview {
     MapView()
         .modelContainer(for: TravelDestination.self, inMemory: true)
+        .environmentObject(BrandColorManager.shared)
         .environmentObject(CountryManager.shared)
 }
 

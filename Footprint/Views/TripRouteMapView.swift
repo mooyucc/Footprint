@@ -16,6 +16,7 @@ struct TripRouteMapView: View {
     
     @StateObject private var routeManager = RouteManager.shared
     @StateObject private var languageManager = LanguageManager.shared
+    @EnvironmentObject private var brandColorManager: BrandColorManager
     @State private var routes: [MKRoute] = []
     @State private var isLoadingRoutes = false
     @State private var cameraPosition: MapCameraPosition = .automatic
@@ -27,6 +28,10 @@ struct TripRouteMapView: View {
     // 计算总路线距离
     var totalDistance: CLLocationDistance {
         routes.reduce(0) { $0 + $1.distance }
+    }
+    
+    private var brandAccentColor: Color {
+        brandColorManager.currentBrandColor
     }
     
     var body: some View {
@@ -65,7 +70,7 @@ struct TripRouteMapView: View {
                         ZStack {
                             // 统一使用品牌红色
                             Circle()
-                                .fill(Color.footprintRed)
+                                .fill(brandAccentColor)
                                 .frame(width: index == 0 ? 20 : 16, height: index == 0 ? 20 : 16)
                                 .overlay(
                                     Circle()
@@ -285,6 +290,7 @@ struct TripRouteMapView: View {
     
     return TripRouteMapView(destinations: [dest1, dest2], height: 300)
         .modelContainer(container)
+        .environmentObject(BrandColorManager.shared)
         .padding()
 }
 
