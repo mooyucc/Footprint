@@ -189,6 +189,7 @@
 
 // Add Destination View
 "add_destination" = "Ajouter une destination";
+"location_search" = "Recherche de localisation";
 "search" = "Rechercher";
 "search_domestic_places" = "🇨🇳 Rechercher des lieux nationaux :";
 "use_amap_data" = "• Utiliser les données Amap pour rechercher des lieux en Chine";
@@ -258,6 +259,7 @@
 "add_cover_image" = "Ajouter une image de couverture";
 "change_cover_image" = "Changer l'image de couverture";
 "trip_duration" = "Durée du voyage";
+"destination_count" = "Nombre de destinations";
 
 // Trip Detail View
 "start" = "Début";

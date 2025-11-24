@@ -225,6 +225,42 @@ struct AppColorScheme {
         )
     }
     
+    // MARK: - Core Graphics 渐变背景（用于图片生成）
+    
+    /// 绘制三色线性渐变背景（Core Graphics版本，用于分享图片生成）
+    /// - Parameters:
+    ///   - rect: 绘制区域
+    ///   - context: Core Graphics 上下文
+    static func drawGradientBackground(in rect: CGRect, context: CGContext) {
+        // 定义三色渐变的颜色停止点（符合App配色标准）
+        let color1 = UIColor(red: 0.984, green: 0.937, blue: 0.925, alpha: 1.0) // #FBEFEC at 25%
+        let color2 = UIColor(red: 0.980, green: 0.969, blue: 0.949, alpha: 1.0) // #FAF7F2 at 50%
+        let color3 = UIColor(red: 0.984, green: 0.965, blue: 0.925, alpha: 1.0) // #FBF6EC at 75%
+        
+        // 创建颜色数组和位置数组
+        let colors = [color1.cgColor, color1.cgColor, color2.cgColor, color3.cgColor, color3.cgColor]
+        let locations: [CGFloat] = [0.0, 0.25, 0.50, 0.75, 1.0]
+        
+        // 创建渐变
+        guard let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors as CFArray, locations: locations) else {
+            // 如果创建失败，使用单色背景作为降级方案
+            context.setFillColor(UIColor(red: 0.984, green: 0.937, blue: 0.925, alpha: 1.0).cgColor)
+            context.fill(rect)
+            return
+        }
+        
+        // 渐变方向：从右上角（.topTrailing）到左下角（.bottomLeading）
+        let startPoint = CGPoint(x: rect.maxX, y: rect.minY) // 右上角
+        let endPoint = CGPoint(x: rect.minX, y: rect.maxY)  // 左下角
+        
+        // 绘制渐变
+        context.saveGState()
+        context.addRect(rect)
+        context.clip()
+        context.drawLinearGradient(gradient, start: startPoint, end: endPoint, options: [])
+        context.restoreGState()
+    }
+    
     // MARK: - 卡片背景色
     
     /// 白卡片背景色（White Card）

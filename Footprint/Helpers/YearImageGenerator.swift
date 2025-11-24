@@ -27,6 +27,12 @@ struct YearImageGenerator {
         }
     }
     
+    // MARK: - 背景渐变（共享方法）
+    /// 使用 AppColorScheme 统一方法
+    static func drawGradientBackground(in rect: CGRect, context: CGContext) {
+        AppColorScheme.drawGradientBackground(in: rect, context: context)
+    }
+    
     // MARK: - 绘制标题（共享方法）
     static func drawTitle(_ title: String, at point: CGPoint, width: CGFloat, context: CGContext) {
         let fontSize = calculateDynamicTitleFontSize(for: title, availableWidth: width)
@@ -424,9 +430,8 @@ struct YearListLayoutGenerator: YearLayoutGenerator {
         return renderer.image { context in
             let cgContext = context.cgContext
             
-            // 设置背景色 - 使用与"我的"tab一致的浅米白色背景 #f7f3eb
-            cgContext.setFillColor(UIColor(red: 0.969, green: 0.953, blue: 0.922, alpha: 1.0).cgColor) // #f7f3eb
-            cgContext.fill(CGRect(origin: .zero, size: imageSize))
+            // 绘制三色线性渐变背景（符合App配色标准）
+            YearImageGenerator.drawGradientBackground(in: CGRect(origin: .zero, size: imageSize), context: cgContext)
             
             var currentY: CGFloat = 0
             

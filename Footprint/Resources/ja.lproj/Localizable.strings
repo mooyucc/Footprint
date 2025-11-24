@@ -189,6 +189,7 @@
 
 // Add Destination View
 "add_destination" = "目的地を追加";
+"location_search" = "位置検索";
 "search" = "検索";
 "search_domestic_places" = "🇨🇳 国内の場所を検索:";
 "use_amap_data" = "• 高德地图データを使用して、中国国内の場所を検索";
@@ -258,6 +259,7 @@
 "add_cover_image" = "カバー画像を追加";
 "change_cover_image" = "カバー画像を変更";
 "trip_duration" = "旅程期間";
+"destination_count" = "目的地数";
 
 // Trip Detail View
 "start" = "開始";

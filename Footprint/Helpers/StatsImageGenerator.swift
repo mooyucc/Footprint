@@ -109,11 +109,9 @@ struct StatsImageGenerator {
     }
     
     // MARK: - 背景渐变
+    /// 使用 AppColorScheme 统一方法
     private static func drawGradientBackground(in context: CGContext, size: CGSize) {
-        // 使用与"我的"tab一致的浅米白色背景 #f7f3eb
-        let backgroundColor = UIColor(red: 0.969, green: 0.953, blue: 0.922, alpha: 1.0)
-        context.setFillColor(backgroundColor.cgColor)
-        context.fill(CGRect(origin: .zero, size: size))
+        AppColorScheme.drawGradientBackground(in: CGRect(origin: .zero, size: size), context: context)
     }
     
     // MARK: - 顶部标题

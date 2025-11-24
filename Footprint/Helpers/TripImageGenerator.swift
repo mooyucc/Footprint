@@ -7,6 +7,7 @@
 
 import SwiftUI
 import UIKit
+import CoreText
 
 // MARK: - 分享相关
 struct TripShareItem: Identifiable {
@@ -125,50 +126,36 @@ struct TripImageGenerator {
         var contentHeight: CGFloat = 0
         contentHeight += topPadding
         
-        // 标题和副标题（需要计算实际高度）
+        // 用户头像和用户名区域（高度：头像高度 + 间距）
+        let avatarSize: CGFloat = 40 // 头像大小
+        let userNameHeight: CGFloat = 20 // 用户名文字高度
+        contentHeight += avatarSize + 16 // 头像 + 到标题的间距
+        
+        // 标题（需要计算实际高度，支持多行）
         let titleAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 42, weight: .bold)
+            .font: UIFont.systemFont(ofSize: 42, weight: .bold),
+            .paragraphStyle: {
+                let style = NSMutableParagraphStyle()
+                style.lineBreakMode = .byWordWrapping
+                return style
+            }()
         ]
         let titleString = NSAttributedString(string: destination.name, attributes: titleAttributes)
-        let titleHeight = titleString.size().height
+        // 使用boundingRect计算多行文本的实际高度，与绘制时保持一致
+        let maxTitleHeight: CGFloat = 200 // 最大高度限制
+        let titleRect = titleString.boundingRect(
+            with: CGSize(width: contentWidth, height: maxTitleHeight),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        let titleHeight = ceil(titleRect.height)
         
-        let subtitleAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 22, weight: .regular)
-        ]
-        let subtitleString = NSAttributedString(string: destination.country, attributes: subtitleAttributes)
-        let subtitleHeight = subtitleString.size().height
+        contentHeight += titleHeight + 20 // 标题 + 到笔记的间距
         
-        contentHeight += titleHeight + 8 + subtitleHeight + 20 // 标题 + 间距 + 副标题 + 到时间的间距
-        
-        // 时间信息（简单一行）
-        contentHeight += 28
-        
-        // 照片区域（根据数量智能布局）
-        let photoSpacing: CGFloat = 6 // 统一图片间距（上下左右一致）
-        let photoToNotesSpacing: CGFloat = 30 // 图片与笔记标题的间距
-        if photoCount > 0 {
-            if photoCount == 1 {
-                // 单张照片：显示为大图
-                contentHeight += contentWidth * 0.75 + photoToNotesSpacing // 大图高度（4:3比例）+ 图片与笔记间距
-            } else if photoCount == 9 {
-                // 9张照片：不设置主图，直接3x3排列
-                let cols = 3
-                let photoSize = (contentWidth - photoSpacing * CGFloat(cols - 1)) / CGFloat(cols)
-                let rows = 3
-                contentHeight += CGFloat(rows) * photoSize + CGFloat(rows - 1) * photoSpacing + photoToNotesSpacing
-            } else {
-                // 多张照片（2-8张）：第一张大图 + 其余网格
-                let mainImageHeight = contentWidth * 0.6 // 主图高度
-                let remainingPhotos = photoCount - 1
-                let gridHeight = calculateSmartGridHeight(photoCount: remainingPhotos, width: contentWidth)
-                contentHeight += mainImageHeight + photoSpacing + gridHeight + photoToNotesSpacing // 主图 + 间距 + 网格 + 图片与笔记间距
-            }
-        }
-        
-        // 笔记区域（如果有）
+        // 笔记区域（如果有，放在标题下面）
         if !destination.notes.isEmpty {
             let notesAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 16, weight: .regular)
+                .font: UIFont.systemFont(ofSize: 17, weight: .regular)
             ]
             let notesString = NSAttributedString(string: destination.notes, attributes: notesAttributes)
             let notesRect = notesString.boundingRect(
@@ -176,13 +163,64 @@ struct TripImageGenerator {
                 options: [.usesLineFragmentOrigin, .usesFontLeading],
                 context: nil
             )
-            contentHeight += 20 + ceil(notesRect.height) + 24 // 标题间距 + 笔记高度 + 底部间距
+            contentHeight += ceil(notesRect.height) + 20 // 笔记高度 + 到时间的间距
+        } else {
+            contentHeight += 20 // 如果没有笔记，直接到时间的间距
+        }
+        
+        // 时间信息（简单一行）
+        contentHeight += 28
+        
+        // 照片区域（根据数量智能布局）
+        let photoSpacing: CGFloat = 6 // 统一图片间距（上下左右一致）
+        let photoToBottomSpacing: CGFloat = 30 // 图片与底部的间距
+        if photoCount > 0 {
+            if photoCount == 1 {
+                // 单张照片：显示为大图（3:2比例，宽度×2/3，与布局简图说明一致）
+                contentHeight += contentWidth * 2.0 / 3.0 + photoToBottomSpacing // 大图高度（3:2比例）+ 图片与底部间距
+            } else if photoCount == 9 {
+                // 9张照片：不设置主图，直接3x3排列
+                let cols = 3
+                let photoSize = (contentWidth - photoSpacing * CGFloat(cols - 1)) / CGFloat(cols)
+                let rows = 3
+                contentHeight += CGFloat(rows) * photoSize + CGFloat(rows - 1) * photoSpacing + photoToBottomSpacing
+            } else {
+                // 多张照片（2-8张）：第一张大图 + 其余网格
+                let mainImageHeight = contentWidth * 0.6 // 主图高度
+                let remainingPhotos = photoCount - 1
+                let gridHeight = calculateSmartGridHeight(photoCount: remainingPhotos, width: contentWidth)
+                contentHeight += mainImageHeight + photoSpacing + gridHeight + photoToBottomSpacing // 主图 + 间距 + 网格 + 图片与底部间距
+            }
         }
         
         // 底部签名（两行：主签名 + 副标题）
-        contentHeight += 14 + 12 + 25 // 主签名高度 + 间距 + 副标题高度
+        // 计算签名的实际高度
+        let signatureAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 14)
+        ]
+        let signatureString = NSAttributedString(string: "trip_share_signature".localized, attributes: signatureAttributes)
+        let signatureRect = signatureString.boundingRect(
+            with: CGSize(width: contentWidth, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        let signatureHeight = ceil(signatureRect.height)
         
-        contentHeight += bottomPadding
+        let subtitleAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 12)
+        ]
+        let subtitleString = NSAttributedString(string: "trip_share_subtitle".localized, attributes: subtitleAttributes)
+        let subtitleRect = subtitleString.boundingRect(
+            with: CGSize(width: contentWidth, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        let subtitleHeight = ceil(subtitleRect.height)
+        
+        contentHeight += signatureHeight + 25 + subtitleHeight // 主签名实际高度 + 间距 + 副标题实际高度
+        
+        // 增加额外的底部边距，确保第二行签名文字完整显示（特别是标题多行时）
+        contentHeight += bottomPadding + 10 // 底部边距 + 额外安全边距
         
         let imageSize = CGSize(width: screenWidth, height: contentHeight)
         
@@ -197,21 +235,41 @@ struct TripImageGenerator {
         return renderer.image { context in
             let cgContext = context.cgContext
             
-            // 设置背景色 - 使用与旅程图片一致的浅米白色背景
-            cgContext.setFillColor(UIColor(red: 0.969, green: 0.953, blue: 0.922, alpha: 1.0).cgColor)
-            cgContext.fill(CGRect(origin: .zero, size: imageSize))
+            // 绘制三色线性渐变背景（符合App配色标准）
+            drawGradientBackground(in: CGRect(origin: .zero, size: imageSize), context: cgContext)
             
             var currentY: CGFloat = topPadding
             
-            // 绘制标题和副标题（参考图样式）
-            let titleHeight = drawDestinationTitleWithSubtitle(
+            // 绘制用户头像和用户名
+            let avatarSize: CGFloat = 40
+            let userInfoHeight = drawUserInfo(
+                at: CGPoint(x: horizontalPadding, y: currentY),
+                avatarSize: avatarSize,
+                context: cgContext
+            )
+            currentY += userInfoHeight + 16 // 用户信息高度 + 到标题的间距
+            
+            // 绘制标题（只绘制标题，不绘制副标题）
+            let titleHeight = drawDestinationTitle(
                 title: destination.name,
-                subtitle: destination.country,
                 at: CGPoint(x: horizontalPadding, y: currentY),
                 width: contentWidth,
                 context: cgContext
             )
-            currentY += titleHeight + 20 // 标题区域高度 + 到时间的间距
+            currentY += titleHeight + 20 // 标题高度 + 到笔记的间距
+            
+            // 绘制笔记（如果有，放在标题下面）
+            if !destination.notes.isEmpty {
+                let notesHeight = drawDestinationNotesBelowTitle(
+                    destination.notes,
+                    at: CGPoint(x: horizontalPadding, y: currentY),
+                    width: contentWidth,
+                    context: cgContext
+                )
+                currentY += notesHeight + 20 // 笔记高度 + 到时间的间距
+            } else {
+                currentY += 20 // 如果没有笔记，直接到时间的间距
+            }
             
             // 绘制时间信息（简单一行）
             drawDestinationDateSimple(for: destination, at: CGPoint(x: horizontalPadding, y: currentY), width: contentWidth, context: cgContext)
@@ -219,16 +277,15 @@ struct TripImageGenerator {
             
             // 绘制照片（智能布局）
             let photoSpacing: CGFloat = 6 // 统一图片间距（上下左右一致）
-            let photoToNotesSpacing: CGFloat = 30 // 图片与笔记标题的间距
-            if photoCount > 0 {
-                if photoCount == 1 {
-                    // 单张照片：显示为大图
-                    if let photoImage = UIImage(data: allPhotos[0]) {
-                        let mainImageHeight = contentWidth * 0.75
-                        let mainImageRect = CGRect(x: horizontalPadding, y: currentY, width: contentWidth, height: mainImageHeight)
-                        drawMainImage(photoImage, in: mainImageRect, context: cgContext)
-                        currentY += mainImageHeight + photoToNotesSpacing
-                    }
+        if photoCount > 0 {
+            if photoCount == 1 {
+                // 单张照片：显示为大图（3:2比例，宽度×2/3，与布局简图说明一致）
+                if let photoImage = UIImage(data: allPhotos[0]) {
+                    let mainImageHeight = contentWidth * 2.0 / 3.0 // 3:2比例
+                    let mainImageRect = CGRect(x: horizontalPadding, y: currentY, width: contentWidth, height: mainImageHeight)
+                    drawMainImage(photoImage, in: mainImageRect, context: cgContext)
+                    currentY += mainImageHeight + photoSpacing
+                }
                 } else if photoCount == 9 {
                     // 9张照片：不设置主图，直接3x3排列（所有照片圆角12pt）
                     let cols = 3
@@ -252,7 +309,7 @@ struct TripImageGenerator {
                             gridY += photoSize
                         }
                     }
-                    currentY = gridY + photoToNotesSpacing
+                        currentY = gridY + 30
                 } else {
                     // 多张照片（2-8张）：第一张大图 + 其余网格
                     if let mainPhotoImage = UIImage(data: allPhotos[0]) {
@@ -269,15 +326,9 @@ struct TripImageGenerator {
                             width: contentWidth,
                             context: cgContext
                         )
-                        currentY += gridHeight + photoToNotesSpacing
+                        currentY += gridHeight + 30
                     }
                 }
-            }
-            
-            // 绘制笔记（如果有）
-            if !destination.notes.isEmpty {
-                let notesHeight = drawDestinationNotes(destination.notes, at: CGPoint(x: horizontalPadding, y: currentY), width: contentWidth, context: cgContext)
-                currentY += notesHeight + 24
             }
             
             // 绘制底部签名
@@ -287,7 +338,228 @@ struct TripImageGenerator {
     
     // MARK: - 地点图片绘制辅助方法
     
+    /// 绘制三色线性渐变背景（符合App配色标准）
+    /// 使用 AppColorScheme 统一方法
+    static func drawGradientBackground(in rect: CGRect, context: CGContext) {
+        AppColorScheme.drawGradientBackground(in: rect, context: context)
+    }
+    
+    /// 绘制用户头像和用户名
+    static func drawUserInfo(at point: CGPoint, avatarSize: CGFloat, context: CGContext) -> CGFloat {
+        let signInManager = AppleSignInManager.shared
+        let userName = signInManager.displayName
+        let avatarImage = signInManager.userAvatarImage
+        
+        // 获取品牌颜色作为默认头像背景色
+        let brandColor = BrandColorManager.shared.currentBrandColor
+        let brandUIColor = UIColor(brandColor)
+        
+        // 绘制头像
+        let avatarRect = CGRect(x: point.x, y: point.y, width: avatarSize, height: avatarSize)
+        
+        if let avatarImage = avatarImage {
+            // 如果有用户头像，绘制圆形头像
+            context.saveGState()
+            let avatarPath = UIBezierPath(ovalIn: avatarRect)
+            context.addPath(avatarPath.cgPath)
+            context.clip()
+            
+            // 缩放头像以适应圆形
+            let imageSize = avatarImage.size
+            let scale = max(avatarSize / imageSize.width, avatarSize / imageSize.height)
+            let scaledSize = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
+            let imageRect = CGRect(
+                x: point.x + (avatarSize - scaledSize.width) / 2,
+                y: point.y + (avatarSize - scaledSize.height) / 2,
+                width: scaledSize.width,
+                height: scaledSize.height
+            )
+            avatarImage.draw(in: imageRect)
+            context.restoreGState()
+        } else {
+            // 如果没有头像，绘制默认圆形图标
+            context.saveGState()
+            
+            // 绘制圆形背景（使用品牌颜色）
+            context.setFillColor(brandUIColor.cgColor)
+            let avatarPath = UIBezierPath(ovalIn: avatarRect)
+            context.addPath(avatarPath.cgPath)
+            context.fillPath()
+            
+            // 绘制白色人形图标
+            if let personIcon = UIImage(systemName: "person.fill") {
+                let iconSize: CGFloat = avatarSize * 0.5
+                let iconRect = CGRect(
+                    x: point.x + (avatarSize - iconSize) / 2,
+                    y: point.y + (avatarSize - iconSize) / 2,
+                    width: iconSize,
+                    height: iconSize
+                )
+                let tintedIcon = personIcon.withTintColor(.white, renderingMode: .alwaysOriginal)
+                tintedIcon.draw(in: iconRect)
+            }
+            
+            context.restoreGState()
+        }
+        
+        // 绘制用户名
+        let userNameAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 16, weight: .medium),
+            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0)
+        ]
+        let userNameString = NSAttributedString(string: userName, attributes: userNameAttributes)
+        let userNameX = point.x + avatarSize + 12 // 头像右侧12点间距
+        let userNameY = point.y + (avatarSize - userNameString.size().height) / 2 // 垂直居中
+        userNameString.draw(at: CGPoint(x: userNameX, y: userNameY))
+        
+        // 返回用户信息区域高度（头像高度）
+        return avatarSize
+    }
+    
+    /// 绘制标题（只绘制标题，不绘制副标题）
+    /// 支持多行显示，当标题文字较多时自动换行
+    static func drawDestinationTitle(title: String, at point: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
+        // 获取品牌颜色
+        let brandColor = BrandColorManager.shared.currentBrandColor
+        let brandUIColor = UIColor(brandColor)
+        
+        // 绘制主标题（参考图样式：大号字体）
+        let titleAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 42, weight: .bold),
+            .foregroundColor: UIColor(red: 0.15, green: 0.15, blue: 0.15, alpha: 1.0),
+            .paragraphStyle: {
+                let style = NSMutableParagraphStyle()
+                style.lineBreakMode = .byWordWrapping
+                return style
+            }()
+        ]
+        
+        let titleString = NSAttributedString(string: title, attributes: titleAttributes)
+        
+        // 计算多行文本的实际高度和宽度
+        let maxHeight: CGFloat = 200 // 最大高度限制
+        let textRect = titleString.boundingRect(
+            with: CGSize(width: width, height: maxHeight),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        
+        let actualHeight = ceil(textRect.height)
+        let actualWidth = min(textRect.width, width) // 确保不超过可用宽度
+        
+        // 在文字下方绘制半透明品牌色高亮（只覆盖标题文字，不延伸到描述区域）
+        // 高亮高度约为字体高度的 40%，位置在文字垂直中心
+        let font = UIFont.systemFont(ofSize: 42, weight: .bold)
+        let lineHeight = font.lineHeight
+        let highlightHeight = lineHeight * 0.4
+        let highlightOffsetY = lineHeight * 0.45 // 从文字中心偏上一点开始
+        
+        // 设置半透明品牌色（透明度约 0.25，更接近图片效果）
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        brandUIColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        
+        let highlightColor = UIColor(red: red, green: green, blue: blue, alpha: 0.25)
+        context.setFillColor(highlightColor.cgColor)
+        
+        // 使用 Core Text 获取每一行的实际位置和宽度，确保高亮精确覆盖标题文字
+        // 注意：Core Text 坐标系统从底部开始，需要转换为从顶部开始的坐标
+        let framesetter = CTFramesetterCreateWithAttributedString(titleString)
+        // 创建文本框架路径（Core Text 使用从底部开始的坐标系统，所以 y 从 0 开始）
+        let textPath = CGPath(rect: CGRect(x: point.x, y: 0, width: width, height: actualHeight), transform: nil)
+        let frame = CTFramesetterCreateFrame(framesetter, CFRangeMake(0, 0), textPath, nil)
+        
+        let lines = CTFrameGetLines(frame) as! [CTLine]
+        var lineOrigins = [CGPoint](repeating: .zero, count: lines.count)
+        CTFrameGetLineOrigins(frame, CFRangeMake(0, 0), &lineOrigins)
+        
+        // 为每一行绘制高亮，使用每行的实际宽度
+        for (lineIndex, line) in lines.enumerated() {
+            let lineOrigin = lineOrigins[lineIndex]
+            // Core Text 坐标系统从底部开始，lineOrigin.y 是相对于框架底部（y=0）的距离
+            // 转换为从顶部开始的坐标：actualHeight - lineOrigin.y - lineHeight = 从顶部到行顶部的距离
+            let lineY = point.y + actualHeight - lineOrigin.y - lineHeight
+            
+            // 获取这一行的实际宽度
+            let lineWidth = CTLineGetTypographicBounds(line, nil, nil, nil)
+            let actualLineWidth = CGFloat(lineWidth)
+            
+            // 计算高亮位置（只在标题文字范围内，不延伸到描述区域）
+            let highlightY = lineY + highlightOffsetY
+            let highlightWidth = min(actualLineWidth, width) + 24 // 稍微超出文字宽度（左右各12点），但不超过可用宽度
+            let highlightX = point.x - 12 // 向左偏移12点，使高亮超出文字
+            
+            // 确保高亮完全在标题文字范围内，不会延伸到标题文字底部之外
+            // 高亮的最底部应该在标题文字的最底部之前（留出一些余量，避免延伸到描述区域）
+            let titleBottom = point.y + actualHeight
+            let highlightBottom = highlightY + highlightHeight
+            // 确保高亮不会超出标题文字区域，并且高亮底部至少距离标题底部有 highlightHeight 的余量
+            if highlightY >= point.y && highlightBottom <= titleBottom - highlightHeight * 0.1 {
+                // 绘制圆角矩形高亮
+                let highlightRect = CGRect(
+                    x: highlightX,
+                    y: highlightY,
+                    width: highlightWidth,
+                    height: highlightHeight
+                )
+                let highlightPath = UIBezierPath(roundedRect: highlightRect, cornerRadius: 4)
+                context.addPath(highlightPath.cgPath)
+                context.fillPath()
+            }
+        }
+        
+        // 绘制标题文字（在高亮之上，支持多行）
+        let drawRect = CGRect(
+            x: point.x,
+            y: point.y,
+            width: width,
+            height: actualHeight
+        )
+        titleString.draw(in: drawRect)
+        
+        // 返回标题高度
+        return actualHeight
+    }
+    
+    /// 在标题下面绘制笔记（不包含笔记标题）
+    private static func drawDestinationNotesBelowTitle(_ notes: String, at point: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
+        // 绘制笔记内容（参考图样式：更舒适的字体和行距）
+        let notesAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 17, weight: .regular),
+            .foregroundColor: UIColor(red: 0.35, green: 0.35, blue: 0.35, alpha: 1.0),
+            .paragraphStyle: {
+                let style = NSMutableParagraphStyle()
+                style.lineSpacing = 6 // 增加行距，提升可读性
+                style.lineBreakMode = .byWordWrapping
+                return style
+            }()
+        ]
+        let notesString = NSAttributedString(string: notes, attributes: notesAttributes)
+        let notesRect = notesString.boundingRect(
+            with: CGSize(width: width, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        
+        let notesDrawRect = CGRect(
+            x: point.x,
+            y: point.y,
+            width: width,
+            height: ceil(notesRect.height)
+        )
+        
+        notesString.draw(in: notesDrawRect)
+        
+        return ceil(notesRect.height)
+    }
+    
     private static func drawDestinationTitleWithSubtitle(title: String, subtitle: String, at point: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
+        // 获取品牌颜色
+        let brandColor = BrandColorManager.shared.currentBrandColor
+        let brandUIColor = UIColor(brandColor)
+        
         // 绘制主标题（参考图样式：大号字体）
         let titleAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 42, weight: .bold),
@@ -295,6 +567,37 @@ struct TripImageGenerator {
         ]
         
         let titleString = NSAttributedString(string: title, attributes: titleAttributes)
+        let titleSize = titleString.size()
+        
+        // 在文字下方绘制半透明品牌色高亮
+        // 高亮高度约为字体高度的 40%，位置在文字垂直中心
+        let highlightHeight = titleSize.height * 0.4
+        let highlightY = point.y + titleSize.height * 0.45 // 从文字中心偏上一点开始，覆盖中间部分
+        let highlightWidth = titleSize.width + 24 // 稍微超出文字宽度（左右各12点）
+        let highlightX = point.x - 12 // 向左偏移12点，使高亮超出文字
+        
+        // 设置半透明品牌色（透明度约 0.25，更接近图片效果）
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        brandUIColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        
+        let highlightColor = UIColor(red: red, green: green, blue: blue, alpha: 0.25)
+        context.setFillColor(highlightColor.cgColor)
+        
+        // 绘制圆角矩形高亮
+        let highlightRect = CGRect(
+            x: highlightX,
+            y: highlightY,
+            width: highlightWidth,
+            height: highlightHeight
+        )
+        let highlightPath = UIBezierPath(roundedRect: highlightRect, cornerRadius: 4)
+        context.addPath(highlightPath.cgPath)
+        context.fillPath()
+        
+        // 绘制标题文字（在高亮之上）
         titleString.draw(at: point)
         
         // 绘制副标题（国家信息，稍小字体）
@@ -303,7 +606,6 @@ struct TripImageGenerator {
             .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0)
         ]
         
-        let titleSize = titleString.size()
         let subtitleString = NSAttributedString(string: subtitle, attributes: subtitleAttributes)
         let subtitleSize = subtitleString.size()
         subtitleString.draw(at: CGPoint(x: point.x, y: point.y + titleSize.height + 8))
@@ -377,37 +679,31 @@ struct TripImageGenerator {
             let photoSize = (width - spacing * CGFloat(photoCount - 1)) / CGFloat(photoCount)
             return photoSize
         } else if photoCount == 4 {
-            // 4张：第1行3张（3列网格），第2行1张（矩形占满整行）
+            // 4张（5个地点时剩余4张）：第1行3张（3列网格），第2行1张（全宽矩形，高度=标准网格方块高度）
             let cols = 3
-            let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols)
-            let mainImageSize = width * 0.6 // 高度为60%宽度
-            return photoSize + spacing + mainImageSize
+            let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols) // 标准网格方块高度
+            return photoSize + spacing + photoSize // 第1行高度 + 间距 + 第2行高度（等于标准网格方块高度）
         } else if photoCount == 5 {
-            // 5张：第1行3张（3列网格），第2行2张（单行均分）
+            // 5张（6个地点时剩余5张）：第1行3张（3列网格），第2行2张（单行均分，高度=标准网格方块高度）
             let cols = 3
-            let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols)
-            let remainingPhotos = 2
-            let rowPhotoSize = (width - spacing * CGFloat(remainingPhotos - 1)) / CGFloat(remainingPhotos)
-            return photoSize + spacing + rowPhotoSize
+            let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols) // 标准网格方块高度
+            return photoSize + spacing + photoSize // 第1行高度 + 间距 + 第2行高度（等于标准网格方块高度）
         } else if photoCount == 6 {
-            // 6张：2行显示（都是3列网格）
+            // 6张（7个地点时剩余6张）：第1行3张（3列网格），第2行3张（3列网格）
             let cols = 3
             let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols)
             let rows = 2
             return CGFloat(rows) * photoSize + CGFloat(rows - 1) * spacing
         } else if photoCount == 7 {
-            // 7张：第1行3张（3列网格），第2行3张（3列网格），第3行1张（矩形占满整行）
+            // 7张（8个地点时剩余7张）：第1行3张（3列网格），第2行3张（3列网格），第3行1张（全宽矩形，高度=标准网格方块高度）
             let cols = 3
-            let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols)
-            let mainImageSize = width * 0.6 // 高度为60%宽度
-            return CGFloat(2) * photoSize + CGFloat(2) * spacing + mainImageSize
+            let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols) // 标准网格方块高度
+            return CGFloat(2) * photoSize + CGFloat(2) * spacing + photoSize // 第1行高度 + 间距 + 第2行高度 + 间距 + 第3行高度（等于标准网格方块高度）
         } else {
-            // 8张：第1行3张（3列网格），第2行3张（3列网格），第3行2张（单行均分）
+            // 8张：第1行3张（3列网格），第2行3张（3列网格），第3行1张（全宽矩形，高度=标准网格方块高度）
             let cols = 3
-            let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols)
-            let remainingPhotos = 2
-            let rowPhotoSize = (width - spacing * CGFloat(remainingPhotos - 1)) / CGFloat(remainingPhotos)
-            return CGFloat(2) * photoSize + CGFloat(2) * spacing + rowPhotoSize
+            let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols) // 标准网格方块高度
+            return CGFloat(2) * photoSize + CGFloat(2) * spacing + photoSize // 第1行高度 + 间距 + 第2行高度 + 间距 + 第3行高度（等于标准网格方块高度）
         }
     }
     
@@ -446,9 +742,9 @@ struct TripImageGenerator {
             }
             return photoSize
         } else if photoCount == 4 {
-            // 4张：第1行3张（3列网格），第2行1张（矩形占满整行）
+            // 4张（5个地点时剩余4张）：第1行3张（3列网格），第2行1张（全宽矩形，高度=标准网格方块高度）
             let cols = 3
-            let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols)
+            let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols) // 标准网格方块高度
             var currentX = point.x
             
             // 第1行：3张（3列网格）
@@ -463,20 +759,19 @@ struct TripImageGenerator {
             }
             currentY += photoSize + spacing
             
-            // 第2行：1张占满整行，矩形（与主图类似）
+            // 第2行：1张占满整行，矩形（高度=标准网格方块高度）
             if photoIndex < photos.count,
                let photoImage = UIImage(data: photos[photoIndex]) {
-                let mainImageSize = width * 0.6 // 高度为60%宽度
-                let mainImageRect = CGRect(x: point.x, y: currentY, width: width, height: mainImageSize)
+                let mainImageRect = CGRect(x: point.x, y: currentY, width: width, height: photoSize)
                 drawMainImage(photoImage, in: mainImageRect, context: context)
-                currentY += mainImageSize
+                currentY += photoSize
             }
             
             return currentY - point.y
         } else if photoCount == 5 {
-            // 5张：第1行3张（3列网格），第2行2张（单行均分）
+            // 5张（6个地点时剩余5张）：第1行3张（3列网格），第2行2张（单行均分，高度=标准网格方块高度）
             let cols = 3
-            let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols)
+            let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols) // 标准网格方块高度
             var currentX = point.x
             
             // 第1行：3张（3列网格）
@@ -491,7 +786,7 @@ struct TripImageGenerator {
             }
             currentY += photoSize + spacing
             
-            // 第2行：2张单行均分
+            // 第2行：2张单行均分（高度=标准网格方块高度）
             let remainingPhotos = 2
             let rowPhotoSize = (width - spacing * CGFloat(remainingPhotos - 1)) / CGFloat(remainingPhotos)
             currentX = point.x
@@ -499,44 +794,17 @@ struct TripImageGenerator {
             for col in 0..<remainingPhotos {
                 if photoIndex < photos.count,
                    let photoImage = UIImage(data: photos[photoIndex]) {
-                    let photoRect = CGRect(x: currentX, y: currentY, width: rowPhotoSize, height: rowPhotoSize)
+                    let photoRect = CGRect(x: currentX, y: currentY, width: rowPhotoSize, height: photoSize) // 高度使用标准网格方块高度
                     drawGridPhoto(photoImage, in: photoRect, context: context)
                 }
                 currentX += rowPhotoSize + spacing
                 photoIndex += 1
             }
-            currentY += rowPhotoSize
+            currentY += photoSize
             
             return currentY - point.y
         } else if photoCount == 6 {
-            // 6张：2行显示（都是3列网格）
-            let cols = 3
-            let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols)
-            
-            for row in 0..<2 {
-                var currentX = point.x
-                let photosInRow = min(cols, photoCount - row * cols)
-                
-                for col in 0..<photosInRow {
-                    if photoIndex < photos.count,
-                       let photoImage = UIImage(data: photos[photoIndex]) {
-                        let photoRect = CGRect(x: currentX, y: currentY, width: photoSize, height: photoSize)
-                        drawGridPhoto(photoImage, in: photoRect, context: context)
-                    }
-                    currentX += photoSize + spacing
-                    photoIndex += 1
-                }
-                
-                if row < 1 {
-                    currentY += photoSize + spacing
-                } else {
-                    currentY += photoSize
-                }
-            }
-            
-            return currentY - point.y
-        } else if photoCount == 7 {
-            // 7张：第1行3张（3列网格），第2行3张（3列网格），第3行1张（矩形占满整行）
+            // 6张（7个地点时剩余6张）：第1行3张（3列网格），第2行3张（3列网格）
             let cols = 3
             let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols)
             var currentX = point.x
@@ -564,20 +832,51 @@ struct TripImageGenerator {
                 currentX += photoSize + spacing
                 photoIndex += 1
             }
+            currentY += photoSize
+            
+            return currentY - point.y
+        } else if photoCount == 7 {
+            // 7张（8个地点时剩余7张）：第1行3张（3列网格），第2行3张（3列网格），第3行1张（全宽矩形，高度=标准网格方块高度）
+            let cols = 3
+            let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols) // 标准网格方块高度
+            var currentX = point.x
+            
+            // 第1行：3张（3列网格）
+            for col in 0..<cols {
+                if photoIndex < photos.count,
+                   let photoImage = UIImage(data: photos[photoIndex]) {
+                    let photoRect = CGRect(x: currentX, y: currentY, width: photoSize, height: photoSize)
+                    drawGridPhoto(photoImage, in: photoRect, context: context)
+                }
+                currentX += photoSize + spacing
+                photoIndex += 1
+            }
             currentY += photoSize + spacing
             
-            // 第3行：1张占满整行，矩形（与主图类似）
+            // 第2行：3张（3列网格）
+            currentX = point.x
+            for col in 0..<cols {
+                if photoIndex < photos.count,
+                   let photoImage = UIImage(data: photos[photoIndex]) {
+                    let photoRect = CGRect(x: currentX, y: currentY, width: photoSize, height: photoSize)
+                    drawGridPhoto(photoImage, in: photoRect, context: context)
+                }
+                currentX += photoSize + spacing
+                photoIndex += 1
+            }
+            currentY += photoSize + spacing
+            
+            // 第3行：1张占满整行，矩形（高度=标准网格方块高度）
             if photoIndex < photos.count,
                let photoImage = UIImage(data: photos[photoIndex]) {
-                let mainImageSize = width * 0.6 // 高度为60%宽度
-                let mainImageRect = CGRect(x: point.x, y: currentY, width: width, height: mainImageSize)
+                let mainImageRect = CGRect(x: point.x, y: currentY, width: width, height: photoSize)
                 drawMainImage(photoImage, in: mainImageRect, context: context)
-                currentY += mainImageSize
+                currentY += photoSize
             }
             
             return currentY - point.y
         } else {
-            // 8张：第1行3张（3列网格），第2行3张（3列网格），第3行2张（单行均分）
+            // 8张及以上：第1行3张（3列网格），第2行3张（3列网格），第3行1张（全宽矩形，高度=标准网格方块高度）
             let cols = 3
             let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols)
             var currentX = point.x
@@ -607,21 +906,13 @@ struct TripImageGenerator {
             }
             currentY += photoSize + spacing
             
-            // 第3行：2张单行均分
-            let remainingPhotos = 2
-            let rowPhotoSize = (width - spacing * CGFloat(remainingPhotos - 1)) / CGFloat(remainingPhotos)
-            currentX = point.x
-            
-            for col in 0..<remainingPhotos {
-                if photoIndex < photos.count,
-                   let photoImage = UIImage(data: photos[photoIndex]) {
-                    let photoRect = CGRect(x: currentX, y: currentY, width: rowPhotoSize, height: rowPhotoSize)
-                    drawGridPhoto(photoImage, in: photoRect, context: context)
-                }
-                currentX += rowPhotoSize + spacing
-                photoIndex += 1
+            // 第3行：1张占满整行，矩形（高度=标准网格方块高度）
+            if photoIndex < photos.count,
+               let photoImage = UIImage(data: photos[photoIndex]) {
+                let mainImageRect = CGRect(x: point.x, y: currentY, width: width, height: photoSize)
+                drawMainImage(photoImage, in: mainImageRect, context: context)
+                currentY += photoSize
             }
-            currentY += rowPhotoSize
             
             return currentY - point.y
         }
@@ -743,9 +1034,8 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         return renderer.image { context in
             let cgContext = context.cgContext
             
-            // 设置背景色 - 使用与"我的"tab一致的浅米白色背景 #f7f3eb
-            cgContext.setFillColor(UIColor(red: 0.969, green: 0.953, blue: 0.922, alpha: 1.0).cgColor) // #f7f3eb
-            cgContext.fill(CGRect(origin: .zero, size: imageSize))
+            // 绘制三色线性渐变背景（符合App配色标准）
+            TripImageGenerator.drawGradientBackground(in: CGRect(origin: .zero, size: imageSize), context: cgContext)
             
             var currentY: CGFloat = 0
             
@@ -845,7 +1135,30 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         height += routeHeight
         
         // 底部签名（与上面地点图片间距40，离底部边缘20）
-        height += 40 + 40 + 20 // 与上面地点图片的间距 + 签名高度 + 底部padding
+        // 计算签名的实际高度
+        let signatureAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 14)
+        ]
+        let signatureString = NSAttributedString(string: "trip_share_signature".localized, attributes: signatureAttributes)
+        let signatureRect = signatureString.boundingRect(
+            with: CGSize(width: width - 40, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        let signatureHeight = ceil(signatureRect.height)
+        
+        let subtitleAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 12)
+        ]
+        let subtitleString = NSAttributedString(string: "trip_share_subtitle".localized, attributes: subtitleAttributes)
+        let subtitleRect = subtitleString.boundingRect(
+            with: CGSize(width: width - 40, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        let subtitleHeight = ceil(subtitleRect.height)
+        
+        height += 40 + signatureHeight + 25 + subtitleHeight + 20 // 与上面地点图片的间距 + 主签名实际高度 + 间距 + 副标题实际高度 + 底部padding
         
         return height
     }
@@ -1230,17 +1543,15 @@ struct GridLayoutGenerator: TripLayoutGenerator {
         return renderer.image { context in
             let cgContext = context.cgContext
             
-            // 设置背景色
-            cgContext.setFillColor(UIColor(red: 0.969, green: 0.953, blue: 0.922, alpha: 1.0).cgColor) // #f7f3eb
-            cgContext.fill(CGRect(origin: .zero, size: imageSize))
+            // 绘制三色线性渐变背景（符合App配色标准）
+            TripImageGenerator.drawGradientBackground(in: CGRect(origin: .zero, size: imageSize), context: cgContext)
             
             var currentY: CGFloat = topPadding
             
             // 绘制标题区域
             let headerHeight = drawHeader(for: trip, at: CGPoint(x: horizontalPadding, y: currentY), width: contentWidth, context: cgContext)
-            // 标题区域高度 + 与时间卡片的间距（描述后12 + 到时间卡片20 = 32）
-            currentY += headerHeight + 12 // 描述后的间距
-            currentY += 20 // 到时间卡片的间距
+            // 标题区域高度 + 与时间卡片的间距
+            currentY += headerHeight + 20 // 描述后的间距 + 到时间卡片的间距
             
             // 绘制时间信息卡片
             let timeCardHeight = drawTimeCard(for: trip, at: CGPoint(x: horizontalPadding, y: currentY), width: contentWidth, context: cgContext)
@@ -1269,17 +1580,33 @@ struct GridLayoutGenerator: TripLayoutGenerator {
         // 顶部padding
         height += topPadding
         
-        // 标题区域（动态计算，包括标题和描述）
+        // 用户头像和用户名区域（高度：头像高度 + 间距）
+        let avatarSize: CGFloat = 40 // 头像大小
+        height += avatarSize + 16 // 头像 + 到标题的间距
+        
+        // 标题区域（动态计算，包括标题和描述，支持多行）
         let titleAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 28, weight: .bold)
+            .font: UIFont.systemFont(ofSize: 42, weight: .bold), // 与地点分享图片一致
+            .paragraphStyle: {
+                let style = NSMutableParagraphStyle()
+                style.lineBreakMode = .byWordWrapping
+                return style
+            }()
         ]
         let titleString = NSAttributedString(string: trip.name, attributes: titleAttributes)
-        let titleSize = titleString.size()
-        var headerHeight: CGFloat = titleSize.height + 12 // 标题高度 + 间距12（与描述间距）
+        // 计算多行文本的实际高度
+        let maxTitleHeight: CGFloat = 200 // 最大高度限制
+        let titleRect = titleString.boundingRect(
+            with: CGSize(width: contentWidth, height: maxTitleHeight),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        let titleSize = ceil(titleRect.height)
+        var headerHeight: CGFloat = titleSize + 20 // 标题高度 + 到描述的间距
         
         if !trip.desc.isEmpty {
             let descAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 16)
+                .font: UIFont.systemFont(ofSize: 17, weight: .regular) // 与地点分享图片一致
             ]
             let descString = NSAttributedString(string: trip.desc, attributes: descAttributes)
             let maxHeight: CGFloat = 200
@@ -1290,8 +1617,7 @@ struct GridLayoutGenerator: TripLayoutGenerator {
             )
             headerHeight += ceil(descRect.height)
         }
-        height += headerHeight + 12 // 描述后的间距
-        height += 20 // 到时间卡片的间距（总共32点）
+        height += headerHeight + 20 // 描述后的间距 + 到时间卡片的间距
         
         // 时间信息卡片
         height += 100 + 20 // 与地点卡片间距20
@@ -1305,7 +1631,30 @@ struct GridLayoutGenerator: TripLayoutGenerator {
         }
         
         // 底部签名区域高度（与上面地点图片间距40，离底部边缘20）
-        height += 40 + 40 + bottomPadding // 与上面地点图片的间距 + 签名高度 + 底部padding
+        // 计算签名的实际高度
+        let signatureAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 14)
+        ]
+        let signatureString = NSAttributedString(string: "trip_share_signature".localized, attributes: signatureAttributes)
+        let signatureRect = signatureString.boundingRect(
+            with: CGSize(width: contentWidth, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        let signatureHeight = ceil(signatureRect.height)
+        
+        let subtitleAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 12)
+        ]
+        let subtitleString = NSAttributedString(string: "trip_share_subtitle".localized, attributes: subtitleAttributes)
+        let subtitleRect = subtitleString.boundingRect(
+            with: CGSize(width: contentWidth, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        let subtitleHeight = ceil(subtitleRect.height)
+        
+        height += 40 + signatureHeight + 25 + subtitleHeight + bottomPadding // 与上面地点图片的间距 + 主签名实际高度 + 间距 + 副标题实际高度 + 底部padding
         
         return height
     }
@@ -1313,21 +1662,35 @@ struct GridLayoutGenerator: TripLayoutGenerator {
     private func drawHeader(for trip: TravelTrip, at point: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
         var currentY: CGFloat = point.y
         
-        // 绘制标题
-        let titleAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 28, weight: .bold),
-            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
-        ]
-        let titleString = NSAttributedString(string: trip.name, attributes: titleAttributes)
-        let titleSize = titleString.size()
-        titleString.draw(at: CGPoint(x: point.x, y: currentY))
-        currentY += titleSize.height + 12 // 标题高度 + 间距12（与描述间距）
+        // 1. 绘制用户头像和用户名（与地点分享图片一致）
+        let avatarSize: CGFloat = 40
+        let userInfoHeight = TripImageGenerator.drawUserInfo(
+            at: CGPoint(x: point.x, y: currentY),
+            avatarSize: avatarSize,
+            context: context
+        )
+        currentY += userInfoHeight + 16 // 用户信息高度 + 到标题的间距
         
-        // 绘制描述（支持多行）
+        // 2. 绘制标题（带品牌色高亮，与地点分享图片一致）
+        let titleHeight = TripImageGenerator.drawDestinationTitle(
+            title: trip.name,
+            at: CGPoint(x: point.x, y: currentY),
+            width: width,
+            context: context
+        )
+        currentY += titleHeight + 20 // 标题高度 + 到描述的间距
+        
+        // 3. 绘制描述文字（支持多行）
         if !trip.desc.isEmpty {
             let descAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 16),
-                .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // #666666
+                .font: UIFont.systemFont(ofSize: 17, weight: .regular),
+                .foregroundColor: UIColor(red: 0.35, green: 0.35, blue: 0.35, alpha: 1.0), // 与地点分享图片的笔记颜色一致
+                .paragraphStyle: {
+                    let style = NSMutableParagraphStyle()
+                    style.lineSpacing = 6 // 增加行距，提升可读性
+                    style.lineBreakMode = .byWordWrapping
+                    return style
+                }()
             ]
             let descString = NSAttributedString(string: trip.desc, attributes: descAttributes)
             // 计算多行文本的实际高度
@@ -1457,8 +1820,8 @@ struct GridLayoutGenerator: TripLayoutGenerator {
         guard !destinationImages.isEmpty else { return 0 }
         
         if displayCount == 1 {
-            // 1张照片：显示为大图（4:3比例，圆角12pt）
-            let mainImageHeight = width * 0.75 // 4:3比例
+            // 1张照片：显示为大图（3:2比例，宽度×2/3，圆角12pt，与布局简图说明一致）
+            let mainImageHeight = width * 2.0 / 3.0 // 3:2比例
             let mainImageRect = CGRect(x: point.x, y: currentY, width: width, height: mainImageHeight)
             drawMainImageDestination(destinationImages[0], destination: displayDestinations[0], index: 1, in: mainImageRect, context: context)
             return mainImageHeight
@@ -1517,8 +1880,8 @@ struct GridLayoutGenerator: TripLayoutGenerator {
         let spacing: CGFloat = 6 // 照片间距（与地点分享图片一致）
         
         if destinations == 1 {
-            // 1张照片：显示为大图（4:3比例）
-            return width * 0.75
+            // 1张照片：显示为大图（3:2比例，宽度×2/3，与布局简图说明一致）
+            return width * 2.0 / 3.0
         } else if destinations == 9 {
             // 9张照片：不设置主图，直接3x3排列
             let cols = 3
@@ -1541,36 +1904,32 @@ struct GridLayoutGenerator: TripLayoutGenerator {
                 let photoSize = (width - spacing * CGFloat(remainingCount - 1)) / CGFloat(remainingCount)
                 gridHeight = photoSize
             } else if remainingCount == 4 {
-                // 4张：特殊处理 - 前3张3列网格，最后1张单行占满（矩形）
+                // 4张：第1行3张（3列网格），第2行1张（全宽矩形，高度=标准网格方块高度）
+                // 注意：这是剩余4张的情况（总5个地点时），应该按照5个地点的网格布局
                 let cols = 3
-                let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols)
-                let mainImageSize = width * 0.6 // 高度为60%宽度
-                gridHeight = photoSize + spacing + mainImageSize
+                let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols) // 标准网格方块高度
+                gridHeight = photoSize + spacing + photoSize // 第1行高度 + 间距 + 第2行高度（等于标准网格方块高度）
             } else if remainingCount == 5 {
-                // 5张：特殊处理 - 前3张3列网格，后2张单行均分
+                // 5张（6个地点时剩余5张）：第1行3张（3列网格），第2行2张（单行均分，高度=标准网格方块高度）
                 let cols = 3
-                let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols)
-                let remainingPhotos = 2
-                let rowPhotoSize = (width - spacing * CGFloat(remainingPhotos - 1)) / CGFloat(remainingPhotos)
-                gridHeight = photoSize + spacing + rowPhotoSize
+                let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols) // 标准网格方块高度
+                gridHeight = photoSize + spacing + photoSize // 第1行高度 + 间距 + 第2行高度（等于标准网格方块高度）
             } else if remainingCount == 6 {
-                // 6张：2行显示（都是3列网格）
+                // 6张（7个地点时剩余6张）：第1行3张（3列网格），第2行3张（3列网格）
                 let cols = 3
                 let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols)
                 let rows = 2
                 gridHeight = CGFloat(rows) * photoSize + CGFloat(rows - 1) * spacing
             } else if remainingCount == 7 {
-                // 7张：特殊处理 - 前6张2行3列网格，最后1张单行占满（矩形）
+                // 7张（8个地点时剩余7张）：第1行3张（3列网格），第2行3张（3列网格），第3行1张（全宽矩形，高度=标准网格方块高度）
                 let cols = 3
-                let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols)
-                let mainImageSize = width * 0.6 // 高度为60%宽度
-                gridHeight = CGFloat(2) * photoSize + CGFloat(2) * spacing + mainImageSize
+                let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols) // 标准网格方块高度
+                gridHeight = CGFloat(2) * photoSize + CGFloat(2) * spacing + photoSize // 第1行高度 + 间距 + 第2行高度 + 间距 + 第3行高度（等于标准网格方块高度）
             } else {
-                // 8张：3行显示（都是3列网格，最后一行2张）
+                // 8张：第1行3张（3列网格），第2行3张（3列网格），第3行1张（全宽矩形，高度=标准网格方块高度）
                 let cols = 3
-                let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols)
-                let rows = 3
-                gridHeight = CGFloat(rows) * photoSize + CGFloat(rows - 1) * spacing
+                let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols) // 标准网格方块高度
+                gridHeight = CGFloat(2) * photoSize + CGFloat(2) * spacing + photoSize // 第1行高度 + 间距 + 第2行高度 + 间距 + 第3行高度（等于标准网格方块高度）
             }
             
             return mainImageSize + spacing + gridHeight
@@ -1684,9 +2043,10 @@ struct GridLayoutGenerator: TripLayoutGenerator {
             }
             return photoSize
         } else if photoCount == 4 {
-            // 4张：特殊处理 - 前3张3列网格，最后1张单行占满
+            // 4张：第1行3张（3列网格），第2行1张（全宽矩形，高度=标准网格方块高度）
+            // 注意：这是剩余4张的情况（总5个地点时），应该按照5个地点的网格布局
             let cols = 3
-            let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols)
+            let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols) // 标准网格方块高度
             var currentX = point.x
             
             // 第1行：3张（3列网格）
@@ -1697,17 +2057,16 @@ struct GridLayoutGenerator: TripLayoutGenerator {
             }
             currentY += photoSize + spacing
             
-            // 第2行：1张占满整行，矩形（与主图类似）
-            let mainImageSize = width * 0.6 // 高度为60%宽度
-            let mainImageRect = CGRect(x: point.x, y: currentY, width: width, height: mainImageSize)
+            // 第2行：1张占满整行，矩形（高度=标准网格方块高度）
+            let mainImageRect = CGRect(x: point.x, y: currentY, width: width, height: photoSize)
             drawMainImageDestination(images[3], destination: destinations[3], index: startIndex + 3, in: mainImageRect, context: context)
-            currentY += mainImageSize
+            currentY += photoSize
             
             return currentY - point.y
         } else if photoCount == 5 {
-            // 5张：特殊处理 - 前3张3列网格，后2张单行均分
+            // 5张（6个地点时剩余5张）：第1行3张（3列网格），第2行2张（单行均分，高度=标准网格方块高度）
             let cols = 3
-            let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols)
+            let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols) // 标准网格方块高度
             var currentX = point.x
             
             // 第1行：3张（3列网格）
@@ -1718,23 +2077,88 @@ struct GridLayoutGenerator: TripLayoutGenerator {
             }
             currentY += photoSize + spacing
             
-            // 第2行：2张单行均分
+            // 第2行：2张单行均分（高度=标准网格方块高度）
             let remainingPhotos = 2
             let rowPhotoSize = (width - spacing * CGFloat(remainingPhotos - 1)) / CGFloat(remainingPhotos)
             currentX = point.x
             
             for col in 0..<remainingPhotos {
-                let photoRect = CGRect(x: currentX, y: currentY, width: rowPhotoSize, height: rowPhotoSize)
-                drawDestinationGridPhoto(images[cols + col], destination: destinations[cols + col], index: startIndex + cols + col, in: photoRect, context: context)
+                let index = cols + col
+                if index < images.count {
+                    let photoRect = CGRect(x: currentX, y: currentY, width: rowPhotoSize, height: photoSize) // 高度使用标准网格方块高度
+                    drawDestinationGridPhoto(images[index], destination: destinations[index], index: startIndex + index, in: photoRect, context: context)
+                }
                 currentX += rowPhotoSize + spacing
             }
-            currentY += rowPhotoSize
+            currentY += photoSize
+            
+            return currentY - point.y
+        } else if photoCount == 6 {
+            // 6张（7个地点时剩余6张）：第1行3张（3列网格），第2行3张（3列网格）
+            let cols = 3
+            let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols)
+            var currentX = point.x
+            
+            // 第1行：3张（3列网格）
+            for col in 0..<cols {
+                let photoRect = CGRect(x: currentX, y: currentY, width: photoSize, height: photoSize)
+                drawDestinationGridPhoto(images[col], destination: destinations[col], index: startIndex + col, in: photoRect, context: context)
+                currentX += photoSize + spacing
+            }
+            currentY += photoSize + spacing
+            
+            // 第2行：3张（3列网格）
+            currentX = point.x
+            for col in 0..<cols {
+                let index = cols + col
+                if index < images.count {
+                    let photoRect = CGRect(x: currentX, y: currentY, width: photoSize, height: photoSize)
+                    drawDestinationGridPhoto(images[index], destination: destinations[index], index: startIndex + index, in: photoRect, context: context)
+                }
+                currentX += photoSize + spacing
+            }
+            currentY += photoSize
             
             return currentY - point.y
         } else if photoCount == 7 {
-            // 7张：特殊处理 - 前6张2行3列网格，最后1张单行占满
+            // 7张（8个地点时剩余7张）：第1行3张（3列网格），第2行3张（3列网格），第3行1张（全宽矩形，高度=标准网格方块高度）
             let cols = 3
-            let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols)
+            let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols) // 标准网格方块高度
+            var currentX = point.x
+            
+            // 第1行：3张（3列网格）
+            for col in 0..<cols {
+                let photoRect = CGRect(x: currentX, y: currentY, width: photoSize, height: photoSize)
+                drawDestinationGridPhoto(images[col], destination: destinations[col], index: startIndex + col, in: photoRect, context: context)
+                currentX += photoSize + spacing
+            }
+            currentY += photoSize + spacing
+            
+            // 第2行：3张（3列网格）
+            currentX = point.x
+            for col in 0..<cols {
+                let index = cols + col
+                if index < images.count {
+                    let photoRect = CGRect(x: currentX, y: currentY, width: photoSize, height: photoSize)
+                    drawDestinationGridPhoto(images[index], destination: destinations[index], index: startIndex + index, in: photoRect, context: context)
+                }
+                currentX += photoSize + spacing
+            }
+            currentY += photoSize + spacing
+            
+            // 第3行：1张占满整行，矩形（高度=标准网格方块高度）
+            let index = cols * 2
+            if index < images.count {
+                let mainImageRect = CGRect(x: point.x, y: currentY, width: width, height: photoSize)
+                drawMainImageDestination(images[index], destination: destinations[index], index: startIndex + index, in: mainImageRect, context: context)
+                currentY += photoSize
+            }
+            
+            return currentY - point.y
+        } else if photoCount == 8 {
+            // 8张：第1行3张（3列网格），第2行3张（3列网格），第3行1张（全宽矩形，高度=标准网格方块高度）
+            let cols = 3
+            let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols) // 标准网格方块高度
             var currentX = point.x
             
             // 第1行：3张（3列网格）
@@ -1754,15 +2178,14 @@ struct GridLayoutGenerator: TripLayoutGenerator {
             }
             currentY += photoSize + spacing
             
-            // 第3行：1张占满整行，矩形（与主图类似）
-            let mainImageSize = width * 0.6 // 高度为60%宽度
-            let mainImageRect = CGRect(x: point.x, y: currentY, width: width, height: mainImageSize)
-            drawMainImageDestination(images[6], destination: destinations[6], index: startIndex + 6, in: mainImageRect, context: context)
-            currentY += mainImageSize
+            // 第3行：1张占满整行，矩形（高度=标准网格方块高度）
+            let mainImageRect = CGRect(x: point.x, y: currentY, width: width, height: photoSize)
+            drawMainImageDestination(images[7], destination: destinations[7], index: startIndex + 7, in: mainImageRect, context: context)
+            currentY += photoSize
             
             return currentY - point.y
         } else {
-            // 6张或8张：多行网格布局
+            // 6张：多行网格布局
             let cols = 3
             let photoSize = (width - spacing * CGFloat(cols - 1)) / CGFloat(cols)
             let rows = (photoCount + cols - 1) / cols // 向上取整
@@ -2030,18 +2453,16 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
         return renderer.image { context in
             let cgContext = context.cgContext
             
-            // 设置背景色
-            cgContext.setFillColor(UIColor(red: 0.969, green: 0.953, blue: 0.922, alpha: 1.0).cgColor) // #f7f3eb
-            cgContext.fill(CGRect(origin: .zero, size: imageSize))
+            // 绘制三色线性渐变背景（符合App配色标准）
+            TripImageGenerator.drawGradientBackground(in: CGRect(origin: .zero, size: imageSize), context: cgContext)
             
             var currentY: CGFloat = 0
             
             // 绘制标题区域
             currentY += 40
             let headerHeight = drawHeader(for: trip, at: CGPoint(x: 20, y: currentY), width: screenWidth - 40, context: cgContext)
-            // 标题区域高度 + 与时间卡片的间距（描述后12 + 到时间卡片20 = 32）
-            currentY += headerHeight + 12 // 描述后的间距
-            currentY += 20 // 到时间卡片的间距
+            // 标题区域高度 + 与时间卡片的间距
+            currentY += headerHeight + 20 // 描述后的间距 + 到时间卡片的间距
             
             // 绘制时间信息卡片
             let timeCardHeight = drawTimeCard(for: trip, at: CGPoint(x: 20, y: currentY), width: screenWidth - 40, context: cgContext)
@@ -2065,21 +2486,38 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
     
     private func calculateContentHeight(for trip: TravelTrip, destinations: [TravelDestination], width: CGFloat) -> CGFloat {
         var height: CGFloat = 0
+        let contentWidth = width - 40 // 内容宽度（左右边距各20）
         
         // 顶部padding
         height += 40
         
-        // 标题区域（动态计算，包括标题和描述）
+        // 用户头像和用户名区域（高度：头像高度 + 间距）
+        let avatarSize: CGFloat = 40 // 头像大小
+        height += avatarSize + 16 // 头像 + 到标题的间距
+        
+        // 标题区域（动态计算，包括标题和描述，支持多行）
         let titleAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 28, weight: .bold)
+            .font: UIFont.systemFont(ofSize: 42, weight: .bold), // 与地点分享图片一致
+            .paragraphStyle: {
+                let style = NSMutableParagraphStyle()
+                style.lineBreakMode = .byWordWrapping
+                return style
+            }()
         ]
         let titleString = NSAttributedString(string: trip.name, attributes: titleAttributes)
-        let titleSize = titleString.size()
-        var headerHeight: CGFloat = titleSize.height + 12 // 标题高度 + 间距12（与描述间距）
+        // 计算多行文本的实际高度
+        let maxTitleHeight: CGFloat = 200 // 最大高度限制
+        let titleRect = titleString.boundingRect(
+            with: CGSize(width: contentWidth, height: maxTitleHeight),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        let titleSize = ceil(titleRect.height)
+        var headerHeight: CGFloat = titleSize + 20 // 标题高度 + 到描述的间距
         
         if !trip.desc.isEmpty {
             let descAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 16)
+                .font: UIFont.systemFont(ofSize: 17, weight: .regular) // 与地点分享图片一致
             ]
             let descString = NSAttributedString(string: trip.desc, attributes: descAttributes)
             let maxHeight: CGFloat = 200
@@ -2090,8 +2528,7 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
             )
             headerHeight += ceil(descRect.height)
         }
-        height += headerHeight + 12 // 描述后的间距
-        height += 20 // 到时间卡片的间距（总共32点）
+        height += headerHeight + 20 // 描述后的间距 + 到时间卡片的间距
         
         // 时间信息卡片
         height += 100 + 20 // 与地点卡片间距20
@@ -2107,7 +2544,30 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
         }
         
         // 底部签名区域高度（与上面地点图片间距40，离底部边缘20）
-        height += 40 + 40 + 20 // 与上面地点图片的间距 + 签名高度 + 底部padding
+        // 计算签名的实际高度
+        let signatureAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 14)
+        ]
+        let signatureString = NSAttributedString(string: "trip_share_signature".localized, attributes: signatureAttributes)
+        let signatureRect = signatureString.boundingRect(
+            with: CGSize(width: contentWidth, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        let signatureHeight = ceil(signatureRect.height)
+        
+        let subtitleAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 12)
+        ]
+        let subtitleString = NSAttributedString(string: "trip_share_subtitle".localized, attributes: subtitleAttributes)
+        let subtitleRect = subtitleString.boundingRect(
+            with: CGSize(width: contentWidth, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        let subtitleHeight = ceil(subtitleRect.height)
+        
+        height += 40 + signatureHeight + 25 + subtitleHeight + 20 // 与上面地点图片的间距 + 主签名实际高度 + 间距 + 副标题实际高度 + 底部padding
         
         return height
     }
@@ -2115,21 +2575,35 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
     private func drawHeader(for trip: TravelTrip, at point: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
         var currentY: CGFloat = point.y
         
-        // 绘制标题
-        let titleAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 32, weight: .bold),
-            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
-        ]
-        let titleString = NSAttributedString(string: trip.name, attributes: titleAttributes)
-        let titleSize = titleString.size()
-        titleString.draw(at: CGPoint(x: point.x, y: currentY))
-        currentY += titleSize.height + 12 // 标题高度 + 间距12（与描述间距）
+        // 1. 绘制用户头像和用户名（与地点分享图片一致）
+        let avatarSize: CGFloat = 40
+        let userInfoHeight = TripImageGenerator.drawUserInfo(
+            at: CGPoint(x: point.x, y: currentY),
+            avatarSize: avatarSize,
+            context: context
+        )
+        currentY += userInfoHeight + 16 // 用户信息高度 + 到标题的间距
         
-        // 绘制描述（支持多行）
+        // 2. 绘制标题（带品牌色高亮，与地点分享图片一致）
+        let titleHeight = TripImageGenerator.drawDestinationTitle(
+            title: trip.name,
+            at: CGPoint(x: point.x, y: currentY),
+            width: width,
+            context: context
+        )
+        currentY += titleHeight + 20 // 标题高度 + 到描述的间距
+        
+        // 3. 绘制描述文字（支持多行）
         if !trip.desc.isEmpty {
             let descAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 16),
-                .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // #666666
+                .font: UIFont.systemFont(ofSize: 17, weight: .regular),
+                .foregroundColor: UIColor(red: 0.35, green: 0.35, blue: 0.35, alpha: 1.0), // 与地点分享图片的笔记颜色一致
+                .paragraphStyle: {
+                    let style = NSMutableParagraphStyle()
+                    style.lineSpacing = 6 // 增加行距，提升可读性
+                    style.lineBreakMode = .byWordWrapping
+                    return style
+                }()
             ]
             let descString = NSAttributedString(string: trip.desc, attributes: descAttributes)
             // 计算多行文本的实际高度

@@ -189,6 +189,7 @@
 
 // Add Destination View
 "add_destination" = "목적지 추가";
+"location_search" = "위치 검색";
 "search" = "검색";
 "search_domestic_places" = "🇨🇳 국내 장소 검색:";
 "use_amap_data" = "• 고덕 지도 데이터를 사용하여 중국 내 장소 검색";
@@ -258,6 +259,7 @@
 "add_cover_image" = "커버 이미지 추가";
 "change_cover_image" = "커버 이미지 변경";
 "trip_duration" = "여행 기간";
+"destination_count" = "목적지 수";
 
 // Trip Detail View
 "start" = "시작";

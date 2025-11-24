@@ -2031,6 +2031,55 @@ struct MapView: View {
         addDestinationPrefill = prefill
     }
     
+    // 构建地点名称：优先使用 POI，否则使用"城市+街道+门牌号"
+    private func buildLocationName(poi: String, city: String, street: String, streetNumber: String) -> String {
+        // 优先级1：使用 POI（如果存在）
+        if !poi.isEmpty {
+            return poi
+        }
+        
+        // 优先级2：组合"城市+街道+门牌号"
+        // 判断是否为中文环境（通过检查城市名是否包含中文字符）
+        let isChinese = city.contains(where: { "\u{4E00}" <= $0 && $0 <= "\u{9FFF}" }) ||
+                       street.contains(where: { "\u{4E00}" <= $0 && $0 <= "\u{9FFF}" })
+        
+        var addressParts: [String] = []
+        
+        if isChinese {
+            // 中文格式：城市 + 街道 + 门牌号（如"北京市建国路88号"）
+            addressParts.append(city)
+            if !street.isEmpty {
+                addressParts.append(street)
+            }
+            if !streetNumber.isEmpty {
+                addressParts.append(streetNumber)
+            }
+            
+            // 如果有多个部分，组合它们；否则只返回城市
+            if addressParts.count > 1 {
+                return addressParts.joined(separator: " ").trimmingCharacters(in: .whitespaces)
+            }
+            return city
+        } else {
+            // 英文格式：门牌号 + 街道, 城市（如"123 Main Street, New York"）
+            if !streetNumber.isEmpty {
+                addressParts.append(streetNumber)
+            }
+            if !street.isEmpty {
+                addressParts.append(street)
+            }
+            
+            // 如果有街道信息，组合成"门牌号 街道, 城市"格式
+            if !addressParts.isEmpty {
+                let streetPart = addressParts.joined(separator: " ")
+                return "\(streetPart), \(city)"
+            }
+            
+            // 如果没有街道信息，只返回城市
+            return city
+        }
+    }
+    
     // 反向地理编码：获取城市和国家信息（带多重回退）
     private func reverseGeocodeLocation(coordinate: CLLocationCoordinate2D) {
         isGeocodingLocation = true
@@ -2039,17 +2088,48 @@ struct MapView: View {
 
         func succeed(with placemark: CLPlacemark) {
             isGeocodingLocation = false
+            
+            // 提取详细地址信息
             let cityName = placemark.locality ?? placemark.administrativeArea ?? "unknown_city".localized
+            let streetName = placemark.thoroughfare ?? "" // 街道名
+            let streetNumber = placemark.subThoroughfare ?? "" // 门牌号
+            let poi = placemark.areasOfInterest?.first ?? "" // POI（兴趣点），取第一个
+            
+            // 构建地点名称：优先使用 POI，否则使用"城市+街道+门牌号"
+            let locationName = buildLocationName(
+                poi: poi,
+                city: cityName,
+                street: streetName,
+                streetNumber: streetNumber
+            )
+            
             let countryName = placemark.country ?? "unknown_country".localized
             let isoCountryCode = placemark.isoCountryCode ?? ""
             let category = (isoCountryCode == "CN" || countryName == "中国" || countryName == "China") ? "domestic" : "international"
-            print("✅ 反向地理编码成功:\n   城市: \(cityName)\n   国家: \(countryName)\n   ISO代码: \(isoCountryCode)\n   分类: \(category)")
+            
+            // 详细日志输出
+            print("✅ 反向地理编码成功:")
+            print("   地点名称: \(locationName)")
+            if !poi.isEmpty {
+                print("   POI: \(poi)")
+            }
+            print("   城市: \(cityName)")
+            if !streetName.isEmpty {
+                print("   街道: \(streetName)")
+            }
+            if !streetNumber.isEmpty {
+                print("   门牌号: \(streetNumber)")
+            }
+            print("   国家: \(countryName)")
+            print("   ISO代码: \(isoCountryCode)")
+            print("   分类: \(category)")
+            
             let mkPlacemark = MKPlacemark(placemark: placemark)
             let mapItem = MKMapItem(placemark: mkPlacemark)
-            mapItem.name = cityName
+            mapItem.name = locationName
             updateAddDestinationPrefill(
                 mapItem: mapItem,
-                name: cityName,
+                name: locationName,
                 country: countryName,
                 category: category
             )
@@ -2097,18 +2177,46 @@ struct MapView: View {
         let search = MKLocalSearch(request: request)
         search.start { response, error in
             if let item = response?.mapItems.first {
-                let cityName = item.name ?? item.placemark.locality ?? "selected_location".localized
+                // 提取详细地址信息
+                let cityName = item.placemark.locality ?? item.placemark.administrativeArea ?? "unknown_city".localized
+                let streetName = item.placemark.thoroughfare ?? ""
+                let streetNumber = item.placemark.subThoroughfare ?? ""
+                // 优先使用 mapItem.name（可能是 POI），否则使用 areasOfInterest
+                let poi = item.name ?? item.placemark.areasOfInterest?.first ?? ""
+                
+                // 构建地点名称：优先使用 POI，否则使用"城市+街道+门牌号"
+                let locationName = self.buildLocationName(
+                    poi: poi,
+                    city: cityName,
+                    street: streetName,
+                    streetNumber: streetNumber
+                )
+                
                 let countryName = item.placemark.country ?? "unknown_country".localized
                 let isoCountryCode = item.placemark.isoCountryCode ?? ""
                 let category = (isoCountryCode == "CN" || countryName == "中国" || countryName == "China") ? "domestic" : "international"
-                print("✅ " + "nearby_search_success".localized(with: cityName, countryName))
+                
+                print("✅ 附近搜索成功:")
+                print("   地点名称: \(locationName)")
+                if !poi.isEmpty {
+                    print("   POI: \(poi)")
+                }
+                print("   城市: \(cityName)")
+                if !streetName.isEmpty {
+                    print("   街道: \(streetName)")
+                }
+                if !streetNumber.isEmpty {
+                    print("   门牌号: \(streetNumber)")
+                }
+                print("   国家: \(countryName)")
+                
                 let mapItem = item
-                mapItem.name = cityName
+                mapItem.name = locationName
                 DispatchQueue.main.async {
                     self.isGeocodingLocation = false
                     self.updateAddDestinationPrefill(
                         mapItem: mapItem,
-                        name: cityName,
+                        name: locationName,
                         country: countryName,
                         category: category
                     )
