@@ -12,6 +12,7 @@
 "not_logged_in" = "로그인하지 않음";
 "login_sync_description" = "로그인 후 데이터가 자동으로 iCloud에 동기화됩니다";
 "data_sync" = "데이터 동기화";
+"data_settings" = "데이터";
 "icloud_sync" = "iCloud 동기화";
 "enabled" = "활성화됨";
 "not_enabled" = "비활성화됨";
@@ -27,6 +28,14 @@
 "sign_out" = "로그아웃";
 "language" = "언어";
 "language_selection" = "언어 선택";
+"appearance" = "외관";
+"general_settings" = "일반";
+"brand_color" = "브랜드 색상";
+"custom_color_active" = "사용자 지정 색상 사용 중";
+"default_color_active" = "기본 색상 사용 중";
+"select_brand_color" = "브랜드 색상 선택";
+"reset_to_default_color" = "기본값으로 재설정";
+"brand_color_description" = "앱의 주요 버튼과 강조 요소에 사용되는 색상을 설정하세요.";
 
 // Edit User Name
 "edit_username" = "사용자 이름 편집";
@@ -358,3 +367,17 @@
 "copyright" = "저작권";
 "all_rights_reserved" = "All Rights Reserved";
 
+
+// Account deletion
+"delete_account" = "계정 삭제";
+"delete_account_description" = "계정 정보를 삭제하고 이 기기의 모든 여행 데이터를 지웁니다.";
+"delete_account_detail" = "삭제하면 계정, 로컬 여행 기록, 백업과 사진이 완전히 제거되며 되돌릴 수 없습니다.";
+"delete_account_warning_title" = "계정을 삭제할까요?";
+"delete_account_warning_message" = "이 작업은 되돌릴 수 없으며, 계정과 모든 로컬 데이터가 삭제됩니다.";
+"delete_account_confirm_button" = "삭제";
+"delete_account_keyword" = "삭제";
+"delete_account_placeholder" = "\"%@\"를 입력해 확인하세요";
+"delete_account_instruction" = "\"%@\"를 입력하면 계정과 로컬 데이터가 모두 삭제됩니다.";
+"delete_account_success_title" = "삭제 완료";
+"delete_account_success_message" = "계정과 모든 로컬 데이터가 삭제되었습니다.";
+"delete_account_error_title" = "삭제 실패";

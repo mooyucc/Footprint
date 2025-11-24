@@ -12,6 +12,7 @@
 "not_logged_in" = "Non connecté";
 "login_sync_description" = "Les données seront automatiquement synchronisées avec iCloud après la connexion";
 "data_sync" = "Synchronisation des données";
+"data_settings" = "Données";
 "icloud_sync" = "Synchronisation iCloud";
 "enabled" = "Activé";
 "not_enabled" = "Non activé";
@@ -27,6 +28,14 @@
 "sign_out" = "Se déconnecter";
 "language" = "Langue";
 "language_selection" = "Sélection de la langue";
+"appearance" = "Apparence";
+"general_settings" = "Général";
+"brand_color" = "Couleur de marque";
+"custom_color_active" = "Couleur personnalisée active";
+"default_color_active" = "Couleur par défaut active";
+"select_brand_color" = "Sélectionner la couleur de marque";
+"reset_to_default_color" = "Réinitialiser la couleur par défaut";
+"brand_color_description" = "Définissez la couleur d'accent de l'app utilisée pour les boutons et éléments clés.";
 
 // Edit User Name
 "edit_username" = "Modifier le nom d'utilisateur";
@@ -358,3 +367,17 @@
 "copyright" = "Droits d'auteur";
 "all_rights_reserved" = "Tous droits réservés";
 
+
+// Account deletion
+"delete_account" = "Supprimer le compte";
+"delete_account_description" = "Supprime vos informations de compte et efface tous les voyages sur cet appareil.";
+"delete_account_detail" = "Cette action supprime définitivement le compte, les sauvegardes locales et les photos.";
+"delete_account_warning_title" = "Supprimer le compte ?";
+"delete_account_warning_message" = "Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.";
+"delete_account_confirm_button" = "Supprimer";
+"delete_account_keyword" = "SUPPRIMER";
+"delete_account_placeholder" = "Saisissez %@ pour confirmer";
+"delete_account_instruction" = "Saisissez %@ pour confirmer. Votre compte et toutes les données locales seront supprimés.";
+"delete_account_success_title" = "Compte supprimé";
+"delete_account_success_message" = "Votre compte et toutes les données locales ont été effacés.";
+"delete_account_error_title" = "Échec de la suppression";

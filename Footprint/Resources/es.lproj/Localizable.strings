@@ -12,6 +12,7 @@
 "not_logged_in" = "No iniciado sesión";
 "login_sync_description" = "Los datos se sincronizarán automáticamente con iCloud después de iniciar sesión";
 "data_sync" = "Sincronización de datos";
+"data_settings" = "Datos";
 "icloud_sync" = "Sincronización iCloud";
 "enabled" = "Habilitado";
 "not_enabled" = "No habilitado";
@@ -27,6 +28,14 @@
 "sign_out" = "Cerrar sesión";
 "language" = "Idioma";
 "language_selection" = "Selección de idioma";
+"appearance" = "Apariencia";
+"general_settings" = "General";
+"brand_color" = "Color de marca";
+"custom_color_active" = "Color personalizado activo";
+"default_color_active" = "Color predeterminado activo";
+"select_brand_color" = "Seleccionar color de marca";
+"reset_to_default_color" = "Restablecer al color predeterminado";
+"brand_color_description" = "Configura el color principal de la app para botones y elementos destacados.";
 
 // Edit User Name
 "edit_username" = "Editar nombre de usuario";
@@ -358,3 +367,17 @@
 "copyright" = "Derechos de autor";
 "all_rights_reserved" = "Todos los derechos reservados";
 
+
+// Account deletion
+"delete_account" = "Eliminar cuenta";
+"delete_account_description" = "Elimina tu información de cuenta y borra todos los viajes de este dispositivo.";
+"delete_account_detail" = "Esta acción eliminará la cuenta, las copias locales y las fotos de forma permanente.";
+"delete_account_warning_title" = "¿Eliminar la cuenta?";
+"delete_account_warning_message" = "¿Seguro que quieres eliminar la cuenta? Esta acción no se puede deshacer.";
+"delete_account_confirm_button" = "Eliminar";
+"delete_account_keyword" = "ELIMINAR";
+"delete_account_placeholder" = "Escribe %@ para confirmar";
+"delete_account_instruction" = "Escribe %@ para confirmar. Se borrarán la cuenta y todos los datos locales.";
+"delete_account_success_title" = "Cuenta eliminada";
+"delete_account_success_message" = "Tu cuenta y los datos locales se eliminaron correctamente.";
+"delete_account_error_title" = "Error al eliminar";

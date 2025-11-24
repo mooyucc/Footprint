@@ -12,6 +12,7 @@
 "not_logged_in" = "Not logged in";
 "login_sync_description" = "Data will automatically sync to iCloud after logging in";
 "data_sync" = "Data Sync";
+"data_settings" = "Data";
 "icloud_sync" = "iCloud Sync";
 "enabled" = "Enabled";
 "not_enabled" = "Not enabled";
@@ -27,6 +28,14 @@
 "sign_out" = "Sign Out";
 "language" = "Language";
 "language_selection" = "Language Selection";
+"appearance" = "Appearance";
+"general_settings" = "General";
+"brand_color" = "Brand Color";
+"custom_color_active" = "Custom color active";
+"default_color_active" = "Default color active";
+"select_brand_color" = "Select brand color";
+"reset_to_default_color" = "Reset to default color";
+"brand_color_description" = "Set the app's accent color used on buttons and highlights.";
 
 // Edit User Name
 "edit_username" = "Edit Username";
@@ -366,3 +375,17 @@
 "default_color_active" = "Using default color";
 "reset_to_default_color" = "Reset to Default";
 "brand_color_description" = "Customize the app's theme color, which will be applied to icons, buttons, and other UI elements";
+
+// Account deletion
+"delete_account" = "Delete Account";
+"delete_account_description" = "Removes your account info and erases all trips on this device.";
+"delete_account_detail" = "This action deletes your account data and clears every local trip, backup, and media.";
+"delete_account_warning_title" = "Delete Account?";
+"delete_account_warning_message" = "Are you sure you want to delete your account? This action cannot be undone.";
+"delete_account_confirm_button" = "Delete Account";
+"delete_account_keyword" = "DELETE";
+"delete_account_placeholder" = "Type %@ to confirm";
+"delete_account_instruction" = "Type %@ to confirm. Your account and all local data will be removed.";
+"delete_account_success_title" = "Account Deleted";
+"delete_account_success_message" = "Your account and all local data have been deleted.";
+"delete_account_error_title" = "Delete Failed";

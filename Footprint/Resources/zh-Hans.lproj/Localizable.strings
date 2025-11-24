@@ -12,6 +12,7 @@
 "not_logged_in" = "未登录";
 "login_sync_description" = "登录后数据自动同步到 iCloud";
 "data_sync" = "数据同步";
+"data_settings" = "数据";
 "icloud_sync" = "iCloud 同步";
 "enabled" = "已启用";
 "not_enabled" = "未启用";
@@ -27,6 +28,14 @@
 "sign_out" = "退出登录";
 "language" = "语言";
 "language_selection" = "语言选择";
+"appearance" = "外观";
+"general_settings" = "通用";
+"brand_color" = "品牌颜色";
+"custom_color_active" = "已启用自定义颜色";
+"default_color_active" = "使用默认颜色";
+"select_brand_color" = "选择品牌颜色";
+"reset_to_default_color" = "恢复默认颜色";
+"brand_color_description" = "设置应用的主题色，用于按钮与重点元素。";
 
 // Edit User Name
 "edit_username" = "编辑用户名";
@@ -366,3 +375,17 @@
 "default_color_active" = "使用默认颜色";
 "reset_to_default_color" = "恢复默认颜色";
 "brand_color_description" = "自定义应用的主题颜色，将应用于图标、按钮等界面元素";
+
+// Account deletion
+"delete_account" = "删除账户";
+"delete_account_description" = "将移除账户信息并清空此设备的所有旅行数据。";
+"delete_account_detail" = "删除后，账户资料、本地旅行记录、备份与图片都会被彻底清除，且无法恢复。";
+"delete_account_warning_title" = "确定要删除账户吗？";
+"delete_account_warning_message" = "此操作不可逆，将删除账户及所有本地数据。";
+"delete_account_confirm_button" = "删除";
+"delete_account_keyword" = "删除";
+"delete_account_placeholder" = "请输入“%@”确认";
+"delete_account_instruction" = "请输入“%@”以确认，你的账户和本地数据会被全部删除。";
+"delete_account_success_title" = "删除成功";
+"delete_account_success_message" = "账户及所有本地数据已清空。";
+"delete_account_error_title" = "删除失败";

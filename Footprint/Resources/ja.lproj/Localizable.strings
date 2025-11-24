@@ -12,6 +12,7 @@
 "not_logged_in" = "ログインしていません";
 "login_sync_description" = "ログイン後、データは自動的にiCloudに同期されます";
 "data_sync" = "データ同期";
+"data_settings" = "データ";
 "icloud_sync" = "iCloud同期";
 "enabled" = "有効";
 "not_enabled" = "無効";
@@ -27,6 +28,14 @@
 "sign_out" = "サインアウト";
 "language" = "言語";
 "language_selection" = "言語選択";
+"appearance" = "外観";
+"general_settings" = "一般";
+"brand_color" = "ブランドカラー";
+"custom_color_active" = "カスタムカラーを使用中";
+"default_color_active" = "デフォルトカラーを使用中";
+"select_brand_color" = "ブランドカラーを選択";
+"reset_to_default_color" = "デフォルトにリセット";
+"brand_color_description" = "アプリ全体で使われるアクセントカラーを設定します。";
 
 // Edit User Name
 "edit_username" = "ユーザー名を編集";
@@ -358,3 +367,17 @@
 "copyright" = "著作権";
 "all_rights_reserved" = "All Rights Reserved";
 
+
+// Account deletion
+"delete_account" = "アカウントを削除";
+"delete_account_description" = "アカウント情報とこのデバイス上のすべての旅のデータを削除します。";
+"delete_account_detail" = "削除するとアカウント、ローカルの旅データ、バックアップや写真が完全に消去され、元に戻せません。";
+"delete_account_warning_title" = "アカウントを削除しますか？";
+"delete_account_warning_message" = "この操作は取り消せません。アカウントとローカルデータが削除されます。";
+"delete_account_confirm_button" = "削除";
+"delete_account_keyword" = "削除";
+"delete_account_placeholder" = "確認のため「%@」と入力してください";
+"delete_account_instruction" = "確認のため「%@」と入力してください。アカウントとローカルデータがすべて削除されます。";
+"delete_account_success_title" = "削除が完了しました";
+"delete_account_success_message" = "アカウントとローカルデータが削除されました。";
+"delete_account_error_title" = "削除に失敗しました";
