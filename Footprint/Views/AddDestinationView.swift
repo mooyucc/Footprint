@@ -16,6 +16,7 @@ struct AddDestinationPrefill {
     var location: MKMapItem?
     var name: String?
     var country: String?
+    var province: String?
     var category: String?
     var visitDate: Date?
     var photoDatas: [Data]
@@ -25,6 +26,7 @@ struct AddDestinationPrefill {
         location: MKMapItem? = nil,
         name: String? = nil,
         country: String? = nil,
+        province: String? = nil,
         category: String? = nil,
         visitDate: Date? = nil,
         photoDatas: [Data] = [],
@@ -33,6 +35,7 @@ struct AddDestinationPrefill {
         self.location = location
         self.name = name
         self.country = country
+        self.province = province
         self.category = category
         self.visitDate = visitDate
         self.photoDatas = photoDatas
@@ -52,6 +55,7 @@ struct AddDestinationView: View {
     
     @State private var name: String
     @State private var country: String
+    @State private var province: String
     @State private var visitDate: Date
     @State private var notes = ""
     @State private var category: String
@@ -77,6 +81,7 @@ struct AddDestinationView: View {
         self.prefill = prefill
         let initialName = prefill?.name ?? ""
         let initialCountry = prefill?.country ?? ""
+        let initialProvince = prefill?.province ?? ""
         let initialCategory = prefill?.category ?? "domestic"
         let initialVisitDate = prefill?.visitDate ?? Date()
         let initialLocation = prefill?.location
@@ -91,6 +96,7 @@ struct AddDestinationView: View {
         
         _name = State(initialValue: initialName)
         _country = State(initialValue: initialCountry)
+        _province = State(initialValue: initialProvince)
         _visitDate = State(initialValue: initialVisitDate)
         _category = State(initialValue: initialCategory)
         _photoDatas = State(initialValue: initialPhotoDatas)
@@ -111,38 +117,18 @@ struct AddDestinationView: View {
                     }
                     .pickerStyle(.segmented)
                     
+                    TextField("province_state".localized, text: $province)
+                    
                     TextField("country_region".localized, text: $country)
                     
                     DatePicker("visit_date".localized, selection: $visitDate, displayedComponents: [.date, .hourAndMinute])
-                        .environment(\.locale, Locale(identifier: languageManager.currentLanguage.rawValue))
+                        .environment(\.locale, get24HourLocale())
                     
                     Toggle("mark_as_favorite".localized, isOn: $isFavorite)
                 }
                 
-                if !trips.isEmpty {
-                    Section("belongs_to_trip_optional".localized) {
-                        Picker("select_trip".localized, selection: $selectedTrip) {
-                            Text("none".localized).tag(nil as TravelTrip?)
-                            ForEach(trips) { trip in
-                                Text(trip.name).tag(trip as TravelTrip?)
-                            }
-                        }
-                        
-                        if let trip = selectedTrip {
-                            HStack {
-                                Image(systemName: "info.circle")
-                                    .foregroundColor(.blue)
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(trip.name)
-                                        .font(.caption)
-                                    Text("\(trip.startDate.localizedFormatted(dateStyle: .medium)) - \(trip.endDate.localizedFormatted(dateStyle: .medium))")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                        }
-                    }
-                }
+                // 使用可复用的旅程选择组件
+                TripSelectionSection(selectedTrip: $selectedTrip)
                 
                 Section("location_search".localized) {
                     VStack(alignment: .leading, spacing: 8) {
@@ -269,46 +255,15 @@ struct AddDestinationView: View {
                     }
                 }
                 
-                Section("photo".localized) {
-                    PhotosPicker(selection: $selectedPhotos, maxSelectionCount: 10, matching: .images) {
-                        Label("select_photo".localized, systemImage: "photo")
-                    }
-                    
-                    if !photoDatas.isEmpty {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 90), spacing: 8)], spacing: 8) {
-                            ForEach(Array(photoDatas.enumerated()), id: \.offset) { index, data in
-                                let thumbnailData = index < photoThumbnailDatas.count ? photoThumbnailDatas[index] : data
-                                if let uiImage = UIImage(data: thumbnailData) {
-                                    ZStack(alignment: .topTrailing) {
-                                        Image(uiImage: uiImage)
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: 100, height: 100)
-                                            .clipped()
-                                            .cornerRadius(8)
-                                        Button {
-                                            photoDatas.remove(at: index)
-                                            if index < photoThumbnailDatas.count {
-                                                photoThumbnailDatas.remove(at: index)
-                                            }
-                                        } label: {
-                                            Image(systemName: "xmark.circle.fill")
-                                                .foregroundColor(.white)
-                                                .background(Circle().fill(Color.black.opacity(0.5)))
-                                        }
-                                        .padding(4)
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-                }
+                // 使用可复用的照片选择组件
+                PhotoSelectionSection(
+                    selectedPhotos: $selectedPhotos,
+                    photoDatas: $photoDatas,
+                    photoThumbnailDatas: $photoThumbnailDatas
+                )
                 
-                Section("notes".localized) {
-                    TextEditor(text: $notes)
-                        .frame(minHeight: 100)
-                }
+                // 使用可复用的笔记组件
+                NotesSection(notes: $notes)
             }
             .navigationTitle("add_destination".localized)
             .navigationBarTitleDisplayMode(.inline)
@@ -324,25 +279,6 @@ struct AddDestinationView: View {
                         saveDestination()
                     }
                     .disabled(!isValid)
-                }
-            }
-            .onChange(of: selectedPhotos) { oldValue, newValue in
-                Task {
-                    var processed: [(Data, Data)] = []
-                    for item in newValue {
-                        if let data = try? await item.loadTransferable(type: Data.self) {
-                            let result = ImageProcessor.process(data: data)
-                            processed.append(result)
-                        }
-                    }
-                    if !processed.isEmpty {
-                        await MainActor.run {
-                            for (resized, thumbnail) in processed {
-                                photoDatas.append(resized)
-                                photoThumbnailDatas.append(thumbnail)
-                            }
-                        }
-                    }
                 }
             }
             .alert("duplicate_destination_title".localized, isPresented: $showDuplicateAlert) {
@@ -607,6 +543,14 @@ struct AddDestinationView: View {
         // 自动填充国家/地区
         country = item.placemark.country ?? ""
         
+        // 自动填充省份/州（对于中国直辖市，会将其名称作为省份）
+        province = CountryManager.extractProvince(
+            administrativeArea: item.placemark.administrativeArea,
+            locality: item.placemark.locality,
+            country: country,
+            isoCountryCode: item.placemark.isoCountryCode
+        )
+        
         // 根据国家信息自动判断分类
         if let countryCode = item.placemark.isoCountryCode {
             if countryCode == "CN" || country == "中国" || country == "China" {
@@ -655,6 +599,7 @@ struct AddDestinationView: View {
         let destination = TravelDestination(
             name: name,
             country: country,
+            province: province,
             latitude: location.placemark.coordinate.latitude,
             longitude: location.placemark.coordinate.longitude,
             visitDate: visitDate,
@@ -675,6 +620,8 @@ struct AddDestinationView: View {
         modelContext.insert(destination)
         // 立即保存，确保 @Query 与统计更新
         try? modelContext.save()
+        // 发送更新通知，通知徽章视图更新（新增目的地）
+        NotificationCenter.default.post(name: .destinationUpdated, object: nil)
         dismiss()
     }
     
@@ -684,6 +631,7 @@ struct AddDestinationView: View {
         // 更新现有目的地的信息
         existing.name = name
         existing.country = country
+        existing.province = province
         existing.latitude = selectedLocation?.placemark.coordinate.latitude ?? existing.latitude
         existing.longitude = selectedLocation?.placemark.coordinate.longitude ?? existing.longitude
         existing.visitDate = visitDate
@@ -700,7 +648,33 @@ struct AddDestinationView: View {
         
         // 保存更新
         try? modelContext.save()
+        // 发送更新通知，通知徽章视图更新（覆盖现有目的地）
+        NotificationCenter.default.post(name: .destinationUpdated, object: nil)
         dismiss()
+    }
+    
+    // 获取24小时制的locale（用于DatePicker显示24小时制时间）
+    private func get24HourLocale() -> Locale {
+        // 根据当前语言返回对应的locale，但强制使用24小时制
+        let baseLocale = Locale(identifier: languageManager.currentLanguage.rawValue)
+        
+        // 对于中文环境，使用zh_CN但确保24小时制
+        // 可以通过创建自定义locale或使用特定标识符
+        switch languageManager.currentLanguage {
+        case .chinese, .chineseTraditional:
+            // 使用zh_CN但确保24小时制显示
+            return Locale(identifier: "zh_CN")
+        case .english:
+            return Locale(identifier: "en_US")
+        case .japanese:
+            return Locale(identifier: "ja_JP")
+        case .french:
+            return Locale(identifier: "fr_FR")
+        case .spanish:
+            return Locale(identifier: "es_ES")
+        case .korean:
+            return Locale(identifier: "ko_KR")
+        }
     }
 }
 

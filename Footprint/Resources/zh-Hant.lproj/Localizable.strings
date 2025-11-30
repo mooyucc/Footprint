@@ -37,6 +37,13 @@
 "reset_to_default_color" = "恢復預設顏色";
 "brand_color_description" = "設置應用的主題色，用於按鈕與重點元素。";
 
+// Appearance Mode Settings
+"appearance_mode" = "外觀模式";
+"appearance_mode_system" = "系統";
+"appearance_mode_dark" = "深色";
+"appearance_mode_light" = "淺色";
+"appearance_mode_description" = "選擇應用的外觀模式，跟隨系統將根據系統設置自動切換";
+
 // Edit User Name
 "edit_username" = "編輯用戶名";
 "custom_username" = "自定義用戶名";
@@ -142,6 +149,7 @@
 "basic_info" = "基本信息";
 "place_name" = "地點名稱";
 "category" = "分類";
+"province_state" = "省份/州";
 "country_region" = "國家/地區";
 "visit_date" = "訪問日期";
 "mark_as_favorite" = "標記為喜愛";
@@ -173,6 +181,7 @@
 "map_button_footprints" = "足跡";
 "map_button_search" = "搜索";
 "map_button_style" = "樣式";
+"map_button_menu" = "快捷操作";
 "map_button_import_photo" = "導入照片";
 "footprints_action_menu" = "快捷操作";
 "search_places" = "搜索地點";
@@ -381,3 +390,40 @@
 "delete_account_success_title" = "刪除成功";
 "delete_account_success_message" = "帳戶與所有本地資料已清空。";
 "delete_account_error_title" = "刪除失敗";
+
+// Quick Check In View
+"quick_check_in" = "快速打卡";
+"more_options" = "更多選項";
+"loading_location" = "正在載入位置...";
+"notes_guide_question" = "今天的心情如何？";
+"notes_guide_question_with_weather" = "今天%@，%@，心情如何？";
+
+// POI Preview Card
+"open_in_maps" = "在地圖中打開";
+"unknown_location" = "未知位置";
+"point_of_interest" = "興趣點";
+"restaurant" = "餐廳";
+"cafe" = "咖啡廳";
+"hotel" = "酒店";
+"gas_station" = "加油站";
+"airport" = "機場";
+"park" = "公園";
+"museum" = "博物館";
+"theater" = "劇院";
+"store" = "商店";
+"school" = "學校";
+"hospital" = "醫院";
+"bank" = "銀行";
+
+// Badge View
+"badges" = "徽章";
+"country_badges" = "國家勳章";
+"province_badges" = "省份勳章";
+"badges_progress" = "點亮進度";
+"search_badges" = "搜索勳章...";
+"location" = "個地點";
+"locations" = "個地點";
+"not_visited" = "未訪問";
+"view_badge" = "查看徽章";
+"view_destinations" = "查看地點";
+"no_destinations" = "暫無地點";

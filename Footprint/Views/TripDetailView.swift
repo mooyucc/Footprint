@@ -383,6 +383,8 @@ struct TripDestinationRow: View {
                 Image("ImageMooyu")
                     .renderingMode(.original)
                     .resizable()
+                    .interpolation(.high)  // 高质量插值，确保边缘光滑
+                    .antialiased(true)     // 启用抗锯齿
                     .scaledToFill()
                     .frame(width: 50, height: 50)
                     .clipShape(RoundedRectangle(cornerRadius: 8))

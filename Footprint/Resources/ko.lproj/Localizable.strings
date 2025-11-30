@@ -37,6 +37,13 @@
 "reset_to_default_color" = "기본값으로 재설정";
 "brand_color_description" = "앱의 주요 버튼과 강조 요소에 사용되는 색상을 설정하세요.";
 
+// Appearance Mode Settings
+"appearance_mode" = "외관 모드";
+"appearance_mode_system" = "시스템 따르기";
+"appearance_mode_dark" = "다크";
+"appearance_mode_light" = "라이트";
+"appearance_mode_description" = "앱의 외관 모드를 선택하세요. 시스템 따르기는 시스템 설정에 따라 자동으로 전환됩니다";
+
 // Edit User Name
 "edit_username" = "사용자 이름 편집";
 "custom_username" = "사용자 지정 사용자 이름";
@@ -142,6 +149,7 @@
 "basic_info" = "기본 정보";
 "place_name" = "장소 이름";
 "category" = "카테고리";
+"province_state" = "도/주";
 "country_region" = "국가/지역";
 "visit_date" = "방문 날짜";
 "mark_as_favorite" = "즐겨찾기로 표시";
@@ -381,3 +389,40 @@
 "delete_account_success_title" = "삭제 완료";
 "delete_account_success_message" = "계정과 모든 로컬 데이터가 삭제되었습니다.";
 "delete_account_error_title" = "삭제 실패";
+
+// Quick Check In View
+"quick_check_in" = "빠른 체크인";
+"more_options" = "추가 옵션";
+"loading_location" = "위치 로딩 중...";
+"notes_guide_question" = "오늘 기분이 어떠신가요?";
+"notes_guide_question_with_weather" = "오늘 %@, %@, 기분이 어떠신가요?";
+
+// POI Preview Card
+"open_in_maps" = "지도에서 열기";
+"unknown_location" = "알 수 없는 위치";
+"point_of_interest" = "관심 지점";
+"restaurant" = "레스토랑";
+"cafe" = "카페";
+"hotel" = "호텔";
+"gas_station" = "주유소";
+"airport" = "공항";
+"park" = "공원";
+"museum" = "박물관";
+"theater" = "극장";
+"store" = "상점";
+"school" = "학교";
+"hospital" = "병원";
+"bank" = "은행";
+
+// Badge View
+"badges" = "배지";
+"country_badges" = "국가 배지";
+"province_badges" = "지역 배지";
+"badges_progress" = "진행률";
+"search_badges" = "배지 검색...";
+"location" = "개 장소";
+"locations" = "개 장소";
+"not_visited" = "방문하지 않음";
+"view_badge" = "배지 보기";
+"view_destinations" = "목적지 보기";
+"no_destinations" = "목적지 없음";

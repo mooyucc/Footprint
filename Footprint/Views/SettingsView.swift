@@ -15,7 +15,9 @@ struct SettingsView: View {
     @EnvironmentObject var languageManager: LanguageManager
     @EnvironmentObject var countryManager: CountryManager
     @EnvironmentObject var brandColorManager: BrandColorManager
+    @EnvironmentObject var appearanceManager: AppearanceManager
     @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) private var systemColorScheme
     @State private var showingEditName = false
     @State private var editingName = ""
     @State private var showingEditAvatar = false
@@ -220,7 +222,7 @@ struct SettingsView: View {
                     .environmentObject(languageManager)
             }
             .sheet(isPresented: $showingGeneralSettings) {
-                GeneralSettingsView()
+                GeneralSettingsView(appearanceManager: AppearanceManager.shared)
                     .environmentObject(languageManager)
                     .environmentObject(countryManager)
                     .environmentObject(brandColorManager)
@@ -230,6 +232,22 @@ struct SettingsView: View {
                     .environmentObject(appleSignInManager)
                     .environmentObject(brandColorManager)
             }
+        }
+        .preferredColorScheme(actualColorScheme)
+    }
+    
+    // MARK: - Helper Methods
+    
+    /// 获取实际使用的颜色模式（考虑系统模式）
+    private var actualColorScheme: ColorScheme? {
+        switch appearanceManager.currentMode {
+        case .system:
+            // 当跟随系统时，主动读取系统当前的颜色模式
+            return appearanceManager.systemColorScheme
+        case .dark:
+            return .dark
+        case .light:
+            return .light
         }
     }
     
@@ -597,6 +615,8 @@ struct DataSettingsView: View {
             
             do {
                 try modelContext.save()
+                // 发送批量删除通知，通知徽章视图更新
+                NotificationCenter.default.post(name: .destinationDeleted, object: nil)
                 appleSignInManager.signOut()
                 showingDeleteAccountSuccess = true
             } catch {
@@ -682,7 +702,9 @@ struct GeneralSettingsView: View {
     @EnvironmentObject var languageManager: LanguageManager
     @EnvironmentObject var countryManager: CountryManager
     @EnvironmentObject var brandColorManager: BrandColorManager
+    @ObservedObject var appearanceManager: AppearanceManager
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var systemColorScheme
     @State private var showingLanguagePicker = false
     @State private var showingCountryPicker = false
     
@@ -727,6 +749,26 @@ struct GeneralSettingsView: View {
                     Text("country".localized)
                 } footer: {
                     Text("country_description".localized)
+                }
+                
+                // 外观模式设置
+                Section {
+                    Picker("appearance_mode".localized, selection: Binding(
+                        get: { appearanceManager.currentMode },
+                        set: { newMode in
+                            appearanceManager.setAppearanceMode(newMode)
+                        }
+                    )) {
+                        ForEach(AppearanceManager.AppearanceMode.allCases, id: \.self) { mode in
+                            Text(mode.displayName)
+                                .tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                } header: {
+                    Text("appearance_mode".localized)
+                } footer: {
+                    Text("appearance_mode_description".localized)
                 }
                 
                 // 品牌颜色设置（外观）
@@ -802,11 +844,39 @@ struct GeneralSettingsView: View {
                 }
             }
         }
+        .preferredColorScheme(actualColorScheme)
         .sheet(isPresented: $showingLanguagePicker) {
             LanguageSelectionView()
         }
         .sheet(isPresented: $showingCountryPicker) {
             CountrySelectionView()
+        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    /// 获取实际使用的颜色模式（考虑系统模式）
+    private var actualColorScheme: ColorScheme? {
+        switch appearanceManager.currentMode {
+        case .system:
+            // 当跟随系统时，主动读取系统当前的颜色模式
+            return appearanceManager.systemColorScheme
+        case .dark:
+            return .dark
+        case .light:
+            return .light
+        }
+    }
+    
+    /// 获取外观模式的图标
+    private func modeIcon(for mode: AppearanceManager.AppearanceMode) -> String {
+        switch mode {
+        case .system:
+            return "circle.lefthalf.filled"
+        case .dark:
+            return "moon.fill"
+        case .light:
+            return "sun.max.fill"
         }
     }
 }

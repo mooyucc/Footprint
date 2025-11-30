@@ -1,0 +1,23 @@
+# 忽略所有图片文件（如果不想提交原始图片到 Git）
+# 如果需要提交图片，可以删除或注释掉下面的规则
+
+# 国家图片
+Countries/*.png
+Countries/*.jpg
+Countries/*.jpeg
+Countries/*.PNG
+Countries/*.JPG
+Countries/*.JPEG
+
+# 省份图片
+Provinces/*.png
+Provinces/*.jpg
+Provinces/*.jpeg
+Provinces/*.PNG
+Provinces/*.JPG
+Provinces/*.JPEG
+
+# 但保留 README 和列表文件
+!README.md
+!image_name_list.txt
+

@@ -108,9 +108,16 @@ struct DestinationDetailView: View {
                                 }
                             }
                             
-                            Text(destination.country)
-                                .font(.title3)
-                                .foregroundColor(.secondary)
+                            VStack(alignment: .leading, spacing: 4) {
+                                if !destination.province.isEmpty {
+                                    Text(destination.province)
+                                        .font(.title3)
+                                        .foregroundColor(.secondary)
+                                }
+                                Text(destination.country)
+                                    .font(destination.province.isEmpty ? .title3 : .subheadline)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                         
                         Spacer()
@@ -274,6 +281,17 @@ struct DestinationDetailView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { _ in
                 // 语言变化时刷新界面
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .destinationDeleted)) { notification in
+                // 当地点被删除时，如果删除的是当前地点，则关闭详情页
+                if let userInfo = notification.userInfo,
+                   let deletedDestinationId = userInfo["destinationId"] as? UUID,
+                   destination.id == deletedDestinationId {
+                    dismiss()
+                } else if notification.userInfo?["destinationId"] == nil {
+                    // 如果是批量删除（没有 destinationId），也关闭详情页
+                    dismiss()
+                }
             }
         }
     }

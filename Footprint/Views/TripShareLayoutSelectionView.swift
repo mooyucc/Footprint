@@ -13,6 +13,7 @@ struct TripShareLayoutSelectionView: View {
     @Binding var selectedLayout: TripShareLayout
     @Environment(\.dismiss) private var dismiss
     @State private var shareItem: TripShareItem?
+    @State private var isGenerating = false
     
     var body: some View {
         NavigationStack {
@@ -35,19 +36,26 @@ struct TripShareLayoutSelectionView: View {
                 // 底部操作按钮
                 VStack(spacing: 12) {
                     Button {
+                        guard !isGenerating else { return }
                         generateAndShare()
                     } label: {
                         HStack {
-                            Image(systemName: "square.and.arrow.up")
-                            Text("share".localized)
+                            if isGenerating {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            } else {
+                                Image(systemName: "square.and.arrow.up")
+                            }
+                            Text(isGenerating ? "正在生成..." : "share".localized)
                         }
                         .font(.headline)
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color.blue)
+                        .background(isGenerating ? Color.gray : Color.blue)
                         .cornerRadius(12)
                     }
+                    .disabled(isGenerating)
                     
                     Button {
                         dismiss()
@@ -71,8 +79,19 @@ struct TripShareLayoutSelectionView: View {
     }
     
     private func generateAndShare() {
-        let tripImage = TripImageGenerator.generateTripImage(from: trip, layout: selectedLayout)
-        shareItem = TripShareItem(text: "", image: tripImage)
+        guard !isGenerating else { return }
+        
+        isGenerating = true
+        
+        // 在后台线程生成图片，避免阻塞UI
+        DispatchQueue.global(qos: .userInitiated).async {
+            let tripImage = TripImageGenerator.generateTripImage(from: trip, layout: selectedLayout)
+            
+            DispatchQueue.main.async {
+                self.isGenerating = false
+                self.shareItem = TripShareItem(text: "", image: tripImage)
+            }
+        }
     }
 }
 

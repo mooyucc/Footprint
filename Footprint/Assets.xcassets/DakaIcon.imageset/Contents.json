@@ -1,15 +1,17 @@
 {
   "images" : [
     {
-      "filename" : "Group 11.png",
+      "filename" : "Frame 10 30.png",
       "idiom" : "universal",
       "scale" : "1x"
     },
     {
+      "filename" : "Frame 10 60.png",
       "idiom" : "universal",
       "scale" : "2x"
     },
     {
+      "filename" : "Frame 10 90.png",
       "idiom" : "universal",
       "scale" : "3x"
     }

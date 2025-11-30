@@ -325,11 +325,17 @@ struct AddDestinationToTripView: View {
             
             destination.trip = trip
             modelContext.insert(destination)
+            try? modelContext.save()
+            // 发送更新通知，通知徽章视图更新（新增目的地到旅程）
+            NotificationCenter.default.post(name: .destinationUpdated, object: nil)
         } else {
             // 将现有目的地添加到旅程
             for destination in selectedDestinations {
                 destination.trip = trip
             }
+            try? modelContext.save()
+            // 发送更新通知（虽然只是关联旅程，但为了保险起见也发送）
+            NotificationCenter.default.post(name: .destinationUpdated, object: nil)
         }
         
         dismiss()

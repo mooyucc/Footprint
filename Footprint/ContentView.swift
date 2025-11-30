@@ -38,6 +38,16 @@ struct ContentView: View {
                 }
                 .tag(1)
             
+            BadgeView()
+                .tabItem {
+                    Label {
+                        Text("badges".localized)
+                    } icon: {
+                        Image(systemName: "medal.star")
+                    }
+                }
+                .tag(2)
+            
             ProfileView()
                 .tabItem {
                     Label {
@@ -46,7 +56,7 @@ struct ContentView: View {
                         Image(systemName: "person.fill")
                     }
                 }
-                .tag(2)
+                .tag(3)
         }
         .tint(brandColorManager.currentBrandColor) // 使用品牌红色，确保所有 tab 一致，并响应颜色变化
         .onAppear {
@@ -306,6 +316,8 @@ struct ProfileView: View {
             } else {
                 Image("ImageMooyu")
                     .resizable()
+                    .interpolation(.high)  // 高质量插值，确保边缘光滑
+                    .antialiased(true)     // 启用抗锯齿
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 80, height: 80)
                     .clipShape(Circle())

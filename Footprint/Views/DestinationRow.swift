@@ -56,10 +56,21 @@ struct DestinationRow: View {
                     }
                 }
                 
-                Text(destination.country.isEmpty ? "-" : destination.country)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    if !destination.province.isEmpty {
+                        Text(destination.province)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                        Text("·")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    Text(destination.country.isEmpty ? "-" : destination.country)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
                 
                 Text(visitDateText)
                     .font(.caption)
@@ -97,6 +108,8 @@ struct DestinationRow: View {
                 Image("ImageMooyu")
                     .renderingMode(.original)
                     .resizable()
+                    .interpolation(.high)  // 高质量插值，确保边缘光滑
+                    .antialiased(true)     // 启用抗锯齿
                     .scaledToFill()
             }
         }

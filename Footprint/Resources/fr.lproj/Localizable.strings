@@ -37,6 +37,13 @@
 "reset_to_default_color" = "Réinitialiser la couleur par défaut";
 "brand_color_description" = "Définissez la couleur d'accent de l'app utilisée pour les boutons et éléments clés.";
 
+// Appearance Mode Settings
+"appearance_mode" = "Mode d'Apparence";
+"appearance_mode_system" = "Suivre le Système";
+"appearance_mode_dark" = "Sombre";
+"appearance_mode_light" = "Clair";
+"appearance_mode_description" = "Choisissez le mode d'apparence de l'app. Suivre le Système basculera automatiquement selon les paramètres du système";
+
 // Edit User Name
 "edit_username" = "Modifier le nom d'utilisateur";
 "custom_username" = "Nom d'utilisateur personnalisé";
@@ -142,6 +149,7 @@
 "basic_info" = "Informations de base";
 "place_name" = "Nom du lieu";
 "category" = "Catégorie";
+"province_state" = "Province/État";
 "country_region" = "Pays/Région";
 "visit_date" = "Date de visite";
 "mark_as_favorite" = "Marquer comme favori";
@@ -173,6 +181,7 @@
 "map_button_footprints" = "Empreintes";
 "map_button_search" = "Rechercher";
 "map_button_style" = "Style";
+"map_button_menu" = "Actions rapides";
 "map_button_import_photo" = "Importer une photo";
 "footprints_action_menu" = "Actions rapides";
 "search_places" = "Rechercher des lieux";
@@ -381,3 +390,40 @@
 "delete_account_success_title" = "Compte supprimé";
 "delete_account_success_message" = "Votre compte et toutes les données locales ont été effacés.";
 "delete_account_error_title" = "Échec de la suppression";
+
+// Quick Check In View
+"quick_check_in" = "Enregistrement rapide";
+"more_options" = "Plus d'options";
+"loading_location" = "Chargement de la position...";
+"notes_guide_question" = "Comment vous sentez-vous aujourd'hui ?";
+"notes_guide_question_with_weather" = "Il fait %@ et %@ aujourd'hui, comment vous sentez-vous ?";
+
+// POI Preview Card
+"open_in_maps" = "Ouvrir dans Plans";
+"unknown_location" = "Emplacement inconnu";
+"point_of_interest" = "Point d'intérêt";
+"restaurant" = "Restaurant";
+"cafe" = "Café";
+"hotel" = "Hôtel";
+"gas_station" = "Station-service";
+"airport" = "Aéroport";
+"park" = "Parc";
+"museum" = "Musée";
+"theater" = "Théâtre";
+"store" = "Magasin";
+"school" = "École";
+"hospital" = "Hôpital";
+"bank" = "Banque";
+
+// Badge View
+"badges" = "Badges";
+"country_badges" = "Badges de pays";
+"province_badges" = "Badges de province";
+"badges_progress" = "Progression";
+"search_badges" = "Rechercher des badges...";
+"location" = "lieu";
+"locations" = "lieux";
+"not_visited" = "Non visité";
+"view_badge" = "Voir le Badge";
+"view_destinations" = "Voir les Destinations";
+"no_destinations" = "Aucune Destination";

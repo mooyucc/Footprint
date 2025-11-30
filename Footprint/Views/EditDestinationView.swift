@@ -23,6 +23,7 @@ struct EditDestinationView: View {
     
     @State private var name = ""
     @State private var country = ""
+    @State private var province = ""
     @State private var visitDate = Date()
     @State private var notes = ""
     @State private var category = "international"
@@ -68,10 +69,12 @@ struct EditDestinationView: View {
                     }
                     .pickerStyle(.segmented)
                     
+                    TextField("province_state".localized, text: $province)
+                    
                     TextField("country_region".localized, text: $country)
                     
                     DatePicker("visit_date".localized, selection: $visitDate, displayedComponents: [.date, .hourAndMinute])
-                        .environment(\.locale, Locale(identifier: languageManager.currentLanguage.rawValue))
+                        .environment(\.locale, get24HourLocale())
                     
                     Toggle("mark_as_favorite".localized, isOn: $isFavorite)
                 }
@@ -123,6 +126,13 @@ struct EditDestinationView: View {
                             if let countryName = item.placemark.country, !countryName.isEmpty {
                                 self.country = countryName
                             }
+                            // 自动填充省份（对于中国直辖市，会将其名称作为省份）
+                            self.province = CountryManager.extractProvince(
+                                administrativeArea: item.placemark.administrativeArea,
+                                locality: item.placemark.locality,
+                                country: self.country,
+                                isoCountryCode: item.placemark.isoCountryCode
+                            )
                             // 名称不强制覆盖，保留用户原名称
                         }
                     } label: {
@@ -309,6 +319,7 @@ struct EditDestinationView: View {
     private func loadDestinationData() {
         name = destination.name
         country = destination.country
+        province = destination.province
         visitDate = destination.visitDate
         notes = destination.notes
         category = destination.category
@@ -536,6 +547,15 @@ struct EditDestinationView: View {
         selectedLocation = item
         latitude = item.placemark.coordinate.latitude
         longitude = item.placemark.coordinate.longitude
+        // 自动填充国家
+        country = item.placemark.country ?? ""
+        // 自动填充省份（对于中国直辖市，会将其名称作为省份）
+        province = CountryManager.extractProvince(
+            administrativeArea: item.placemark.administrativeArea,
+            locality: item.placemark.locality,
+            country: country,
+            isoCountryCode: item.placemark.isoCountryCode
+        )
         searchResults = []
         searchText = ""
     }
@@ -544,6 +564,7 @@ struct EditDestinationView: View {
         // 更新目的地信息
         destination.name = name
         destination.country = country
+        destination.province = province
         destination.visitDate = visitDate
         destination.notes = notes
         destination.category = category
@@ -562,7 +583,15 @@ struct EditDestinationView: View {
             destination.longitude = location.placemark.coordinate.longitude
         }
         
-        // SwiftData会自动保存更改
+        // 显式保存更改，确保数据已同步
+        try? modelContext.save()
+        
+        // 发送更新通知，通知徽章视图更新
+        // 延迟一小段时间，确保 SwiftData 的保存操作已完成
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            NotificationCenter.default.post(name: .destinationUpdated, object: nil)
+        }
+        
         dismiss()
     }
     
@@ -574,6 +603,26 @@ struct EditDestinationView: View {
             // 发送删除通知，通知详情页关闭
             NotificationCenter.default.post(name: .destinationDeleted, object: nil, userInfo: ["destinationId": destinationId])
             dismiss()
+        }
+    }
+    
+    // 获取24小时制的locale（用于DatePicker显示24小时制时间）
+    private func get24HourLocale() -> Locale {
+        // 根据当前语言返回对应的locale，但强制使用24小时制
+        switch languageManager.currentLanguage {
+        case .chinese, .chineseTraditional:
+            // 使用zh_CN但确保24小时制显示
+            return Locale(identifier: "zh_CN")
+        case .english:
+            return Locale(identifier: "en_US")
+        case .japanese:
+            return Locale(identifier: "ja_JP")
+        case .french:
+            return Locale(identifier: "fr_FR")
+        case .spanish:
+            return Locale(identifier: "es_ES")
+        case .korean:
+            return Locale(identifier: "ko_KR")
         }
     }
 }

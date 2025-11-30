@@ -142,6 +142,7 @@
 "basic_info" = "基本信息";
 "place_name" = "地点名称";
 "category" = "分类";
+"province_state" = "省份/州";
 "country_region" = "国家/地区";
 "visit_date" = "访问日期";
 "mark_as_favorite" = "标记为喜爱";
@@ -173,6 +174,7 @@
 "map_button_footprints" = "足迹";
 "map_button_search" = "搜索";
 "map_button_style" = "样式";
+"map_button_menu" = "快捷操作";
 "map_button_import_photo" = "导入照片";
 "footprints_action_menu" = "快捷操作";
 "search_places" = "搜索地点";
@@ -376,6 +378,13 @@
 "reset_to_default_color" = "恢复默认颜色";
 "brand_color_description" = "自定义应用的主题颜色，将应用于图标、按钮等界面元素";
 
+// Appearance Mode Settings
+"appearance_mode" = "外观模式";
+"appearance_mode_system" = "系统";
+"appearance_mode_dark" = "深色";
+"appearance_mode_light" = "浅色";
+"appearance_mode_description" = "选择应用的外观模式，跟随系统将根据系统设置自动切换";
+
 // Account deletion
 "delete_account" = "删除账户";
 "delete_account_description" = "将移除账户信息并清空此设备的所有旅行数据。";
@@ -389,3 +398,44 @@
 "delete_account_success_title" = "删除成功";
 "delete_account_success_message" = "账户及所有本地数据已清空。";
 "delete_account_error_title" = "删除失败";
+
+// Quick Check In View
+"quick_check_in" = "快速打卡";
+"more_options" = "更多选项";
+"loading_location" = "正在加载位置...";
+"notes_guide_question" = "今天的心情如何？";
+"notes_guide_question_with_weather" = "今天%@，%@，心情如何？";
+
+// POI Search Loading
+"searching_location" = "正在搜索位置...";
+"please_wait" = "请稍候";
+
+// POI Preview Card
+"open_in_maps" = "在地图中打开";
+"unknown_location" = "未知位置";
+"point_of_interest" = "兴趣点";
+"restaurant" = "餐厅";
+"cafe" = "咖啡厅";
+"hotel" = "酒店";
+"gas_station" = "加油站";
+"airport" = "机场";
+"park" = "公园";
+"museum" = "博物馆";
+"theater" = "剧院";
+"store" = "商店";
+"school" = "学校";
+"hospital" = "医院";
+"bank" = "银行";
+
+// Badge View
+"badges" = "徽章";
+"country_badges" = "国家勋章";
+"province_badges" = "省份勋章";
+"badges_progress" = "点亮进度";
+"search_badges" = "搜索勋章...";
+"location" = "个地点";
+"locations" = "个地点";
+"not_visited" = "未访问";
+"view_badge" = "查看徽章";
+"view_destinations" = "查看地点";
+"no_destinations" = "暂无地点";

@@ -14,6 +14,7 @@ final class TravelDestination {
     var id: UUID = UUID()
     var name: String = ""
     var country: String = ""
+    var province: String = ""
     var latitude: Double = 0.0
     var longitude: Double = 0.0
     var visitDate: Date = Date()
@@ -30,6 +31,7 @@ final class TravelDestination {
     init(
         name: String,
         country: String,
+        province: String = "",
         latitude: Double,
         longitude: Double,
         visitDate: Date = Date(),
@@ -43,6 +45,7 @@ final class TravelDestination {
     ) {
         self.name = name
         self.country = country
+        self.province = province
         self.latitude = latitude
         self.longitude = longitude
         self.visitDate = visitDate

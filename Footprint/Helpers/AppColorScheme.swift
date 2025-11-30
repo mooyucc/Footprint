@@ -786,10 +786,119 @@ extension View {
     }
 }
 
+// MARK: - AppearanceManager
+
+/// 外观模式管理器，用于管理应用的颜色模式（跟随系统/深色/浅色）
+class AppearanceManager: ObservableObject {
+    static let shared = AppearanceManager()
+    
+    /// UserDefaults 键名，用于存储外观模式偏好
+    private let appearanceModeKey = "AppearanceMode"
+    
+    /// 外观模式枚举
+    enum AppearanceMode: String, CaseIterable {
+        case system = "system"
+        case dark = "dark"
+        case light = "light"
+        
+        /// 显示名称（用于UI）
+        var displayName: String {
+            switch self {
+            case .system:
+                return "appearance_mode_system".localized
+            case .dark:
+                return "appearance_mode_dark".localized
+            case .light:
+                return "appearance_mode_light".localized
+            }
+        }
+        
+        /// 转换为 SwiftUI ColorScheme
+        func toColorScheme() -> ColorScheme? {
+            switch self {
+            case .system:
+                return nil  // nil 表示跟随系统
+            case .dark:
+                return .dark
+            case .light:
+                return .light
+            }
+        }
+    }
+    
+    /// 当前外观模式（可观察属性，变化时自动通知所有视图）
+    @Published var currentMode: AppearanceMode
+    
+    private init() {
+        // 从 UserDefaults 读取保存的外观模式
+        if let savedMode = UserDefaults.standard.string(forKey: appearanceModeKey),
+           let mode = AppearanceMode(rawValue: savedMode) {
+            self.currentMode = mode
+        } else {
+            // 默认跟随系统
+            self.currentMode = .system
+        }
+    }
+    
+    /// 设置外观模式
+    func setAppearanceMode(_ mode: AppearanceMode) {
+        // 直接在主线程更新（Picker 的 set 回调已经在主线程）
+        UserDefaults.standard.set(mode.rawValue, forKey: appearanceModeKey)
+        currentMode = mode
+        
+        // 当切换到系统模式时，强制触发更新以确保读取最新的系统颜色
+        if mode == .system {
+            // 触发 objectWillChange 以确保视图刷新
+            objectWillChange.send()
+        }
+        
+        // 发送通知（用于其他需要监听的地方）
+        NotificationCenter.default.post(name: .appearanceModeChanged, object: nil)
+    }
+    
+    /// 获取当前应该使用的 ColorScheme（用于 .preferredColorScheme 修饰符）
+    var preferredColorScheme: ColorScheme? {
+        currentMode.toColorScheme()
+    }
+    
+    /// 获取系统当前的颜色模式
+    var systemColorScheme: ColorScheme {
+        // 使用 UITraitCollection 读取系统当前的颜色模式
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let window = windowScene.windows.first {
+            let traitCollection = window.traitCollection
+            switch traitCollection.userInterfaceStyle {
+            case .dark:
+                return .dark
+            case .light:
+                return .light
+            default:
+                return .light
+            }
+        }
+        // 降级方案：使用当前窗口的 trait collection
+        if let keyWindow = UIApplication.shared.windows.first(where: { $0.isKeyWindow }) {
+            switch keyWindow.traitCollection.userInterfaceStyle {
+            case .dark:
+                return .dark
+            case .light:
+                return .light
+            default:
+                return .light
+            }
+        }
+        // 默认返回浅色
+        return .light
+    }
+}
+
 // MARK: - Notification.Name 扩展
 
 extension Notification.Name {
     /// 品牌颜色更改通知
     static let brandColorChanged = Notification.Name("brandColorChanged")
+    
+    /// 外观模式更改通知
+    static let appearanceModeChanged = Notification.Name("appearanceModeChanged")
 }
 

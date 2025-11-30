@@ -915,21 +915,22 @@ class CountryManager: ObservableObject {
     
     // 根据当前语言设置获取国家显示名称
     func getLocalizedCountryName(for country: Country) -> String {
-        // 获取当前语言设置
-        if let savedLanguage = UserDefaults.standard.string(forKey: "SelectedLanguage") {
-            if savedLanguage == "en" {
-                return country.englishName
-            } else {
-                return country.displayName
+        // 获取当前语言设置（优先使用 LanguageManager）
+        let currentLanguage = LanguageManager.shared.currentLanguage
+        
+        switch currentLanguage {
+        case .chinese, .chineseTraditional:
+            return country.displayName
+        case .english:
+            return country.englishName
+        case .japanese, .french, .spanish, .korean:
+            // 对于其他语言，尝试使用系统本地化名称
+            // 如果系统不支持，则使用英文名称作为后备
+            let locale = Locale(identifier: currentLanguage.rawValue)
+            if let localizedName = locale.localizedString(forRegionCode: country.rawValue) {
+                return localizedName
             }
-        } else {
-            // 如果没有保存的语言设置，根据系统语言判断
-            let systemLanguage = Locale.current.language.languageCode?.identifier ?? "en"
-            if systemLanguage.hasPrefix("zh") {
-                return country.displayName
-            } else {
-                return country.englishName
-            }
+            return country.englishName
         }
     }
     
@@ -941,4 +942,116 @@ class CountryManager: ObservableObject {
 
 extension Notification.Name {
     static let countryChanged = Notification.Name("CountryChanged")
+}
+
+// MARK: - 省份处理扩展
+extension CountryManager {
+    /// 中国的直辖市列表
+    private static let chineseMunicipalities: Set<String> = [
+        "北京市", "北京", "Beijing",
+        "上海市", "上海", "Shanghai",
+        "天津市", "天津", "Tianjin",
+        "重庆市", "重庆", "Chongqing"
+    ]
+    
+    /// 从地点信息中提取省份名称
+    /// 对于中国的直辖市，会将其名称作为省份返回
+    /// - Parameters:
+    ///   - administrativeArea: 行政区域（通常是省份或直辖市）
+    ///   - locality: 城市名称
+    ///   - country: 国家名称
+    ///   - isoCountryCode: ISO国家代码
+    /// - Returns: 省份名称（对于直辖市，返回直辖市名称）
+    static func extractProvince(
+        administrativeArea: String?,
+        locality: String?,
+        country: String?,
+        isoCountryCode: String?
+    ) -> String {
+        // 判断是否是中国
+        let isChina = isoCountryCode == "CN" || 
+                     country == "中国" || 
+                     country == "China"
+        
+        guard isChina else {
+            // 非中国地区，直接返回 administrativeArea
+            return administrativeArea ?? ""
+        }
+        
+        // 检查 administrativeArea 是否是直辖市
+        if let adminArea = administrativeArea, !adminArea.isEmpty {
+            // 检查是否是直辖市（支持多种格式）
+            if isMunicipality(adminArea) {
+                return normalizeMunicipalityName(adminArea)
+            }
+            return adminArea
+        }
+        
+        // 如果 administrativeArea 为空，检查 locality 是否是直辖市
+        if let city = locality, !city.isEmpty {
+            if isMunicipality(city) {
+                return normalizeMunicipalityName(city)
+            }
+        }
+        
+        return administrativeArea ?? ""
+    }
+    
+    /// 判断给定的名称是否是中国的直辖市
+    private static func isMunicipality(_ name: String) -> Bool {
+        let normalizedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // 精确匹配
+        if chineseMunicipalities.contains(normalizedName) {
+            return true
+        }
+        
+        // 模糊匹配：检查是否包含直辖市名称（处理"北京市朝阳区"等情况）
+        let municipalityNames = ["北京", "上海", "天津", "重庆", "Beijing", "Shanghai", "Tianjin", "Chongqing"]
+        for municipalityName in municipalityNames {
+            if normalizedName.contains(municipalityName) {
+                return true
+            }
+        }
+        
+        return false
+    }
+    
+    /// 标准化直辖市名称（统一格式为"XX市"）
+    private static func normalizeMunicipalityName(_ name: String) -> String {
+        let normalized = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // 直辖市名称映射
+        let municipalityMap: [String: String] = [
+            "北京": "北京市",
+            "Beijing": "北京市",
+            "上海": "上海市",
+            "Shanghai": "上海市",
+            "天津": "天津市",
+            "Tianjin": "天津市",
+            "重庆": "重庆市",
+            "Chongqing": "重庆市"
+        ]
+        
+        // 如果已经是标准格式（带"市"），直接返回
+        if normalized.hasSuffix("市") {
+            return normalized
+        }
+        
+        // 查找映射表
+        if let standardName = municipalityMap[normalized] {
+            return standardName
+        }
+        
+        // 如果找不到映射，尝试添加"市"后缀（仅对中文名称）
+        if normalized.count <= 4 && !normalized.contains("市") {
+            // 检查是否是中文（简单判断：不包含英文字母）
+            let isChinese = normalized.range(of: "[a-zA-Z]", options: .regularExpression) == nil
+            if isChinese {
+                return normalized + "市"
+            }
+        }
+        
+        return normalized
+    }
 }

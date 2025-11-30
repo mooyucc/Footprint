@@ -14,6 +14,7 @@ struct FootprintApp: App {
     @StateObject private var languageManager = LanguageManager.shared
     @StateObject private var countryManager = CountryManager.shared
     @StateObject private var brandColorManager = BrandColorManager.shared
+    @StateObject private var appearanceManager = AppearanceManager.shared
     
     var sharedModelContainer: ModelContainer = {
         // 启用 iCloud CloudKit 同步
@@ -39,6 +40,8 @@ struct FootprintApp: App {
                 .environmentObject(languageManager)
                 .environmentObject(countryManager)
                 .environmentObject(brandColorManager)
+                .environmentObject(appearanceManager)
+                .preferredColorScheme(appearanceManager.preferredColorScheme)
         }
         .modelContainer(sharedModelContainer)
     }

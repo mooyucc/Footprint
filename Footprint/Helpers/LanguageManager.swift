@@ -214,6 +214,7 @@ extension Notification.Name {
     static let languageChanged = Notification.Name("LanguageChanged")
     static let openDestinationDrawer = Notification.Name("OpenDestinationDrawer")
     static let destinationDeleted = Notification.Name("DestinationDeleted")
+    static let destinationUpdated = Notification.Name("DestinationUpdated")
 }
 
 // 本地化字符串扩展

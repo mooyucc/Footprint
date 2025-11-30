@@ -207,7 +207,11 @@ struct YearFilteredDestinationView: View {
     
     private func deleteDestination(_ destination: TravelDestination) {
         if let modelContext = destination.modelContext {
+            let destinationId = destination.id
             modelContext.delete(destination)
+            try? modelContext.save()
+            // 发送删除通知，通知徽章视图更新
+            NotificationCenter.default.post(name: .destinationDeleted, object: nil, userInfo: ["destinationId": destinationId])
         }
     }
     
@@ -215,7 +219,11 @@ struct YearFilteredDestinationView: View {
         for index in offsets {
             let destination = filteredDestinations[index]
             if let modelContext = destination.modelContext {
+                let destinationId = destination.id
                 modelContext.delete(destination)
+                try? modelContext.save()
+                // 发送删除通知，通知徽章视图更新
+                NotificationCenter.default.post(name: .destinationDeleted, object: nil, userInfo: ["destinationId": destinationId])
             }
         }
     }
@@ -307,10 +315,21 @@ struct DestinationRowCard: View {
                     }
                 }
                 
-                Text(destination.country.isEmpty ? "-" : destination.country)
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    if !destination.province.isEmpty {
+                        Text(destination.province)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                        Text("·")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    Text(destination.country.isEmpty ? "-" : destination.country)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
                 
                 Text(visitDateText)
                     .font(.caption)
@@ -355,6 +374,8 @@ struct DestinationRowCard: View {
                 Image("ImageMooyu")
                     .renderingMode(.original)
                     .resizable()
+                    .interpolation(.high)  // 高质量插值，确保边缘光滑
+                    .antialiased(true)     // 启用抗锯齿
                     .scaledToFill()
             }
         }

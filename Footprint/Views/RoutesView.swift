@@ -34,7 +34,7 @@ struct RoutesView: View {
     var body: some View {
         NavigationStack {
             // 显示地图视图，并自动显示线路卡片
-            MapView(autoShowRouteCards: true)
+            MapView(autoShowRouteCards: true, showBottomCheckInButton: false)
                 .navigationTitle("trips".localized)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {

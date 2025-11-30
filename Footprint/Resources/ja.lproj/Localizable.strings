@@ -37,6 +37,13 @@
 "reset_to_default_color" = "デフォルトにリセット";
 "brand_color_description" = "アプリ全体で使われるアクセントカラーを設定します。";
 
+// Appearance Mode Settings
+"appearance_mode" = "外観モード";
+"appearance_mode_system" = "システムに従う";
+"appearance_mode_dark" = "ダーク";
+"appearance_mode_light" = "ライト";
+"appearance_mode_description" = "アプリの外観モードを選択してください。システムに従うは、システム設定に応じて自動的に切り替わります";
+
 // Edit User Name
 "edit_username" = "ユーザー名を編集";
 "custom_username" = "カスタムユーザー名";
@@ -142,6 +149,7 @@
 "basic_info" = "基本情報";
 "place_name" = "場所名";
 "category" = "カテゴリー";
+"province_state" = "都道府県/州";
 "country_region" = "国/地域";
 "visit_date" = "訪問日";
 "mark_as_favorite" = "お気に入りにマーク";
@@ -381,3 +389,40 @@
 "delete_account_success_title" = "削除が完了しました";
 "delete_account_success_message" = "アカウントとローカルデータが削除されました。";
 "delete_account_error_title" = "削除に失敗しました";
+
+// Quick Check In View
+"quick_check_in" = "クイックチェックイン";
+"more_options" = "その他のオプション";
+"loading_location" = "位置情報を読み込み中...";
+"notes_guide_question" = "今日の気分はどうですか？";
+"notes_guide_question_with_weather" = "今日は%@、%@、気分はどうですか？";
+
+// POI Preview Card
+"open_in_maps" = "マップで開く";
+"unknown_location" = "不明な場所";
+"point_of_interest" = "ポイントオブインタレスト";
+"restaurant" = "レストラン";
+"cafe" = "カフェ";
+"hotel" = "ホテル";
+"gas_station" = "ガソリンスタンド";
+"airport" = "空港";
+"park" = "公園";
+"museum" = "博物館";
+"theater" = "劇場";
+"store" = "店";
+"school" = "学校";
+"hospital" = "病院";
+"bank" = "銀行";
+
+// Badge View
+"badges" = "バッジ";
+"country_badges" = "国バッジ";
+"province_badges" = "都道府県バッジ";
+"badges_progress" = "進捗";
+"search_badges" = "バッジを検索...";
+"location" = "場所";
+"locations" = "場所";
+"not_visited" = "未訪問";
+"view_badge" = "バッジを表示";
+"view_destinations" = "目的地を表示";
+"no_destinations" = "目的地なし";

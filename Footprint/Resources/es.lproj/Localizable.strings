@@ -37,6 +37,13 @@
 "reset_to_default_color" = "Restablecer al color predeterminado";
 "brand_color_description" = "Configura el color principal de la app para botones y elementos destacados.";
 
+// Appearance Mode Settings
+"appearance_mode" = "Modo de Apariencia";
+"appearance_mode_system" = "Seguir Sistema";
+"appearance_mode_dark" = "Oscuro";
+"appearance_mode_light" = "Claro";
+"appearance_mode_description" = "Elige el modo de apariencia de la app. Seguir Sistema cambiará automáticamente según la configuración del sistema";
+
 // Edit User Name
 "edit_username" = "Editar nombre de usuario";
 "custom_username" = "Nombre de usuario personalizado";
@@ -142,6 +149,7 @@
 "basic_info" = "Información básica";
 "place_name" = "Nombre del lugar";
 "category" = "Categoría";
+"province_state" = "Provincia/Estado";
 "country_region" = "País/Región";
 "visit_date" = "Fecha de visita";
 "mark_as_favorite" = "Marcar como favorito";
@@ -173,6 +181,7 @@
 "map_button_footprints" = "Huellas";
 "map_button_search" = "Buscar";
 "map_button_style" = "Estilo";
+"map_button_menu" = "Accesos rápidos";
 "map_button_import_photo" = "Importar foto";
 "footprints_action_menu" = "Acciones rápidas";
 "search_places" = "Buscar lugares";
@@ -381,3 +390,40 @@
 "delete_account_success_title" = "Cuenta eliminada";
 "delete_account_success_message" = "Tu cuenta y los datos locales se eliminaron correctamente.";
 "delete_account_error_title" = "Error al eliminar";
+
+// Quick Check In View
+"quick_check_in" = "Registro rápido";
+"more_options" = "Más opciones";
+"loading_location" = "Cargando ubicación...";
+"notes_guide_question" = "¿Cómo te sientes hoy?";
+"notes_guide_question_with_weather" = "Hoy hace %@ y está %@, ¿cómo te sientes?";
+
+// POI Preview Card
+"open_in_maps" = "Abrir en Mapas";
+"unknown_location" = "Ubicación desconocida";
+"point_of_interest" = "Punto de interés";
+"restaurant" = "Restaurante";
+"cafe" = "Cafetería";
+"hotel" = "Hotel";
+"gas_station" = "Gasolinera";
+"airport" = "Aeropuerto";
+"park" = "Parque";
+"museum" = "Museo";
+"theater" = "Teatro";
+"store" = "Tienda";
+"school" = "Escuela";
+"hospital" = "Hospital";
+"bank" = "Banco";
+
+// Badge View
+"badges" = "Insignias";
+"country_badges" = "Insignias de país";
+"province_badges" = "Insignias de provincia";
+"badges_progress" = "Progreso";
+"search_badges" = "Buscar insignias...";
+"location" = "lugar";
+"locations" = "lugares";
+"not_visited" = "No visitado";
+"view_badge" = "Ver Insignia";
+"view_destinations" = "Ver Destinos";
+"no_destinations" = "Sin Destinos";

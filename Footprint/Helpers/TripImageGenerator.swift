@@ -8,6 +8,8 @@
 import SwiftUI
 import UIKit
 import CoreText
+import CoreLocation
+import MapKit
 
 // MARK: - 分享相关
 struct TripShareItem: Identifiable {
@@ -23,11 +25,45 @@ struct TripShareItem: Identifiable {
     }
 }
 
+// 全局状态管理，防止重复触发分享
+private class ShareSheetManager {
+    static let shared = ShareSheetManager()
+    private var isPresenting = false
+    private let queue = DispatchQueue(label: "com.footprint.share")
+    
+    func canPresent() -> Bool {
+        return queue.sync { !isPresenting }
+    }
+    
+    func setPresenting(_ value: Bool) {
+        queue.sync { isPresenting = value }
+    }
+}
+
 struct SystemShareSheet: UIViewControllerRepresentable {
     let items: [Any]
     
     func makeUIViewController(context: Context) -> UIActivityViewController {
+        // 检查是否已有分享界面正在显示
+        guard ShareSheetManager.shared.canPresent() else {
+            // 如果已有分享界面，返回一个空的控制器
+            let emptyController = UIActivityViewController(activityItems: [], applicationActivities: nil)
+            return emptyController
+        }
+        
+        ShareSheetManager.shared.setPresenting(true)
+        
         let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        
+        // 设置完成回调，防止重复触发
+        controller.completionWithItemsHandler = { activityType, completed, returnedItems, error in
+            ShareSheetManager.shared.setPresenting(false)
+            
+            if let error = error {
+                print("⚠️ 分享错误: \(error.localizedDescription)")
+            }
+        }
+        
         return controller
     }
     
@@ -1130,8 +1166,20 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         height += 20 + 100 + 20 // padding + card + margin (增加卡片高度)
         
         // 行程路线卡片
-        let destinationCount = trip.destinations?.count ?? 0
-        let routeHeight = destinationCount > 0 ? CGFloat(destinationCount) * 60 + 90 : 136 // header + destinations or empty state (增加行间距和底部padding)
+        let sortedDestinations = trip.destinations?.sorted { $0.visitDate < $1.visitDate } ?? []
+        let destinationCount = sortedDestinations.count
+        var routeHeight: CGFloat = 0
+        if destinationCount > 0 {
+            // 动态计算每个地点项的高度（包括笔记和距离信息）
+            var totalItemsHeight: CGFloat = 0
+            for (index, destination) in sortedDestinations.enumerated() {
+                let nextDestination = index < sortedDestinations.count - 1 ? sortedDestinations[index + 1] : nil
+                totalItemsHeight += calculateDestinationItemHeight(destination, nextDestination: nextDestination, width: width - 40)
+            }
+            routeHeight = 50 + totalItemsHeight + 20 // header + destinations + bottom padding
+        } else {
+            routeHeight = 136 // empty state
+        }
         height += routeHeight
         
         // 底部签名（与上面地点图片间距40，离底部边缘20）
@@ -1335,16 +1383,86 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         valueString.draw(in: valueRect)
     }
     
+    /// 计算单个地点项的高度（包括笔记和距离信息）
+    private func calculateDestinationItemHeight(_ destination: TravelDestination, nextDestination: TravelDestination?, width: CGFloat) -> CGFloat {
+        var height: CGFloat = 60 // 基础高度（序号、照片、名称、副标题）
+        
+        // 日期下方的基础间距
+        height += 16 // 日期到距离信息或笔记的初始间距
+        
+        // 如果有下一个地点，添加距离信息高度
+        if let nextDestination = nextDestination {
+            let distance = destination.coordinate.distance(to: nextDestination.coordinate)
+            let distanceText = formatDistance(distance)
+            let distanceInfo = "→ \(distanceText) → \(nextDestination.name)"
+            
+            // 计算距离信息的实际高度
+            let distanceAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 11)
+            ]
+            let distanceString = NSAttributedString(string: distanceInfo, attributes: distanceAttributes)
+            let distanceSize = distanceString.size()
+            height += ceil(distanceSize.height) + 6 // 距离信息实际高度 + 间距
+        }
+        
+        // 如果有笔记，计算笔记高度
+        if !destination.notes.isEmpty {
+            let notesWidth = width - 110 // 减去左侧的序号和照片区域
+            let notesAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 13, weight: .regular),
+                .paragraphStyle: {
+                    let style = NSMutableParagraphStyle()
+                    style.lineSpacing = 4
+                    style.lineBreakMode = .byWordWrapping
+                    return style
+                }()
+            ]
+            let notesString = NSAttributedString(string: destination.notes, attributes: notesAttributes)
+            let notesRect = notesString.boundingRect(
+                with: CGSize(width: notesWidth, height: CGFloat.greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                context: nil
+            )
+            // 使用实际计算的高度，不限制最大高度，确保完整显示
+            let notesHeight = ceil(notesRect.height)
+            let notesSpacing: CGFloat = nextDestination != nil ? 4 : 8 // 如果有距离信息，间距更小
+            height += notesHeight + notesSpacing // 笔记高度 + 间距
+        }
+        
+        return height
+    }
+    
+    /// 格式化距离（优化版本，避免 Preference Access 错误）
+    private func formatDistance(_ distance: CLLocationDistance) -> String {
+        let formatter = MKDistanceFormatter()
+        formatter.unitStyle = .abbreviated
+        
+        // 使用更安全的本地化方式，避免访问系统偏好设置
+        // 直接使用应用的语言设置，而不是系统偏好
+        let appLanguage = LanguageManager.shared.currentLanguage.rawValue
+        formatter.locale = Locale(identifier: appLanguage)
+        
+        return formatter.string(fromDistance: distance)
+    }
+    
     private func drawRouteCard(for trip: TravelTrip, at point: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
         let sortedDestinations = trip.destinations?.sorted { $0.visitDate < $1.visitDate } ?? []
         let destinationCount = sortedDestinations.count
         
         var currentY = point.y
         let headerHeight: CGFloat = 50
-        let itemHeight: CGFloat = 60 // 与实际绘制的行间距保持一致
+        
+        // 计算总高度（动态计算每个地点项的高度）
+        var totalItemsHeight: CGFloat = 0
+        if destinationCount > 0 {
+            for (index, destination) in sortedDestinations.enumerated() {
+                let nextDestination = index < sortedDestinations.count - 1 ? sortedDestinations[index + 1] : nil
+                totalItemsHeight += calculateDestinationItemHeight(destination, nextDestination: nextDestination, width: width - 40)
+            }
+        }
         
         // 绘制卡片背景
-        let totalHeight = headerHeight + (destinationCount > 0 ? CGFloat(destinationCount) * itemHeight : 80) + 40 // 增加底部padding
+        let totalHeight = headerHeight + (destinationCount > 0 ? totalItemsHeight : 80) + 20 // 底部padding
         let cardRect = CGRect(x: point.x, y: point.y, width: width, height: totalHeight)
         
         let path = UIBezierPath(roundedRect: cardRect, cornerRadius: 20) // 使用20圆角，与"我的"tab一致
@@ -1389,8 +1507,11 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         if destinationCount > 0 {
             // 绘制目的地列表
             for (index, destination) in sortedDestinations.enumerated() {
-                drawDestinationItem(destination, index: index + 1, at: CGPoint(x: point.x + 20, y: currentY), width: width - 40, context: context)
-                currentY += 60 // 增加行间距
+                // 获取下一个地点（如果有）
+                let nextDestination = index < sortedDestinations.count - 1 ? sortedDestinations[index + 1] : nil
+                drawDestinationItem(destination, index: index + 1, nextDestination: nextDestination, at: CGPoint(x: point.x + 20, y: currentY), width: width - 40, context: context)
+                // 使用动态高度
+                currentY += calculateDestinationItemHeight(destination, nextDestination: nextDestination, width: width - 40)
             }
         } else {
             // 绘制空状态
@@ -1406,7 +1527,7 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         return totalHeight
     }
     
-    private func drawDestinationItem(_ destination: TravelDestination, index: Int, at point: CGPoint, width: CGFloat, context: CGContext) {
+    private func drawDestinationItem(_ destination: TravelDestination, index: Int, nextDestination: TravelDestination?, at point: CGPoint, width: CGFloat, context: CGContext) {
         // 绘制序号圆圈
         let circleRect = CGRect(x: point.x, y: point.y + 14, width: 32, height: 32)
         context.setFillColor(UIColor.systemBlue.cgColor)
@@ -1495,6 +1616,67 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         ]
         let subtitleString = NSAttributedString(string: subtitle, attributes: subtitleAttributes)
         subtitleString.draw(at: CGPoint(x: point.x + 110, y: point.y + 30))
+        
+        // 绘制距离信息（如果有下一个地点）
+        var currentY = point.y + 30 + 16 // 日期下方16pt处开始（与计算逻辑保持一致）
+        if let nextDestination = nextDestination {
+            let distance = destination.coordinate.distance(to: nextDestination.coordinate)
+            let distanceText = formatDistance(distance)
+            let distanceInfo = "→ \(distanceText) → \(nextDestination.name)"
+            
+            let distanceAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 11),
+                .foregroundColor: UIColor(red: 0.5, green: 0.5, blue: 0.5, alpha: 1.0) // 更浅的灰色
+            ]
+            let distanceString = NSAttributedString(string: distanceInfo, attributes: distanceAttributes)
+            let distanceSize = distanceString.size()
+            distanceString.draw(at: CGPoint(x: point.x + 110, y: currentY))
+            currentY += ceil(distanceSize.height) + 6 // 距离信息实际高度 + 间距
+        }
+        
+        // 绘制旅行笔记（如果有）
+        if !destination.notes.isEmpty {
+            // 如果有距离信息，间距是4pt；如果没有距离信息，间距是8pt（与计算逻辑保持一致）
+            let notesSpacing: CGFloat = nextDestination != nil ? 4 : 8
+            let notesY = currentY + notesSpacing
+            let notesWidth = width - 110 // 减去左侧的序号和照片区域
+            let notesHeight = drawDestinationNotesContent(destination.notes, at: CGPoint(x: point.x + 110, y: notesY), width: notesWidth, context: context)
+        }
+    }
+    
+    /// 绘制地点笔记内容（清单版面专用，不包含标题）
+    private func drawDestinationNotesContent(_ notes: String, at point: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
+        // 绘制笔记内容（使用较小的字体以适应清单版面）
+        let notesAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 13, weight: .regular),
+            .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0), // 次要文本 #666666
+            .paragraphStyle: {
+                let style = NSMutableParagraphStyle()
+                style.lineSpacing = 4 // 行距
+                style.lineBreakMode = .byWordWrapping
+                return style
+            }()
+        ]
+        let notesString = NSAttributedString(string: notes, attributes: notesAttributes)
+        let notesRect = notesString.boundingRect(
+            with: CGSize(width: width, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        
+        // 使用实际计算的高度，不限制最大高度，确保完整显示
+        let actualHeight = ceil(notesRect.height)
+        
+        let notesDrawRect = CGRect(
+            x: point.x,
+            y: point.y,
+            width: width,
+            height: actualHeight
+        )
+        
+        notesString.draw(in: notesDrawRect)
+        
+        return actualHeight
     }
     
     private func drawSignature(at point: CGPoint, width: CGFloat, context: CGContext) {

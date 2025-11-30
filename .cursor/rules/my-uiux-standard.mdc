@@ -571,6 +571,7 @@ struct MyView: View {
 - [Human Interface Guidelines](https://developer.apple.com/design/human-interface-guidelines/)
 - [SwiftUI Documentation](https://developer.apple.com/documentation/swiftui/)
 - [SF Symbols](https://developer.apple.com/sf-symbols/)
+- [Liquid Glass](https://developer.apple.com/documentation/technologyoverviews/adopting-liquid-glass)
 
 ### 设计资源
 - SF Symbols应用（macOS）
@@ -581,6 +582,123 @@ struct MyView: View {
 - 遵循WWDC设计相关session
 - 参考Apple官方应用的设计模式
 - 关注Apple Design Awards获奖应用
+
+## 十六、Liquid Glass 设计与实现规范（iOS 26+）
+
+> **说明**：Liquid Glass 是 iOS 26 / iPadOS 26 / macOS Tahoe 中推出的全新玻璃视觉与交互体系，用于替代传统 `Material` 毛玻璃。它强调**折射感（Refraction）**、**流体感（Fluidity）**和**动态融合（Morphing）**。本节定义 Footprint 在使用 Liquid Glass 时的范围、实现方式和 HIG 要求。
+
+### 16.1 概念与使用范围
+
+- **核心特性**
+  - **光学折射感**：通过对背景内容的弯折与模糊体现「真实玻璃」，而非简单半透明叠加。
+  - **流体弹性**：在交互过程中呈现轻微弹性和形变，配合系统动画（如 spring）营造流体感。
+  - **动态融合**：多块玻璃与背景、前景之间的过渡自然，不是孤立的硬边卡片。
+- **适用场景（推荐）**
+  - 底部主导航栏、地图上的悬浮控制条、关键操作条（如行程播放控制、过滤控制）。
+  - 底部弹出面板顶部的抓手区域、小型浮动菜单、少量核心按钮的背景。
+- **不适用场景（禁止）**
+  - 主要内容区域的大面积背景（阅读区、长列表背景等）。
+  - 长列表中每一行都使用 Liquid Glass。
+  - Liquid Glass 之上再叠加另一层 Liquid Glass（多层玻璃堆叠）。
+
+### 16.2 SwiftUI 实现方式
+
+- **优先使用系统自动 Liquid Glass**
+  - 在 iOS 26+ 上，`TabView`、`NavigationSplitView`、`sheet` / `popover`、部分控制组件会自动采用 Liquid Glass 外观。
+  - 设计上优先通过系统组件表达玻璃效果，减少完全自绘的玻璃容器。
+
+- **自定义玻璃区域：`.glassEffect` 与降级策略**
+
+```swift
+import SwiftUI
+
+struct FootprintGlassButton: View {
+    var body: some View {
+        Button {
+            // 业务操作
+        } label: {
+            Label("打卡", systemImage: "star.fill")
+                .padding(.horizontal, 20)
+                .padding(.vertical, 10)
+        }
+        .modifier(GlassButtonStyle())
+    }
+}
+
+struct GlassButtonStyle: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26, *) {
+            content
+                .glassEffect(.regular, in: Capsule())
+                .interactive(.automatic)   // 根据交互自动高亮与弹性反馈
+        } else {
+            content
+                .background(.ultraThinMaterial)
+                .clipShape(Capsule())
+        }
+    }
+}
+```
+
+- **高阶：`GlassEffectContainer` + `glassEffectID`（仅用于少量核心场景）**
+  - 适合底部模式切换、少量图标菜单等**需要共享同一玻璃底板并随选择状态形变**的区域。
+
+```swift
+import SwiftUI
+
+@available(iOS 26, *)
+struct MorphingGlassMenu: View {
+    @Namespace private var animation
+    @State private var selectedTab = 0
+
+    var body: some View {
+        GlassEffectContainer {
+            HStack {
+                ForEach(0..<3) { index in
+                    Button {
+                        withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+                            selectedTab = index
+                        }
+                    } label: {
+                        Image(systemName: index == selectedTab ? "circle.fill" : "circle")
+                            .padding(12)
+                    }
+                    .glassEffectID(index, in: animation)
+                }
+            }
+        }
+        .glassStyle(.regular)
+    }
+}
+```
+
+> **向后兼容要求**：所有使用 `glassEffect` / `GlassEffectContainer` 的代码必须通过 `if #available(iOS 26, *)` 提供 `Material`（如 `.background(.ultraThinMaterial)`）等价降级方案，确保在 iOS 18–25 上依然有清晰的半透明背景与轮廓。
+
+### 16.3 设计与 HIG 细则
+
+- **1）放在「框架层」，不要占据「内容层」**
+  - **应该用**：底部导航 / 顶部工具条 / 地图悬浮控件 / 可拖动面板顶部等接近窗口边缘或内容边界的区域。
+  - **不应该用**：整屏大背景、主内容阅读区、长列表每行的背景。
+- **2）不要堆叠多层 Liquid Glass（Don’t Stack）**
+  - 同一个界面中同时出现的 Liquid Glass 层尽量控制在 **1–2 层**。
+  - 不要在已经是 Liquid Glass 的导航栏上再放一块单独的玻璃卡片。
+- **3）保持足够留白与对比（Spacing）**
+  - Liquid Glass 依赖背景内容（图片 / 地图 / 渐变）来体现折射和深度，应保持**8–12pt 以上**的外边距与周围元素区分。
+  - 避免在纯白或纯黑大片区域上放置玻璃容器，以免失去「折射」和「深度」感。
+- **4）避免过度动态与眩晕感**
+  - 使用 `.interactive(.automatic)` 时，需在真机上验证弹性与亮度变化是否自然、不过度「跳动」。
+  - 与应用整体动画节奏保持一致（参考本规范中动画持续时间与曲线设置）。
+
+### 16.4 引入步骤建议（团队实践）
+
+- **步骤 1：环境准备**
+  - 确认 Xcode 使用支持 iOS 26 SDK 的版本，构建目标包含 iOS 26。
+- **步骤 2：从关键导航和地图浮层开始试点**
+  - 先在底部主导航栏、地图悬浮控制条、少量核心操作按钮上引入 `glassEffect`。
+  - 旧版本保持 `Material` 实现，避免一次性替换所有毛玻璃区域。
+- **步骤 3：联动测试（视觉 + 性能 + 无障碍）**
+  - 多设备测试（含老机型），观察帧率与电量，必要时减少同时存在的玻璃元素数量。
+  - 确保文字对比度与可读性满足无障碍要求，VoiceOver 下可以正确聚焦和朗读。
 
 ---
 
