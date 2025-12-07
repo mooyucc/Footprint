@@ -15,12 +15,14 @@ struct FootprintApp: App {
     @StateObject private var countryManager = CountryManager.shared
     @StateObject private var brandColorManager = BrandColorManager.shared
     @StateObject private var appearanceManager = AppearanceManager.shared
+    @State private var showSplash = true  // 控制启动画面显示
+    @State private var initializationCompleted = false  // 初始化是否完成
     
     var sharedModelContainer: ModelContainer = {
-        // 启用 iCloud CloudKit 同步
+        // 暂时禁用 iCloud CloudKit 同步（功能尚未完善）
         let modelConfiguration = ModelConfiguration(
-            isStoredInMemoryOnly: false,
-            cloudKitDatabase: .automatic  // 启用 iCloud 同步
+            isStoredInMemoryOnly: false
+            // cloudKitDatabase: .automatic  // 暂时禁用 iCloud 同步
         )
 
         do {
@@ -35,14 +37,87 @@ struct FootprintApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(appleSignInManager)
-                .environmentObject(languageManager)
-                .environmentObject(countryManager)
-                .environmentObject(brandColorManager)
-                .environmentObject(appearanceManager)
-                .preferredColorScheme(appearanceManager.preferredColorScheme)
+            ZStack {
+                // 主内容视图
+                ContentView()
+                    .environmentObject(appleSignInManager)
+                    .environmentObject(languageManager)
+                    .environmentObject(countryManager)
+                    .environmentObject(brandColorManager)
+                    .environmentObject(appearanceManager)
+                    .preferredColorScheme(appearanceManager.preferredColorScheme)
+                    .environment(\.isAppReady, !showSplash)  // 传递应用就绪状态
+                
+                // 启动画面（覆盖在主内容之上）
+                if showSplash {
+                    SplashScreenView(isPresented: $showSplash)
+                        .environmentObject(brandColorManager)  // 传递 BrandColorManager 环境对象
+                        .zIndex(999)  // 确保在最上层
+                        .transition(.opacity)
+                        .onAppear {
+                            startBackgroundInitialization()
+                        }
+                }
+            }
         }
         .modelContainer(sharedModelContainer)
     }
+}
+
+// 环境键：用于控制 MapView 是否应该延迟初始化定位和地理编码
+private struct IsAppReadyKey: EnvironmentKey {
+    static let defaultValue: Bool = true  // 默认值：已就绪（向后兼容）
+}
+
+extension EnvironmentValues {
+    var isAppReady: Bool {
+        get { self[IsAppReadyKey.self] }
+        set { self[IsAppReadyKey.self] = newValue }
+    }
+}
+
+// MARK: - 后台初始化逻辑
+extension FootprintApp {
+    private func startBackgroundInitialization() {
+        print("🚀 开始后台初始化工作...")
+        
+        // 在主线程启动定位服务（定位服务需要在主线程）
+        DispatchQueue.main.async {
+            // 1. 提前启动定位服务
+            let locationManager = LocationManager.shared
+            locationManager.startUpdatingLocation()
+            locationManager.requestLocation()
+            print("📍 定位服务已在启动画面期间启动")
+            
+            // 2. 提前创建 Geocoder（通过通知通知 MapView）
+            // Geocoder 需要在 MapView 中创建，因为需要 @State 变量
+            // 这里通过通知告知 MapView 可以提前创建
+            NotificationCenter.default.post(name: .shouldPrepareGeocoder, object: nil)
+        }
+        
+        // 在后台队列执行其他初始化工作
+        DispatchQueue.global(qos: .userInitiated).async {
+            // 3. 其他后台初始化工作
+            // 注意：iCloud/CloudKit 同步已暂时禁用
+            
+            // 本地数据库初始化很快，不需要额外等待时间
+            // 如果后续需要添加其他初始化工作，可以在这里添加
+            
+            // 给定位服务一些时间进行初始化（定位获取需要时间）
+            // 我们不需要等待定位完成，可以在后台继续其他工作
+            Thread.sleep(forTimeInterval: 0.2)
+            
+            print("✅ 后台初始化工作完成（定位服务已启动）")
+            
+            // 通知启动画面初始化完成（不等待定位完成，让定位在后台继续进行）
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(name: .appInitializationCompleted, object: nil)
+            }
+        }
+    }
+}
+
+// MARK: - 通知名称扩展
+extension Notification.Name {
+    static let shouldPrepareGeocoder = Notification.Name("shouldPrepareGeocoder")
 }

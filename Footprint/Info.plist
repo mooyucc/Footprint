@@ -6,5 +6,7 @@
 	<array>
 		<string>remote-notification</string>
 	</array>
+	<key>AMapAPIKey</key>
+	<string>4981e329454fa25fd1bb4fdf2806bbe7</string>
 </dict>
 </plist>

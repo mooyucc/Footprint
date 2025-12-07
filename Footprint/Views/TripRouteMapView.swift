@@ -21,6 +21,26 @@ struct TripRouteMapView: View {
     @State private var isLoadingRoutes = false
     @State private var cameraPosition: MapCameraPosition = .automatic
     
+    // MARK: - Route Color Helper
+    /// 根据交通方式返回路线颜色
+    /// - Parameter transportType: 交通方式
+    /// - Returns: 路线颜色（徒步：绿色，机动车：蓝色，其他：灰色）
+    private func routeColor(for transportType: MKDirectionsTransportType) -> Color {
+        if transportType.contains(.walking) && transportType == .walking {
+            // 徒步模式：使用绿色，更符合自然、步行的感觉
+            return .green
+        } else if transportType.contains(.automobile) && transportType == .automobile {
+            // 机动车模式：使用蓝色（保持原有颜色）
+            return .blue
+        } else if transportType.contains(.transit) && transportType == .transit {
+            // 公共交通：使用紫色
+            return .purple
+        } else {
+            // 其他或混合模式：使用灰色
+            return .gray
+        }
+    }
+    
     var sortedDestinations: [TravelDestination] {
         destinations.sorted { $0.visitDate < $1.visitDate }
     }
@@ -84,7 +104,10 @@ struct TripRouteMapView: View {
                 // 显示路线
                 if !routes.isEmpty {
                     ForEach(Array(routes.enumerated()), id: \.offset) { index, route in
-                        // 路线 - 使用 Apple 设计标准的样式（白色描边 + 蓝色主体）
+                        // 根据交通方式选择颜色
+                        let routeColor = routeColor(for: route.footprintTransportType)
+                        
+                        // 路线 - 使用 Apple 设计标准的样式（白色描边 + 主体颜色）
                         // 先绘制白色背景（更粗），创建描边效果
                         MapPolyline(route.polyline)
                             .stroke(
@@ -95,10 +118,10 @@ struct TripRouteMapView: View {
                                     lineJoin: .round
                                 )
                             )
-                        // 再绘制蓝色主体（较细），叠加在白色背景上
+                        // 再绘制主体颜色（较细），叠加在白色背景上
                         MapPolyline(route.polyline)
                             .stroke(
-                                Color.blue,
+                                routeColor,
                                 style: StrokeStyle(
                                     lineWidth: 5,
                                     lineCap: .round,

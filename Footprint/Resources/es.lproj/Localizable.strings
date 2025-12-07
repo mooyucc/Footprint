@@ -398,6 +398,10 @@
 "notes_guide_question" = "¿Cómo te sientes hoy?";
 "notes_guide_question_with_weather" = "Hoy hace %@ y está %@, ¿cómo te sientes?";
 
+// POI Search Loading
+"searching_location" = "Buscando ubicación...";
+"please_wait" = "Por favor espere";
+
 // POI Preview Card
 "open_in_maps" = "Abrir en Mapas";
 "unknown_location" = "Ubicación desconocida";

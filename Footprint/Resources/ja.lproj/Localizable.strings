@@ -397,6 +397,10 @@
 "notes_guide_question" = "今日の気分はどうですか？";
 "notes_guide_question_with_weather" = "今日は%@、%@、気分はどうですか？";
 
+// POI Search Loading
+"searching_location" = "位置を検索中...";
+"please_wait" = "お待ちください";
+
 // POI Preview Card
 "open_in_maps" = "マップで開く";
 "unknown_location" = "不明な場所";

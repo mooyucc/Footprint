@@ -72,12 +72,34 @@ struct MapView: View {
     @Query private var destinations: [TravelDestination]
     @Query(sort: \TravelTrip.startDate, order: .reverse) private var trips: [TravelTrip]
     @Environment(\.colorScheme) private var colorScheme // 检测颜色模式
+    @Environment(\.isAppReady) private var isAppReady // 应用是否已就绪（启动画面是否结束）
     @EnvironmentObject private var brandColorManager: BrandColorManager
     @StateObject private var languageManager = LanguageManager.shared
     @StateObject private var countryManager = CountryManager.shared
+    
+    // MARK: - Route Color Helper
+    /// 根据交通方式返回路线颜色
+    /// - Parameter transportType: 交通方式
+    /// - Returns: 路线颜色（徒步：绿色，机动车：蓝色，其他：灰色）
+    private func routeColor(for transportType: MKDirectionsTransportType) -> Color {
+        if transportType.contains(.walking) && transportType == .walking {
+            // 徒步模式：使用绿色，更符合自然、步行的感觉
+            return .green
+        } else if transportType.contains(.automobile) && transportType == .automobile {
+            // 机动车模式：使用蓝色（保持原有颜色）
+            return .blue
+        } else if transportType.contains(.transit) && transportType == .transit {
+            // 公共交通：使用紫色
+            return .purple
+        } else {
+            // 其他或混合模式：使用灰色
+            return .gray
+        }
+    }
     @State private var position: MapCameraPosition = .automatic
     @State private var selectedDestination: TravelDestination?
-    @State private var showingAddDestination = false
+    @State private var showingAddDestination = false        // 普通“添加目的地”弹窗
+    @State private var showingQuickCheckIn = false          // “快速打卡”弹窗
     @State private var mapCameraPosition: MapCameraPosition = .automatic
     @State private var visibleRegion: MKCoordinateRegion?
     @State private var showTripConnections = false // 是否显示旅程连线
@@ -85,7 +107,7 @@ struct MapView: View {
     @State private var pendingRegion: MKCoordinateRegion? // 待处理的区域更新
     @State private var periodicCheckTimer: Timer? // 用于定期检查地点变化
     @State private var mapSelection: TravelDestination? // 地图的选择状态
-    @StateObject private var locationManager = LocationManager()
+    @ObservedObject private var locationManager = LocationManager.shared
     @StateObject private var routeManager = RouteManager.shared
     @StateObject private var destinationWeatherManager = DestinationWeatherManager()
     // 详情弹窗（由父级统一展示，避免子视图被移除导致弹窗不出现）
@@ -99,6 +121,11 @@ struct MapView: View {
     @State private var isThrottled = false // 是否处于节流状态
     @State private var throttleResetTime: Date? // 节流重置时间
     @State private var viewAppearTime: Date? // 视图出现时间，用于启动阶段的节流控制
+    @State private var hasDoneInitialGeocode = false // 启动阶段是否已完成一次反向地理编码
+    @State private var startupGeocodeScheduled = false // 启动阶段是否已安排一次延迟地理编码
+    @State private var locationInitializationPending = false // 定位初始化是否待执行（等待启动画面结束）
+    @State private var initialCameraPositionSet = false // 初始相机位置是否已设置
+    @State private var waitingForLocationToSetCamera = false // 是否正在等待位置来设置相机
     
     // 底部浮动按钮参数
     private let tabBarHeight: CGFloat = 49
@@ -132,7 +159,6 @@ struct MapView: View {
     @State private var lastReverseGeocodeCoordinate: CLLocationCoordinate2D?
     @State private var lastReverseGeocodeTimestamp: Date?
     @State private var lastGeocodedAccuracy: Double = .greatestFiniteMagnitude
-    @State private var isQuickCheckInMode = false // 是否为快速打卡模式
     @State private var showingPhotoImportPicker = false
     @State private var photoImportItem: PhotosPickerItem?
     @State private var photoImportError: PhotoImportError?
@@ -151,10 +177,11 @@ struct MapView: View {
     @State private var lastDestinationsSignature: String = ""
     
     // 回忆泡泡相关状态
-    @State private var showMemoryBubble = false
-    @State private var selectedBubbleDestination: TravelDestination?
-    @State private var bubbleAnimationOffset: CGFloat = 0
-    @State private var bubbleScale: CGFloat = 0
+    @State private var selectedBubbleDestination: TravelDestination? // 用于获取地点位置
+    @State private var showSoapBubbles = false
+    @State private var soapBubblesID = UUID() // 用于强制创建新的肥皂泡泡视图实例
+    @State private var waitingForMapToReachDestination = false // 是否正在等待地图到达地点
+    @State private var targetBubbleDestination: TravelDestination? // 目标地点（用于检查是否到达）
     
     // 搜索相关状态
     @State private var searchText = ""
@@ -347,15 +374,6 @@ struct MapView: View {
             floatingButtons
             keyboardOverlay
         }
-        .overlay(alignment: .bottom) {
-            if showBottomCheckInButton && selectedDestination == nil && !showingPOIPreview && !showSearchBar {
-                bottomCheckInButton
-                    .padding(
-                        .bottom,
-                        geometry.safeAreaInsets.bottom + bottomButtonSpacing - 70
-                    )
-            }
-        }
         // 搜索功能已移至 searchBarOverlay，使用自定义覆盖层实现
     }
     
@@ -383,14 +401,23 @@ struct MapView: View {
                     onImportPhoto: handleFootprintsImport
                 )
             }
+            // 普通“添加目的地”弹窗
             .sheet(isPresented: $showingAddDestination, onDismiss: {
                 addDestinationPrefill = nil
                 pendingPhotoPrefill = nil
                 isWaitingForLocation = false
                 isGeocodingLocation = false
-                isQuickCheckInMode = false
             }) {
-                destinationSheet
+                addDestinationSheet
+            }
+            // “快速打卡”弹窗
+            .sheet(isPresented: $showingQuickCheckIn, onDismiss: {
+                addDestinationPrefill = nil
+                pendingPhotoPrefill = nil
+                isWaitingForLocation = false
+                isGeocodingLocation = false
+            }) {
+                quickCheckInSheet
             }
             .sheet(isPresented: $showingMapStylePicker) {
                 mapStylePicker
@@ -430,6 +457,22 @@ struct MapView: View {
             }
             .onDisappear {
                 handleViewDisappear()
+            }
+            .onChange(of: isAppReady) { oldValue, newValue in
+                // 当应用就绪状态从 false 变为 true 时（启动画面结束），执行延迟的初始化
+                if !oldValue && newValue && locationInitializationPending {
+                    print("✅ 启动画面已结束，定位服务已在启动画面期间启动，直接设置地图相机位置")
+                    locationInitializationPending = false
+                    // 定位服务已在启动画面期间启动，这里只需要设置地图相机位置
+                    setInitialMapCameraPosition()
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .shouldPrepareGeocoder)) { _ in
+                // 在启动画面期间提前创建 Geocoder
+                if geocoder == nil {
+                    geocoder = CLGeocoder()
+                    print("📍 Geocoder 已在启动画面期间提前创建")
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { _ in
                 refreshID = UUID()
@@ -586,6 +629,18 @@ struct MapView: View {
         guard let newLocation = newValue else { return }
         
         let accuracy = locationManager.lastLocationAccuracy ?? Double.greatestFiniteMagnitude
+        
+        // 如果正在等待位置来设置初始相机位置，现在设置它
+        if waitingForLocationToSetCamera && !initialCameraPositionSet {
+            // 等待精度稳定（<200米）再设置相机位置
+            if accuracy > 0 && accuracy < 200.0 {
+                setCameraToUserLocation(newLocation)
+                waitingForLocationToSetCamera = false
+                initialCameraPositionSet = true
+                print("📍 首次获取到位置，地图已定位到用户位置（精度: \(String(format: "%.1f", accuracy))米）")
+            }
+            // 注意：即使精度不够，也继续执行后续的反向地理编码逻辑
+        }
         let distanceToLast: CLLocationDistance
         if let lastCoord = lastReverseGeocodeCoordinate {
             let newLoc = CLLocation(latitude: newLocation.latitude, longitude: newLocation.longitude)
@@ -599,15 +654,27 @@ struct MapView: View {
         let isStartupPhase = viewAppearTime.map { Date().timeIntervalSince($0) < 30.0 } ?? false
         let isLocationStable = accuracy > 0 && accuracy < 50.0 // 位置精度稳定
         
+        // 启动阶段：如果已经完成过一次自动反向地理编码，则后续位置更新不再自动触发请求
+        if isStartupPhase && hasDoneInitialGeocode {
+            lastReverseGeocodeCoordinate = newLocation
+            lastGeocodedAccuracy = accuracy
+            return
+        }
+        
         // 启动阶段：如果位置精度不稳定，延迟触发反向地理编码
         if isStartupPhase && !isLocationStable {
             print("⏳ 启动阶段，等待位置稳定（当前精度: \(String(format: "%.1f", accuracy))米）")
-            // 延迟3秒后重试，给GPS更多时间稳定
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                if let currentLocation = self.locationManager.lastKnownLocation {
-                    let currentAccuracy = self.locationManager.lastLocationAccuracy ?? Double.greatestFiniteMagnitude
-                    if currentAccuracy > 0 && currentAccuracy < 50.0 {
-                        self.reverseGeocodeLocation(coordinate: currentLocation, force: false)
+            // 启动阶段只安排一次延迟反向地理编码，给GPS更多时间稳定
+            if !startupGeocodeScheduled {
+                startupGeocodeScheduled = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    startupGeocodeScheduled = false
+                    if let currentLocation = self.locationManager.lastKnownLocation {
+                        let currentAccuracy = self.locationManager.lastLocationAccuracy ?? Double.greatestFiniteMagnitude
+                        if currentAccuracy > 0 && currentAccuracy < 50.0 {
+                            hasDoneInitialGeocode = true
+                            self.reverseGeocodeLocation(coordinate: currentLocation, force: false)
+                        }
                     }
                 }
             }
@@ -623,6 +690,11 @@ struct MapView: View {
             isWaitingForLocation = false
         }
         
+        if isStartupPhase {
+            // 启动阶段：只执行一次自动反向地理编码
+            hasDoneInitialGeocode = true
+        }
+        
         reverseGeocodeLocation(coordinate: newLocation, force: shouldForce)
     }
     
@@ -636,20 +708,71 @@ struct MapView: View {
         isThrottled = false
         throttleResetTime = nil
         
-        if autoShowRouteCards {
-            handleAutoShowRouteCards()
-        }
-        
         lastDestinationsSignature = destinationsSignature
         startPeriodicCheck()
-        locationManager.startUpdatingLocation()
-        locationManager.requestLocation()
         
-        if geocoder == nil {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                geocoder = CLGeocoder()
-                print("📍 Geocoder 已初始化")
+        // 如果应用还未就绪（启动画面还在显示），延迟设置地图相机位置
+        if !isAppReady {
+            print("⏳ 启动画面显示中，定位服务已在后台启动，等待启动画面结束...")
+            locationInitializationPending = true
+            // 即使启动画面还在显示，也要处理路线卡片（如果在线路tab）
+            if autoShowRouteCards {
+                handleAutoShowRouteCards()
             }
+            return
+        }
+        
+        // 应用已就绪，处理路线卡片和地图相机位置
+        if autoShowRouteCards {
+            // 在线路tab，优先处理路线卡片，让地图缩放到旅程范围
+            handleAutoShowRouteCards()
+        } else {
+            // 不在线路tab，设置初始地图相机位置（定位服务已在启动画面期间启动）
+            setInitialMapCameraPosition()
+        }
+    }
+    
+    // 设置初始地图相机位置（优化：优先定位到用户位置）
+    private func setInitialMapCameraPosition() {
+        // 如果已经设置过，不再重复设置
+        guard !initialCameraPositionSet else { return }
+        
+        // 检查定位服务是否已获取到位置
+        if let userLocation = locationManager.lastKnownLocation {
+            let accuracy = locationManager.lastLocationAccuracy ?? Double.greatestFiniteMagnitude
+            // 如果位置精度较好（<200米），直接定位到用户位置
+            if accuracy > 0 && accuracy < 200.0 {
+                setCameraToUserLocation(userLocation)
+                initialCameraPositionSet = true
+                print("📍 地图已定位到用户位置: (\(userLocation.latitude), \(userLocation.longitude))")
+            } else {
+                // 位置精度不够，等待更好的位置
+                waitingForLocationToSetCamera = true
+                mapCameraPosition = .automatic
+                print("⏳ 等待更精确的位置（当前精度: \(String(format: "%.1f", accuracy))米）")
+            }
+        } else {
+            // 如果还没有位置，使用自动定位，并监听位置更新
+            waitingForLocationToSetCamera = true
+            mapCameraPosition = .automatic
+            print("⏳ 等待定位获取，使用自动定位模式")
+            
+            // 确保 Geocoder 已创建
+            if geocoder == nil {
+                geocoder = CLGeocoder()
+            }
+        }
+    }
+    
+    // 设置地图相机到用户位置
+    private func setCameraToUserLocation(_ location: CLLocationCoordinate2D) {
+        let region = MKCoordinateRegion(
+            center: location,
+            span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05) // 约5公里范围
+        )
+        
+        withAnimation(.easeInOut(duration: 0.5)) {
+            mapCameraPosition = .region(region)
         }
     }
     
@@ -694,14 +817,21 @@ struct MapView: View {
         }
         
         if let trip = targetTrip, let destinations = tripDestinations {
+            // 先缩放地图到旅程范围（确保地点可见）
             zoomToTripDestinations(destinations)
+            
+            // 显示旅程连线
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 showTripConnections = true
             }
+            
+            // 计算路线
             let coordinates = destinations.map { $0.coordinate }
             Task {
                 await calculateRoutesForTrip(tripId: trip.id, coordinates: coordinates, incremental: true)
             }
+            
+            // 延迟显示卡片，确保地图已经缩放完成
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                     showRouteCards = true
@@ -739,7 +869,14 @@ struct MapView: View {
         showingFootprintsDrawer = false
         let targetDestination = destination
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-            focusMap(on: targetDestination)
+            // 聚焦地图到指定地点
+            let region = MKCoordinateRegion(
+                center: targetDestination.coordinate,
+                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
+            )
+            withAnimation(.easeInOut(duration: 0.8)) {
+                mapCameraPosition = .region(region)
+            }
             detailDestinationForSheet = targetDestination
         }
     }
@@ -783,6 +920,10 @@ struct MapView: View {
                 // 增加防抖延迟，减少频繁计算
                 updateTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: false) { _ in
                     visibleRegion = pendingRegion
+                    // 如果正在等待地图到达地点，检查是否已到达
+                    if waitingForMapToReachDestination {
+                        checkAndTriggerBubbles()
+                    }
                 }
             }
             .onChange(of: mapSelection) { oldValue, newValue in
@@ -847,7 +988,10 @@ struct MapView: View {
                                     if !areDestinationsInSameCluster(sourceDestination, destinationDestination) {
                                         // 获取对应索引的路线（可能为 nil）
                                         if index < routes.count, let route = routes[index] {
-                                            // 路线 - 使用 Apple 设计标准的样式（白色描边 + 蓝色主体）
+                                            // 根据交通方式选择颜色
+                                            let routeColor = routeColor(for: route.footprintTransportType)
+                                            
+                                            // 路线 - 使用 Apple 设计标准的样式（白色描边 + 主体颜色）
                                             // 先绘制白色背景（更粗），创建描边效果
                                             MapPolyline(route.polyline)
                                                 .stroke(
@@ -858,10 +1002,10 @@ struct MapView: View {
                                                         lineJoin: .round
                                                     )
                                                 )
-                                            // 再绘制蓝色主体（较细），叠加在白色背景上
+                                            // 再绘制主体颜色（较细），叠加在白色背景上
                                             MapPolyline(route.polyline)
                                                 .stroke(
-                                                    Color.blue,
+                                                    routeColor,
                                                     style: StrokeStyle(
                                                         lineWidth: 5,
                                                         lineCap: .round,
@@ -1018,8 +1162,8 @@ struct MapView: View {
             selectedPOI = nil
         }
         
-        // 搜索该位置的POI信息
-        searchPOIAtCoordinate(coordinate)
+        // 搜索该位置的POI信息（用户主动点击，不受启动阶段节流影响）
+        searchPOIAtCoordinate(coordinate, isUserInitiated: true)
     }
     
     // 检查点击坐标是否接近任何标注或聚合点
@@ -1052,9 +1196,9 @@ struct MapView: View {
     }
     
     // 在指定坐标搜索POI（用于点击地图）
-    private func searchPOIAtCoordinate(_ coordinate: CLLocationCoordinate2D) {
+    private func searchPOIAtCoordinate(_ coordinate: CLLocationCoordinate2D, isUserInitiated: Bool = false) {
         // 优化：先尝试小范围精确搜索，找不到再扩大范围
-        searchPOIAtCoordinate(coordinate, searchSpan: nil, isRetry: false)
+        searchPOIAtCoordinate(coordinate, searchSpan: nil, isRetry: false, isUserInitiated: isUserInitiated)
     }
     
     // 统一显示POI结果：智能处理加载状态
@@ -1089,7 +1233,7 @@ struct MapView: View {
     }
     
     // 优化的POI搜索方法：支持渐进式搜索策略和多种搜索方式
-    private func searchPOIAtCoordinate(_ coordinate: CLLocationCoordinate2D, searchSpan: MKCoordinateSpan?, isRetry: Bool) {
+    private func searchPOIAtCoordinate(_ coordinate: CLLocationCoordinate2D, searchSpan: MKCoordinateSpan?, isRetry: Bool, isUserInitiated: Bool = false) {
         // 只在首次搜索时设置延迟显示加载状态（重试时不重新设置）
         if !isRetry {
             // 记录搜索开始时间
@@ -1098,26 +1242,33 @@ struct MapView: View {
             // 取消之前的延迟显示任务
             loadingTaskHolder.task?.cancel()
             
-            // 延迟显示加载卡片：如果搜索很快完成（300ms内），就不显示加载状态
-            let task = DispatchWorkItem {
-                // 检查是否已经显示了结果，如果没有才显示加载状态
-                if !showingPOIPreview && selectedPOI == nil {
-                    withAnimation(.easeIn(duration: 0.2)) {
-                        isSearchingPOI = true
+            // 用户主动点击时，立即显示加载状态（不等待300ms），提供即时反馈
+            if isUserInitiated {
+                withAnimation(.easeIn(duration: 0.1)) {
+                    isSearchingPOI = true
+                }
+            } else {
+                // 延迟显示加载卡片：如果搜索很快完成（300ms内），就不显示加载状态
+                let task = DispatchWorkItem {
+                    // 检查是否已经显示了结果，如果没有才显示加载状态
+                    if !showingPOIPreview && selectedPOI == nil {
+                        withAnimation(.easeIn(duration: 0.2)) {
+                            isSearchingPOI = true
+                        }
                     }
                 }
+                loadingTaskHolder.task = task
+                DispatchQueue.main.asyncAfter(deadline: .now() + showLoadingThreshold, execute: task)
             }
-            loadingTaskHolder.task = task
-            DispatchQueue.main.asyncAfter(deadline: .now() + showLoadingThreshold, execute: task)
         }
         
         // 判断是否在中国境内
-        let isInChina = isInChinaBoundingBox(coordinate)
+        let isInChina = CoordinateConverter.isInChina(coordinate)
         
-        // 优化：在中国使用更宽松的搜索策略
+        // 优化：在中国使用高德API，其他地区使用Apple MapKit
         if isInChina && !isRetry {
-            // 在中国：优先尝试使用反向地理编码（更可靠），然后再尝试MKLocalSearch
-            tryReverseGeocodeWithPOI(coordinate: coordinate)
+            // 在中国：使用高德API进行POI搜索（更可靠，识别率更高）
+            searchPOIWithGeocodeService(coordinate: coordinate, isUserInitiated: isUserInitiated)
             return
         }
         
@@ -1175,7 +1326,7 @@ struct MapView: View {
                             longitudeDelta: span.longitudeDelta * 4
                         )
                         print("   🔄 扩大搜索范围重试...")
-                        self.searchPOIAtCoordinate(coordinate, searchSpan: largerSpan, isRetry: true)
+                        self.searchPOIAtCoordinate(coordinate, searchSpan: largerSpan, isRetry: true, isUserInitiated: isUserInitiated)
                         return
                     }
                     
@@ -1196,7 +1347,7 @@ struct MapView: View {
                             longitudeDelta: span.longitudeDelta * 4
                         )
                         print("⚠️ 小范围搜索无结果，扩大搜索范围重试...")
-                        self.searchPOIAtCoordinate(coordinate, searchSpan: largerSpan, isRetry: true)
+                        self.searchPOIAtCoordinate(coordinate, searchSpan: largerSpan, isRetry: true, isUserInitiated: isUserInitiated)
                         return
                     }
                     
@@ -1211,24 +1362,143 @@ struct MapView: View {
         }
     }
     
+    // 使用统一的地理编码服务进行POI搜索（混合策略：中国使用高德，其他地区使用Apple）
+    private func searchPOIWithGeocodeService(coordinate: CLLocationCoordinate2D, isUserInitiated: Bool = false) {
+        // 获取适合的服务（根据坐标自动选择高德或Apple）
+        let service = GeocodeServiceFactory.createService(for: coordinate)
+        
+        print("📍 [统一服务] 开始POI搜索，服务: \(service is AMapGeocodeService ? "高德API" : "Apple MapKit")")
+        
+        // 1. 先进行反向地理编码获取地址和POI信息
+        service.reverseGeocode(coordinate: coordinate) { result in
+            switch result {
+            case .success(let geocodeResult):
+                // 处理成功结果
+                self.handleGeocodeResult(geocodeResult, coordinate: coordinate)
+                
+                // 2. 如果在中国且没有找到POI，同时搜索周边POI（增强功能）
+                if geocodeResult.source == .amap && geocodeResult.poi == nil {
+                    // 搜索500米范围内的周边POI
+                    service.searchNearbyPOIs(coordinate: coordinate, radius: 500) { nearbyResult in
+                        switch nearbyResult {
+                        case .success(let nearbyPOIResult):
+                            if let nearestPOI = nearbyPOIResult.nearestPOI {
+                                print("📍 [统一服务] 找到最近的周边POI: \(nearestPOI.name) (\(nearestPOI.formattedDistance))")
+                                // 使用最近的POI创建结果
+                                let poiResult = GeocodeResult(
+                                    coordinate: coordinate,
+                                    address: geocodeResult.address,
+                                    poi: nearestPOI,
+                                    source: .amap
+                                )
+                                self.handleGeocodeResult(poiResult, coordinate: coordinate)
+                            }
+                        case .failure(let error):
+                            print("⚠️ [统一服务] 周边POI搜索失败: \(error.localizedDescription)")
+                            // 忽略错误，使用反向地理编码的结果
+                        }
+                    }
+                }
+                
+            case .failure(let error):
+                // 处理错误：降级到Apple MapKit或显示错误
+                print("❌ [统一服务] 反向地理编码失败: \(error.localizedDescription)")
+                self.handleGeocodeError(error, coordinate: coordinate, isUserInitiated: isUserInitiated)
+            }
+        }
+    }
+    
+    // 处理统一的地理编码结果
+    private func handleGeocodeResult(_ result: GeocodeResult, coordinate: CLLocationCoordinate2D) {
+        // 转换为MKMapItem用于显示
+        let mapItem = result.toMapItem()
+        
+        // 构建消息
+        var message = "✅ 找到位置信息（来源：\(result.source.displayName)）"
+        if let poi = result.poi {
+            message += "\n   POI: \(poi.name)"
+            if let distance = poi.distance {
+                message += " (\(String(format: "%.0f", distance))米)"
+            }
+        } else {
+            message += "\n   地址: \(result.address.buildFullAddress())"
+        }
+        
+        // 显示结果
+        showPOIResult(mapItem, message: message)
+    }
+    
+    // 处理地理编码错误
+    private func handleGeocodeError(_ error: Error, coordinate: CLLocationCoordinate2D, isUserInitiated: Bool) {
+        // 检查是否是节流错误 - 如果是，不继续尝试，避免触发更多节流
+        if let nsError = error as NSError?,
+           nsError.domain == "GEOErrorDomain" && nsError.code == -3 {
+            print("⚠️ Apple地理编码已被节流，停止尝试降级，避免进一步触发节流")
+            // 显示错误信息给用户
+            showErrorFallback(coordinate: coordinate)
+            return
+        }
+        
+        // 检查当前是否处于节流状态
+        if isThrottled {
+            print("⚠️ 当前处于节流状态，不继续尝试降级服务")
+            showErrorFallback(coordinate: coordinate)
+            return
+        }
+        
+        // 如果是高德API失败（网络错误或超时），且是用户主动点击，可以尝试降级
+        if (error is AMapError || error.localizedDescription.contains("高德") || error.localizedDescription.contains("超时") || error.localizedDescription.contains("网络错误")) && isUserInitiated {
+            print("⚠️ 高德API失败（用户主动点击），尝试降级到Apple MapKit")
+            // 使用Apple服务重试（但只在用户主动点击时）
+            let appleService = AppleGeocodeService.shared
+            appleService.reverseGeocode(coordinate: coordinate) { result in
+                switch result {
+                case .success(let geocodeResult):
+                    self.handleGeocodeResult(geocodeResult, coordinate: coordinate)
+                case .failure:
+                    // Apple也失败，显示错误信息
+                    print("⚠️ Apple MapKit也失败，显示错误信息")
+                    self.showErrorFallback(coordinate: coordinate)
+                }
+            }
+        } else {
+            // 其他错误或自动请求，直接显示错误信息，不再尝试降级
+            print("⚠️ 地理编码服务失败，显示错误信息")
+            showErrorFallback(coordinate: coordinate)
+        }
+    }
+    
+    // 显示错误回退信息（使用坐标兜底）
+    private func showErrorFallback(coordinate: CLLocationCoordinate2D) {
+        // 使用坐标兜底方案
+        fallbackWithCoordinateOnly(coordinate: coordinate)
+    }
+    
     // 优化的反向地理编码方法：在中国优先使用，可以获取areasOfInterest（POI名称）
-    private func tryReverseGeocodeWithPOI(coordinate: CLLocationCoordinate2D) {
+    // 注意：此方法保留用于兼容性，但优先使用searchPOIWithGeocodeService
+    private func tryReverseGeocodeWithPOI(coordinate: CLLocationCoordinate2D, isUserInitiated: Bool = false) {
         let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
         
-        // 使用独立的 geocoder
+        // 使用独立的 geocoder（不受主 geocoder 节流影响）
         let poiGeocoder = CLGeocoder()
+        
+        // 用户主动点击时，记录日志以便调试
+        if isUserInitiated {
+            print("👆 用户主动点击POI，立即执行反向地理编码（不受启动阶段节流影响）")
+        }
+        
         poiGeocoder.reverseGeocodeLocation(location) { placemarks, error in
             DispatchQueue.main.async {
                 if let error = error {
                     // 反向地理编码失败，尝试MKLocalSearch
                     print("⚠️ 反向地理编码失败，尝试MKLocalSearch: \(error.localizedDescription)")
-                    self.searchPOIAtCoordinate(coordinate, searchSpan: nil, isRetry: true)
+                    self.searchPOIAtCoordinate(coordinate, searchSpan: nil, isRetry: true, isUserInitiated: isUserInitiated)
                     return
                 }
                 
                 guard let placemark = placemarks?.first else {
                     print("⚠️ 反向地理编码返回空结果，尝试MKLocalSearch")
-                    self.searchPOIAtCoordinate(coordinate, searchSpan: nil, isRetry: true)
+                    self.searchPOIAtCoordinate(coordinate, searchSpan: nil, isRetry: true, isUserInitiated: isUserInitiated)
                     return
                 }
                 
@@ -1703,21 +1973,34 @@ struct MapView: View {
                     .onAppear {
                         // 在线路tab视图，确保卡片滚动位置与选中的旅程一致
                         if let currentSelectedId = selectedTripId,
-                           displayTrips.contains(where: { $0.id == currentSelectedId }) {
-                            // 如果已经有选中的卡片，滚动到该卡片并居中（保持地图和卡片一致）
+                           let currentTrip = displayTrips.first(where: { $0.id == currentSelectedId }),
+                           let tripDestinations = currentTrip.destinations {
+                            let destinations = tripDestinations.sorted(by: { $0.visitDate < $1.visitDate })
+                            guard destinations.count >= 2 else { return }
+                            
+                            // 如果已经有选中的卡片，确保地图已缩放到该旅程范围
+                            // 检查地图是否已经正确缩放（通过检查当前地图位置）
+                            // 如果地图还没有缩放，再次调用缩放函数
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                // 延迟一点确保地图已经渲染，然后再次确保缩放正确
+                                zoomToTripDestinations(destinations)
+                            }
+                            
+                            // 滚动到该卡片并居中（保持地图和卡片一致）
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                                 withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
                                     proxy.scrollTo(currentSelectedId, anchor: .center)
                                 }
                             }
-                        } else if selectedTripId == nil, let firstTrip = displayTrips.first {
-                            // 如果没有选中的卡片，选中第一个
-                            let destinations = (firstTrip.destinations ?? []).sorted(by: { $0.visitDate < $1.visitDate })
+                        } else if selectedTripId == nil, let firstTrip = displayTrips.first,
+                                  let tripDestinations = firstTrip.destinations {
+                            let destinations = tripDestinations.sorted(by: { $0.visitDate < $1.visitDate })
+                            guard destinations.count >= 2 else { return }
+                            // 如果没有选中的卡片，选中第一个并缩放地图
                             handleCardAppear(trip: firstTrip, destinations: destinations)
                             
                             // 确保第一个旅程的路线已计算（使用incremental模式检查缓存）
-                            if destinations.count >= 2,
-                               tripRoutes[firstTrip.id] == nil || tripRoutes[firstTrip.id]?.isEmpty == true {
+                            if tripRoutes[firstTrip.id] == nil || tripRoutes[firstTrip.id]?.isEmpty == true {
                                 let coordinates = destinations.map { $0.coordinate }
                                 Task {
                                     // 使用incremental模式，会先检查缓存，避免重复计算
@@ -1976,6 +2259,89 @@ struct MapView: View {
             .scaleEffect(1.0 + (checkInPulseScale - 1.0) * (0.1 / 0.3))
     }
     
+    /// 浮动菜单中使用的打卡图标（小号版本），复用与底部按钮一致的颜色与脉冲动画
+    private var assistiveCheckInMenuIcon: some View {
+        ZStack {
+            // 外圈脉冲光晕（缩小版）
+            Circle()
+                .fill(brandColorManager.currentBrandColor.opacity(0.25))
+                .frame(width: 60, height: 60)
+                .scaleEffect(checkInPulseScale)
+                .opacity(checkInPulseOpacity)
+            
+            // 中心玻璃按钮（缩小版）
+            Group {
+                if #available(iOS 26, *) {
+                    Circle()
+                        .fill(Color.clear)
+                        .frame(width: 46, height: 46)
+                        .glassEffect(.regular, in: Circle())
+                        .overlay(
+                            Circle()
+                                .strokeBorder(
+                                    LinearGradient(
+                                        colors: [
+                                            .white.opacity(0.7),
+                                            brandColorManager.currentBrandColor.opacity(0.5),
+                                            .white.opacity(0.25)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1.6
+                                )
+                        )
+                        .opacity(0.95)
+                        .shadow(
+                            color: Color.black.opacity(colorScheme == .dark ? 0.45 : 0.3),
+                            radius: 8,
+                            x: 0,
+                            y: 4
+                        )
+                        .overlay(checkInIcon)
+                } else {
+                    Circle()
+                        .fill(.ultraThinMaterial)
+                        .frame(width: 46, height: 46)
+                        .overlay(
+                            Circle()
+                                .strokeBorder(
+                                    LinearGradient(
+                                        colors: [
+                                            .white.opacity(0.6),
+                                            brandColorManager.currentBrandColor.opacity(0.4),
+                                            .white.opacity(0.25)
+                                        ],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    lineWidth: 1.6
+                                )
+                        )
+                        .opacity(0.88)
+                        .shadow(
+                            color: Color.black.opacity(colorScheme == .dark ? 0.4 : 0.25),
+                            radius: 8,
+                            x: 0,
+                            y: 4
+                        )
+                        .overlay(checkInIcon)
+                }
+            }
+        }
+        // 当仅保留浮动菜单时，在这里启动/重置打卡脉冲动画
+        .onAppear {
+            withAnimation(.easeOut(duration: 1.8).repeatForever(autoreverses: false)) {
+                checkInPulseScale = 1.3
+                checkInPulseOpacity = 0.0
+            }
+        }
+        .onDisappear {
+            checkInPulseScale = 1.0
+            checkInPulseOpacity = 0.45
+        }
+    }
+    
     private var assistiveMenuActions: [AssistiveMenuAction] {
         [
             AssistiveMenuAction(
@@ -2062,24 +2428,8 @@ struct MapView: View {
                     .frame(width: 22, height: 22)
             )
         case "DakaIcon":
-            if colorScheme == .dark || isDarkMapStyle {
-                return AnyView(
-                    Image(icon)
-                        .resizable()
-                        .renderingMode(.template)
-                        .scaledToFit()
-                        .foregroundColor(buttonIconColor(isActive: isActive))
-                        .frame(width: 22, height: 22)
-                )
-            } else {
-                return AnyView(
-                    Image(icon)
-                        .resizable()
-                        .renderingMode(.original)
-                        .scaledToFit()
-                        .frame(width: 22, height: 22)
-                )
-            }
+            // 浮动菜单中的打卡按钮使用与底部大按钮一致的玻璃+脉冲视觉
+            return AnyView(assistiveCheckInMenuIcon)
         default:
             return AnyView(
                 Image(systemName: icon)
@@ -2253,54 +2603,54 @@ struct MapView: View {
         .presentationDetents([.height(180)])
     }
     
-    // 目的地添加表单
+    // “快速打卡”弹窗内容
     @ViewBuilder
-    private var destinationSheet: some View {
-        // 如果是快速打卡模式，优先使用简化界面
-        if isQuickCheckInMode {
-            if let prefill = addDestinationPrefill {
-                QuickCheckInView(prefill: prefill)
-            } else if isGeocodingLocation {
-                // 快速打卡模式的加载状态
-                VStack(spacing: 20) {
-                    ProgressView()
-                        .scaleEffect(1.2)
-                    Text("getting_location_info".localized)
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                    Text("identifying_location".localized)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(.systemBackground))
-            } else {
-                // 快速打卡模式但还没有位置信息，显示简化界面（会显示加载状态）
-                QuickCheckInView(prefill: nil)
+    private var quickCheckInSheet: some View {
+        if let prefill = addDestinationPrefill {
+            QuickCheckInView(prefill: prefill)
+        } else if isGeocodingLocation {
+            // 快速打卡模式的加载状态
+            VStack(spacing: 20) {
+                ProgressView()
+                    .scaleEffect(1.2)
+                Text("getting_location_info".localized)
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+                Text("identifying_location".localized)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(.systemBackground))
         } else {
-            // 非快速打卡模式，使用完整界面
-            if let prefill = addDestinationPrefill {
-                AddDestinationView(prefill: prefill)
-            } else if isGeocodingLocation {
-                // 显示加载状态，等待地理编码完成
-                VStack(spacing: 20) {
-                    ProgressView()
-                        .scaleEffect(1.2)
-                    Text("getting_location_info".localized)
-                        .font(.headline)
-                        .foregroundColor(.secondary)
-                    Text("identifying_location".localized)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(Color(.systemBackground))
-            } else {
-                AddDestinationView()
+            // 快速打卡模式但还没有位置信息，显示简化界面（会显示加载状态）
+            QuickCheckInView(prefill: nil)
+        }
+    }
+    
+    // 普通“添加目的地”弹窗内容
+    @ViewBuilder
+    private var addDestinationSheet: some View {
+        if let prefill = addDestinationPrefill {
+            AddDestinationView(prefill: prefill)
+        } else if isGeocodingLocation {
+            // 显示加载状态，等待地理编码完成
+            VStack(spacing: 20) {
+                ProgressView()
+                    .scaleEffect(1.2)
+                Text("getting_location_info".localized)
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+                Text("identifying_location".localized)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(.systemBackground))
+        } else {
+            AddDestinationView()
         }
     }
     
@@ -2670,15 +3020,36 @@ struct MapView: View {
         // 如果使用增量更新，先检查缓存
         if incremental {
             for i in 0..<coordinates.count - 1 {
+                let source = coordinates[i]
+                let destination = coordinates[i + 1]
+                
+                // 计算两点间的直线距离
+                let sourceLocation = CLLocation(latitude: source.latitude, longitude: source.longitude)
+                let destinationLocation = CLLocation(latitude: destination.latitude, longitude: destination.longitude)
+                let distance = sourceLocation.distance(from: destinationLocation)
+                
                 if let cachedRoute = routeManager.getCachedRoute(
-                    from: coordinates[i],
-                    to: coordinates[i + 1]
+                    from: source,
+                    to: destination
                 ) {
-                    calculatedRoutes[i] = cachedRoute
+                    // 检查缓存的路线是否使用了合适的交通方式
+                    // 如果距离≤5公里但使用了机动车模式，说明是旧缓存，需要重新计算
+                    let cachedTransportType = cachedRoute.footprintTransportType
+                    let shouldUseWalking = distance <= 5_000
+                    let isUsingAutomobile = cachedTransportType.contains(.automobile) && cachedTransportType == .automobile
+                    
+                    if shouldUseWalking && isUsingAutomobile {
+                        // 缓存的路线使用了不合适的交通方式，清除缓存并重新计算
+                        print("🔄 检测到缓存路线使用了不合适的交通方式（距离\(String(format: "%.1f", distance/1000))km应使用徒步但使用了机动车），清除缓存并重新计算")
+                        routeManager.clearRouteCache(from: source, to: destination)
+                        // 不添加到 calculatedRoutes，让后续重新计算
+                    } else {
+                        calculatedRoutes[i] = cachedRoute
+                    }
                 }
             }
             
-            // 如果所有路线都已缓存，直接更新 UI
+            // 如果所有路线都已缓存且都合适，直接更新 UI
             let allCached = calculatedRoutes.allSatisfy { $0 != nil }
             if allCached {
                 await MainActor.run {
@@ -2838,20 +3209,16 @@ struct MapView: View {
         let isoCountryCode = placemark.isoCountryCode ?? ""
         let category = (isoCountryCode == "CN" || countryName == "中国" || countryName == "China") ? "domestic" : "international"
         
-        // 设置为快速打卡模式
-        isQuickCheckInMode = true
+        // 设置预填充数据并显示快速打卡界面
         isWaitingForLocation = false
         pendingPhotoPrefill = nil
-        
-        // 更新预填充数据并显示快速打卡界面
         updateAddDestinationPrefill(
             mapItem: poi,
             name: locationName,
             country: countryName,
             category: category
         )
-        
-        showingAddDestination = true
+        showingQuickCheckIn = true
     }
     
     // 处理打卡功能：使用用户当前位置添加目的地
@@ -2859,15 +3226,14 @@ struct MapView: View {
         print("📍 点击打卡按钮")
         checkInFeedbackGenerator.impactOccurred()
         
-        // 设置为快速打卡模式
-        isQuickCheckInMode = true
-        
         // 检查是否有已知位置
         if let userLocation = locationManager.lastKnownLocation {
             print("✅ 使用已知位置进行打卡: (\(userLocation.latitude), \(userLocation.longitude))")
             
-            // 立即显示添加目的地界面，显示加载状态
-            showingAddDestination = true
+            // 在下一帧显示添加目的地界面，避免第一次呈现时使用旧的模式状态
+            DispatchQueue.main.async {
+                self.showingQuickCheckIn = true
+            }
             
             // 执行反向地理编码
             reverseGeocodeLocation(coordinate: userLocation)
@@ -2875,8 +3241,10 @@ struct MapView: View {
             // 如果没有位置信息，先请求定位
             print("⏳ 没有已知位置，请求定位中...")
             
-            // 立即显示添加目的地界面，显示加载状态
-            showingAddDestination = true
+            // 在下一帧显示添加目的地界面，显示加载状态，确保使用快速打卡模式
+            DispatchQueue.main.async {
+                self.showingQuickCheckIn = true
+            }
             isGeocodingLocation = true
             isWaitingForLocation = true
             
@@ -3064,13 +3432,7 @@ struct MapView: View {
         if isThrottled, let resetTime = throttleResetTime {
             let timeUntilReset = resetTime.timeIntervalSinceNow
             if timeUntilReset > 0 {
-                print("⏸️ 反向地理编码被节流，将在 \(Int(timeUntilReset)) 秒后重试")
-                // 在节流重置时间后重试
-                DispatchQueue.main.asyncAfter(deadline: .now() + timeUntilReset + 1.0) {
-                    self.isThrottled = false
-                    self.throttleResetTime = nil
-                    self.reverseGeocodeLocation(coordinate: coordinate, force: force)
-                }
+                print("⏸️ 反向地理编码被节流，\(Int(timeUntilReset)) 秒内不再发起新请求")
                 return
             } else {
                 // 节流时间已过，重置状态
@@ -3176,15 +3538,7 @@ struct MapView: View {
                     isThrottled = true
                     throttleResetTime = Date().addingTimeInterval(resetTime)
                     
-                    print("⏸️ 节流将在 \(Int(resetTime)) 秒后重置")
-                    
-                    // 在节流重置后重试
-                    DispatchQueue.main.asyncAfter(deadline: .now() + resetTime + 1.0) {
-                        self.isThrottled = false
-                        self.throttleResetTime = nil
-                        print("✅ 节流已重置，重试反向地理编码")
-                        self.reverseGeocodeLocation(coordinate: coordinate, force: force)
-                    }
+                    print("⏸️ 节流将在 \(Int(resetTime)) 秒后重置，本次及冷静期内不再自动重试")
                     return
                 }
                 
@@ -3350,7 +3704,10 @@ struct MapView: View {
     
     private func handlePhotoImportSelection(_ item: PhotosPickerItem) {
         Task {
+            print("📸 开始处理图片导入...")
+            
             guard let data = try? await item.loadTransferable(type: Data.self) else {
+                print("❌ 图片加载失败：无法从 PhotosPickerItem 获取数据")
                 await MainActor.run {
                     photoImportError = .failedToLoad
                     showingAddDestination = false
@@ -3361,13 +3718,37 @@ struct MapView: View {
                 return
             }
             
+            print("✅ 图片数据加载成功，大小: \(data.count / 1024) KB")
+            
             let processed = ImageProcessor.process(data: data)
             let metadata = extractMetadata(for: item, imageData: data)
             
             await MainActor.run {
                 photoImportItem = nil
                 showingPhotoImportPicker = false
-                if let coordinate = metadata.coordinate {
+                
+                if let wgsCoordinate = metadata.coordinate {
+                    // 📍 关键修复：iPhone 拍摄的照片 GPS 信息是 WGS84 坐标系
+                    // 在中国境内需要转换为 GCJ02（火星坐标）才能准确定位
+                    let isInChina = !CoordinateConverter.isOutOfChina(wgsCoordinate)
+                    let finalCoordinate: CLLocationCoordinate2D
+                    
+                    if isInChina {
+                        finalCoordinate = CoordinateConverter.wgs84ToGCJ02(wgsCoordinate)
+                        print("📍 坐标转换（中国境内）:")
+                        print("   WGS84: (\(String(format: "%.6f", wgsCoordinate.latitude)), \(String(format: "%.6f", wgsCoordinate.longitude)))")
+                        print("   GCJ02: (\(String(format: "%.6f", finalCoordinate.latitude)), \(String(format: "%.6f", finalCoordinate.longitude)))")
+                    } else {
+                        finalCoordinate = wgsCoordinate
+                        print("📍 坐标（境外，无需转换）: (\(String(format: "%.6f", finalCoordinate.latitude)), \(String(format: "%.6f", finalCoordinate.longitude)))")
+                    }
+                    
+                    if let captureDate = metadata.captureDate {
+                        print("📅 拍摄日期: \(captureDate)")
+                    } else {
+                        print("⚠️ 未找到拍摄日期")
+                    }
+                    
                     pendingPhotoPrefill = PendingPhotoPrefill(
                         visitDate: metadata.captureDate,
                         photoData: processed.0,
@@ -3376,8 +3757,15 @@ struct MapView: View {
                     photoImportError = nil
                     showingAddDestination = true
                     addDestinationPrefill = nil
-                    reverseGeocodeLocation(coordinate: coordinate)
+                    
+                    print("🔄 开始逆地理编码...")
+                    reverseGeocodeLocation(coordinate: finalCoordinate)
                 } else {
+                    print("⚠️ 图片中未找到 GPS 坐标信息")
+                    if let captureDate = metadata.captureDate {
+                        print("📅 拍摄日期: \(captureDate)")
+                    }
+                    
                     pendingPhotoPrefill = nil
                     addDestinationPrefill = AddDestinationPrefill(
                         visitDate: metadata.captureDate,
@@ -3396,19 +3784,33 @@ struct MapView: View {
         var coordinate: CLLocationCoordinate2D?
         var captureDate: Date?
         
+        // 方法1：从 PHAsset 获取元数据（优先）
         if let identifier = item.itemIdentifier {
             let assets = PHAsset.fetchAssets(withLocalIdentifiers: [identifier], options: nil)
             if let asset = assets.firstObject {
                 captureDate = asset.creationDate ?? asset.modificationDate
                 if let location = asset.location {
                     coordinate = location.coordinate
+                    print("✅ 从 PHAsset 获取坐标: (\(String(format: "%.6f", coordinate!.latitude)), \(String(format: "%.6f", coordinate!.longitude)))")
+                } else {
+                    print("⚠️ PHAsset 中未找到位置信息")
                 }
+                if captureDate != nil {
+                    print("✅ 从 PHAsset 获取拍摄日期: \(captureDate!)")
+                } else {
+                    print("⚠️ PHAsset 中未找到拍摄日期")
+                }
+            } else {
+                print("⚠️ 无法找到对应的 PHAsset")
             }
         }
         
+        // 方法2：从图片 EXIF 数据获取元数据（备用）
         if coordinate == nil || captureDate == nil {
             if let source = CGImageSourceCreateWithData(imageData as CFData, nil),
                let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] {
+                
+                // 提取 GPS 坐标
                 if coordinate == nil,
                    let gps = properties[kCGImagePropertyGPSDictionary] as? [CFString: Any],
                    let latitude = gps[kCGImagePropertyGPSLatitude] as? Double,
@@ -3420,19 +3822,34 @@ struct MapView: View {
                     let lat = latRef == "S" ? -latitude : latitude
                     let lon = lonRef == "W" ? -longitude : longitude
                     coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
+                    print("✅ 从 EXIF GPS 获取坐标: (\(String(format: "%.6f", lat)), \(String(format: "%.6f", lon)))")
+                } else if coordinate == nil {
+                    print("⚠️ EXIF 中未找到 GPS 信息")
                 }
                 
+                // 提取拍摄日期
                 if captureDate == nil {
                     if let exif = properties[kCGImagePropertyExifDictionary] as? [CFString: Any],
                        let dateString = exif[kCGImagePropertyExifDateTimeOriginal] as? String {
                         captureDate = parseExifDateString(dateString)
+                        if captureDate != nil {
+                            print("✅ 从 EXIF DateTimeOriginal 获取拍摄日期: \(captureDate!)")
+                        }
                     }
                     if captureDate == nil,
                        let tiff = properties[kCGImagePropertyTIFFDictionary] as? [CFString: Any],
                        let dateString = tiff[kCGImagePropertyTIFFDateTime] as? String {
                         captureDate = parseExifDateString(dateString)
+                        if captureDate != nil {
+                            print("✅ 从 TIFF DateTime 获取拍摄日期: \(captureDate!)")
+                        }
+                    }
+                    if captureDate == nil {
+                        print("⚠️ EXIF/TIFF 中未找到拍摄日期")
                     }
                 }
+            } else {
+                print("⚠️ 无法读取图片 EXIF 数据")
             }
         }
         
@@ -4007,24 +4424,51 @@ struct MapView: View {
     // 回忆泡泡覆盖层
     @ViewBuilder
     private var memoryBubbleOverlay: some View {
-        if showMemoryBubble, let destination = selectedBubbleDestination {
-            GeometryReader { geometry in
-                // 计算地点在地图上的屏幕坐标
-                let screenPoint = convertCoordinateToScreenPoint(destination.coordinate, in: geometry.size)
-                
-                // 回忆泡泡
-                MemoryBubbleView(
-                    destination: destination,
-                    screenPosition: screenPoint,
-                    animationOffset: bubbleAnimationOffset,
-                    scale: bubbleScale
-                ) {
-                    // 点击泡泡的回调
-                    handleBubbleTap(destination: destination)
+        GeometryReader { geometry in
+            ZStack {
+                // 吹出肥皂泡泡动画 - 从地点上方吹出
+                if showSoapBubbles, let destination = selectedBubbleDestination {
+                    // 计算地点在地图上的屏幕坐标
+                    let screenPoint = convertCoordinateToScreenPoint(destination.coordinate, in: geometry.size)
+                    
+                    // 从地点上方（向上偏移约80点）吹出肥皂泡泡
+                    let bubbleStartPosition = CGPoint(
+                        x: screenPoint.x,
+                        y: screenPoint.y - 80 // 地点上方
+                    )
+                    
+                    SoapBubblesView(
+                        position: bubbleStartPosition,
+                        direction: .pi / 2, // 主要向上吹
+                        spreadAngle: .pi / 3, // 约60度扩散角度，向上飘散，带有轻微摆动
+                        isDarkMapStyle: isDarkMapStyle, // 传递地图样式信息，用于调整泡泡对比度
+                        onPlaySound: { soundType in
+                            // 在泡泡动画过程中播放音效，根据类型播放不同音效
+                            // 使用3种不同的音效变体，营造Q弹感和层次感
+                            switch soundType {
+                            case 0:
+                                playBubblePopSound1() // 气泡音效
+                            case 1:
+                                playBubblePopSound2() // 轻微点击音效
+                            case 2:
+                                playBubblePopSound3() // 消息接收音效
+                            default:
+                                playBubblePopSound1()
+                            }
+                        },
+                        onComplete: {
+                            showSoapBubbles = false
+                            selectedBubbleDestination = nil
+                        }
+                    )
+                    .id(soapBubblesID) // 使用 ID 确保每次创建新实例
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .allowsHitTesting(false) // 不阻挡其他交互
+                    .zIndex(1000) // 确保在最上层
                 }
             }
-            .allowsHitTesting(true)
         }
+        .allowsHitTesting(true)
     }
     
     // 触发回忆泡泡
@@ -4037,76 +4481,71 @@ struct MapView: View {
         
         // 随机选择一个地点
         let randomDestination = destinations.randomElement()!
-        selectedBubbleDestination = randomDestination
         
         // 播放音效
         playBubbleSound()
         
-        // 移动地图到选中的地点，以国家视野范围定位到目的地为中心
-        moveMapToDestination(randomDestination)
+        // 设置目标地点，开始等待地图到达
+        targetBubbleDestination = randomDestination
+        waitingForMapToReachDestination = true
         
-        // 地图直接跳到位置，预留0.3秒后显示泡泡
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            // 开始动画
-            withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
-                showMemoryBubble = true
-                bubbleScale = 1.0
-            }
-            
-            // 泡泡上升动画
-            withAnimation(.easeOut(duration: 2.0)) {
-                bubbleAnimationOffset = -100
-            }
-        }
+        // 直接 Zoom in 到地点（使用较小的视野范围，约10km）
+        let zoomRegion = MKCoordinateRegion(
+            center: randomDestination.coordinate,
+            span: MKCoordinateSpan(latitudeDelta: 0.09, longitudeDelta: 0.09) // 约10km视野
+        )
         
-        // 3秒后自动消失
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.3) {
-            dismissMemoryBubble()
-        }
-        
-        print("🫧 触发回忆泡泡: \(randomDestination.name)")
-    }
-    
-    // 处理泡泡点击
-    private func handleBubbleTap(destination: TravelDestination) {
-        // 播放点击音效
-        playTapSound()
-        
-        // 关闭泡泡
-        dismissMemoryBubble()
-        
-        // 选中该地点并显示详情
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-            selectedDestination = destination
-            mapSelection = destination
-        }
-        
-        // 将地图移动到该地点
-        focusMap(on: destination)
-        
-        print("🫧 点击回忆泡泡: \(destination.name)")
-    }
-    
-    // 聚焦地图到指定地点
-    private func focusMap(on destination: TravelDestination, span: MKCoordinateSpan = MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)) {
-        let region = MKCoordinateRegion(center: destination.coordinate, span: span)
         withAnimation(.easeInOut(duration: 0.8)) {
-            mapCameraPosition = .region(region)
+            mapCameraPosition = .region(zoomRegion)
+        }
+        
+        print("🫧 地图 Zoom in 到地点: \(randomDestination.name)")
+        print("🫧 等待地图到达地点后吹出肥皂泡泡...")
+        
+        // 设置超时保护：如果5秒后还没到达，强制触发（防止卡死）
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+            if waitingForMapToReachDestination {
+                print("🫧 超时保护：强制触发肥皂泡泡动画")
+                self.checkAndTriggerBubbles()
+            }
         }
     }
     
-    // 关闭回忆泡泡
-    private func dismissMemoryBubble() {
-        withAnimation(.easeIn(duration: 0.3)) {
-            showMemoryBubble = false
-            bubbleScale = 0
-            bubbleAnimationOffset = 0
+    // 检查地图是否已到达目标地点，如果到达则触发肥皂泡泡
+    private func checkAndTriggerBubbles() {
+        guard waitingForMapToReachDestination,
+              let target = targetBubbleDestination,
+              let currentRegion = visibleRegion else {
+            return
         }
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            selectedBubbleDestination = nil
+        // 计算目标地点与当前视野中心的距离
+        let targetCoord = target.coordinate
+        let centerCoord = currentRegion.center
+        
+        // 计算距离（使用简单的经纬度差值，约111km/度）
+        let latDiff = abs(targetCoord.latitude - centerCoord.latitude)
+        let lonDiff = abs(targetCoord.longitude - centerCoord.longitude)
+        
+        // 检查是否在视野范围内（允许一些误差，约1km）
+        let latSpan = currentRegion.span.latitudeDelta
+        let lonSpan = currentRegion.span.longitudeDelta
+        
+        // 如果地点在视野中心附近（距离中心小于视野范围的20%），认为已到达
+        let isNearCenter = latDiff < latSpan * 0.2 && lonDiff < lonSpan * 0.2
+        
+        if isNearCenter {
+            print("🫧 地图已到达地点，触发肥皂泡泡动画")
+            waitingForMapToReachDestination = false
+            targetBubbleDestination = nil
+            
+            // 触发肥皂泡泡动画
+            selectedBubbleDestination = target
+            showSoapBubbles = true
+            soapBubblesID = UUID()
         }
     }
+    
     
     // 将坐标转换为屏幕坐标
     private func convertCoordinateToScreenPoint(_ coordinate: CLLocationCoordinate2D, in size: CGSize) -> CGPoint {
@@ -4136,6 +4575,28 @@ struct MapView: View {
     private func playBubbleSound() {
         // 使用系统音效
         AudioServicesPlaySystemSound(1104) // 气泡音效
+    }
+    
+    // 播放轻泡泡音效（用于动画过程中）
+    private func playLightBubbleSound() {
+        // 使用较轻的系统音效（音量较低，用于连续播放）
+        // 使用音效 1103 (轻微点击) 或 1104 (气泡)，但音量较低
+        AudioServicesPlaySystemSound(1103) // 轻微点击音效，较轻
+    }
+    
+    // 播放Q弹泡泡音效（变体1）
+    private func playBubblePopSound1() {
+        AudioServicesPlaySystemSound(1104) // 气泡音效
+    }
+    
+    // 播放Q弹泡泡音效（变体2）
+    private func playBubblePopSound2() {
+        AudioServicesPlaySystemSound(1103) // 轻微点击音效
+    }
+    
+    // 播放Q弹泡泡音效（变体3）
+    private func playBubblePopSound3() {
+        AudioServicesPlaySystemSound(1057) // 消息接收音效（较轻的提示音）
     }
     
     // 播放点击音效
@@ -4974,8 +5435,10 @@ extension MKPointOfInterestCategory {
         .environmentObject(CountryManager.shared)
 }
 
-// 位置管理器
+// 位置管理器 - 单例模式，支持在启动画面期间提前初始化
 class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
+    static let shared = LocationManager()
+    
     private let locationManager = CLLocationManager()
     @Published var lastKnownLocation: CLLocationCoordinate2D?
     @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
@@ -4998,7 +5461,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     private let minDistanceForUpdate: Double = 3.0 // 最小距离变化（米）
     private let staleLocationThreshold: TimeInterval = 30.0 // 位置数据过期时间（秒）
     
-    override init() {
+    private override init() {
         super.init()
         locationManager.delegate = self
         
@@ -5540,21 +6003,28 @@ private struct FloatingAssistiveMenu: View {
     
     private func radialButton(for action: AssistiveMenuAction, at index: Int) -> some View {
         let offsets = radialOffsets(for: index)
+        let isCheckInAction = action.id == "check_in"
+        
         return Button {
             select(action)
         } label: {
             VStack(spacing: 0) {
-                iconProvider(action.icon, action.isActive)
-                    .frame(width: 24, height: 24)
-                    .padding(14)
-                    .background(
-                        Circle()
-                            .fill(buttonBackground(isActive: action.isActive))
-                            .overlay(
-                                Circle()
-                                    .stroke(Color.white.opacity(isDarkStyle ? 0.25 : 0.2), lineWidth: action.isActive ? 1.6 : 1)
-                            )
-                    )
+                if isCheckInAction {
+                    // 打卡按钮：直接使用外部提供的完整玻璃+脉冲视图，不再额外包一层圆形背景
+                    iconProvider(action.icon, action.isActive)
+                } else {
+                    iconProvider(action.icon, action.isActive)
+                        .frame(width: 24, height: 24)
+                        .padding(14)
+                        .background(
+                            Circle()
+                                .fill(buttonBackground(isActive: action.isActive))
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.white.opacity(isDarkStyle ? 0.25 : 0.2), lineWidth: action.isActive ? 1.6 : 1)
+                                )
+                        )
+                }
             }
             .opacity(isExpanded ? 1 : 0)
             .scaleEffect(isExpanded ? 1 : 0.5, anchor: .center)
@@ -5804,6 +6274,33 @@ struct RouteCard: View {
         return hashString.hashValue
     }
     
+    // 检查是否有封面图片
+    private var hasCoverPhoto: Bool {
+        trip.coverPhotoData != nil
+    }
+    
+    // 封面图片
+    @ViewBuilder
+    private var coverImage: some View {
+        if let photoData = trip.coverPhotoData,
+           let uiImage = UIImage(data: photoData) {
+            Image(uiImage: uiImage)
+                .resizable()
+                .scaledToFill()
+        } else {
+            Color.clear
+        }
+    }
+    
+    // 文字颜色：有封面图片时使用白色，否则使用系统颜色
+    private var primaryTextColor: Color {
+        hasCoverPhoto ? .white : .primary
+    }
+    
+    private var secondaryTextColor: Color {
+        hasCoverPhoto ? .white.opacity(0.9) : .secondary
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             // 旅程名称和日期
@@ -5811,15 +6308,15 @@ struct RouteCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(trip.name)
                         .font(.headline)
-                        .foregroundColor(.primary)
+                        .foregroundColor(primaryTextColor)
                     
                     HStack(spacing: 8) {
                         Image(systemName: "calendar")
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(secondaryTextColor)
                         Text(formatDateRange(trip.startDate, trip.endDate))
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(secondaryTextColor)
                     }
                 }
                 
@@ -5831,12 +6328,23 @@ struct RouteCard: View {
                     Button {
                         openTripInMaps()
                     } label: {
-                        Image(systemName: "map")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.primary)
-                            .frame(width: 32, height: 32)
-                            .background(.ultraThinMaterial)
-                            .clipShape(Circle())
+                        ZStack {
+                            if hasCoverPhoto {
+                                // 有封面时使用更不透明的 Material，叠加白色半透明层
+                                Circle()
+                                    .fill(.ultraThinMaterial)
+                                Circle()
+                                    .fill(Color.white.opacity(0.15))
+                            } else {
+                                Circle()
+                                    .fill(.ultraThinMaterial)
+                            }
+                            
+                            Image(systemName: "map")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(hasCoverPhoto ? .white : .primary)
+                        }
+                        .frame(width: 32, height: 32)
                     }
                     .buttonStyle(.plain)
                     
@@ -5844,12 +6352,23 @@ struct RouteCard: View {
                     Button {
                         showingLayoutSelection = true
                     } label: {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(.primary)
-                            .frame(width: 32, height: 32)
-                            .background(.ultraThinMaterial)
-                            .clipShape(Circle())
+                        ZStack {
+                            if hasCoverPhoto {
+                                // 有封面时使用更不透明的 Material，叠加白色半透明层
+                                Circle()
+                                    .fill(.ultraThinMaterial)
+                                Circle()
+                                    .fill(Color.white.opacity(0.15))
+                            } else {
+                                Circle()
+                                    .fill(.ultraThinMaterial)
+                            }
+                            
+                            Image(systemName: "square.and.arrow.up")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(hasCoverPhoto ? .white : .primary)
+                        }
+                        .frame(width: 32, height: 32)
                     }
                     .buttonStyle(.plain)
                 }
@@ -5862,14 +6381,14 @@ struct RouteCard: View {
                     HStack(spacing: 4) {
                         Image(systemName: "mappin.circle.fill")
                             .font(.caption)
-                            .foregroundColor(.blue)
+                            .foregroundColor(hasCoverPhoto ? .white : .blue)
                         Text("\(destinations.count)")
                             .font(.headline)
-                            .foregroundColor(.primary)
+                            .foregroundColor(primaryTextColor)
                     }
                     Text("地点")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(secondaryTextColor)
                 }
                 
                 // 总距离
@@ -5878,22 +6397,23 @@ struct RouteCard: View {
                         HStack(spacing: 4) {
                             Image(systemName: "road.lanes")
                                 .font(.caption)
-                                .foregroundColor(.green)
+                                .foregroundColor(hasCoverPhoto ? .white : .green)
                             Text(formatDistance(totalDistance))
                                 .font(.headline)
-                                .foregroundColor(.primary)
+                                .foregroundColor(primaryTextColor)
                         }
                         Text("总距离")
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(secondaryTextColor)
                     }
                 } else if isLoadingRoutes {
                     HStack(spacing: 4) {
                         ProgressView()
                             .scaleEffect(0.8)
+                            .tint(hasCoverPhoto ? .white : nil)
                         Text("计算中...")
                             .font(.caption)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(secondaryTextColor)
                     }
                 }
             }
@@ -5904,35 +6424,35 @@ struct RouteCard: View {
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 4) {
                             Circle()
-                                .fill(Color.red)
+                                .fill(hasCoverPhoto ? Color.white : Color.red)
                                 .frame(width: 6, height: 6)
                             Text(start.name)
                                 .font(.caption)
-                                .foregroundColor(.primary)
+                                .foregroundColor(primaryTextColor)
                                 .lineLimit(1)
                         }
                         Text("起点")
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(secondaryTextColor)
                     }
                     
                     Image(systemName: "arrow.right")
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(secondaryTextColor)
                     
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 4) {
                             Circle()
-                                .fill(Color.blue)
+                                .fill(hasCoverPhoto ? Color.white : Color.blue)
                                 .frame(width: 6, height: 6)
                             Text(end.name)
                                 .font(.caption)
-                                .foregroundColor(.primary)
+                                .foregroundColor(primaryTextColor)
                                 .lineLimit(1)
                         }
                         Text("终点")
                             .font(.caption2)
-                            .foregroundColor(.secondary)
+                            .foregroundColor(secondaryTextColor)
                     }
                     
                     Spacer()
@@ -5941,11 +6461,11 @@ struct RouteCard: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("trip_share_no_destinations".localized)
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(secondaryTextColor)
                     
                     Label("add_destination".localized, systemImage: "plus.circle")
                         .font(.caption)
-                        .foregroundColor(.accentColor)
+                        .foregroundColor(hasCoverPhoto ? .white : .accentColor)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -5953,8 +6473,36 @@ struct RouteCard: View {
         .padding()
         .frame(width: 320)
         .background(
-            RoundedRectangle(cornerRadius: 15, style: .continuous)
-                .fill(.ultraThinMaterial)
+            Group {
+                if hasCoverPhoto {
+                    // 有封面图片：使用封面图片 + 深色遮罩层
+                    GeometryReader { geometry in
+                        ZStack {
+                            // 封面图片作为背景，填充整个区域
+                            coverImage
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: geometry.size.width, height: geometry.size.height)
+                                .clipped()
+                            
+                            // 深色半透明遮罩层，确保文字可读性
+                            // 使用渐变遮罩，底部更暗以增强文字对比度
+                            LinearGradient(
+                                colors: [
+                                    Color.black.opacity(0.4),
+                                    Color.black.opacity(0.6)
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
+                } else {
+                    // 无封面图片：使用毛玻璃效果
+                    RoundedRectangle(cornerRadius: 15, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                }
+            }
         )
         .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 4)
         .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
@@ -6162,21 +6710,7 @@ struct FootprintsDrawerView: View {
                         Button {
                             onAdd()
                         } label: {
-                            ZStack {
-                                // 半透明外圈光晕
-                                Circle()
-                                    .fill(Color.black.opacity(0.15))
-                                    .frame(width: 36, height: 36)
-                                // 黑色内圈
-                                Circle()
-                                    .fill(Color.black)
-                                    .frame(width: 28, height: 28)
-                                // 白色图标
-                                Image(systemName: "plus")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(.white)
-                            }
-                            .frame(width: 36, height: 36)
+                            FootprintsToolbarIcon(systemName: "plus")
                         }
                         .buttonStyle(.plain)
                         .padding(.vertical, 2)
@@ -6185,21 +6719,7 @@ struct FootprintsDrawerView: View {
                         Button {
                             onImportPhoto()
                         } label: {
-                            ZStack {
-                                // 半透明外圈光晕
-                                Circle()
-                                    .fill(Color.black.opacity(0.15))
-                                    .frame(width: 36, height: 36)
-                                // 黑色内圈
-                                Circle()
-                                    .fill(Color.black)
-                                    .frame(width: 28, height: 28)
-                                // 白色图标
-                                Image(systemName: "photo.badge.plus")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(.white)
-                            }
-                            .frame(width: 36, height: 36)
+                            FootprintsToolbarIcon(systemName: "photo.badge.plus")
                         }
                         .buttonStyle(.plain)
                         .padding(.vertical, 2)
@@ -6209,6 +6729,32 @@ struct FootprintsDrawerView: View {
         }
         .presentationDetents([.medium, .large])
         .presentationDragIndicator(.visible)
+    }
+}
+
+// 顶部工具栏图标按钮样式（与全局风格一致，去掉额外灰色环）
+private struct FootprintsToolbarIcon: View {
+    let systemName: String
+    
+    var body: some View {
+        Image(systemName: systemName)
+            .font(.system(size: 15, weight: .semibold))
+            // 图标使用系统背景色，搭配深色圆形背景，形成黑/白对比
+            .foregroundColor(Color(.systemBackground))
+            .frame(width: 32, height: 32)
+            .background {
+                if #available(iOS 26, *) {
+                    Circle()
+                        // 使用系统语义前景色（浅色模式下接近黑色，深色模式下接近白色）
+                        .fill(Color(.label))
+                        .glassEffect(.regular, in: Circle())
+                } else {
+                    Circle()
+                        .fill(Color(.label))
+                }
+            }
+            .contentShape(Rectangle())
+            .frame(width: 44, height: 44) // 扩大触控区域，符合HIG
     }
 }
 
@@ -6427,3 +6973,4 @@ struct RoutePreviewCard: View {
         return formatter.string(fromDistance: distance)
     }
 }
+

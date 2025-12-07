@@ -398,6 +398,10 @@
 "notes_guide_question" = "今天的心情如何？";
 "notes_guide_question_with_weather" = "今天%@，%@，心情如何？";
 
+// POI Search Loading
+"searching_location" = "正在搜尋位置...";
+"please_wait" = "請稍候";
+
 // POI Preview Card
 "open_in_maps" = "在地圖中打開";
 "unknown_location" = "未知位置";

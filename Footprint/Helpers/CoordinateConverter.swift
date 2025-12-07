@@ -74,12 +74,21 @@ struct CoordinateConverter {
     // MARK: - 辅助方法
     
     /// 判断坐标是否在中国境外
-    private static func isOutOfChina(_ coord: CLLocationCoordinate2D) -> Bool {
+    /// - Parameter coord: 要判断的坐标
+    /// - Returns: 如果坐标在中国境外返回 true，否则返回 false
+    static func isOutOfChina(_ coord: CLLocationCoordinate2D) -> Bool {
         let lat = coord.latitude
         let lon = coord.longitude
         
         // 中国大致经纬度范围（含港澳台）
         return lat < 0.8293 || lat > 55.8271 || lon < 72.004 || lon > 137.8347
+    }
+    
+    /// 判断坐标是否在中国境内
+    /// - Parameter coordinate: 要判断的坐标
+    /// - Returns: 如果坐标在中国境内返回 true，否则返回 false
+    static func isInChina(_ coordinate: CLLocationCoordinate2D) -> Bool {
+        return !isOutOfChina(coordinate)
     }
     
     /// 纬度转换
