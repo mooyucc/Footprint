@@ -15,6 +15,11 @@ import ObjectiveC
 class RouteManager: ObservableObject {
     static let shared = RouteManager()
     
+    // MARK: - Custom Transport Types
+    /// 飞机交通方式（自定义，使用直线距离）
+    /// 使用 0x100 (256) 作为 rawValue，避免与系统定义的交通方式冲突
+    static let airplane: MKDirectionsTransportType = MKDirectionsTransportType(rawValue: 0x100)
+    
     // MARK: - Nested Types
     private struct PersistedRouteEntry: Codable {
         struct Coordinate: Codable {
@@ -43,6 +48,13 @@ class RouteManager: ObservableObject {
     
     // 存储当前计算出的所有路线
     @Published var routes: [String: MKRoute] = [:]
+    
+    // 用户手动选择的交通方式偏好（key: routeKey, value: transportType的rawValue）
+    // nil 表示使用自动选择，非nil表示用户手动选择
+    private var userTransportPreferences: [String: UInt] = [:]
+    private let preferencesQueue = DispatchQueue(label: "com.footprint.route.preferences", attributes: .concurrent)
+    
+    private let preferencesFileURL: URL
     
     private let cacheQueue = DispatchQueue(label: "com.footprint.route.cache", attributes: .concurrent)
     
@@ -80,8 +92,10 @@ class RouteManager: ObservableObject {
             try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         }
         self.cacheFileURL = directory.appendingPathComponent("routes.json")
+        self.preferencesFileURL = directory.appendingPathComponent("transportPreferences.json")
         
         self.persistedRouteEntries = Self.loadPersistedCache(from: cacheFileURL)
+        self.userTransportPreferences = Self.loadTransportPreferences(from: preferencesFileURL)
     }
     
     /// 计算两个地点之间的路线
@@ -97,6 +111,16 @@ class RouteManager: ObservableObject {
         completion: @escaping (MKRoute?) -> Void
     ) {
         let cacheKey = routeKey(from: source, to: destination)
+        
+        // 确定使用的交通方式：优先使用传入的参数，其次使用用户偏好，最后使用自动选择
+        let finalTransportType: MKDirectionsTransportType?
+        if let specifiedType = transportType {
+            finalTransportType = specifiedType
+        } else if let userPreference = getUserTransportType(from: source, to: destination) {
+            finalTransportType = userPreference
+        } else {
+            finalTransportType = nil // 使用自动选择
+        }
         
         // 计算两点间的直线距离
         let sourceLocation = CLLocation(latitude: source.latitude, longitude: source.longitude)
@@ -167,6 +191,8 @@ class RouteManager: ObservableObject {
             
             // 请求节流：避免短时间内发送过多请求导致被限流
             // 在后台队列中等待，避免阻塞主线程
+            // 捕获 finalTransportType 以便在嵌套闭包中使用
+            let capturedTransportType = finalTransportType
             self.requestThrottleQueue.async {
                 let now = Date()
                 let timeSinceLastRequest = now.timeIntervalSince(self.lastRequestTime)
@@ -182,7 +208,7 @@ class RouteManager: ObservableObject {
                     destination: destination,
                     distance: distance,
                     cacheKey: cacheKey,
-                    transportType: transportType,
+                    transportType: capturedTransportType,
                     completion: completion
                 )
             }
@@ -233,6 +259,35 @@ class RouteManager: ObservableObject {
             }
         }
         
+        // 如果是飞机模式，直接计算直线距离，不调用 MKDirections
+        if selectedTransportType == Self.airplane {
+            // 释放信号量（飞机模式不需要网络请求）
+            self.requestSemaphore.signal()
+            self.requestCountQueue.async {
+                self.activeRequestCount -= 1
+            }
+            
+            // 创建直线路线
+            let coordinates = [source, destination]
+            let polyline = MKPolyline(coordinates: coordinates, count: coordinates.count)
+            let route = MKRoute()
+            route.setValue(polyline, forKey: "polyline")
+            route.footprintDistance = distance
+            route.footprintExpectedTravelTime = distance / 800.0 // 假设飞机平均速度 800 km/h
+            route.footprintTransportType = Self.airplane
+            
+            // 缓存路线
+            self.cacheQueue.async(flags: .barrier) {
+                self.routeCache[cacheKey] = route
+            }
+            self.persistRoute(route, cacheKey: cacheKey, source: source, destination: destination)
+            
+            DispatchQueue.main.async {
+                completion(route)
+            }
+            return
+        }
+        
         // 创建路线请求
         let request = MKDirections.Request()
         request.source = sourceMapItem
@@ -260,27 +315,7 @@ class RouteManager: ObservableObject {
                 print("⚠️ 路线计算失败 [距离: \(String(format: "%.1f", distance/1000))km, 交通方式: \(self?.transportTypeDescription(selectedTransportType) ?? "未知"), 耗时: \(String(format: "%.2f", elapsedTime))s]")
                 print("   错误: \(errorDescription) (代码: \(errorCode))")
                 
-                // 如果使用徒步模式失败，且距离在合理范围内，尝试机动车模式作为备选
-                if selectedTransportType == .walking && distance <= 10_000 && transportType == nil {
-                    print("🔄 徒步模式失败，尝试机动车模式...")
-                    // 释放当前信号量（因为重试会重新获取）
-                    self?.requestSemaphore.signal()
-                    self?.requestCountQueue.async {
-                        self?.activeRequestCount -= 1
-                    }
-                    // 使用机动车模式重试（在后台队列中执行，避免阻塞）
-                    DispatchQueue.global(qos: .userInitiated).async {
-                        self?.performRouteCalculation(
-                            source: source,
-                            destination: destination,
-                            distance: distance,
-                            cacheKey: cacheKey,
-                            transportType: .automobile,
-                            completion: completion
-                        )
-                    }
-                    return
-                }
+                // 不再自动退回，直接返回 nil，让 UI 显示占位线
                 
                 // 对于某些错误类型，记录到失败列表（避免重复尝试）
                 // 某些错误（如找不到路线、地点不存在）应该跳过，避免重复尝试
@@ -300,6 +335,9 @@ class RouteManager: ObservableObject {
             
             guard let route = response?.routes.first else {
                 print("⚠️ 未找到路线 [距离: \(String(format: "%.1f", distance/1000))km, 耗时: \(String(format: "%.2f", elapsedTime))s]")
+                
+                // 不再自动退回，直接返回 nil，让 UI 显示占位线
+                
                 // 记录到失败列表
                 self?.failedRoutesQueue.async(flags: .barrier) {
                     self?.failedRoutes.insert(cacheKey)
@@ -459,6 +497,86 @@ class RouteManager: ObservableObject {
     /// 如果交通方式改变，需要清除旧缓存
     private func routeKey(from source: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D) -> String {
         return "\(source.latitude),\(source.longitude)->\(destination.latitude),\(destination.longitude)"
+    }
+    
+    // MARK: - User Transport Preferences
+    
+    /// 获取用户为某段路线选择的交通方式
+    /// - Parameters:
+    ///   - source: 起点坐标
+    ///   - destination: 终点坐标
+    /// - Returns: 用户选择的交通方式，nil 表示使用自动选择
+    func getUserTransportType(
+        from source: CLLocationCoordinate2D,
+        to destination: CLLocationCoordinate2D
+    ) -> MKDirectionsTransportType? {
+        let key = routeKey(from: source, to: destination)
+        return preferencesQueue.sync {
+            guard let rawValue = userTransportPreferences[key] else {
+                return nil
+            }
+            return MKDirectionsTransportType(rawValue: rawValue)
+        }
+    }
+    
+    /// 设置用户为某段路线选择的交通方式
+    /// - Parameters:
+    ///   - source: 起点坐标
+    ///   - destination: 终点坐标
+    ///   - transportType: 交通方式，nil 表示恢复自动选择
+    func setUserTransportType(
+        from source: CLLocationCoordinate2D,
+        to destination: CLLocationCoordinate2D,
+        transportType: MKDirectionsTransportType?
+    ) {
+        let key = routeKey(from: source, to: destination)
+        
+        preferencesQueue.async(flags: .barrier) {
+            if let type = transportType {
+                self.userTransportPreferences[key] = type.rawValue
+            } else {
+                self.userTransportPreferences.removeValue(forKey: key)
+            }
+            
+            // 保存到文件
+            let snapshot = self.userTransportPreferences
+            DispatchQueue.global(qos: .utility).async {
+                Self.saveTransportPreferences(snapshot, to: self.preferencesFileURL)
+            }
+        }
+        
+        // 清除该路线的缓存，强制重新计算
+        clearRouteCache(from: source, to: destination)
+        
+        print("✅ 已设置路线交通方式偏好: \(key) -> \(transportType?.description ?? "自动")")
+    }
+    
+    /// 加载交通方式偏好
+    private static func loadTransportPreferences(from fileURL: URL) -> [String: UInt] {
+        guard FileManager.default.fileExists(atPath: fileURL.path) else {
+            return [:]
+        }
+        
+        do {
+            let data = try Data(contentsOf: fileURL)
+            let decoder = JSONDecoder()
+            return try decoder.decode([String: UInt].self, from: data)
+        } catch {
+            print("⚠️ 交通方式偏好加载失败: \(error.localizedDescription)")
+            return [:]
+        }
+    }
+    
+    /// 保存交通方式偏好
+    private static func saveTransportPreferences(_ preferences: [String: UInt], to fileURL: URL) {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted]
+        do {
+            let data = try encoder.encode(preferences)
+            try data.write(to: fileURL, options: .atomic)
+        } catch {
+            print("⚠️ 交通方式偏好保存失败: \(error.localizedDescription)")
+        }
     }
     
     /// 清除特定路径的缓存（用于强制重新计算）
@@ -652,15 +770,51 @@ extension MKRoute {
     }
 }
 
+
+// MARK: - MKDirectionsTransportType Extension
+extension MKDirectionsTransportType {
+    /// 获取交通方式的图标名称
+    var iconName: String {
+        if self == RouteManager.airplane {
+            return "airplane"
+        } else if self.contains(.walking) && self == .walking {
+            return "figure.walk"
+        } else if self.contains(.automobile) && self == .automobile {
+            return "car.fill"
+        } else if self.contains(.transit) && self == .transit {
+            return "tram.fill"
+        } else {
+            return "sparkles" // 自动或其他
+        }
+    }
+    
+    /// 获取交通方式的描述
+    var description: String {
+        if self == RouteManager.airplane {
+            return "飞机"
+        } else if self.contains(.walking) && self == .walking {
+            return "步行"
+        } else if self.contains(.automobile) && self == .automobile {
+            return "机动车"
+        } else if self.contains(.transit) && self == .transit {
+            return "公共交通"
+        } else {
+            return "自动"
+        }
+    }
+}
+
 // MARK: - Helper Methods
 extension RouteManager {
     /// 获取交通方式的描述
     private func transportTypeDescription(_ type: MKDirectionsTransportType) -> String {
         // MKDirectionsTransportType 是选项集，可能包含多个值，使用 if-else 检查
-        if type.contains(.automobile) && type == .automobile {
+        if type == Self.airplane {
+            return "飞机"
+        } else if type.contains(.automobile) && type == .automobile {
             return "机动车"
         } else if type.contains(.walking) && type == .walking {
-            return "徒步"
+            return "步行"
         } else if type.contains(.transit) && type == .transit {
             return "公共交通"
         } else if type.contains(.any) || type == .any {
@@ -672,7 +826,7 @@ extension RouteManager {
                 descriptions.append("机动车")
             }
             if type.contains(.walking) {
-                descriptions.append("徒步")
+                descriptions.append("步行")
             }
             if type.contains(.transit) {
                 descriptions.append("公共交通")

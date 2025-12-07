@@ -26,7 +26,10 @@ struct TripRouteMapView: View {
     /// - Parameter transportType: 交通方式
     /// - Returns: 路线颜色（徒步：绿色，机动车：蓝色，其他：灰色）
     private func routeColor(for transportType: MKDirectionsTransportType) -> Color {
-        if transportType.contains(.walking) && transportType == .walking {
+        if transportType == RouteManager.airplane {
+            // 飞机模式：使用橙色
+            return .orange
+        } else if transportType.contains(.walking) && transportType == .walking {
             // 徒步模式：使用绿色，更符合自然、步行的感觉
             return .green
         } else if transportType.contains(.automobile) && transportType == .automobile {
@@ -52,6 +55,130 @@ struct TripRouteMapView: View {
     
     private var brandAccentColor: Color {
         brandColorManager.currentBrandColor
+    }
+    
+    // 计算占位线应该显示的交通方式
+    private func calculatePlaceholderTransportType(
+        from source: TravelDestination,
+        to destination: TravelDestination
+    ) -> MKDirectionsTransportType {
+        // 获取用户选择的交通方式，如果没有则使用自动选择的逻辑
+        let userTransportType = routeManager.getUserTransportType(
+            from: source.coordinate,
+            to: destination.coordinate
+        )
+        
+        // 确定显示的交通方式：优先使用用户选择，否则根据距离智能选择
+        if let userType = userTransportType {
+            return userType
+        } else {
+            // 自动选择逻辑：近距离步行，远距离机动车
+            let distance = source.coordinate.distance(to: destination.coordinate)
+            if distance <= 5_000 {
+                return .walking
+            } else {
+                return .automobile
+            }
+        }
+    }
+    
+    // 占位线绘制视图（提取复杂逻辑，避免类型检查超时）
+    @MapContentBuilder
+    private func placeholderRouteContent(
+        for source: TravelDestination,
+        destination: TravelDestination,
+        transportType: MKDirectionsTransportType
+    ) -> some MapContent {
+        // 根据交通方式选择虚线颜色
+        let placeholderColor = routeColor(for: transportType)
+        
+        // 计算直线距离
+        let distance = source.coordinate.distance(to: destination.coordinate)
+        
+        // 绘制虚线（更细的线条，更短的虚线间隔）
+        MapPolyline(coordinates: [source.coordinate, destination.coordinate])
+            .stroke(placeholderColor.opacity(0.5), style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round, dash: [3, 2]))
+        
+        // 显示直线距离标注（带交通方式选择，显示用户选择的交通方式图标）
+        if let midpoint = midpointOfLine(from: source.coordinate, to: destination.coordinate) {
+            Annotation("", coordinate: midpoint) {
+                RouteDistanceLabel(
+                    distance: distance,
+                    transportType: transportType, // 显示用户选择的交通方式图标
+                    source: source.coordinate,
+                    destination: destination.coordinate,
+                    onTransportTypeChange: { newType in
+                        // 保存用户选择并重新计算路线
+                        routeManager.setUserTransportType(
+                            from: source.coordinate,
+                            to: destination.coordinate,
+                            transportType: newType
+                        )
+                        // 清除当前路线，强制重新计算
+                        routes = []
+                        // 重新计算路线
+                        calculateRoutes()
+                    }
+                )
+            }
+        }
+    }
+    
+    // 路线绘制视图（提取复杂逻辑，避免类型检查超时）
+    // 注意：MapContent 需要使用 Group 来组合多个内容
+    @MapContentBuilder
+    private func routePolylineContent(for route: MKRoute, at index: Int) -> some MapContent {
+        // 根据交通方式选择颜色
+        let routeColorValue = routeColor(for: route.footprintTransportType)
+        
+        // 路线 - 使用 Apple 设计标准的样式（白色描边 + 主体颜色）
+        // 先绘制白色背景（更粗），创建描边效果
+        MapPolyline(route.polyline)
+            .stroke(
+                Color.white,
+                style: StrokeStyle(
+                    lineWidth: 7,
+                    lineCap: .round,
+                    lineJoin: .round
+                )
+            )
+        // 再绘制主体颜色（较细），叠加在白色背景上
+        MapPolyline(route.polyline)
+            .stroke(
+                routeColorValue,
+                style: StrokeStyle(
+                    lineWidth: 5,
+                    lineCap: .round,
+                    lineJoin: .round
+                )
+            )
+        
+        // 距离标注（带交通方式选择）
+        if let midpoint = midpointOfPolyline(route.polyline),
+           index < sortedDestinations.count - 1 {
+            let source = sortedDestinations[index]
+            let destination = sortedDestinations[index + 1]
+            Annotation("", coordinate: midpoint) {
+                RouteDistanceLabel(
+                    distance: route.footprintDistance,
+                    transportType: route.footprintTransportType,
+                    source: source.coordinate,
+                    destination: destination.coordinate,
+                    onTransportTypeChange: { newType in
+                        // 保存用户选择并重新计算路线
+                        routeManager.setUserTransportType(
+                            from: source.coordinate,
+                            to: destination.coordinate,
+                            transportType: newType
+                        )
+                        // 清除当前路线，强制重新计算
+                        routes = []
+                        // 重新计算路线（totalDistance 会自动从 routes 计算得出）
+                        calculateRoutes()
+                    }
+                )
+            }
+        }
     }
     
     var body: some View {
@@ -104,37 +231,7 @@ struct TripRouteMapView: View {
                 // 显示路线
                 if !routes.isEmpty {
                     ForEach(Array(routes.enumerated()), id: \.offset) { index, route in
-                        // 根据交通方式选择颜色
-                        let routeColor = routeColor(for: route.footprintTransportType)
-                        
-                        // 路线 - 使用 Apple 设计标准的样式（白色描边 + 主体颜色）
-                        // 先绘制白色背景（更粗），创建描边效果
-                        MapPolyline(route.polyline)
-                            .stroke(
-                                Color.white,
-                                style: StrokeStyle(
-                                    lineWidth: 7,
-                                    lineCap: .round,
-                                    lineJoin: .round
-                                )
-                            )
-                        // 再绘制主体颜色（较细），叠加在白色背景上
-                        MapPolyline(route.polyline)
-                            .stroke(
-                                routeColor,
-                                style: StrokeStyle(
-                                    lineWidth: 5,
-                                    lineCap: .round,
-                                    lineJoin: .round
-                                )
-                            )
-                        
-                        // 距离标注
-                        if let midpoint = midpointOfPolyline(route.polyline) {
-                            Annotation("", coordinate: midpoint) {
-                                RouteDistanceLabel(distance: route.footprintDistance)
-                            }
-                        }
+                        routePolylineContent(for: route, at: index)
                     }
                 } else if !isLoadingRoutes && sortedDestinations.count >= 2 {
                     // 如果没有计算好的路线，显示直线作为占位
@@ -142,17 +239,8 @@ struct TripRouteMapView: View {
                         if index < sortedDestinations.count - 1 {
                             let source = sortedDestinations[index]
                             let destination = sortedDestinations[index + 1]
-                            
-                            MapPolyline(coordinates: [source.coordinate, destination.coordinate])
-                                .stroke(Color.gray.opacity(0.3), style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round, dash: [5, 5]))
-                            
-                            // 计算直线距离作为占位
-                            let distance = source.coordinate.distance(to: destination.coordinate)
-                            if let midpoint = midpointOfLine(from: source.coordinate, to: destination.coordinate) {
-                                Annotation("", coordinate: midpoint) {
-                                    RouteDistanceLabel(distance: distance)
-                                }
-                            }
+                            let transportType = calculatePlaceholderTransportType(from: source, to: destination)
+                            placeholderRouteContent(for: source, destination: destination, transportType: transportType)
                         }
                     }
                 }
@@ -241,19 +329,60 @@ struct TripRouteMapView: View {
         }
     }
     
-    /// 计算路线多边形的中点坐标
+    /// 计算路线多边形的中点坐标（按距离计算，而不是简单的点索引）
     private func midpointOfPolyline(_ polyline: MKPolyline) -> CLLocationCoordinate2D? {
         let pointCount = polyline.pointCount
         guard pointCount > 0 else { return nil }
         
-        let points = polyline.points()
-        let middleIndex = pointCount / 2
-        let middlePoint = points[middleIndex]
+        // 如果只有两个点（如飞机模式的直线），直接计算两点中点
+        if pointCount == 2 {
+            let points = polyline.points()
+            let start = points[0].coordinate
+            let end = points[1].coordinate
+            return midpointOfLine(from: start, to: end)
+        }
         
-        return CLLocationCoordinate2D(
-            latitude: middlePoint.coordinate.latitude,
-            longitude: middlePoint.coordinate.longitude
-        )
+        // 对于多点路线，计算总距离，然后找到中点位置
+        let points = polyline.points()
+        var totalDistance: CLLocationDistance = 0
+        var segmentDistances: [CLLocationDistance] = []
+        
+        // 计算每段的距离和总距离
+        for i in 0..<pointCount - 1 {
+            let start = CLLocation(latitude: points[i].coordinate.latitude, longitude: points[i].coordinate.longitude)
+            let end = CLLocation(latitude: points[i + 1].coordinate.latitude, longitude: points[i + 1].coordinate.longitude)
+            let segmentDistance = start.distance(from: end)
+            segmentDistances.append(segmentDistance)
+            totalDistance += segmentDistance
+        }
+        
+        // 找到中点位置（总距离的一半）
+        let halfDistance = totalDistance / 2
+        var accumulatedDistance: CLLocationDistance = 0
+        
+        for i in 0..<segmentDistances.count {
+            let segmentDistance = segmentDistances[i]
+            if accumulatedDistance + segmentDistance >= halfDistance {
+                // 中点在这个段内
+                let remainingDistance = halfDistance - accumulatedDistance
+                let ratio = remainingDistance / segmentDistance
+                
+                let start = points[i].coordinate
+                let end = points[i + 1].coordinate
+                
+                // 在起点和终点之间按比例插值
+                return CLLocationCoordinate2D(
+                    latitude: start.latitude + (end.latitude - start.latitude) * ratio,
+                    longitude: start.longitude + (end.longitude - start.longitude) * ratio
+                )
+            }
+            accumulatedDistance += segmentDistance
+        }
+        
+        // 如果没找到（理论上不应该发生），返回中间点
+        let midIndex = pointCount / 2
+        guard midIndex < pointCount else { return nil }
+        return points[midIndex].coordinate
     }
     
     /// 计算两点连线的中点

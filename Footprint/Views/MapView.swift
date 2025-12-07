@@ -80,9 +80,12 @@ struct MapView: View {
     // MARK: - Route Color Helper
     /// 根据交通方式返回路线颜色
     /// - Parameter transportType: 交通方式
-    /// - Returns: 路线颜色（徒步：绿色，机动车：蓝色，其他：灰色）
+    /// - Returns: 路线颜色（徒步：绿色，机动车：蓝色，飞机：橙色，其他：灰色）
     private func routeColor(for transportType: MKDirectionsTransportType) -> Color {
-        if transportType.contains(.walking) && transportType == .walking {
+        if transportType == RouteManager.airplane {
+            // 飞机模式：使用橙色
+            return .orange
+        } else if transportType.contains(.walking) && transportType == .walking {
             // 徒步模式：使用绿色，更符合自然、步行的感觉
             return .green
         } else if transportType.contains(.automobile) && transportType == .automobile {
@@ -728,7 +731,7 @@ struct MapView: View {
             handleAutoShowRouteCards()
         } else {
             // 不在线路tab，设置初始地图相机位置（定位服务已在启动画面期间启动）
-            setInitialMapCameraPosition()
+        setInitialMapCameraPosition()
         }
     }
     
@@ -937,6 +940,11 @@ struct MapView: View {
             .simultaneousGesture(
                 DragGesture(minimumDistance: 0)
                     .onEnded { value in
+                        // 在旅程页面禁用点击地图的POI搜索
+                        if autoShowRouteCards {
+                            return
+                        }
+                        
                         guard selectedDestination == nil,
                               !showingPOIPreview,
                               !showSearchBar else { return }
@@ -1013,32 +1021,50 @@ struct MapView: View {
                                                     )
                                                 )
                                             
-                                            // 距离标注
+                                            // 距离标注（带交通方式选择）
                                             if let midpoint = midpointOfPolyline(route.polyline) {
                                                 Annotation("", coordinate: midpoint) {
-                                                    RouteDistanceLabel(distance: route.footprintDistance)
+                                                    RouteDistanceLabel(
+                                                        distance: route.footprintDistance,
+                                                        transportType: route.footprintTransportType,
+                                                        source: sourceDestination.coordinate,
+                                                        destination: destinationDestination.coordinate,
+                                                        onTransportTypeChange: { newType in
+                                                            // 保存用户选择并重新计算路线
+                                                            routeManager.setUserTransportType(
+                                                                from: sourceDestination.coordinate,
+                                                                to: destinationDestination.coordinate,
+                                                                transportType: newType
+                                                            )
+                                                            // 清除该旅程的路线缓存，强制重新计算
+                                                            tripRoutes.removeValue(forKey: trip.id)
+                                                            // 重新计算该旅程的路线
+                                                            let coordinates = visibleDestinations.map { $0.coordinate }
+                                                            Task {
+                                                                await calculateRoutesForTrip(tripId: trip.id, coordinates: coordinates, incremental: false)
+                                                            }
+                                                        }
+                                                    )
                                                 }
                                             }
                                         } else {
-                                            // 如果该段路线为nil，显示占位线
+                                            // 如果该段路线为nil，显示占位线（虚线）
                                             let source = visibleDestinations[index]
                                             let destination = visibleDestinations[index + 1]
-                                            MapPolyline(coordinates: [source.coordinate, destination.coordinate])
-                                                .stroke(tripConnectionColor.opacity(0.3), style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round, dash: [1, 2]))
-                                            
-                                            // 显示直线距离标注
-                                            let distance = source.coordinate.distance(to: destination.coordinate)
-                                            if let midpoint = midpointOfLine(from: source.coordinate, to: destination.coordinate) {
-                                                Annotation("", coordinate: midpoint) {
-                                                    RouteDistanceLabel(distance: distance)
-                                                }
-                                            }
+                                            let transportType = calculatePlaceholderTransportType(from: source, to: destination)
+                                            placeholderRouteContent(
+                                                for: source,
+                                                destination: destination,
+                                                transportType: transportType,
+                                                tripId: trip.id,
+                                                visibleDestinations: visibleDestinations
+                                            )
                                         }
                                     }
                                 }
                             }
                         } else {
-                            // 如果没有路线或所有路线都是nil，显示直线作为占位，但也要检查聚合
+                            // 如果没有路线或所有路线都是nil，显示彩色占位线，但也要检查聚合
                             ForEach(Array(visibleDestinations.enumerated()), id: \.offset) { index, _ in
                                 if index < visibleDestinations.count - 1 {
                                     let source = visibleDestinations[index]
@@ -1046,16 +1072,14 @@ struct MapView: View {
                                     
                                     // 如果不在同一个聚合中，才显示占位线
                                     if !areDestinationsInSameCluster(source, destination) {
-                                        MapPolyline(coordinates: [source.coordinate, destination.coordinate])
-                                            .stroke(tripConnectionColor.opacity(0.3), style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round, dash: [1, 2]))
-                                        
-                                        // 显示直线距离标注
-                                        let distance = source.coordinate.distance(to: destination.coordinate)
-                                        if let midpoint = midpointOfLine(from: source.coordinate, to: destination.coordinate) {
-                                            Annotation("", coordinate: midpoint) {
-                                                RouteDistanceLabel(distance: distance)
-                                            }
-                                        }
+                                        let transportType = calculatePlaceholderTransportType(from: source, to: destination)
+                                        placeholderRouteContent(
+                                            for: source,
+                                            destination: destination,
+                                            transportType: transportType,
+                                            tripId: trip.id,
+                                            visibleDestinations: visibleDestinations
+                                        )
                                     }
                                 }
                             }
@@ -1133,6 +1157,11 @@ struct MapView: View {
         LongPressGesture(minimumDuration: 0.5)
             .sequenced(before: DragGesture(minimumDistance: 0))
             .onEnded { value in
+                // 在旅程页面禁用长按手势
+                if autoShowRouteCards {
+                    return
+                }
+                
                 switch value {
                 case .second(true, let drag):
                     if let location = drag?.location,
@@ -1147,6 +1176,12 @@ struct MapView: View {
     
     // 处理地图点击 - 检测POI或地址信息
     private func handleMapTap(at coordinate: CLLocationCoordinate2D) {
+        // 在旅程页面禁用反向地理编码和POI搜索
+        if autoShowRouteCards {
+            print("⏭️ 旅程页面：已禁用点击地图的POI搜索")
+            return
+        }
+        
         print("📍 点击地图位置: (\(coordinate.latitude), \(coordinate.longitude))")
         
         // 检查点击位置是否接近任何标注或聚合点
@@ -3006,12 +3041,15 @@ struct MapView: View {
     private func calculateRoutesForTrip(tripId: UUID, coordinates: [CLLocationCoordinate2D], incremental: Bool = false) async {
         guard coordinates.count >= 2 else { return }
         
-        // 如果路线已经完整计算过，直接返回（避免重复计算）
+        // 如果使用增量更新，且路线已经完整计算过，直接返回（避免重复计算）
+        // 如果 incremental = false（强制重新计算），则跳过此检查
+        if incremental {
         if let existingRoutes = tripRoutes[tripId],
            existingRoutes.count == coordinates.count - 1,
            existingRoutes.allSatisfy({ $0 != nil }) {
             // 路线已完整，无需重新计算
             return
+            }
         }
         
         // 初始化路线数组（保持顺序）
@@ -3044,7 +3082,7 @@ struct MapView: View {
                         routeManager.clearRouteCache(from: source, to: destination)
                         // 不添加到 calculatedRoutes，让后续重新计算
                     } else {
-                        calculatedRoutes[i] = cachedRoute
+                    calculatedRoutes[i] = cachedRoute
                     }
                 }
             }
@@ -3110,6 +3148,12 @@ struct MapView: View {
     
     // 处理长按手势 - 显示地址信息（路名和门牌号）
     private func handleLongPress(at coordinate: CLLocationCoordinate2D) {
+        // 在旅程页面禁用反向地理编码
+        if autoShowRouteCards {
+            print("⏭️ 旅程页面：已禁用长按反向地理编码")
+            return
+        }
+        
         print("🗺️ 长按地图位置: (\(coordinate.latitude), \(coordinate.longitude))")
         
         // 先关闭之前可能显示的POI预览
@@ -4944,16 +4988,60 @@ extension CLLocationCoordinate2D {
 
 // 计算多边形中点的辅助函数
 extension MapView {
-    // 计算路线多边形的中点坐标
+    // 计算路线多边形的中点坐标（按距离计算，而不是简单的点索引）
     func midpointOfPolyline(_ polyline: MKPolyline) -> CLLocationCoordinate2D? {
         let pointCount = polyline.pointCount
         guard pointCount > 0 else { return nil }
         
-        let midIndex = pointCount / 2
+        // 如果只有两个点（如飞机模式的直线），直接计算两点中点
+        if pointCount == 2 {
+            let points = polyline.points()
+            let start = points[0].coordinate
+            let end = points[1].coordinate
+            return midpointOfLine(from: start, to: end)
+        }
+        
+        // 对于多点路线，计算总距离，然后找到中点位置
         let points = polyline.points()
+        var totalDistance: CLLocationDistance = 0
+        var segmentDistances: [CLLocationDistance] = []
+        
+        // 计算每段的距离和总距离
+        for i in 0..<pointCount - 1 {
+            let start = CLLocation(latitude: points[i].coordinate.latitude, longitude: points[i].coordinate.longitude)
+            let end = CLLocation(latitude: points[i + 1].coordinate.latitude, longitude: points[i + 1].coordinate.longitude)
+            let segmentDistance = start.distance(from: end)
+            segmentDistances.append(segmentDistance)
+            totalDistance += segmentDistance
+        }
+        
+        // 找到中点位置（总距离的一半）
+        let halfDistance = totalDistance / 2
+        var accumulatedDistance: CLLocationDistance = 0
+        
+        for i in 0..<segmentDistances.count {
+            let segmentDistance = segmentDistances[i]
+            if accumulatedDistance + segmentDistance >= halfDistance {
+                // 中点在这个段内
+                let remainingDistance = halfDistance - accumulatedDistance
+                let ratio = remainingDistance / segmentDistance
+                
+                let start = points[i].coordinate
+                let end = points[i + 1].coordinate
+                
+                // 在起点和终点之间按比例插值
+                return CLLocationCoordinate2D(
+                    latitude: start.latitude + (end.latitude - start.latitude) * ratio,
+                    longitude: start.longitude + (end.longitude - start.longitude) * ratio
+                )
+            }
+            accumulatedDistance += segmentDistance
+        }
+        
+        // 如果没找到（理论上不应该发生），返回中间点
+        let midIndex = pointCount / 2
         guard midIndex < pointCount else { return nil }
-        let mapPoint = points[midIndex]
-        return mapPoint.coordinate
+        return points[midIndex].coordinate
     }
     
     // 计算两点连线的中点
@@ -4975,17 +5063,211 @@ extension MapView {
         }
         return false
     }
+    
+    // 计算占位线应该显示的交通方式
+    private func calculatePlaceholderTransportType(
+        from source: TravelDestination,
+        to destination: TravelDestination
+    ) -> MKDirectionsTransportType {
+        // 获取用户选择的交通方式，如果没有则使用自动选择的逻辑
+        let userTransportType = routeManager.getUserTransportType(
+            from: source.coordinate,
+            to: destination.coordinate
+        )
+        
+        // 确定显示的交通方式：优先使用用户选择，否则根据距离智能选择
+        if let userType = userTransportType {
+            return userType
+        } else {
+            // 自动选择逻辑：近距离步行，远距离机动车
+            let distance = source.coordinate.distance(to: destination.coordinate)
+            if distance <= 5_000 {
+                return .walking
+            } else {
+                return .automobile
+            }
+        }
+    }
+    
+    // 占位线绘制视图（提取复杂逻辑，避免类型检查超时）
+    @MapContentBuilder
+    private func placeholderRouteContent(
+        for source: TravelDestination,
+        destination: TravelDestination,
+        transportType: MKDirectionsTransportType,
+        tripId: UUID,
+        visibleDestinations: [TravelDestination]
+    ) -> some MapContent {
+        // 根据交通方式选择虚线颜色
+        let placeholderColor = routeColor(for: transportType)
+        
+        // 计算直线距离
+        let distance = source.coordinate.distance(to: destination.coordinate)
+        
+        // 绘制虚线（更细的线条，更短的虚线间隔）
+        MapPolyline(coordinates: [source.coordinate, destination.coordinate])
+            .stroke(placeholderColor.opacity(0.5), style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round, dash: [3, 2]))
+        
+        // 显示直线距离标注（带交通方式选择，显示用户选择的交通方式图标）
+        if let midpoint = midpointOfLine(from: source.coordinate, to: destination.coordinate) {
+            Annotation("", coordinate: midpoint) {
+                RouteDistanceLabel(
+                    distance: distance,
+                    transportType: transportType, // 显示用户选择的交通方式图标
+                    source: source.coordinate,
+                    destination: destination.coordinate,
+                    onTransportTypeChange: { newType in
+                        // 保存用户选择并重新计算路线
+                        routeManager.setUserTransportType(
+                            from: source.coordinate,
+                            to: destination.coordinate,
+                            transportType: newType
+                        )
+                        // 清除该旅程的路线缓存，强制重新计算
+                        tripRoutes.removeValue(forKey: tripId)
+                        // 重新计算该旅程的路线
+                        let coordinates = visibleDestinations.map { $0.coordinate }
+                        Task {
+                            await calculateRoutesForTrip(tripId: tripId, coordinates: coordinates, incremental: false)
+                        }
+                    }
+                )
+            }
+        }
+    }
 }
 
-// 路线距离标签视图
+// 路线距离标签视图（带交通方式选择）
 struct RouteDistanceLabel: View {
     let distance: CLLocationDistance
+    let transportType: MKDirectionsTransportType
+    let source: CLLocationCoordinate2D?
+    let destination: CLLocationCoordinate2D?
+    let onTransportTypeChange: ((MKDirectionsTransportType?) -> Void)?
+    
     @StateObject private var languageManager = LanguageManager.shared
+    @StateObject private var routeManager = RouteManager.shared
+    
+    // 兼容旧版本：不传递交通方式信息时使用
+    init(distance: CLLocationDistance) {
+        self.distance = distance
+        self.transportType = .automobile
+        self.source = nil
+        self.destination = nil
+        self.onTransportTypeChange = nil
+    }
+    
+    // 新版本：包含交通方式信息
+    init(
+        distance: CLLocationDistance,
+        transportType: MKDirectionsTransportType,
+        source: CLLocationCoordinate2D? = nil,
+        destination: CLLocationCoordinate2D? = nil,
+        onTransportTypeChange: ((MKDirectionsTransportType?) -> Void)? = nil
+    ) {
+        self.distance = distance
+        self.transportType = transportType
+        self.source = source
+        self.destination = destination
+        self.onTransportTypeChange = onTransportTypeChange
+    }
     
     var body: some View {
-        Text(formatDistance(distance))
-            .font(.system(size: 11, weight: .semibold, design: .rounded))
-            .foregroundColor(.white)
+        // 如果有回调，将整个标签包装在 Menu 中，使整个标签都可以点击
+        if let source = source, let destination = destination, let onChange = onTransportTypeChange {
+            Menu {
+                Button {
+                    onChange(nil) // 恢复自动选择
+                } label: {
+                    Label {
+                        Text("auto_select".localized)
+                    } icon: {
+                        Image(systemName: "sparkles")
+                    }
+                }
+                
+                Divider()
+                
+                Button {
+                    onChange(.walking)
+                } label: {
+                    Label {
+                        Text("walking".localized)
+                    } icon: {
+                        Image(systemName: "figure.walk")
+                    }
+                }
+                
+                Button {
+                    onChange(.automobile)
+                } label: {
+                    Label {
+                        Text("automobile".localized)
+                    } icon: {
+                        Image(systemName: "car.fill")
+                    }
+                }
+                
+                Button {
+                    onChange(.transit)
+                } label: {
+                    Label {
+                        Text("transit".localized)
+                    } icon: {
+                        Image(systemName: "tram.fill")
+                    }
+                }
+                
+                Button {
+                    onChange(RouteManager.airplane)
+                } label: {
+                    Label {
+                        Text("airplane".localized)
+                    } icon: {
+                        Image(systemName: "airplane")
+                    }
+                }
+            } label: {
+                // 整个标签作为 Menu 的 label，使整个标签都可以点击
+                HStack(spacing: 4) {
+                    // 交通方式图标
+                    Image(systemName: transportType.iconName)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(transportColor(for: transportType))
+                        .frame(width: 14, height: 14)
+                    
+                    // 距离文本
+                    Text(formatDistance(distance))
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .foregroundColor(.white)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(.black.opacity(0.7))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(.white.opacity(0.3), lineWidth: 1)
+                        }
+                }
+                .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+            }
+            .menuStyle(.borderlessButton) // 使用无边框按钮样式，确保点击响应
+        } else {
+            // 只显示标签，不可点击
+            HStack(spacing: 4) {
+                // 交通方式图标
+                Image(systemName: transportType.iconName)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundColor(transportColor(for: transportType))
+                    .frame(width: 14, height: 14)
+                
+                // 距离文本
+                Text(formatDistance(distance))
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundColor(.white)
+            }
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background {
@@ -4997,6 +5279,7 @@ struct RouteDistanceLabel: View {
                     }
             }
             .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+        }
     }
     
     private func formatDistance(_ distance: CLLocationDistance) -> String {
@@ -5004,6 +5287,20 @@ struct RouteDistanceLabel: View {
         formatter.unitStyle = .abbreviated
         formatter.locale = languageManager.currentLanguage == .chinese ? Locale(identifier: "zh_CN") : Locale(identifier: "en_US")
         return formatter.string(fromDistance: distance)
+    }
+    
+    private func transportColor(for type: MKDirectionsTransportType) -> Color {
+        if type == RouteManager.airplane {
+            return .orange // 飞机使用橙色
+        } else if type.contains(.walking) && type == .walking {
+            return .green
+        } else if type.contains(.automobile) && type == .automobile {
+            return .blue
+        } else if type.contains(.transit) && type == .transit {
+            return .purple
+        } else {
+            return .gray
+        }
     }
 }
 
@@ -6340,11 +6637,11 @@ struct RouteCard: View {
                                     .fill(.ultraThinMaterial)
                             }
                             
-                            Image(systemName: "map")
-                                .font(.system(size: 16, weight: .medium))
+                        Image(systemName: "map")
+                            .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(hasCoverPhoto ? .white : .primary)
                         }
-                        .frame(width: 32, height: 32)
+                            .frame(width: 32, height: 32)
                     }
                     .buttonStyle(.plain)
                     
@@ -6364,11 +6661,11 @@ struct RouteCard: View {
                                     .fill(.ultraThinMaterial)
                             }
                             
-                            Image(systemName: "square.and.arrow.up")
-                                .font(.system(size: 16, weight: .medium))
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 16, weight: .medium))
                                 .foregroundColor(hasCoverPhoto ? .white : .primary)
                         }
-                        .frame(width: 32, height: 32)
+                            .frame(width: 32, height: 32)
                     }
                     .buttonStyle(.plain)
                 }
@@ -6499,8 +6796,8 @@ struct RouteCard: View {
                     .clipShape(RoundedRectangle(cornerRadius: 15, style: .continuous))
                 } else {
                     // 无封面图片：使用毛玻璃效果
-                    RoundedRectangle(cornerRadius: 15, style: .continuous)
-                        .fill(.ultraThinMaterial)
+            RoundedRectangle(cornerRadius: 15, style: .continuous)
+                .fill(.ultraThinMaterial)
                 }
             }
         )

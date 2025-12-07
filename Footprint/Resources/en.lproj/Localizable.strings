@@ -439,3 +439,10 @@
 "view_badge" = "View Badge";
 "view_destinations" = "View Destinations";
 "no_destinations" = "No Destinations";
+
+// Transport Type
+"auto_select" = "Auto Select";
+"walking" = "Walking";
+"automobile" = "Automobile";
+"transit" = "Transit";
+"airplane" = "Airplane";

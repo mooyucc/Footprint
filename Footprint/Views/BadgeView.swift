@@ -85,11 +85,16 @@ struct BadgeView: View {
             }.count
             return (unlocked, BadgeDataProvider.getAllCountryBadges().count)
         } else {
-            // 从缓存中统计已解锁的徽章数量
-            let unlocked = cachedSortedProvinceBadges.filter { badge in
-                provinceBadgeDataCache[badge.id]?.destinations.count ?? 0 > 0
-            }.count
-            return (unlocked, BadgeDataProvider.getAllProvinceBadges().count)
+            // 省份勋章：只有当前国家是中国时才统计
+            if isCurrentCountryChina {
+                let unlocked = cachedSortedProvinceBadges.filter { badge in
+                    provinceBadgeDataCache[badge.id]?.destinations.count ?? 0 > 0
+                }.count
+                return (unlocked, BadgeDataProvider.getAllProvinceBadges().count)
+            } else {
+                // 其他国家：返回0，不显示统计信息
+                return (0, 0)
+            }
         }
     }
     
@@ -97,6 +102,29 @@ struct BadgeView: View {
     private var progressPercentage: CGFloat {
         guard statistics.total > 0 else { return 0 }
         return CGFloat(statistics.unlocked) / CGFloat(statistics.total) * 100
+    }
+    
+    /// 获取已激活的国家勋章列表（只显示已解锁的）
+    private var unlockedCountryBadges: [CountryBadge] {
+        cachedSortedCountryBadges.filter { badge in
+            let cachedData = countryBadgeDataCache[badge.id]
+            let destinationCount = cachedData?.destinations.count ?? 0
+            return destinationCount > 0
+        }
+    }
+    
+    /// 判断当前所在国家是否是中国
+    private var isCurrentCountryChina: Bool {
+        countryManager.currentCountry == .china
+    }
+    
+    /// 获取已激活的省份勋章列表（只显示已解锁的）
+    private var unlockedProvinceBadges: [ProvinceBadge] {
+        cachedSortedProvinceBadges.filter { badge in
+            let cachedData = provinceBadgeDataCache[badge.id]
+            let destinationCount = cachedData?.destinations.count ?? 0
+            return destinationCount > 0
+        }
     }
     
     // MARK: - 辅助方法
@@ -177,13 +205,15 @@ struct BadgeView: View {
         // 在后台线程执行计算
         Task.detached(priority: .userInitiated) {
             // 在主线程获取必要的数据
-            let (allCountryBadges, allProvinceBadges, destinationsCopy, visitedCountriesSet, visitedProvincesSet) = await MainActor.run {
+            let (allCountryBadges, allProvinceBadges, destinationsCopy, visitedCountriesSet, visitedProvincesSet, isChina) = await MainActor.run {
                 (
                     BadgeDataProvider.getAllCountryBadges(),
-                    BadgeDataProvider.getAllProvinceBadges(),
+                    // 只有当前国家是中国时才获取省份勋章
+                    countryManager.currentCountry == .china ? BadgeDataProvider.getAllProvinceBadges() : [],
                     destinations,
                     badgeManager.getVisitedCountries(from: destinations),
-                    badgeManager.getVisitedProvinces(from: destinations)
+                    badgeManager.getVisitedProvinces(from: destinations),
+                    countryManager.currentCountry == .china
                 )
             }
             
@@ -269,9 +299,9 @@ struct BadgeView: View {
                 return data1.badge.country.englishName.localizedCaseInsensitiveCompare(data2.badge.country.englishName) == .orderedAscending
             }.map { $0.badge }
             
-            // 计算省份勋章
+            // 计算省份勋章（只有当前国家是中国时才计算）
             var provinceBadgeDataCache: [String: (destinations: [TravelDestination], yearRange: String?)] = [:]
-            let provinceBadgeData = allProvinceBadges.map { badge -> (badge: ProvinceBadge, isUnlocked: Bool, earliestYear: Int) in
+            let provinceBadgeData = isChina ? allProvinceBadges.map { badge -> (badge: ProvinceBadge, isUnlocked: Bool, earliestYear: Int) in
                 let normalizedProvince = badgeManager.normalizeProvinceName(badge.provinceName)
                 let isUnlocked = badgeManager.isProvinceBadgeUnlocked(
                     provinceName: normalizedProvince,
@@ -307,9 +337,9 @@ struct BadgeView: View {
                 provinceBadgeDataCache[badge.id] = (destinations: provinceDestinations, yearRange: yearRange)
                 
                 return (badge: badge, isUnlocked: isUnlocked, earliestYear: earliestYear)
-            }
+            } : []
             
-            let sortedProvinceBadges = provinceBadgeData.sorted { data1, data2 in
+            let sortedProvinceBadges = isChina ? provinceBadgeData.sorted { data1, data2 in
                 if data1.isUnlocked != data2.isUnlocked {
                     return data1.isUnlocked
                 }
@@ -317,7 +347,7 @@ struct BadgeView: View {
                     return data1.earliestYear < data2.earliestYear
                 }
                 return data1.badge.displayName.localizedCaseInsensitiveCompare(data2.badge.displayName) == .orderedAscending
-            }.map { $0.badge }
+            }.map { $0.badge } : []
             
             // 回到主线程更新UI
             await MainActor.run {
@@ -347,48 +377,51 @@ struct BadgeView: View {
                 .padding(.vertical, 12)
                 
                 // 进度条统计信息（黑色卡片样式）
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        // 标题：品牌红色
-                        Text("badges_progress".localized)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(AppColorScheme.iconColor)
-                        
-                        Spacer()
-                        
-                        // 百分比：浅灰色
-                        Text("\(Int(progressPercentage))%")
-                            .font(.caption)
-                            .fontWeight(.semibold)
-                            .foregroundColor(Color(red: 153/255, green: 153/255, blue: 153/255))
-                    }
-                    
-                    // 描述文字：白色
-                    Text("\(statistics.unlocked)/\(statistics.total) \(selectedType == .country ? "country_badges".localized : "province_badges".localized)")
-                        .font(.caption)
-                        .foregroundColor(.white)
-                    
-                    // 进度条
-                    GeometryReader { geometry in
-                        ZStack(alignment: .leading) {
-                            // 背景：深灰色
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(AppColorScheme.progressBarBackground)
+                // 只有在国家勋章模式，或者省份勋章模式且当前国家是中国时才显示
+                if selectedType == .country || (selectedType == .province && isCurrentCountryChina) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            // 标题：品牌红色
+                            Text("badges_progress".localized)
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(AppColorScheme.iconColor)
                             
-                            // 进度：品牌红色
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(AppColorScheme.progressBarFill)
-                                .frame(width: geometry.size.width * progressPercentage / 100)
-                                .animation(.spring(response: 0.5, dampingFraction: 0.8), value: progressPercentage)
+                            Spacer()
+                            
+                            // 百分比：浅灰色
+                            Text("\(Int(progressPercentage))%")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(Color(red: 153/255, green: 153/255, blue: 153/255))
                         }
+                        
+                        // 描述文字：白色
+                        Text("\(statistics.unlocked)/\(statistics.total) \(selectedType == .country ? "country_badges".localized : "province_badges".localized)")
+                            .font(.caption)
+                            .foregroundColor(.white)
+                        
+                        // 进度条
+                        GeometryReader { geometry in
+                            ZStack(alignment: .leading) {
+                                // 背景：深灰色
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(AppColorScheme.progressBarBackground)
+                                
+                                // 进度：品牌红色
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(AppColorScheme.progressBarFill)
+                                    .frame(width: geometry.size.width * progressPercentage / 100)
+                                    .animation(.spring(response: 0.5, dampingFraction: 0.8), value: progressPercentage)
+                            }
+                        }
+                        .frame(height: 6)
                     }
-                    .frame(height: 6)
+                    .padding(12)
+                    .darkCardStyle(for: colorScheme, cornerRadius: 12)
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 12)
                 }
-                .padding(12)
-                .darkCardStyle(for: colorScheme, cornerRadius: 12)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 12)
                 
                 // 勋章网格
                 GeometryReader { geometry in
@@ -412,7 +445,7 @@ struct BadgeView: View {
                                 spacing: 16
                             ) {
                                 if selectedType == .country {
-                                    ForEach(cachedSortedCountryBadges) { badge in
+                                    ForEach(unlockedCountryBadges) { badge in
                                         // 从缓存中获取数据，避免重复计算
                                         let cachedData = countryBadgeDataCache[badge.id]
                                         let destinationCount = cachedData?.destinations.count ?? 0
@@ -441,33 +474,51 @@ struct BadgeView: View {
                                         }
                                     }
                                 } else {
-                                    ForEach(cachedSortedProvinceBadges) { badge in
-                                        // 从缓存中获取数据，避免重复计算
-                                        let cachedData = provinceBadgeDataCache[badge.id]
-                                        let destinationCount = cachedData?.destinations.count ?? 0
-                                        let yearRange = cachedData?.yearRange
-                                        let destinations = cachedData?.destinations ?? []
-                                        
-                                        BadgeItemView(
-                                            imageName: badge.imageName,
-                                            title: badge.displayName,
-                                            isUnlocked: destinationCount > 0,
-                                            cardSize: cardWidth,
-                                            destinationCount: destinationCount,
-                                            yearRange: yearRange
-                                        )
-                                        .onTapGesture {
-                                            selectedBadge = BadgeDetail(
-                                                id: badge.id,
+                                    // 根据当前所在国家判断是否显示省份勋章
+                                    if isCurrentCountryChina {
+                                        // 中国：显示省份勋章
+                                        ForEach(unlockedProvinceBadges) { badge in
+                                            // 从缓存中获取数据，避免重复计算
+                                            let cachedData = provinceBadgeDataCache[badge.id]
+                                            let destinationCount = cachedData?.destinations.count ?? 0
+                                            let yearRange = cachedData?.yearRange
+                                            let destinations = cachedData?.destinations ?? []
+                                            
+                                            BadgeItemView(
                                                 imageName: badge.imageName,
                                                 title: badge.displayName,
                                                 isUnlocked: destinationCount > 0,
-                                                destinations: destinations,
-                                                yearRange: yearRange,
-                                                badgeType: .province
+                                                cardSize: cardWidth,
+                                                destinationCount: destinationCount,
+                                                yearRange: yearRange
                                             )
-                                            showingBadgeDetail = true
+                                            .onTapGesture {
+                                                selectedBadge = BadgeDetail(
+                                                    id: badge.id,
+                                                    imageName: badge.imageName,
+                                                    title: badge.displayName,
+                                                    isUnlocked: destinationCount > 0,
+                                                    destinations: destinations,
+                                                    yearRange: yearRange,
+                                                    badgeType: .province
+                                                )
+                                                showingBadgeDetail = true
+                                            }
                                         }
+                                    } else {
+                                        // 其他国家：显示"开发中..."提示
+                                        VStack(spacing: 16) {
+                                            Image(systemName: "hammer.fill")
+                                                .font(.system(size: 48))
+                                                .foregroundColor(.secondary)
+                                            
+                                            Text("in_development".localized)
+                                                .font(.headline)
+                                                .foregroundColor(.secondary)
+                                        }
+                                        .frame(maxWidth: .infinity)
+                                        .padding(.vertical, 60)
+                                        .gridCellColumns(3) // 占据整行
                                     }
                                 }
                             }
@@ -521,6 +572,13 @@ struct BadgeView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .destinationUpdated)) { _ in
                 // 当目的地被更新时（如添加省份、修改国家），强制更新以确保数据已同步
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    updateSortedBadges(forceUpdate: true)
+                    lastDestinationsSignature = destinationsSignature
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .countryChanged)) { _ in
+                // 当所在国家改变时，强制更新勋章列表
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     updateSortedBadges(forceUpdate: true)
                     lastDestinationsSignature = destinationsSignature

@@ -431,3 +431,10 @@
 "view_badge" = "查看徽章";
 "view_destinations" = "查看地點";
 "no_destinations" = "暫無地點";
+
+// Transport Type
+"auto_select" = "自動選擇";
+"walking" = "步行";
+"automobile" = "機動車";
+"transit" = "公共交通";
+"airplane" = "飛機";

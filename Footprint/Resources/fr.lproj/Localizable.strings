@@ -431,3 +431,10 @@
 "view_badge" = "Voir le Badge";
 "view_destinations" = "Voir les Destinations";
 "no_destinations" = "Aucune Destination";
+
+// Transport Type
+"auto_select" = "Sélection Automatique";
+"walking" = "Marche";
+"automobile" = "Automobile";
+"transit" = "Transit";
+"airplane" = "Avion";

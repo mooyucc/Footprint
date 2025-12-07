@@ -430,3 +430,10 @@
 "view_badge" = "배지 보기";
 "view_destinations" = "목적지 보기";
 "no_destinations" = "목적지 없음";
+
+// Transport Type
+"auto_select" = "자동 선택";
+"walking" = "도보";
+"automobile" = "자동차";
+"transit" = "대중교통";
+"airplane" = "비행기";

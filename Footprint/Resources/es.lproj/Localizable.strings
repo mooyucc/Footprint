@@ -431,3 +431,10 @@
 "view_badge" = "Ver Insignia";
 "view_destinations" = "Ver Destinos";
 "no_destinations" = "Sin Destinos";
+
+// Transport Type
+"auto_select" = "Selección Automática";
+"walking" = "Caminar";
+"automobile" = "Automóvil";
+"transit" = "Tránsito";
+"airplane" = "Avión";

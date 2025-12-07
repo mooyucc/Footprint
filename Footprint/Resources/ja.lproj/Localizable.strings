@@ -430,3 +430,10 @@
 "view_badge" = "バッジを表示";
 "view_destinations" = "目的地を表示";
 "no_destinations" = "目的地なし";
+
+// Transport Type
+"auto_select" = "自動選択";
+"walking" = "徒歩";
+"automobile" = "自動車";
+"transit" = "公共交通";
+"airplane" = "飛行機";
