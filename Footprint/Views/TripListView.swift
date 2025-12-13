@@ -11,6 +11,8 @@ import SwiftData
 struct TripListView: View {
     @Query(sort: \TravelTrip.startDate, order: .reverse) private var trips: [TravelTrip]
     @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var entitlementManager: EntitlementManager
+    @EnvironmentObject private var purchaseManager: PurchaseManager
     @State private var showingAddTrip = false
     @State private var searchText = ""
     @State private var shareItem: TripShareItem?
@@ -21,6 +23,7 @@ struct TripListView: View {
     @State private var selectedURL: URL?
     @EnvironmentObject var languageManager: LanguageManager
     @State private var refreshID = UUID()
+    @State private var showPaywall = false
     
     var filteredTrips: [TravelTrip] {
         if searchText.isEmpty {
@@ -104,6 +107,11 @@ struct TripListView: View {
             .sheet(isPresented: $showingFilePicker) {
                 DocumentPicker(selectedURL: $selectedURL)
             }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+                .environmentObject(purchaseManager)
+                .environmentObject(entitlementManager)
+            }
             .alert("import_result".localized, isPresented: $showingImportResult) {
                 Button("ok".localized) { }
             } message: {
@@ -149,7 +157,7 @@ struct TripListView: View {
     }
     
     private func importTripFromURL(_ url: URL) {
-        // 导入旅程
+        // 免费版和 Pro 都可以导入旅程
         importResult = TripDataImporter.importTrip(from: url, modelContext: modelContext)
         showingImportResult = true
         

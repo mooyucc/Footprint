@@ -49,9 +49,9 @@ Color(red: 247/255, green: 92/255, blue: 98/255)
 - **主要米色**：`#F7F3EB` (RGB: 247, 243, 235) - 页面背景（单色模式）
 - **卡片米色**：`#F0E7DA` (RGB: 240, 231, 218) - 小卡片背景
 - **渐变色系**：三色渐变，**主要用于视图的页面背景**
-  - **25%**：`#FBEFEC` (RGB: 251, 239, 236) - 浅粉色
-  - **50%**：`#FAF7F2` (RGB: 250, 247, 242) - 浅米色
-  - **75%**：`#FBF6EC` (RGB: 251, 246, 236) - 浅黄米色
+  - **0%**：`Color.blue.opacity(0.12)` - 浅蓝色（12% 不透明度）
+  - **50%**：`Color.pink.opacity(0.08)` - 浅粉色（8% 不透明度）
+  - **100%**：`Color(.systemBackground)` - 系统背景色
 
 ---
 
@@ -160,10 +160,11 @@ Image(systemName: "calendar")
 
 - **渐变类型**：三色线性渐变
 - **颜色停止点**：
-  - **25%**：`#FBEFEC` (RGB: 251, 239, 236) - 浅粉色
-  - **50%**：`#FAF7F2` (RGB: 250, 247, 242) - 浅米色
-  - **75%**：`#FBF6EC` (RGB: 251, 246, 236) - 浅黄米色
-- **渐变方向**：从右上角（`.topTrailing`）到左下角（`.bottomLeading`）
+  - **0%**：`Color.blue.opacity(0.12)` - 浅蓝色（12% 不透明度）
+  - **50%**：`Color.pink.opacity(0.08)` - 浅粉色（8% 不透明度）
+  - **100%**：`Color(.systemBackground)` - 系统背景色
+- **渐变方向**：从顶部（`.top`）到底部（`.bottom`）
+- **说明**：使用系统颜色的半透明版本，确保在不同设备上都能呈现一致的视觉效果
 
 **推荐实现方式（使用 AppColorScheme 工具类）**：
 ```swift
@@ -181,17 +182,15 @@ struct MyView: View {
 
 **手动实现方式**：
 ```swift
-// 渐变背景（推荐）- 三色渐变
+// 渐变背景（推荐）- 三色渐变（系统颜色半透明版本）
 LinearGradient(
-    stops: [
-        .init(color: Color(red: 0.984, green: 0.937, blue: 0.925), location: 0.0),    // #FBEFEC at 0%
-        .init(color: Color(red: 0.984, green: 0.937, blue: 0.925), location: 0.25),  // #FBEFEC at 25%
-        .init(color: Color(red: 0.980, green: 0.969, blue: 0.949), location: 0.50),  // #FAF7F2 at 50%
-        .init(color: Color(red: 0.984, green: 0.965, blue: 0.925), location: 0.75),  // #FBF6EC at 75%
-        .init(color: Color(red: 0.984, green: 0.965, blue: 0.925), location: 1.0)    // #FBF6EC at 100%
+    colors: [
+        Color.blue.opacity(0.12),      // 浅蓝色（12% 不透明度）
+        Color.pink.opacity(0.08),      // 浅粉色（8% 不透明度）
+        Color(.systemBackground)       // 系统背景色
     ],
-    startPoint: .topTrailing,
-    endPoint: .bottomLeading
+    startPoint: .top,
+    endPoint: .bottom
 )
 
 // ❌ 不推荐：单色背景（仅用于特殊场景）
@@ -1075,20 +1074,18 @@ struct AppColorScheme {
         if colorScheme == .dark {
             return LinearGradient(
                 colors: [Color(.systemGroupedBackground)],
-                startPoint: .topTrailing,
-                endPoint: .bottomLeading
+                startPoint: .top,
+                endPoint: .bottom
             )
         }
         return LinearGradient(
-            stops: [
-                .init(color: Color(red: 0.984, green: 0.937, blue: 0.925), location: 0.0),    // #FBEFEC at 0%
-                .init(color: Color(red: 0.984, green: 0.937, blue: 0.925), location: 0.25),  // #FBEFEC at 25%
-                .init(color: Color(red: 0.980, green: 0.969, blue: 0.949), location: 0.50),  // #FAF7F2 at 50%
-                .init(color: Color(red: 0.984, green: 0.965, blue: 0.925), location: 0.75),  // #FBF6EC at 75%
-                .init(color: Color(red: 0.984, green: 0.965, blue: 0.925), location: 1.0)    // #FBF6EC at 100%
+            colors: [
+                Color.blue.opacity(0.12),      // 浅蓝色（12% 不透明度）
+                Color.pink.opacity(0.08),      // 浅粉色（8% 不透明度）
+                Color(.systemBackground)       // 系统背景色
             ],
-            startPoint: .topTrailing,
-            endPoint: .bottomLeading
+            startPoint: .top,
+            endPoint: .bottom
         )
     }
     
@@ -1355,17 +1352,15 @@ iconButton(icon: "plus", size: 56, iconSize: 24) {
 ### 13.1 背景渐变
 
 ```swift
-// 三色渐变（25%, 50%, 75%）
+// 三色渐变（系统颜色半透明版本）
 LinearGradient(
-    stops: [
-        .init(color: Color(red: 0.984, green: 0.937, blue: 0.925), location: 0.0),    // #FBEFEC at 0%
-        .init(color: Color(red: 0.984, green: 0.937, blue: 0.925), location: 0.25),  // #FBEFEC at 25%
-        .init(color: Color(red: 0.980, green: 0.969, blue: 0.949), location: 0.50),  // #FAF7F2 at 50%
-        .init(color: Color(red: 0.984, green: 0.965, blue: 0.925), location: 0.75),  // #FBF6EC at 75%
-        .init(color: Color(red: 0.984, green: 0.965, blue: 0.925), location: 1.0)    // #FBF6EC at 100%
+    colors: [
+        Color.blue.opacity(0.12),      // 浅蓝色（12% 不透明度）
+        Color.pink.opacity(0.08),      // 浅粉色（8% 不透明度）
+        Color(.systemBackground)       // 系统背景色
     ],
-    startPoint: .topTrailing,
-    endPoint: .bottomLeading
+    startPoint: .top,
+    endPoint: .bottom
 )
 ```
 
@@ -1391,9 +1386,9 @@ Text("渐变文字")
 | 颜色名称 | Hex值 | RGB值 | SwiftUI值 |
 |---------|-------|-------|-----------|
 | 页面背景（单色） | #F7F3EB | (247, 243, 235) | `Color(red: 0.969, green: 0.953, blue: 0.922)` |
-| **渐变25%** | **#FBEFEC** | **(251, 239, 236)** | `Color(red: 0.984, green: 0.937, blue: 0.925)` |
-| **渐变50%** | **#FAF7F2** | **(250, 247, 242)** | `Color(red: 0.980, green: 0.969, blue: 0.949)` |
-| **渐变75%** | **#FBF6EC** | **(251, 246, 236)** | `Color(red: 0.984, green: 0.965, blue: 0.925)` |
+| **渐变顶部（0%）** | **系统蓝色 12%** | **Color.blue.opacity(0.12)** | `Color.blue.opacity(0.12)` |
+| **渐变中间（50%）** | **系统粉色 8%** | **Color.pink.opacity(0.08)** | `Color.pink.opacity(0.08)` |
+| **渐变底部（100%）** | **系统背景** | **Color(.systemBackground)** | `Color(.systemBackground)` |
 | 浅米色卡片背景 | #FAF8F5 | (250, 248, 245) | `Color(red: 250/255, green: 248/255, blue: 245/255)` |
 | 浅米色卡片边框 | #EAE6DF | (234, 230, 223) | `Color(red: 234/255, green: 230/255, blue: 223/255)` |
 | 卡片米色（旧版，已废弃） | #F0E7DA | (240, 231, 218) | `Color(red: 0.941, green: 0.906, blue: 0.855)` |

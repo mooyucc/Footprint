@@ -170,12 +170,15 @@ struct ContentView: View {
 
 struct ProfileView: View {
     @EnvironmentObject var appleSignInManager: AppleSignInManager
+    @EnvironmentObject var entitlementManager: EntitlementManager
+    @EnvironmentObject var purchaseManager: PurchaseManager
     @EnvironmentObject var languageManager: LanguageManager
     @EnvironmentObject var brandColorManager: BrandColorManager
     @StateObject private var countryManager = CountryManager.shared
     @Query private var destinations: [TravelDestination]
     @Query private var trips: [TravelTrip]
     @State private var showSettings = false
+    @State private var showPaywall = false
     @State private var showShareSheet = false
     @State private var shareImage: UIImage?
     @State private var pendingShare = false
@@ -223,9 +226,19 @@ struct ProfileView: View {
                 VStack(spacing: 20) {
                     profileHeaderView
                     
+                    // 未登录时在订阅卡片上方显示登录提示
                     if !appleSignInManager.isSignedIn {
                         signInPromptCard
                     }
+                    
+                    // 始终显示订阅相关卡片（Beta版本中隐藏）
+                    #if !BETA
+                    if appleSignInManager.isSignedIn && entitlementManager.entitlement() == .pro {
+                        membershipStatusCard
+                    } else {
+                        upgradeCard
+                    }
+                    #endif
                     
                     statisticsCard
                     
@@ -261,6 +274,9 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showSettings) {
                 SettingsView()
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
             }
             .sheet(isPresented: $showShareSheet) {
                 if let image = shareImage {
@@ -365,6 +381,147 @@ struct ProfileView: View {
             .darkCardStyle(for: colorScheme, cornerRadius: 15)
         }
         .buttonStyle(PlainButtonStyle())
+    }
+
+    private var upgradeCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "sparkles.rectangle.stack")
+                    .foregroundColor(.white)
+                    .font(.title2)
+                Text("paywall_banner_title".localized)
+                    .font(.headline)
+                    .foregroundColor(.white)
+                Spacer()
+            }
+            
+            VStack(alignment: .leading, spacing: 6) {
+                featureRow(title: "paywall_feature_import_export".localized)
+            }
+            
+            (Text("paywall_emotional_message_part1".localized) +
+             Text("\n") +
+             Text("paywall_emotional_message_part2".localized)
+                .fontWeight(.bold))
+                .font(.subheadline)
+                .foregroundColor(.white.opacity(0.9))
+                .padding(.top, 4)
+            
+            Button {
+                showPaywall = true
+            } label: {
+                Text("paywall_button_upgrade".localized)
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(brandColorManager.currentBrandColor)
+            .controlSize(.large)
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            brandColorManager.currentBrandColor.opacity(0.9),
+                            brandColorManager.currentBrandColor.opacity(0.65)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .shadow(color: Color.black.opacity(0.15), radius: 10, x: 0, y: 6)
+    }
+    
+    private func featureRow(title: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark.seal.fill")
+                .foregroundColor(.white.opacity(0.9))
+            Text(title)
+                .font(.subheadline)
+                .foregroundColor(.white.opacity(0.92))
+        }
+    }
+    
+    private var subscriptionExpiryText: String {
+        guard entitlementManager.entitlement() == .pro else {
+            return "membership_status_subscribed".localized
+        }
+        
+        if let expiry = entitlementManager.subscriptionExpiryDate {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .medium
+            formatter.timeStyle = .none
+            return "membership_status_expiry".localized(with: formatter.string(from: expiry))
+        } else {
+            return "membership_status_lifetime_active".localized
+        }
+    }
+    
+    private var membershipStatusCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "checkmark.seal.fill")
+                    .foregroundColor(.white)
+                    .font(.title2)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("membership_status_pro_active".localized)
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    Text(subscriptionExpiryText)
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.9))
+                }
+                
+                Spacer()
+            }
+            
+            Divider()
+                .overlay(Color.white.opacity(0.3))
+            
+            HStack(alignment: .center, spacing: 8) {
+                Image(systemName: "sparkles")
+                    .foregroundColor(.white.opacity(0.9))
+                Text("membership_status_all_features".localized)
+                    .font(.subheadline)
+                    .foregroundColor(.white.opacity(0.92))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            
+            Button {
+                showPaywall = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.triangle.2.circlepath.circle.fill")
+                    Text("membership_status_view_restore".localized)
+                        .fontWeight(.semibold)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(Color.white.opacity(0.92))
+                .cornerRadius(12)
+                .foregroundColor(brandColorManager.currentBrandColor)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            brandColorManager.currentBrandColor.opacity(0.95),
+                            brandColorManager.currentBrandColor.opacity(0.7)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .shadow(color: Color.black.opacity(0.15), radius: 10, x: 0, y: 6)
     }
     
     private var statisticsCard: some View {

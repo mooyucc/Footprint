@@ -189,12 +189,12 @@ struct AppColorScheme {
     }
     
     /// 页面背景渐变（推荐使用）
-    /// - 浅色模式: 三色渐变
-    ///   - 25%: #FBEFEC (浅粉色) - RGB: (251, 239, 236)
-    ///   - 50%: #FAF7F2 (浅米色) - RGB: (250, 247, 242)
-    ///   - 75%: #FBF6EC (浅黄米色) - RGB: (251, 246, 236)
+    /// - 浅色模式: 三色渐变（系统颜色半透明版本）
+    ///   - 0%: Color.blue.opacity(0.12) - 浅蓝色（12% 不透明度）
+    ///   - 50%: Color.pink.opacity(0.08) - 浅粉色（8% 不透明度）
+    ///   - 100%: Color(.systemBackground) - 系统背景色
     /// - 深色模式: 系统分组背景（单色渐变，视觉上为单色）
-    /// - 渐变方向: 从右上角到左下角
+    /// - 渐变方向: 从顶部到底部
     /// - 使用方式: `.appPageBackgroundGradient(for: colorScheme)`
     /// - 示例:
     ///   ```swift
@@ -207,21 +207,19 @@ struct AppColorScheme {
         if colorScheme == .dark {
             return LinearGradient(
                 colors: [Color(.systemGroupedBackground)],
-                startPoint: .topTrailing,
-                endPoint: .bottomLeading
+                startPoint: .top,
+                endPoint: .bottom
             )
         }
-        // 浅色模式：三色渐变（25%, 50%, 75%）
+        // 浅色模式：三色渐变（系统颜色半透明版本）
         return LinearGradient(
-            stops: [
-                .init(color: Color(red: 0.984, green: 0.937, blue: 0.925), location: 0.0),    // #FBEFEC at 0%
-                .init(color: Color(red: 0.984, green: 0.937, blue: 0.925), location: 0.25),  // #FBEFEC at 25%
-                .init(color: Color(red: 0.980, green: 0.969, blue: 0.949), location: 0.50),  // #FAF7F2 at 50%
-                .init(color: Color(red: 0.984, green: 0.965, blue: 0.925), location: 0.75),  // #FBF6EC at 75%
-                .init(color: Color(red: 0.984, green: 0.965, blue: 0.925), location: 1.0)    // #FBF6EC at 100%
+            colors: [
+                Color.blue.opacity(0.12),      // 浅蓝色（12% 不透明度）
+                Color.pink.opacity(0.08),      // 浅粉色（8% 不透明度）
+                Color(.systemBackground)       // 系统背景色
             ],
-            startPoint: .topTrailing,
-            endPoint: .bottomLeading
+            startPoint: .top,
+            endPoint: .bottom
         )
     }
     
@@ -232,26 +230,60 @@ struct AppColorScheme {
     ///   - rect: 绘制区域
     ///   - context: Core Graphics 上下文
     static func drawGradientBackground(in rect: CGRect, context: CGContext) {
-        // 定义三色渐变的颜色停止点（符合App配色标准）
-        let color1 = UIColor(red: 0.984, green: 0.937, blue: 0.925, alpha: 1.0) // #FBEFEC at 25%
-        let color2 = UIColor(red: 0.980, green: 0.969, blue: 0.949, alpha: 1.0) // #FAF7F2 at 50%
-        let color3 = UIColor(red: 0.984, green: 0.965, blue: 0.925, alpha: 1.0) // #FBF6EC at 75%
+        // 定义三色渐变的颜色（符合App配色标准，使用系统颜色的半透明版本）
+        // 获取系统蓝色和粉色的RGB值，然后应用不透明度
+        var blueRed: CGFloat = 0
+        var blueGreen: CGFloat = 0
+        var blueBlue: CGFloat = 0
+        var blueAlpha: CGFloat = 0
+        UIColor.systemBlue.getRed(&blueRed, green: &blueGreen, blue: &blueBlue, alpha: &blueAlpha)
+        
+        var pinkRed: CGFloat = 0
+        var pinkGreen: CGFloat = 0
+        var pinkBlue: CGFloat = 0
+        var pinkAlpha: CGFloat = 0
+        UIColor.systemPink.getRed(&pinkRed, green: &pinkGreen, blue: &pinkBlue, alpha: &pinkAlpha)
+        
+        // 创建半透明颜色（混合系统背景色以模拟opacity效果）
+        let systemBackground = UIColor.systemBackground
+        var bgRed: CGFloat = 0
+        var bgGreen: CGFloat = 0
+        var bgBlue: CGFloat = 0
+        var bgAlpha: CGFloat = 0
+        systemBackground.getRed(&bgRed, green: &bgGreen, blue: &bgBlue, alpha: &bgAlpha)
+        
+        // 计算混合后的颜色（color * opacity + background * (1 - opacity)）
+        let color1 = UIColor(
+            red: blueRed * 0.12 + bgRed * 0.88,
+            green: blueGreen * 0.12 + bgGreen * 0.88,
+            blue: blueBlue * 0.12 + bgBlue * 0.88,
+            alpha: 1.0
+        ) // 浅蓝色（12% 不透明度）
+        
+        let color2 = UIColor(
+            red: pinkRed * 0.08 + bgRed * 0.92,
+            green: pinkGreen * 0.08 + bgGreen * 0.92,
+            blue: pinkBlue * 0.08 + bgBlue * 0.92,
+            alpha: 1.0
+        ) // 浅粉色（8% 不透明度）
+        
+        let color3 = systemBackground // 系统背景色
         
         // 创建颜色数组和位置数组
-        let colors = [color1.cgColor, color1.cgColor, color2.cgColor, color3.cgColor, color3.cgColor]
-        let locations: [CGFloat] = [0.0, 0.25, 0.50, 0.75, 1.0]
+        let colors = [color1.cgColor, color2.cgColor, color3.cgColor]
+        let locations: [CGFloat] = [0.0, 0.5, 1.0]
         
         // 创建渐变
         guard let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors as CFArray, locations: locations) else {
             // 如果创建失败，使用单色背景作为降级方案
-            context.setFillColor(UIColor(red: 0.984, green: 0.937, blue: 0.925, alpha: 1.0).cgColor)
+            context.setFillColor(systemBackground.cgColor)
             context.fill(rect)
             return
         }
         
-        // 渐变方向：从右上角（.topTrailing）到左下角（.bottomLeading）
-        let startPoint = CGPoint(x: rect.maxX, y: rect.minY) // 右上角
-        let endPoint = CGPoint(x: rect.minX, y: rect.maxY)  // 左下角
+        // 渐变方向：从顶部到底部
+        let startPoint = CGPoint(x: rect.midX, y: rect.minY) // 顶部中心
+        let endPoint = CGPoint(x: rect.midX, y: rect.maxY)  // 底部中心
         
         // 绘制渐变
         context.saveGState()

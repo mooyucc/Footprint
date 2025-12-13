@@ -16,8 +16,6 @@ struct SplashScreenView: View {
     @State private var showSquid = false
     @State private var showText = false
     
-    @Environment(\.colorScheme) private var colorScheme
-    
     // 动画和初始化时间控制
     private let minDisplayTime: TimeInterval = 2.5  // 最小显示时间（保证动画流畅）
     private let maxDisplayTime: TimeInterval = 5.0  // 最大等待时间（避免等待太久）
@@ -26,8 +24,8 @@ struct SplashScreenView: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // 整体背景 - 白色（浅色模式）或深色（深色模式）
-                (colorScheme == .dark ? Color.black : Color.white)
+                // 整体背景固定白色（品牌要求深色模式下也保持白底）
+                Color.white
                     .ignoresSafeArea(.all)
                 
                 VStack(spacing: 0) {
@@ -151,6 +149,9 @@ struct SplashScreenView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 isPresented = false
                 print("✅ 启动画面：初始化完成，关闭启动画面（总耗时：\(String(format: "%.2f", elapsedTime + remainingTime + 0.5))秒）")
+                
+                // 通知启动画面已关闭
+                NotificationCenter.default.post(name: .splashScreenDismissed, object: nil)
             }
         }
     }
@@ -159,6 +160,7 @@ struct SplashScreenView: View {
 // MARK: - 通知名称扩展
 extension Notification.Name {
     static let appInitializationCompleted = Notification.Name("appInitializationCompleted")
+    static let splashScreenDismissed = Notification.Name("splashScreenDismissed")
 }
 
 #Preview {

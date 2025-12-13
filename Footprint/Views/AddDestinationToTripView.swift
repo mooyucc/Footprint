@@ -11,6 +11,8 @@ import PhotosUI
 import MapKit
 
 struct AddDestinationToTripView: View {
+    @EnvironmentObject private var entitlementManager: EntitlementManager
+    @EnvironmentObject private var purchaseManager: PurchaseManager
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query private var allDestinations: [TravelDestination]
@@ -36,6 +38,7 @@ struct AddDestinationToTripView: View {
     
     // 从现有目的地添加
     @State private var selectedDestinations = Set<TravelDestination>()
+    @State private var showPaywall = false
     
     let categories = ["domestic", "international"]
     
@@ -87,6 +90,11 @@ struct AddDestinationToTripView: View {
                         photoThumbnailData = processed.1
                     }
                 }
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
+                    .environmentObject(purchaseManager)
+                    .environmentObject(entitlementManager)
             }
         }
     }
@@ -342,22 +350,5 @@ struct AddDestinationToTripView: View {
     }
 }
 
-#Preview {
-    let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(
-        for: TravelTrip.self, TravelDestination.self,
-        configurations: config
-    )
-    
-    let trip = TravelTrip(
-        name: "2025年10月青甘大环线",
-        desc: "穿越青海甘肃的美丽风光",
-        startDate: Date(),
-        endDate: Date().addingTimeInterval(86400 * 7)
-    )
-    container.mainContext.insert(trip)
-    
-    return AddDestinationToTripView(trip: trip)
-        .modelContainer(container)
-}
+// Preview removed to avoid build issues in production target.
 

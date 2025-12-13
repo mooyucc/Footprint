@@ -1,3 +1,47 @@
+"paywall_title" = "Unlock Pro";
+"paywall_subtitle" = "Unlock local data import/export to easily backup and restore your travel data.";
+"paywall_button_upgrade" = "View Subscription Plan";
+"paywall_button_restore" = "Restore Purchases";
+
+// Membership status card
+"membership_status_subscribed" = "Subscribed";
+"membership_status_expiry" = "Active until %@";
+"membership_status_lifetime_active" = "Lifetime access is active";
+"membership_status_pro_active" = "Pro Active";
+"membership_status_all_features" = "All features unlocked; you can restore purchases anytime to sync devices.";
+"membership_status_view_restore" = "View benefits / Restore purchases";
+
+// Paywall lifetime unlocked
+"paywall_lifetime_unlocked" = "Lifetime access unlocked, no need to purchase again.";
+"paywall_lifetime_sync_hint" = "To sync on a new device, use \"Restore Purchases\" below.";
+"paywall_terms_privacy" = "By purchasing you agree to the Terms of Use and Privacy Policy. Auto-renewable; cancel anytime in system subscriptions.";
+"paywall_feature_title" = "Pro features";
+"paywall_feature_unlimited" = "Unlimited destinations and trip cards";
+"paywall_feature_share_layouts" = "Full share layouts";
+"paywall_feature_import_export" = "Local data import/export";
+"paywall_feature_link_maps" = "Link trips to system Maps app";
+"paywall_banner_title" = "Upgrade to Pro to unlock data management";
+"paywall_emotional_message_part1" = "Let \"MooFootprint\" be more fun and long-lasting! We need your support to create more interesting stories together.";
+"paywall_emotional_message_part2" = "Come support us! ✨";
+"subscription_monthly" = "Monthly subscription";
+"subscription_yearly" = "Yearly subscription";
+"subscription_weekly" = "Weekly subscription";
+"subscription_daily" = "Daily subscription";
+"subscription_default" = "Subscription";
+"close" = "Close";
+"subscription_auto_renew_note" = "Auto-renews until canceled in Settings > Apple ID > Subscriptions.";
+"terms_of_use" = "Terms of Use";
+"privacy_policy" = "Privacy Policy";
+"terms_url" = "https://mooyu.cc/moofootprintlicense.html";
+"privacy_url" = "https://mooyu.cc/myfootprintprivacy.html";
+"limit_destination_reached_title" = "Free limit reached";
+"limit_destination_reached_message" = "Free plan allows up to 50 destinations. Upgrade to Pro for unlimited.";
+"limit_trip_reached_message" = "Free plan allows up to 5 trips. Upgrade to Pro for unlimited.";
+"share_layout_locked_message" = "Full share layouts are for Pro. Upgrade to unlock.";
+"import_export_locked_message" = "Import/Export requires Pro. Upgrade to continue.";
+"import_trip_locked_message" = "Trip import requires Pro. Upgrade to continue.";
+"loading" = "Loading…";
+"one_time_purchase" = "One-time purchase";
 /* 
   Localizable.strings
   Footprint
@@ -80,6 +124,34 @@
 "local_backup_write_failed" = "Write failed: %@";
 "local_backup_unknown_error" = "Unknown error: %@";
 "local_backup_access_denied" = "Access denied";
+
+// Beta Reminder
+"beta_reminder_title" = "Test Build Reminder";
+"beta_reminder_subtitle" = "This is a beta build. It is valid for 30 days.";
+"beta_reminder_countdown" = "Days remaining: %d";
+"beta_reminder_days_label" = "Days Remaining";
+"beta_reminder_expiry_date" = "Expires on %@";
+"beta_reminder_backup_tip" = "Please export a local backup via Me > Settings > Data to avoid data loss after the test build expires.";
+"beta_reminder_backup_button" = "How to back up";
+"beta_reminder_continue_button" = "Open MooFootprint Beta";
+"beta_reminder_backup_guide_title" = "Backup guide";
+"beta_reminder_backup_guide_message" = "Open Me > Settings > Data > Export Local Data to generate a backup package. Save it to iCloud Drive or locally so you can re-import after updating to a new build.";
+"beta_reminder_backup_step1" = "Me → Settings → Data";
+"beta_reminder_backup_step2" = "Tap “Export Local Data” to create a backup package";
+"beta_reminder_backup_step3" = "Save the backup to iCloud Drive or local storage";
+
+// Beta Expired
+"beta_expired_title" = "Test build expired";
+"beta_expired_subtitle" = "Please download the App Store release to keep using MooFootprint.";
+"beta_expired_date" = "Expired on %@";
+"beta_expired_message" = "Download the release from the App Store to continue. You can import any backup in the new version.";
+"beta_expired_button" = "Go to App Store (release)";
+
+// Beta Local Data IO
+"beta_local_data_io_title" = "Beta Build Feature Limit";
+"beta_local_data_io_message" = "Local data import/export is only available in the release version. Please download the release from the App Store to use this feature.";
+"beta_local_data_io_continue" = "Continue";
+"beta_local_data_io_button" = "Go to App Store (release)";
 
 // Common
 "footprint" = "MooFootprint";
@@ -446,3 +518,22 @@
 "automobile" = "Automobile";
 "transit" = "Transit";
 "airplane" = "Airplane";
+
+// Onboarding
+"onboarding_welcome_hello" = "Hello";
+"onboarding_welcome_subtitle" = "Welcome to MooFootprint. Let's set up your preferences.";
+"onboarding_welcome_continue" = "Get Started";
+"onboarding_page1_title" = "Basic Setup";
+"onboarding_page1_language_title" = "Language";
+"onboarding_page1_country_title" = "Country";
+"onboarding_page1_country_description" = "Set your country to distinguish between domestic and international travel";
+"onboarding_page2_title" = "Appearance";
+"onboarding_page2_appearance_title" = "Appearance Mode";
+"onboarding_page2_appearance_description" = "Choose the app's appearance mode. Follow System will automatically switch based on system settings";
+"onboarding_page2_color_title" = "Theme Color";
+"onboarding_page2_color_preview" = "Color Preview";
+"onboarding_page2_color_custom" = "Using custom color";
+"onboarding_page2_color_default" = "Using default color";
+"onboarding_page2_color_description" = "Customize the app's theme color, which will be applied to icons, buttons, and other UI elements";
+"onboarding_next" = "Next";
+"onboarding_complete" = "Get Started";

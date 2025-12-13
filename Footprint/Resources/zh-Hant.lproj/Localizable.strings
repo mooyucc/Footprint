@@ -1,3 +1,47 @@
+"paywall_title" = "解鎖 Pro";
+"paywall_subtitle" = "解鎖本地數據導入/導出功能，輕鬆備份和恢復你的旅行數據。";
+"paywall_button_upgrade" = "查看訂閱方案";
+"paywall_button_restore" = "恢復購買";
+
+// Membership status card
+"membership_status_subscribed" = "已訂閱";
+"membership_status_expiry" = "有效期至 %@";
+"membership_status_lifetime_active" = "終身權益已啟用";
+"membership_status_pro_active" = "Pro 已啟用";
+"membership_status_all_features" = "已解鎖全部功能，隨時可恢復購買以同步設備";
+"membership_status_view_restore" = "查看權益 / 恢復購買";
+
+// Paywall lifetime unlocked
+"paywall_lifetime_unlocked" = "已解鎖終身版權益，無需再次購買。";
+"paywall_lifetime_sync_hint" = "如需在新裝置同步，可使用下方「恢復購買」。";
+"paywall_terms_privacy" = "購買即表示同意《服務條款》和《隱私政策》。自動續訂，可在系統訂閱中隨時取消。";
+"paywall_feature_title" = "Pro 功能";
+"paywall_feature_unlimited" = "無限目的地與旅程卡片";
+"paywall_feature_share_layouts" = "完整版旅程分享圖片版面";
+"paywall_feature_import_export" = "本地數據導入/導出";
+"paywall_feature_link_maps" = "旅程鏈接系統地圖應用";
+"paywall_banner_title" = "升級 Pro 解鎖數據管理功能";
+"paywall_emotional_message_part1" = "讓「墨魚足跡」更好玩、更長久！我們需要你的加入，一起創造更多有趣的故事～";
+"paywall_emotional_message_part2" = "快來支持我們吧！ ✨";
+"subscription_monthly" = "按月訂閱";
+"subscription_yearly" = "按年訂閱";
+"subscription_weekly" = "按週訂閱";
+"subscription_daily" = "按日訂閱";
+"subscription_default" = "訂閱";
+"close" = "關閉";
+"subscription_auto_renew_note" = "自動續訂，需在設定 > Apple ID > 訂閱中取消。";
+"terms_of_use" = "服務條款";
+"privacy_policy" = "隱私政策";
+"terms_url" = "https://mooyu.cc/moofootprintlicense.html";
+"privacy_url" = "https://mooyu.cc/myfootprintprivacy.html";
+"limit_destination_reached_title" = "已達免費版上限";
+"limit_destination_reached_message" = "免費版最多 50 個目的地，升級 Pro 解鎖無限新增。";
+"limit_trip_reached_message" = "免費版最多 5 個旅程卡片，升級 Pro 解鎖無限旅程。";
+"share_layout_locked_message" = "完整版分享版面為 Pro 功能，升級後解鎖。";
+"import_export_locked_message" = "匯入/匯出為 Pro 功能，升級後使用。";
+"import_trip_locked_message" = "旅程匯入為 Pro 功能，升級後使用。";
+"loading" = "正在載入…";
+"one_time_purchase" = "一次性買斷";
 /* 
   Localizable.strings
   Footprint
@@ -87,6 +131,33 @@
 "local_backup_write_failed" = "寫入失敗: %@";
 "local_backup_unknown_error" = "未知錯誤: %@";
 "local_backup_access_denied" = "訪問被拒絕";
+
+// Beta Reminder
+"beta_reminder_title" = "測試版提醒";
+"beta_reminder_subtitle" = "目前為測試版，有效期 30 天。";
+"beta_reminder_countdown" = "剩餘天數：%d";
+"beta_reminder_expiry_date" = "到期日：%@";
+"beta_reminder_backup_tip" = "請前往「我的 > 設定 > 資料」匯出本機備份，避免測試版到期後資料遺失。";
+"beta_reminder_backup_button" = "如何備份";
+"beta_reminder_continue_button" = "打開 墨魚足跡Beta";
+"beta_reminder_backup_guide_title" = "備份指引";
+"beta_reminder_backup_guide_message" = "打開「我的 > 設定 > 資料 > 匯出本地資料」生成備份包。請將檔案儲存到 iCloud Drive 或本地，更新新版本後可重新匯入。";
+"beta_reminder_backup_step1" = "我的 → 設定 → 資料";
+"beta_reminder_backup_step2" = "點擊「匯出本地資料」生成備份包";
+"beta_reminder_backup_step3" = "將備份存到 iCloud Drive 或本機";
+
+// Beta Expired
+"beta_expired_title" = "測試版已到期";
+"beta_expired_subtitle" = "請下載 App Store 正式版繼續使用墨魚足跡。";
+"beta_expired_date" = "到期日：%@";
+"beta_expired_message" = "前往 App Store 下載正式版後即可繼續使用，已備份的資料可在新版本中匯入。";
+"beta_expired_button" = "前往 App Store 下載正式版";
+
+// Beta Local Data IO
+"beta_local_data_io_title" = "測試版功能限制";
+"beta_local_data_io_message" = "本地資料匯入/匯出功能僅在正式版中可用。請前往 App Store 下載正式版以使用此功能。";
+"beta_local_data_io_continue" = "繼續";
+"beta_local_data_io_button" = "前往 App Store 下載正式版";
 
 // Common
 "footprint" = "墨魚足跡";
@@ -438,3 +509,22 @@
 "automobile" = "機動車";
 "transit" = "公共交通";
 "airplane" = "飛機";
+
+// Onboarding
+"onboarding_welcome_hello" = "你好";
+"onboarding_welcome_subtitle" = "歡迎使用墨魚足跡。讓我們來設置你的偏好。";
+"onboarding_welcome_continue" = "開始使用";
+"onboarding_page1_title" = "基本設置";
+"onboarding_page1_language_title" = "語言";
+"onboarding_page1_country_title" = "所在國家";
+"onboarding_page1_country_description" = "設置你的國家，以區分國內和國際旅行";
+"onboarding_page2_title" = "外觀";
+"onboarding_page2_appearance_title" = "外觀模式";
+"onboarding_page2_appearance_description" = "選擇應用的外觀模式。跟隨系統將根據系統設置自動切換";
+"onboarding_page2_color_title" = "主題顏色";
+"onboarding_page2_color_preview" = "顏色預覽";
+"onboarding_page2_color_custom" = "使用自定義顏色";
+"onboarding_page2_color_default" = "使用默認顏色";
+"onboarding_page2_color_description" = "自定義應用的主題顏色，將應用於圖標、按鈕和其他UI元素";
+"onboarding_next" = "下一步";
+"onboarding_complete" = "開始使用";

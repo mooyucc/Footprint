@@ -16,6 +16,8 @@ struct SettingsView: View {
     @EnvironmentObject var countryManager: CountryManager
     @EnvironmentObject var brandColorManager: BrandColorManager
     @EnvironmentObject var appearanceManager: AppearanceManager
+    @EnvironmentObject private var entitlementManager: EntitlementManager
+    @EnvironmentObject private var purchaseManager: PurchaseManager
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) private var systemColorScheme
     @State private var showingEditName = false
@@ -254,9 +256,16 @@ struct SettingsView: View {
 }
 
 // 数据设置视图
+enum BetaLocalDataIOAction {
+    case importData
+    case exportData
+}
+
 struct DataSettingsView: View {
     @EnvironmentObject var appleSignInManager: AppleSignInManager
     @EnvironmentObject var brandColorManager: BrandColorManager
+    @EnvironmentObject private var entitlementManager: EntitlementManager
+    @EnvironmentObject private var purchaseManager: PurchaseManager
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \TravelTrip.startDate, order: .reverse) private var trips: [TravelTrip]
@@ -284,6 +293,9 @@ struct DataSettingsView: View {
     @State private var showingDeleteAccountSuccess = false
     @State private var deleteAccountErrorMessage: String?
     @State private var showingDeleteAccountError = false
+    @State private var showPaywall = false
+    @State private var showingBetaLocalDataIOAlert = false
+    @State private var betaLocalDataIOAction: BetaLocalDataIOAction? = nil
     
     var body: some View {
         NavigationStack {
@@ -413,6 +425,11 @@ struct DataSettingsView: View {
                 SystemShareSheet(items: [item.text])
             }
         }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+                .environmentObject(purchaseManager)
+                .environmentObject(entitlementManager)
+        }
         .alert("local_import_summary_title".localized, isPresented: $showingImportSummaryAlert) {
             Button("ok".localized) { }
         } message: {
@@ -464,6 +481,28 @@ struct DataSettingsView: View {
         } message: {
             Text("delete_account_warning_message".localized)
         }
+        .alert("beta_local_data_io_title".localized, isPresented: $showingBetaLocalDataIOAlert) {
+            Button("cancel".localized, role: .cancel) {
+                betaLocalDataIOAction = nil
+            }
+            Button("beta_local_data_io_continue".localized) {
+                if let action = betaLocalDataIOAction {
+                    switch action {
+                    case .importData:
+                        proceedWithImport()
+                    case .exportData:
+                        proceedWithExport()
+                    }
+                }
+                betaLocalDataIOAction = nil
+            }
+            Button("beta_local_data_io_button".localized) {
+                openAppStoreForRelease()
+                betaLocalDataIOAction = nil
+            }
+        } message: {
+            Text("beta_local_data_io_message".localized)
+        }
         .sheet(isPresented: $showingDeleteAccountSheet, onDismiss: {
             deleteConfirmationText = ""
         }) {
@@ -489,6 +528,21 @@ struct DataSettingsView: View {
     
     // MARK: - 本地数据操作
     private func presentLocalImportPicker() {
+        guard entitlementManager.canUseLocalDataIO else {
+            // Beta版本显示提示但允许继续，非Beta版本显示Paywall
+            if BetaInfo.isBetaBuild {
+                betaLocalDataIOAction = .importData
+                showingBetaLocalDataIOAlert = true
+            } else {
+                showPaywall = true
+            }
+            return
+        }
+        guard !isImportingLocalData else { return }
+        showingLocalImportPicker = true
+    }
+    
+    private func proceedWithImport() {
         guard !isImportingLocalData else { return }
         showingLocalImportPicker = true
     }
@@ -522,6 +576,20 @@ struct DataSettingsView: View {
     }
     
     private func exportLocalData() {
+        guard entitlementManager.canUseLocalDataIO else {
+            // Beta版本显示提示但允许继续，非Beta版本显示Paywall
+            if BetaInfo.isBetaBuild {
+                betaLocalDataIOAction = .exportData
+                showingBetaLocalDataIOAlert = true
+            } else {
+                showPaywall = true
+            }
+            return
+        }
+        proceedWithExport()
+    }
+    
+    private func proceedWithExport() {
         guard !isExportingLocalData else { return }
         isExportingLocalData = true
         defer {
@@ -539,6 +607,13 @@ struct DataSettingsView: View {
         case .failure(let error):
             backupErrorMessage = error.localizedDescription
             showingBackupError = true
+        }
+    }
+    
+    // MARK: - App Store
+    private func openAppStoreForRelease() {
+        if let url = URL(string: "https://apps.apple.com/cn/app/墨鱼足迹/id6754274652") {
+            UIApplication.shared.open(url)
         }
     }
     

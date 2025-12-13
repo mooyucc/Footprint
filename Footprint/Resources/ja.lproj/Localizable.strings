@@ -5,6 +5,52 @@
   Japanese localization
 */
 
+// Paywall
+"paywall_title" = "Proをアンロック";
+"paywall_subtitle" = "ローカルデータのインポート/エクスポートをアンロックして、旅行データを簡単にバックアップおよび復元できます。";
+"paywall_button_upgrade" = "購読プランを表示";
+"paywall_button_restore" = "購入を復元";
+
+// Membership status card
+"membership_status_subscribed" = "購読中";
+"membership_status_expiry" = "%@まで有効";
+"membership_status_lifetime_active" = "生涯アクセスが有効です";
+"membership_status_pro_active" = "Pro有効";
+"membership_status_all_features" = "すべての機能がアンロックされています。デバイスを同期するためにいつでも購入を復元できます。";
+"membership_status_view_restore" = "特典を表示 / 購入を復元";
+
+// Paywall lifetime unlocked
+"paywall_lifetime_unlocked" = "生涯アクセスがアンロックされました。再度購入する必要はありません。";
+"paywall_lifetime_sync_hint" = "新しいデバイスで同期するには、以下の「購入を復元」を使用してください。";
+"paywall_terms_privacy" = "購入することで、利用規約とプライバシーポリシーに同意したことになります。自動更新。システムの購読設定でいつでもキャンセルできます。";
+"paywall_feature_title" = "Pro機能";
+"paywall_feature_unlimited" = "無制限の目的地と旅行カード";
+"paywall_feature_share_layouts" = "完全な共有レイアウト";
+"paywall_feature_import_export" = "ローカルデータのインポート/エクスポート";
+"paywall_feature_link_maps" = "旅行をシステムのマップアプリにリンク";
+"paywall_banner_title" = "Proにアップグレードしてデータ管理をアンロック";
+"paywall_emotional_message_part1" = "「MooFootprint」をもっと楽しく、長続きさせましょう！一緒にもっと面白いストーリーを作るために、あなたのサポートが必要です。";
+"paywall_emotional_message_part2" = "私たちをサポートしてください！ ✨";
+"subscription_monthly" = "月額購読";
+"subscription_yearly" = "年額購読";
+"subscription_weekly" = "週額購読";
+"subscription_daily" = "日額購読";
+"subscription_default" = "購読";
+"close" = "閉じる";
+"subscription_auto_renew_note" = "設定 > Apple ID > 購読でキャンセルするまで自動更新されます。";
+"terms_of_use" = "利用規約";
+"privacy_policy" = "プライバシーポリシー";
+"terms_url" = "https://mooyu.cc/moofootprintlicense.html";
+"privacy_url" = "https://mooyu.cc/myfootprintprivacy.html";
+"limit_destination_reached_title" = "無料プランの上限に達しました";
+"limit_destination_reached_message" = "無料プランは最大50の目的地まで利用できます。Proにアップグレードすると無制限になります。";
+"limit_trip_reached_message" = "無料プランは最大5つの旅行まで利用できます。Proにアップグレードすると無制限になります。";
+"share_layout_locked_message" = "完全な共有レイアウトはPro機能です。アップグレードしてアンロックしてください。";
+"import_export_locked_message" = "インポート/エクスポートにはProが必要です。続行するにはアップグレードしてください。";
+"import_trip_locked_message" = "旅行のインポートにはProが必要です。続行するにはアップグレードしてください。";
+"loading" = "読み込み中…";
+"one_time_purchase" = "一回限りの購入";
+
 // Settings View
 "settings" = "設定";
 "done" = "完了";
@@ -87,6 +133,33 @@
 "local_backup_write_failed" = "書き込み失敗: %@";
 "local_backup_unknown_error" = "不明なエラー: %@";
 "local_backup_access_denied" = "アクセスが拒否されました";
+
+// Beta Reminder
+"beta_reminder_title" = "Test Build Reminder";
+"beta_reminder_subtitle" = "This is a beta build. It is valid for 30 days.";
+"beta_reminder_countdown" = "Days remaining: %d";
+"beta_reminder_expiry_date" = "Expires on %@";
+"beta_reminder_backup_tip" = "Please export a local backup via Me > Settings > Data to avoid data loss after the test build expires.";
+"beta_reminder_backup_button" = "How to back up";
+"beta_reminder_continue_button" = "Open MooFootprint Beta";
+"beta_reminder_backup_guide_title" = "Backup guide";
+"beta_reminder_backup_guide_message" = "Open Me > Settings > Data > Export Local Data to generate a backup package. Save it to iCloud Drive or locally so you can re-import after updating to a new build.";
+"beta_reminder_backup_step1" = "Me → Settings → Data";
+"beta_reminder_backup_step2" = "Tap “Export Local Data” to create a backup package";
+"beta_reminder_backup_step3" = "Save the backup to iCloud Drive or local storage";
+
+// Beta Expired
+"beta_expired_title" = "Test build expired";
+"beta_expired_subtitle" = "Please download the App Store release to keep using MooFootprint.";
+"beta_expired_date" = "Expired on %@";
+"beta_expired_message" = "Download the release from the App Store to continue. You can import any backup in the new version.";
+"beta_expired_button" = "Go to App Store (release)";
+
+// Beta Local Data IO
+"beta_local_data_io_title" = "Beta Build Feature Limit";
+"beta_local_data_io_message" = "Local data import/export is only available in the release version. Please download the release from the App Store to use this feature.";
+"beta_local_data_io_continue" = "Continue";
+"beta_local_data_io_button" = "Go to App Store (release)";
 
 // Common
 "footprint" = "MooFootprint";
@@ -437,3 +510,22 @@
 "automobile" = "自動車";
 "transit" = "公共交通";
 "airplane" = "飛行機";
+
+// Onboarding
+"onboarding_welcome_hello" = "こんにちは";
+"onboarding_welcome_subtitle" = "MooFootprintへようこそ。設定を始めましょう。";
+"onboarding_welcome_continue" = "始める";
+"onboarding_page1_title" = "基本設定";
+"onboarding_page1_language_title" = "言語";
+"onboarding_page1_country_title" = "国";
+"onboarding_page1_country_description" = "あなたの国を設定して、国内旅行と海外旅行を区別します";
+"onboarding_page2_title" = "外観";
+"onboarding_page2_appearance_title" = "外観モード";
+"onboarding_page2_appearance_description" = "アプリの外観モードを選択します。システムに従うと、システム設定に基づいて自動的に切り替わります";
+"onboarding_page2_color_title" = "テーマカラー";
+"onboarding_page2_color_preview" = "カラープレビュー";
+"onboarding_page2_color_custom" = "カスタムカラーを使用中";
+"onboarding_page2_color_default" = "デフォルトカラーを使用中";
+"onboarding_page2_color_description" = "アプリのテーマカラーをカスタマイズします。アイコン、ボタン、その他のUI要素に適用されます";
+"onboarding_next" = "次へ";
+"onboarding_complete" = "始める";

@@ -11,12 +11,19 @@ import SwiftData
 @main
 struct FootprintApp: App {
     @StateObject private var appleSignInManager = AppleSignInManager.shared
+    @StateObject private var purchaseManager = PurchaseManager.shared
+    @StateObject private var entitlementManager = EntitlementManager.shared
     @StateObject private var languageManager = LanguageManager.shared
     @StateObject private var countryManager = CountryManager.shared
     @StateObject private var brandColorManager = BrandColorManager.shared
     @StateObject private var appearanceManager = AppearanceManager.shared
-    @State private var showSplash = true  // 控制启动画面显示
+    @State private var showSplash: Bool = BetaInfo.isBetaBuild ? false : true  // 控制启动画面显示
     @State private var initializationCompleted = false  // 初始化是否完成
+    @State private var showOnboarding = !FirstLaunchManager.shared.hasCompletedOnboarding  // 控制引导流程显示
+    #if BETA
+    @State private var showBetaReminder = !BetaInfo.isExpired
+    @State private var showBetaExpiredReminder = BetaInfo.isExpired
+    #endif
     
     var sharedModelContainer: ModelContainer = {
         // 暂时禁用 iCloud CloudKit 同步（功能尚未完善）
@@ -41,12 +48,14 @@ struct FootprintApp: App {
                 // 主内容视图
                 ContentView()
                     .environmentObject(appleSignInManager)
+                    .environmentObject(purchaseManager)
+                    .environmentObject(entitlementManager)
                     .environmentObject(languageManager)
                     .environmentObject(countryManager)
                     .environmentObject(brandColorManager)
                     .environmentObject(appearanceManager)
                     .preferredColorScheme(appearanceManager.preferredColorScheme)
-                    .environment(\.isAppReady, !showSplash)  // 传递应用就绪状态
+                    .environment(\.isAppReady, isAppReady)  // 传递应用就绪状态
                 
                 // 启动画面（覆盖在主内容之上）
                 if showSplash {
@@ -57,7 +66,54 @@ struct FootprintApp: App {
                         .onAppear {
                             startBackgroundInitialization()
                         }
+                        .onReceive(NotificationCenter.default.publisher(for: .splashScreenDismissed)) { _ in
+                            // 启动画面关闭后，检查是否需要显示引导流程
+                            if !FirstLaunchManager.shared.hasCompletedOnboarding {
+                                withAnimation(.easeInOut(duration: 0.3)) {
+                                    showOnboarding = true
+                                }
+                            }
+                        }
                 }
+                
+                // 引导流程（覆盖在所有内容之上，但低于Beta提醒）
+                if showOnboarding {
+                    OnboardingCoordinatorView(isPresented: $showOnboarding)
+                        .environmentObject(languageManager)
+                        .environmentObject(countryManager)
+                        .environmentObject(brandColorManager)
+                        .environmentObject(appearanceManager)
+                        .environmentObject(purchaseManager)
+                        .environmentObject(entitlementManager)
+                        .zIndex(998)  // 低于启动画面和Beta提醒
+                        .transition(.opacity)
+                }
+                
+                #if BETA
+                if showBetaReminder {
+                    BetaReminderView(
+                        daysRemaining: BetaInfo.displayRemainingDays,
+                        expiryDate: BetaInfo.expiryDate,
+                        onContinue: {
+                            proceedFromBetaReminder()
+                        },
+                        onGoToStore: {
+                            openAppStoreForRelease()
+                        }
+                    )
+                    .zIndex(1000)
+                    .transition(.opacity)
+                }
+                
+                if showBetaExpiredReminder {
+                    BetaExpiredView(
+                        expiryDate: BetaInfo.expiryDate,
+                        onGoToStore: openAppStoreForRelease
+                    )
+                    .zIndex(1001)
+                    .transition(.opacity)
+                }
+                #endif
             }
         }
         .modelContainer(sharedModelContainer)
@@ -78,6 +134,16 @@ extension EnvironmentValues {
 
 // MARK: - 后台初始化逻辑
 extension FootprintApp {
+    #if BETA
+    private var isAppReady: Bool {
+        !showSplash && !showOnboarding && !showBetaReminder && !showBetaExpiredReminder
+    }
+    #else
+    private var isAppReady: Bool {
+        !showSplash && !showOnboarding
+    }
+    #endif
+    
     private func startBackgroundInitialization() {
         print("🚀 开始后台初始化工作...")
         
@@ -115,6 +181,21 @@ extension FootprintApp {
             }
         }
     }
+    
+    #if BETA
+    private func proceedFromBetaReminder() {
+        withAnimation(.easeInOut(duration: 0.25)) {
+            showBetaReminder = false
+            showSplash = true
+        }
+    }
+    
+    private func openAppStoreForRelease() {
+        if let url = URL(string: "https://apps.apple.com/cn/app/墨鱼足迹/id6754274652") {
+            UIApplication.shared.open(url)
+        }
+    }
+    #endif
 }
 
 // MARK: - 通知名称扩展

@@ -5,6 +5,52 @@
   Spanish localization
 */
 
+// Paywall
+"paywall_title" = "Desbloquear Pro";
+"paywall_subtitle" = "Desbloquea la importación/exportación de datos locales para hacer copias de seguridad y restaurar fácilmente tus datos de viaje.";
+"paywall_button_upgrade" = "Ver plan de suscripción";
+"paywall_button_restore" = "Restaurar compras";
+
+// Membership status card
+"membership_status_subscribed" = "Suscrito";
+"membership_status_expiry" = "Activo hasta %@";
+"membership_status_lifetime_active" = "Acceso de por vida activo";
+"membership_status_pro_active" = "Pro Activo";
+"membership_status_all_features" = "Todas las funciones desbloqueadas; puedes restaurar compras en cualquier momento para sincronizar dispositivos.";
+"membership_status_view_restore" = "Ver beneficios / Restaurar compras";
+
+// Paywall lifetime unlocked
+"paywall_lifetime_unlocked" = "Acceso de por vida desbloqueado, no es necesario comprar de nuevo.";
+"paywall_lifetime_sync_hint" = "Para sincronizar en un nuevo dispositivo, usa \"Restaurar compras\" a continuación.";
+"paywall_terms_privacy" = "Al comprar, aceptas los Términos de uso y la Política de privacidad. Renovación automática; cancela en cualquier momento en las suscripciones del sistema.";
+"paywall_feature_title" = "Funciones Pro";
+"paywall_feature_unlimited" = "Destinos y tarjetas de viaje ilimitados";
+"paywall_feature_share_layouts" = "Diseños de compartir completos";
+"paywall_feature_import_export" = "Importación/exportación de datos locales";
+"paywall_feature_link_maps" = "Vincular viajes a la app Mapas del sistema";
+"paywall_banner_title" = "Actualiza a Pro para desbloquear la gestión de datos";
+"paywall_emotional_message_part1" = "¡Hagamos que \"MooFootprint\" sea más divertido y duradero! Necesitamos tu apoyo para crear historias más interesantes juntos.";
+"paywall_emotional_message_part2" = "¡Ven a apoyarnos! ✨";
+"subscription_monthly" = "Suscripción mensual";
+"subscription_yearly" = "Suscripción anual";
+"subscription_weekly" = "Suscripción semanal";
+"subscription_daily" = "Suscripción diaria";
+"subscription_default" = "Suscripción";
+"close" = "Cerrar";
+"subscription_auto_renew_note" = "Se renueva automáticamente hasta que se cancele en Configuración > Apple ID > Suscripciones.";
+"terms_of_use" = "Términos de uso";
+"privacy_policy" = "Política de privacidad";
+"terms_url" = "https://mooyu.cc/moofootprintlicense.html";
+"privacy_url" = "https://mooyu.cc/myfootprintprivacy.html";
+"limit_destination_reached_title" = "Límite gratuito alcanzado";
+"limit_destination_reached_message" = "El plan gratuito permite hasta 50 destinos. Actualiza a Pro para ilimitados.";
+"limit_trip_reached_message" = "El plan gratuito permite hasta 5 viajes. Actualiza a Pro para ilimitados.";
+"share_layout_locked_message" = "Los diseños de compartir completos son para Pro. Actualiza para desbloquear.";
+"import_export_locked_message" = "Importar/Exportar requiere Pro. Actualiza para continuar.";
+"import_trip_locked_message" = "Importar viaje requiere Pro. Actualiza para continuar.";
+"loading" = "Cargando…";
+"one_time_purchase" = "Compra única";
+
 // Settings View
 "settings" = "Configuración";
 "done" = "Hecho";
@@ -87,6 +133,33 @@
 "local_backup_write_failed" = "Error de escritura: %@";
 "local_backup_unknown_error" = "Error desconocido: %@";
 "local_backup_access_denied" = "Acceso denegado";
+
+// Beta Reminder
+"beta_reminder_title" = "Test Build Reminder";
+"beta_reminder_subtitle" = "This is a beta build. It is valid for 30 days.";
+"beta_reminder_countdown" = "Days remaining: %d";
+"beta_reminder_expiry_date" = "Expires on %@";
+"beta_reminder_backup_tip" = "Please export a local backup via Me > Settings > Data to avoid data loss after the test build expires.";
+"beta_reminder_backup_button" = "How to back up";
+"beta_reminder_continue_button" = "Open MooFootprint Beta";
+"beta_reminder_backup_guide_title" = "Backup guide";
+"beta_reminder_backup_guide_message" = "Open Me > Settings > Data > Export Local Data to generate a backup package. Save it to iCloud Drive or locally so you can re-import after updating to a new build.";
+"beta_reminder_backup_step1" = "Me → Settings → Data";
+"beta_reminder_backup_step2" = "Tap “Export Local Data” to create a backup package";
+"beta_reminder_backup_step3" = "Save the backup to iCloud Drive or local storage";
+
+// Beta Expired
+"beta_expired_title" = "Test build expired";
+"beta_expired_subtitle" = "Please download the App Store release to keep using MooFootprint.";
+"beta_expired_date" = "Expired on %@";
+"beta_expired_message" = "Download the release from the App Store to continue. You can import any backup in the new version.";
+"beta_expired_button" = "Go to App Store (release)";
+
+// Beta Local Data IO
+"beta_local_data_io_title" = "Beta Build Feature Limit";
+"beta_local_data_io_message" = "Local data import/export is only available in the release version. Please download the release from the App Store to use this feature.";
+"beta_local_data_io_continue" = "Continue";
+"beta_local_data_io_button" = "Go to App Store (release)";
 
 // Common
 "footprint" = "MooFootprint";
@@ -438,3 +511,22 @@
 "automobile" = "Automóvil";
 "transit" = "Tránsito";
 "airplane" = "Avión";
+
+// Onboarding
+"onboarding_welcome_hello" = "Hola";
+"onboarding_welcome_subtitle" = "Bienvenido a MooFootprint. Configuremos tus preferencias.";
+"onboarding_welcome_continue" = "Comenzar";
+"onboarding_page1_title" = "Configuración Básica";
+"onboarding_page1_language_title" = "Idioma";
+"onboarding_page1_country_title" = "País";
+"onboarding_page1_country_description" = "Establece tu país para distinguir entre viajes nacionales e internacionales";
+"onboarding_page2_title" = "Apariencia";
+"onboarding_page2_appearance_title" = "Modo de Apariencia";
+"onboarding_page2_appearance_description" = "Elige el modo de apariencia de la aplicación. Seguir Sistema cambiará automáticamente según la configuración del sistema";
+"onboarding_page2_color_title" = "Color del Tema";
+"onboarding_page2_color_preview" = "Vista Previa del Color";
+"onboarding_page2_color_custom" = "Usando color personalizado";
+"onboarding_page2_color_default" = "Usando color predeterminado";
+"onboarding_page2_color_description" = "Personaliza el color del tema de la aplicación, que se aplicará a iconos, botones y otros elementos de la interfaz";
+"onboarding_next" = "Siguiente";
+"onboarding_complete" = "Comenzar";

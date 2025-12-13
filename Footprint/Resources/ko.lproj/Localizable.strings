@@ -5,6 +5,52 @@
   Korean localization
 */
 
+// Paywall
+"paywall_title" = "Pro 잠금 해제";
+"paywall_subtitle" = "로컬 데이터 가져오기/내보내기를 잠금 해제하여 여행 데이터를 쉽게 백업하고 복원할 수 있습니다.";
+"paywall_button_upgrade" = "구독 플랜 보기";
+"paywall_button_restore" = "구매 복원";
+
+// Membership status card
+"membership_status_subscribed" = "구독 중";
+"membership_status_expiry" = "%@까지 활성";
+"membership_status_lifetime_active" = "평생 액세스 활성화됨";
+"membership_status_pro_active" = "Pro 활성";
+"membership_status_all_features" = "모든 기능이 잠금 해제되었습니다. 언제든지 구매를 복원하여 기기를 동기화할 수 있습니다.";
+"membership_status_view_restore" = "혜택 보기 / 구매 복원";
+
+// Paywall lifetime unlocked
+"paywall_lifetime_unlocked" = "평생 액세스가 잠금 해제되었습니다. 다시 구매할 필요가 없습니다.";
+"paywall_lifetime_sync_hint" = "새 기기에서 동기화하려면 아래의 \"구매 복원\"을 사용하세요.";
+"paywall_terms_privacy" = "구매하면 이용 약관 및 개인정보 보호정책에 동의하는 것입니다. 자동 갱신; 시스템 구독 설정에서 언제든지 취소할 수 있습니다.";
+"paywall_feature_title" = "Pro 기능";
+"paywall_feature_unlimited" = "무제한 목적지 및 여행 카드";
+"paywall_feature_share_layouts" = "전체 공유 레이아웃";
+"paywall_feature_import_export" = "로컬 데이터 가져오기/내보내기";
+"paywall_feature_link_maps" = "여행을 시스템 지도 앱에 연결";
+"paywall_banner_title" = "Pro로 업그레이드하여 데이터 관리 잠금 해제";
+"paywall_emotional_message_part1" = "\"MooFootprint\"를 더 재미있고 오래 지속되게 만들어요! 함께 더 흥미로운 이야기를 만들기 위해 여러분의 지원이 필요합니다.";
+"paywall_emotional_message_part2" = "우리를 지원해주세요! ✨";
+"subscription_monthly" = "월간 구독";
+"subscription_yearly" = "연간 구독";
+"subscription_weekly" = "주간 구독";
+"subscription_daily" = "일간 구독";
+"subscription_default" = "구독";
+"close" = "닫기";
+"subscription_auto_renew_note" = "설정 > Apple ID > 구독에서 취소할 때까지 자동 갱신됩니다.";
+"terms_of_use" = "이용 약관";
+"privacy_policy" = "개인정보 보호정책";
+"terms_url" = "https://mooyu.cc/moofootprintlicense.html";
+"privacy_url" = "https://mooyu.cc/myfootprintprivacy.html";
+"limit_destination_reached_title" = "무료 플랜 한도 도달";
+"limit_destination_reached_message" = "무료 플랜은 최대 50개의 목적지까지 허용됩니다. 무제한을 위해 Pro로 업그레이드하세요.";
+"limit_trip_reached_message" = "무료 플랜은 최대 5개의 여행까지 허용됩니다. 무제한을 위해 Pro로 업그레이드하세요.";
+"share_layout_locked_message" = "전체 공유 레이아웃은 Pro용입니다. 잠금 해제하려면 업그레이드하세요.";
+"import_export_locked_message" = "가져오기/내보내기는 Pro가 필요합니다. 계속하려면 업그레이드하세요.";
+"import_trip_locked_message" = "여행 가져오기는 Pro가 필요합니다. 계속하려면 업그레이드하세요.";
+"loading" = "로딩 중…";
+"one_time_purchase" = "일회성 구매";
+
 // Settings View
 "settings" = "설정";
 "done" = "완료";
@@ -87,6 +133,33 @@
 "local_backup_write_failed" = "쓰기 실패: %@";
 "local_backup_unknown_error" = "알 수 없는 오류: %@";
 "local_backup_access_denied" = "액세스가 거부되었습니다";
+
+// Beta Reminder
+"beta_reminder_title" = "Test Build Reminder";
+"beta_reminder_subtitle" = "This is a beta build. It is valid for 30 days.";
+"beta_reminder_countdown" = "Days remaining: %d";
+"beta_reminder_expiry_date" = "Expires on %@";
+"beta_reminder_backup_tip" = "Please export a local backup via Me > Settings > Data to avoid data loss after the test build expires.";
+"beta_reminder_backup_button" = "How to back up";
+"beta_reminder_continue_button" = "Open MooFootprint Beta";
+"beta_reminder_backup_guide_title" = "Backup guide";
+"beta_reminder_backup_guide_message" = "Open Me > Settings > Data > Export Local Data to generate a backup package. Save it to iCloud Drive or locally so you can re-import after updating to a new build.";
+"beta_reminder_backup_step1" = "Me → Settings → Data";
+"beta_reminder_backup_step2" = "Tap “Export Local Data” to create a backup package";
+"beta_reminder_backup_step3" = "Save the backup to iCloud Drive or local storage";
+
+// Beta Expired
+"beta_expired_title" = "Test build expired";
+"beta_expired_subtitle" = "Please download the App Store release to keep using MooFootprint.";
+"beta_expired_date" = "Expired on %@";
+"beta_expired_message" = "Download the release from the App Store to continue. You can import any backup in the new version.";
+"beta_expired_button" = "Go to App Store (release)";
+
+// Beta Local Data IO
+"beta_local_data_io_title" = "Beta Build Feature Limit";
+"beta_local_data_io_message" = "Local data import/export is only available in the release version. Please download the release from the App Store to use this feature.";
+"beta_local_data_io_continue" = "Continue";
+"beta_local_data_io_button" = "Go to App Store (release)";
 
 // Common
 "footprint" = "모어풋프린트";
@@ -437,3 +510,22 @@
 "automobile" = "자동차";
 "transit" = "대중교통";
 "airplane" = "비행기";
+
+// Onboarding
+"onboarding_welcome_hello" = "안녕하세요";
+"onboarding_welcome_subtitle" = "모어풋프린트에 오신 것을 환영합니다. 기본 설정을 시작하겠습니다.";
+"onboarding_welcome_continue" = "시작하기";
+"onboarding_page1_title" = "기본 설정";
+"onboarding_page1_language_title" = "언어";
+"onboarding_page1_country_title" = "국가";
+"onboarding_page1_country_description" = "귀하의 국가를 설정하여 국내 여행과 해외 여행을 구분합니다";
+"onboarding_page2_title" = "외관";
+"onboarding_page2_appearance_title" = "외관 모드";
+"onboarding_page2_appearance_description" = "앱의 외관 모드를 선택합니다. 시스템 따르기는 시스템 설정에 따라 자동으로 전환됩니다";
+"onboarding_page2_color_title" = "테마 색상";
+"onboarding_page2_color_preview" = "색상 미리보기";
+"onboarding_page2_color_custom" = "사용자 정의 색상 사용 중";
+"onboarding_page2_color_default" = "기본 색상 사용 중";
+"onboarding_page2_color_description" = "앱의 테마 색상을 사용자 정의합니다. 아이콘, 버튼 및 기타 UI 요소에 적용됩니다";
+"onboarding_next" = "다음";
+"onboarding_complete" = "시작하기";

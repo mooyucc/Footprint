@@ -13,8 +13,11 @@ struct YearShareLayoutSelectionView: View {
     let destinations: [TravelDestination]
     @Binding var selectedLayout: TripShareLayout
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var entitlementManager: EntitlementManager
+    @EnvironmentObject private var purchaseManager: PurchaseManager
     @State private var shareItem: TripShareItem?
     @State private var isGenerating = false
+    @State private var showPaywall = false
     
     var body: some View {
         NavigationStack {
@@ -25,9 +28,14 @@ struct YearShareLayoutSelectionView: View {
                         ForEach(TripShareLayout.allCases) { layout in
                             LayoutOptionCard(
                                 layout: layout,
-                                isSelected: selectedLayout == layout
+                                isSelected: selectedLayout == layout,
+                                isLocked: !allowedLayouts.contains(layout)
                             ) {
+                                if allowedLayouts.contains(layout) {
                                 selectedLayout = layout
+                                } else {
+                                    showPaywall = true
+                                }
                             }
                         }
                     }
@@ -77,10 +85,19 @@ struct YearShareLayoutSelectionView: View {
                 SystemShareSheet(items: [image])
             }
         }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+                .environmentObject(purchaseManager)
+                .environmentObject(entitlementManager)
+        }
     }
     
     private func generateAndShare() {
         guard !isGenerating else { return }
+        guard allowedLayouts.contains(selectedLayout) else {
+            showPaywall = true
+            return
+        }
         
         isGenerating = true
         
@@ -93,6 +110,11 @@ struct YearShareLayoutSelectionView: View {
                 self.shareItem = TripShareItem(text: "", image: yearImage)
             }
         }
+    }
+
+    private var allowedLayouts: [TripShareLayout] {
+        // 免费版和 Pro 都可以使用所有分享版面
+        TripShareLayout.allCases
     }
 }
 

@@ -10,8 +10,11 @@ import SwiftData
 import PhotosUI
 
 struct AddTripView: View {
+    @EnvironmentObject private var entitlementManager: EntitlementManager
+    @EnvironmentObject private var purchaseManager: PurchaseManager
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Query private var allTrips: [TravelTrip]
     
     @State private var name = ""
     @State private var desc = ""
@@ -21,6 +24,8 @@ struct AddTripView: View {
     @State private var coverPhotoData: Data?
     @State private var showingImagePicker = false
     @EnvironmentObject var languageManager: LanguageManager
+    
+    @State private var showPaywall = false
     
     var body: some View {
         NavigationStack {
@@ -114,6 +119,11 @@ struct AddTripView: View {
                         coverPhotoData = data
                     }
                 }
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
+                    .environmentObject(purchaseManager)
+                    .environmentObject(entitlementManager)
             }
         }
     }

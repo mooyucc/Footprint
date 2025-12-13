@@ -44,6 +44,8 @@ struct AddDestinationPrefill {
 }
 
 struct AddDestinationView: View {
+    @EnvironmentObject private var entitlementManager: EntitlementManager
+    @EnvironmentObject private var purchaseManager: PurchaseManager
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \TravelTrip.startDate, order: .reverse) private var trips: [TravelTrip]
@@ -71,6 +73,7 @@ struct AddDestinationView: View {
     @State private var showDuplicateAlert = false
     @State private var duplicateDestinationName = ""
     @State private var existingDestination: TravelDestination?
+    @State private var showPaywall = false
     
     let categories = ["domestic", "international"]
     
@@ -290,6 +293,11 @@ struct AddDestinationView: View {
                 }
             } message: {
                 Text(alertMessage)
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
+                    .environmentObject(purchaseManager)
+                    .environmentObject(entitlementManager)
             }
         }
     }

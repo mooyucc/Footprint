@@ -12,8 +12,11 @@ struct TripShareLayoutSelectionView: View {
     let trip: TravelTrip
     @Binding var selectedLayout: TripShareLayout
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var entitlementManager: EntitlementManager
+    @EnvironmentObject private var purchaseManager: PurchaseManager
     @State private var shareItem: TripShareItem?
     @State private var isGenerating = false
+    @State private var showPaywall = false
     
     var body: some View {
         NavigationStack {
@@ -24,9 +27,14 @@ struct TripShareLayoutSelectionView: View {
                         ForEach(TripShareLayout.allCases) { layout in
                             LayoutOptionCard(
                                 layout: layout,
-                                isSelected: selectedLayout == layout
+                                isSelected: selectedLayout == layout,
+                                isLocked: !allowedLayouts.contains(layout)
                             ) {
+                                if allowedLayouts.contains(layout) {
                                 selectedLayout = layout
+                                } else {
+                                    showPaywall = true
+                                }
                             }
                         }
                     }
@@ -76,10 +84,19 @@ struct TripShareLayoutSelectionView: View {
                 SystemShareSheet(items: [image])
             }
         }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+                .environmentObject(purchaseManager)
+                .environmentObject(entitlementManager)
+        }
     }
     
     private func generateAndShare() {
         guard !isGenerating else { return }
+        guard allowedLayouts.contains(selectedLayout) else {
+            showPaywall = true
+            return
+        }
         
         isGenerating = true
         
@@ -93,11 +110,17 @@ struct TripShareLayoutSelectionView: View {
             }
         }
     }
+
+    private var allowedLayouts: [TripShareLayout] {
+        // 免费版和 Pro 都可以使用所有分享版面
+        TripShareLayout.allCases
+    }
 }
 
 struct LayoutOptionCard: View {
     let layout: TripShareLayout
     let isSelected: Bool
+    let isLocked: Bool
     let action: () -> Void
     
     var body: some View {
@@ -106,7 +129,7 @@ struct LayoutOptionCard: View {
                 // 图标
                 Image(systemName: layout.iconName)
                     .font(.title2)
-                    .foregroundColor(isSelected ? .blue : .secondary)
+                    .foregroundColor(isLocked ? .secondary.opacity(0.4) : (isSelected ? .blue : .secondary))
                     .frame(width: 44, height: 44)
                     .background(isSelected ? Color.blue.opacity(0.1) : Color(.secondarySystemBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -115,7 +138,7 @@ struct LayoutOptionCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(layout.displayName)
                         .font(.headline)
-                        .foregroundColor(.primary)
+                        .foregroundColor(isLocked ? .secondary : .primary)
                     
                     Text(layout.description)
                         .font(.caption)
@@ -125,8 +148,11 @@ struct LayoutOptionCard: View {
                 
                 Spacer()
                 
-                // 选中标记
-                if isSelected {
+                if isLocked {
+                    Image(systemName: "lock.fill")
+                        .foregroundColor(.secondary)
+                        .font(.title3)
+                } else if isSelected {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.blue)
                         .font(.title3)
@@ -137,10 +163,11 @@ struct LayoutOptionCard: View {
             .cornerRadius(16)
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 2)
+                    .stroke(isLocked ? Color.clear : (isSelected ? Color.blue : Color.clear), lineWidth: 2)
             )
         }
         .buttonStyle(.plain)
+        .disabled(isLocked)
     }
 }
 

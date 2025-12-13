@@ -35,7 +35,6 @@ enum MapStyle: String, CaseIterable {
             return "map_style_imagery"
         }
     }
-    
     var iconName: String {
         switch self {
         case .standard:
@@ -356,6 +355,23 @@ struct MapView: View {
         brandColorManager.currentBrandColor
     }
     
+    // 仅为当前选中的旅程重新计算路线（进入“旅程”时避免全量计算）
+    private func recalcSelectedTripRoutes(forceFullRecalc: Bool = false) {
+        guard let selectedId = selectedTripId,
+              let trip = trips.first(where: { $0.id == selectedId }),
+              let tripDestinations = trip.destinations?.sorted(by: { $0.visitDate < $1.visitDate }),
+              tripDestinations.count >= 2 else { return }
+        
+        let coordinates = tripDestinations.map { $0.coordinate }
+        Task {
+            await calculateRoutesForTrip(
+                tripId: selectedId,
+                coordinates: coordinates,
+                incremental: !forceFullRecalc
+            )
+        }
+    }
+    
     var body: some View {
         GeometryReader { geometry in
             let content = mainContentView(geometry: geometry)
@@ -527,12 +543,20 @@ struct MapView: View {
             }
             .onChange(of: showTripConnections) { _, newValue in
                 if newValue {
-                    calculateRoutesForAllTrips()
+                    if autoShowRouteCards {
+                        recalcSelectedTripRoutes()
+                    } else {
+                        calculateRoutesForAllTrips()
+                    }
                 }
             }
             .onChange(of: trips.count) { _, _ in
                 if showTripConnections {
-                    calculateRoutesForAllTrips()
+                    if autoShowRouteCards {
+                        recalcSelectedTripRoutes()
+                    } else {
+                        calculateRoutesForAllTrips()
+                    }
                 }
             }
             .onChange(of: selectedTripId) { oldValue, newValue in
