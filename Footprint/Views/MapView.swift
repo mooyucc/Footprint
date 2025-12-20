@@ -562,6 +562,18 @@ struct MapView: View {
             .onChange(of: selectedTripId) { oldValue, newValue in
                 if autoShowRouteCards && oldValue != newValue {
                     clearClusterCache()
+                    
+                    // 卡片切换时，对原来计算不成功的占位线再次尝试计算
+                    if let newTripId = newValue,
+                       let trip = trips.first(where: { $0.id == newTripId }),
+                       let tripDestinations = trip.destinations?.sorted(by: { $0.visitDate < $1.visitDate }),
+                       tripDestinations.count >= 2 {
+                        let coordinates = tripDestinations.map { $0.coordinate }
+                        Task {
+                            // 重新计算失败的路线（占位线）
+                            await retryFailedRoutesForTrip(tripId: newTripId, coordinates: coordinates)
+                        }
+                    }
                 }
             }
     }
@@ -3024,12 +3036,20 @@ struct MapView: View {
             // 如果路线数量匹配，检查所有路线是否都在缓存中
             if let existingRoutes = tripRoutes[trip.id],
                existingRoutes.count == coordinates.count - 1 {
-                // 检查所有路线段是否都在缓存中
+                // 检查所有路线段是否都在缓存中（考虑交通方式）
                 var allCached = true
                 for i in 0..<coordinates.count - 1 {
+                    let source = coordinates[i]
+                    let destination = coordinates[i + 1]
+                    
+                    // 获取用户选择的交通方式（如果有），否则使用默认机动车
+                    let userTransportType = routeManager.getUserTransportType(from: source, to: destination)
+                    let transportType = userTransportType ?? .automobile
+                    
                     if routeManager.getCachedRoute(
-                        from: coordinates[i],
-                        to: coordinates[i + 1]
+                        from: source,
+                        to: destination,
+                        transportType: transportType
                     ) == nil {
                         allCached = false
                         break
@@ -3085,29 +3105,18 @@ struct MapView: View {
                 let source = coordinates[i]
                 let destination = coordinates[i + 1]
                 
-                // 计算两点间的直线距离
-                let sourceLocation = CLLocation(latitude: source.latitude, longitude: source.longitude)
-                let destinationLocation = CLLocation(latitude: destination.latitude, longitude: destination.longitude)
-                let distance = sourceLocation.distance(from: destinationLocation)
+                // 获取用户选择的交通方式（如果有），否则使用默认机动车
+                let userTransportType = routeManager.getUserTransportType(from: source, to: destination)
+                let transportType = userTransportType ?? .automobile
                 
+                // 检查缓存（RouteManager 会根据交通方式自动匹配）
                 if let cachedRoute = routeManager.getCachedRoute(
                     from: source,
-                    to: destination
+                    to: destination,
+                    transportType: transportType
                 ) {
-                    // 检查缓存的路线是否使用了合适的交通方式
-                    // 如果距离≤5公里但使用了机动车模式，说明是旧缓存，需要重新计算
-                    let cachedTransportType = cachedRoute.footprintTransportType
-                    let shouldUseWalking = distance <= 5_000
-                    let isUsingAutomobile = cachedTransportType.contains(.automobile) && cachedTransportType == .automobile
-                    
-                    if shouldUseWalking && isUsingAutomobile {
-                        // 缓存的路线使用了不合适的交通方式，清除缓存并重新计算
-                        print("🔄 检测到缓存路线使用了不合适的交通方式（距离\(String(format: "%.1f", distance/1000))km应使用徒步但使用了机动车），清除缓存并重新计算")
-                        routeManager.clearRouteCache(from: source, to: destination)
-                        // 不添加到 calculatedRoutes，让后续重新计算
-                    } else {
+                    // 缓存命中，直接使用
                     calculatedRoutes[i] = cachedRoute
-                    }
                 }
             }
             
@@ -3137,8 +3146,12 @@ struct MapView: View {
                 let index = i
                 
                 group.addTask {
+                    // 获取用户选择的交通方式（如果有），否则使用默认机动车
+                    let userTransportType = self.routeManager.getUserTransportType(from: source, to: destination)
+                    let transportType = userTransportType ?? .automobile
+                    
                     // 使用 async/await 版本，性能更好
-                    let route = await self.routeManager.calculateRoute(from: source, to: destination)
+                    let route = await self.routeManager.calculateRoute(from: source, to: destination, transportType: transportType)
                     return (index, route)
                 }
             }
@@ -3167,6 +3180,67 @@ struct MapView: View {
             tripRoutes[tripId] = calculatedRoutes
             let successCount = calculatedRoutes.compactMap { $0 }.count
             print("✅ 旅程 \(tripId.uuidString.prefix(8)) 的路线计算完成，共 \(successCount)/\(coordinates.count - 1) 段路线")
+        }
+    }
+    
+    /// 重试失败的路线计算（占位线重试机制）
+    /// - Parameters:
+    ///   - tripId: 旅程ID
+    ///   - coordinates: 旅程地点坐标数组
+    private func retryFailedRoutesForTrip(tripId: UUID, coordinates: [CLLocationCoordinate2D]) async {
+        guard coordinates.count >= 2 else { return }
+        
+        // 获取当前路线状态
+        guard let currentRoutes = tripRoutes[tripId],
+              currentRoutes.count == coordinates.count - 1 else {
+            // 如果路线还未计算，直接调用正常计算流程
+            await calculateRoutesForTrip(tripId: tripId, coordinates: coordinates, incremental: true)
+            return
+        }
+        
+        // 找出失败的路线（nil 值）
+        var routesToRetry: [(Int, CLLocationCoordinate2D, CLLocationCoordinate2D)] = []
+        for i in 0..<coordinates.count - 1 {
+            if currentRoutes[i] == nil {
+                routesToRetry.append((i, coordinates[i], coordinates[i + 1]))
+            }
+        }
+        
+        guard !routesToRetry.isEmpty else {
+            // 没有失败的路线，无需重试
+            return
+        }
+        
+        print("🔄 重试 \(routesToRetry.count) 段失败的路线...")
+        
+        // 并发重试失败的路线
+        await withTaskGroup(of: (Int, MKRoute?).self) { group in
+            for (index, source, destination) in routesToRetry {
+                group.addTask {
+                    // 获取用户选择的交通方式（如果有），否则使用默认机动车
+                    let userTransportType = self.routeManager.getUserTransportType(from: source, to: destination)
+                    let transportType = userTransportType ?? .automobile
+                    
+                    // 重试计算路线
+                    let route = await self.routeManager.calculateRoute(from: source, to: destination, transportType: transportType)
+                    return (index, route)
+                }
+            }
+            
+            // 收集结果并更新 UI
+            for await (index, route) in group {
+                await MainActor.run {
+                    // 更新对应索引的路线
+                    if tripRoutes[tripId] != nil && index < tripRoutes[tripId]!.count {
+                        tripRoutes[tripId]![index] = route
+                    }
+                }
+            }
+        }
+        
+        await MainActor.run {
+            let successCount = tripRoutes[tripId]?.compactMap { $0 }.count ?? 0
+            print("✅ 重试完成，共 \(successCount)/\(coordinates.count - 1) 段路线")
         }
     }
     
@@ -5093,24 +5167,14 @@ extension MapView {
         from source: TravelDestination,
         to destination: TravelDestination
     ) -> MKDirectionsTransportType {
-        // 获取用户选择的交通方式，如果没有则使用自动选择的逻辑
+        // 获取用户选择的交通方式，如果没有则使用默认机动车
         let userTransportType = routeManager.getUserTransportType(
             from: source.coordinate,
             to: destination.coordinate
         )
         
-        // 确定显示的交通方式：优先使用用户选择，否则根据距离智能选择
-        if let userType = userTransportType {
-            return userType
-        } else {
-            // 自动选择逻辑：近距离步行，远距离机动车
-            let distance = source.coordinate.distance(to: destination.coordinate)
-            if distance <= 5_000 {
-                return .walking
-            } else {
-                return .automobile
-            }
-        }
+        // 优先使用用户选择，否则使用默认机动车
+        return userTransportType ?? .automobile
     }
     
     // 占位线绘制视图（提取复杂逻辑，避免类型检查超时）

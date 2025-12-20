@@ -24,6 +24,8 @@ final class TravelDestination {
     // 新增：支持多张照片
     var photoDatas: [Data] = []
     var photoThumbnailDatas: [Data] = []
+    // 新增：支持视频（限制1段，10秒以内）
+    var videoData: Data?
     var category: String = "international" // domestic or international
     var isFavorite: Bool = false
     var trip: TravelTrip? // 所属的旅行组
@@ -40,6 +42,7 @@ final class TravelDestination {
         photoDatas: [Data] = [],
         photoThumbnailData: Data? = nil,
         photoThumbnailDatas: [Data] = [],
+        videoData: Data? = nil,
         category: String = "international",
         isFavorite: Bool = false
     ) {
@@ -54,6 +57,7 @@ final class TravelDestination {
         self.photoDatas = photoDatas
         self.photoThumbnailData = photoThumbnailData
         self.photoThumbnailDatas = photoThumbnailDatas
+        self.videoData = videoData
         self.category = category
         self.isFavorite = isFavorite
     }

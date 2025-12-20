@@ -8,6 +8,8 @@
 import SwiftUI
 import MapKit
 import SwiftData
+import AVKit
+import AVFoundation
 
 struct DestinationDetailView: View {
     let destination: TravelDestination
@@ -20,6 +22,27 @@ struct DestinationDetailView: View {
     @StateObject private var languageManager = LanguageManager.shared
     @State private var selectedPhotoIndex: Int = 0
     @State private var photosLocal: [Data] = []
+    @State private var videoData: Data?
+    @State private var videoThumbnail: UIImage?
+    @State private var showVideoPlayer = false
+    @State private var videoURL: URL?
+    
+    // 媒体项类型：照片或视频
+    enum MediaItem: Identifiable {
+        case photo(Data, Int)
+        case video(Data, UIImage?)
+        
+        var id: String {
+            switch self {
+            case .photo(_, let index):
+                return "photo_\(index)"
+            case .video(let data, _):
+                return "video_\(data.hashValue)"
+            }
+        }
+    }
+    
+    @State private var mediaItems: [MediaItem] = []
     
     init(destination: TravelDestination) {
         self.destination = destination
@@ -37,44 +60,78 @@ struct DestinationDetailView: View {
         GeometryReader { geometry in
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    // 照片与缩略图
+                    // 照片与视频展示
                     let imageHeight = geometry.size.width * 2 / 3
-                    let allPhotos: [Data] = photosLocal
                     
-                    if !allPhotos.isEmpty, let mainImage = UIImage(data: allPhotos[min(selectedPhotoIndex, allPhotos.count - 1)]) {
+                    if !mediaItems.isEmpty {
+                        let selectedIndex = min(selectedPhotoIndex, mediaItems.count - 1)
+                        let selectedMedia = mediaItems[selectedIndex]
+                        
                         VStack(spacing: 10) {
-                            Image(uiImage: mainImage)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: geometry.size.width)
-                                .frame(height: imageHeight)
-                                .clipped()
-                                .cornerRadius(15)
+                            // 主显示区域
+                            Group {
+                                switch selectedMedia {
+                                case .photo(let data, _):
+                                    if let image = UIImage(data: data) {
+                                        Image(uiImage: image)
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(width: geometry.size.width)
+                                            .frame(height: imageHeight)
+                                            .clipped()
+                                    }
+                                case .video(_, let thumbnail):
+                                    ZStack {
+                                        if let thumbnail = thumbnail {
+                                            Image(uiImage: thumbnail)
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(width: geometry.size.width)
+                                                .frame(height: imageHeight)
+                                                .clipped()
+                                        } else {
+                                            Rectangle()
+                                                .fill(Color.gray.opacity(0.3))
+                                                .frame(height: imageHeight)
+                                        }
+                                        
+                                        // 播放按钮
+                                        Button {
+                                            playVideo(for: selectedMedia)
+                                        } label: {
+                                            ZStack {
+                                                Circle()
+                                                    .fill(Color.black.opacity(0.6))
+                                                    .frame(width: 80, height: 80)
+                                                
+                                                Image(systemName: "play.circle.fill")
+                                                    .font(.system(size: 60))
+                                                    .foregroundColor(.white)
+                                            }
+                                        }
+                                    }
+                                    .cornerRadius(15)
+                                }
+                            }
+                            .frame(width: geometry.size.width, height: imageHeight)
+                            .cornerRadius(15)
                             
-                            if allPhotos.count > 1 {
+                            // 缩略图列表
+                            if mediaItems.count > 1 {
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 8) {
-                                        ForEach(Array(allPhotos.enumerated()), id: \.offset) { index, data in
-                                            if let thumb = UIImage(data: data) {
-                                                Image(uiImage: thumb)
-                                                    .resizable()
-                                                    .scaledToFill()
-                                                    .frame(width: 70, height: 70)
-                                                    .clipped()
-                                                    .overlay(
-                                                        RoundedRectangle(cornerRadius: 8)
-                                                            .stroke(index == selectedPhotoIndex ? Color.accentColor : Color.clear, lineWidth: 2)
-                                                    )
-                                                    .cornerRadius(8)
-                                                    .onTapGesture { selectedPhotoIndex = index }
-                                                    // 详情页不支持排序，仅支持选择预览
-                                            }
+                                        ForEach(Array(mediaItems.enumerated()), id: \.element.id) { index, item in
+                                            mediaThumbnailView(for: item, index: index, isSelected: index == selectedIndex)
+                                                .onTapGesture {
+                                                    selectedPhotoIndex = index
+                                                }
                                         }
                                     }
                                 }
                             }
                         }
                     } else {
+                        // 空状态
                         ZStack {
                             Rectangle()
                                 .fill(destination.normalizedCategory == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
@@ -273,11 +330,20 @@ struct DestinationDetailView: View {
                     SystemShareSheet(items: [item.text])
                 }
             }
-            .onAppear {
-                photosLocal = !destination.photoDatas.isEmpty ? destination.photoDatas : (destination.photoData.map { [$0] } ?? [])
+            .sheet(isPresented: $showVideoPlayer) {
+                if let videoURL = videoURL {
+                    VideoPlayer(player: AVPlayer(url: videoURL))
+                        .ignoresSafeArea()
+                }
             }
-            .onChange(of: destination.photoDatas) { _, newValue in
-                if !newValue.isEmpty { photosLocal = newValue }
+            .onAppear {
+                loadMediaItems()
+            }
+            .onChange(of: destination.photoDatas) { _, _ in
+                loadMediaItems()
+            }
+            .onChange(of: destination.videoData) { _, _ in
+                loadMediaItems()
             }
             .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { _ in
                 // 语言变化时刷新界面
@@ -302,6 +368,131 @@ struct DestinationDetailView: View {
         let destinationImage = TripImageGenerator.generateDestinationImage(from: destination)
         // 只分享图片，不分享文字（因为所有信息都已经包含在图片中）
         shareItem = TripShareItem(text: "", image: destinationImage)
+    }
+    
+    // 加载媒体项（照片和视频）
+    private func loadMediaItems() {
+        var items: [MediaItem] = []
+        
+        // 加载照片
+        let photos = !destination.photoDatas.isEmpty ? destination.photoDatas : (destination.photoData.map { [$0] } ?? [])
+        photosLocal = photos
+        for (index, photoData) in photos.enumerated() {
+            items.append(.photo(photoData, index))
+        }
+        
+        // 加载视频
+        if let video = destination.videoData {
+            videoData = video
+            generateVideoThumbnail(video)
+            items.append(.video(video, nil)) // 缩略图稍后更新
+        }
+        
+        mediaItems = items
+    }
+    
+    // 生成视频缩略图
+    private func generateVideoThumbnail(_ data: Data) {
+        Task {
+            let tempURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString)
+                .appendingPathExtension("mov")
+            
+            do {
+                try data.write(to: tempURL)
+                defer {
+                    try? FileManager.default.removeItem(at: tempURL)
+                }
+                
+                let asset = AVAsset(url: tempURL)
+                let imageGenerator = AVAssetImageGenerator(asset: asset)
+                imageGenerator.appliesPreferredTrackTransform = true
+                
+                let result = try await imageGenerator.image(at: .zero)
+                let cgImage = result.image
+                let thumbnail = UIImage(cgImage: cgImage)
+                
+                await MainActor.run {
+                    self.videoThumbnail = thumbnail
+                    // 更新媒体项中的视频缩略图
+                    if let index = mediaItems.firstIndex(where: {
+                        if case .video = $0 { return true }
+                        return false
+                    }) {
+                        if case .video(let videoData, _) = mediaItems[index] {
+                            mediaItems[index] = .video(videoData, thumbnail)
+                        }
+                    }
+                }
+            } catch {
+                print("Failed to generate video thumbnail: \(error.localizedDescription)")
+            }
+        }
+    }
+    
+    // 媒体缩略图视图
+    @ViewBuilder
+    private func mediaThumbnailView(for item: MediaItem, index: Int, isSelected: Bool) -> some View {
+        Group {
+            switch item {
+            case .photo(let data, _):
+                if let thumb = UIImage(data: data) {
+                    Image(uiImage: thumb)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 70, height: 70)
+                        .clipped()
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
+                        )
+                        .cornerRadius(8)
+                }
+            case .video(_, let thumbnail):
+                ZStack {
+                    if let thumbnail = thumbnail {
+                        Image(uiImage: thumbnail)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 70, height: 70)
+                            .clipped()
+                    } else {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(width: 70, height: 70)
+                    }
+                    
+                    // 视频标识
+                    Image(systemName: "play.circle.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.white)
+                        .background(Circle().fill(Color.black.opacity(0.5)))
+                    
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.accentColor, lineWidth: 2)
+                    }
+                }
+                .cornerRadius(8)
+            }
+        }
+    }
+    
+    // 播放视频
+    private func playVideo(for media: MediaItem) {
+        if case .video(let data, _) = media {
+            let tempURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent(UUID().uuidString)
+                .appendingPathExtension("mov")
+            
+            do {
+                try data.write(to: tempURL)
+                videoURL = tempURL
+                showVideoPlayer = true
+            } catch {
+                print("Failed to create temporary video file: \(error.localizedDescription)")
+            }
+        }
     }
 }
 

@@ -124,6 +124,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 24784B572EA4945B004D4821 /* Build configuration list for PBXNativeTarget "Footprint" */;
 			buildPhases = (
+				284F74D0BFCD4730B4BBE42F /* Auto Increment Build */,
 				24784B302EA49459004D4821 /* Sources */,
 				24784B312EA49459004D4821 /* Frameworks */,
 				24784B322EA49459004D4821 /* Resources */,
@@ -264,6 +265,25 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
+		284F74D0BFCD4730B4BBE42F /* Auto Increment Build */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${SRCROOT}/scripts/auto_increment_build_on_archive.sh",
+			);
+			name = "Auto Increment Build";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/bash;
+			shellScript = "\"${SRCROOT}/scripts/auto_increment_build_on_archive.sh\"\n";
+		};
 		24DBD7632EE86C18009CC7AF /* Run Script */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 8;
@@ -471,7 +491,6 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Footprint/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "墨鱼足迹";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "我们需要访问你的位置来帮助你搜索旅行目的地";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "我们需要权限来保存你的旅行分享图片到相册";
@@ -490,7 +509,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 2.08;
+				MARKETING_VERSION = 2.09;
 				PRODUCT_BUNDLE_IDENTIFIER = Mooyu.Footprint;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -533,7 +552,6 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Footprint/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "墨鱼足迹";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "我们需要访问你的位置来帮助你搜索旅行目的地";
 				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "我们需要权限来保存你的旅行分享图片到相册";

@@ -134,6 +134,16 @@ struct AboutView: View {
                                 .foregroundColor(.blue)
                         }
                         
+                        // Apple Weather Attribution
+                        Button(action: {
+                            openWeatherAttribution()
+                        }) {
+                            // Apple Weather trademark with Apple logo (U+F8FF)
+                            Text("\u{F8FF} Weather")
+                                .font(.system(size: 13))
+                                .foregroundColor(.blue)
+                        }
+                        
                         // ICP备案号
                         if languageManager.currentLanguage == .chinese {
                             Button(action: {
@@ -211,6 +221,13 @@ struct AboutView: View {
     private func openICPBeian() {
         // 打开ICP备案查询
         if let url = URL(string: "https://beian.miit.gov.cn") {
+            UIApplication.shared.open(url)
+        }
+    }
+    
+    private func openWeatherAttribution() {
+        // 打开Apple Weather法律归属链接
+        if let url = URL(string: "https://weatherkit.apple.com/legal-attribution.html") {
             UIApplication.shared.open(url)
         }
     }

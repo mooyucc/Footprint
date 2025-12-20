@@ -169,6 +169,10 @@
 "profile" = "Profil";
 "create_trip" = "Ajouter un voyage";
 "import_trip" = "Importer un voyage";
+"import_result" = "Résultat de l'importation";
+"import_success" = "Importation réussie";
+"trip_exists" = "Voyage déjà existant";
+"import_failed" = "Échec de l'importation";
 "share" = "Partager";
 
 // Profile View
@@ -375,6 +379,14 @@
 "trip_share_route" = "Itinéraire du voyage";
 "trip_share_locations_count" = "lieux";
 "trip_share_no_destinations" = "Aucune destination ajoutée pour le moment";
+
+// Route Card
+"route_card_location" = "Lieu";
+"route_card_total_distance" = "Distance totale";
+"route_card_calculating" = "Calcul en cours...";
+"route_card_start_point" = "Départ";
+"route_card_end_point" = "Arrivée";
+
 "trip_share_signature" = "✨ MooFootprint • Enregistrer chaque voyage";
 "trip_share_subtitle" = "Enregistrer de merveilleux voyages, partager de beaux moments";
 "trip_share_layout_list" = "Mise en page liste";
@@ -445,6 +457,7 @@
 "software_license_agreement" = "Accord de licence et de service du logiciel";
 "privacy_policy_summary" = "Résumé de la politique de confidentialité";
 "privacy_policy" = "Politique de confidentialité";
+"weather_attribution" = "Source des données météorologiques";
 "customer_service_phone" = "Service client";
 "copyright" = "Droits d'auteur";
 "all_rights_reserved" = "Tous droits réservés";

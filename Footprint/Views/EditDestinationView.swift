@@ -37,6 +37,7 @@ struct EditDestinationView: View {
         static func == (lhs: PhotoItem, rhs: PhotoItem) -> Bool { lhs.id == rhs.id }
     }
     @State private var photoItems: [PhotoItem] = []
+    @State private var videoData: Data?
     @State private var searchText = ""
     @State private var searchResults: [MKMapItem] = []
     @State private var selectedLocation: MKMapItem?
@@ -228,10 +229,18 @@ struct EditDestinationView: View {
                     
                     let remaining = max(0, maxPhotos - photoItems.count)
                     PhotosPicker(selection: $selectedPhotos, maxSelectionCount: remaining == 0 ? 1 : remaining, matching: .images) {
-                        Label("add_photo".localized, systemImage: "photo")
+                        HStack {
+                            Image(systemName: "photo")
+                                .foregroundColor(Color.footprintRed)
+                            Text("add_photo".localized)
+                                .foregroundColor(.primary)
+                        }
                     }
                     .disabled(remaining == 0)
                 }
+                
+                // 使用可复用的视频选择组件
+                VideoSelectionSection(videoData: $videoData)
                 
                 Section("notes".localized) {
                     TextEditor(text: $notes)
@@ -338,6 +347,7 @@ struct EditDestinationView: View {
                 return PhotoItem(id: UUID(), data: processed.0, thumbnailData: processed.1)
             }
         }
+        videoData = destination.videoData
         latitude = destination.latitude
         longitude = destination.longitude
         selectedTrip = destination.trip
@@ -575,6 +585,7 @@ struct EditDestinationView: View {
         destination.photoData = datasToSave.first
         destination.photoThumbnailDatas = thumbnailsToSave
         destination.photoThumbnailData = thumbnailsToSave.first
+        destination.videoData = videoData
         destination.trip = selectedTrip
         
         // 如果选择了新位置，更新坐标

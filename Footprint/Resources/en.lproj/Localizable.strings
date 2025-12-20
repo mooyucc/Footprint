@@ -161,6 +161,10 @@
 "profile" = "Profile";
 "create_trip" = "Add Trip";
 "import_trip" = "Import Trip";
+"import_result" = "Import Result";
+"import_success" = "Import successful";
+"trip_exists" = "Trip already exists";
+"import_failed" = "Import failed";
 "share" = "Share";
 
 // Profile View
@@ -231,6 +235,14 @@
 "photo" = "Photo";
 "add_photo" = "Add Photo";
 "change_photo" = "Change Photo";
+"video" = "Video";
+"select_video" = "Select Video";
+"photo_limit_hint" = "You can add up to 9 photos";
+"video_limit_hint" = "Only 1 video supported, max 10 seconds";
+"video_duration_limit" = "Video duration limit: %d seconds";
+"video_error" = "Video Error";
+"video_load_failed" = "Failed to load video. Please try again.";
+"video_too_long" = "Video duration exceeds %d seconds limit. Please select a shorter video.";
 "notes" = "Notes";
 "unknown_place" = "Unknown Place";
 "latitude_longitude" = "Latitude: %.4f, Longitude: %.4f";
@@ -367,6 +379,13 @@
 "trip_share_route" = "Trip Route";
 "trip_share_locations_count" = "locations";
 "trip_share_no_destinations" = "No destinations added yet";
+
+// Route Card
+"route_card_location" = "Location";
+"route_card_total_distance" = "Total Distance";
+"route_card_calculating" = "Calculating...";
+"route_card_start_point" = "Start";
+"route_card_end_point" = "End";
 "trip_share_signature" = "✨ MooFootprint • Record Every Journey";
 "trip_share_subtitle" = "Record wonderful journeys, share beautiful moments";
 "trip_share_layout_list" = "List Layout";
@@ -437,6 +456,7 @@
 "software_license_agreement" = "Software License and Service Agreement";
 "privacy_policy_summary" = "Privacy Policy Summary";
 "privacy_policy" = "Privacy Policy";
+"weather_attribution" = "Weather Data Source";
 "customer_service_phone" = "Customer Service";
 "copyright" = "Copyright";
 "all_rights_reserved" = "All Rights Reserved";

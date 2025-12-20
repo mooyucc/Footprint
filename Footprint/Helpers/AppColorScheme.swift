@@ -91,7 +91,11 @@ class BrandColorManager: ObservableObject {
         }
         
         // 从 Data 中解码颜色
-        if let components = try? NSKeyedUnarchiver.unarchivedObject(ofClass: NSArray.self, from: colorData) as? [CGFloat],
+        // 明确指定允许的类集合，包括 NSArray 和 NSNumber（CGFloat 在归档时会被转换为 NSNumber）
+        if let components = try? NSKeyedUnarchiver.unarchivedObject(
+            ofClasses: [NSArray.self, NSNumber.self],
+            from: colorData
+        ) as? [CGFloat],
            components.count >= 3 {
             return Color(red: Double(components[0]), green: Double(components[1]), blue: Double(components[2]))
         }

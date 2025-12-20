@@ -1,0 +1,9 @@
+/* 
+  InfoPlist.strings
+  Footprint
+  
+  Chinese (Traditional) localization for App Display Name
+*/
+
+CFBundleDisplayName = "墨魚足跡";
+

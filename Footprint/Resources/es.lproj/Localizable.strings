@@ -169,6 +169,10 @@
 "profile" = "Perfil";
 "create_trip" = "Agregar viaje";
 "import_trip" = "Importar viaje";
+"import_result" = "Resultado de importación";
+"import_success" = "Importación exitosa";
+"trip_exists" = "El viaje ya existe";
+"import_failed" = "Error en la importación";
 "share" = "Compartir";
 
 // Profile View
@@ -375,6 +379,14 @@
 "trip_share_route" = "Ruta del viaje";
 "trip_share_locations_count" = "lugares";
 "trip_share_no_destinations" = "Aún no se han agregado destinos";
+
+// Route Card
+"route_card_location" = "Ubicación";
+"route_card_total_distance" = "Distancia total";
+"route_card_calculating" = "Calculando...";
+"route_card_start_point" = "Inicio";
+"route_card_end_point" = "Fin";
+
 "trip_share_signature" = "✨ MooFootprint • Registra cada viaje";
 "trip_share_subtitle" = "Registra viajes maravillosos, comparte momentos hermosos";
 "trip_share_layout_list" = "Diseño de lista";
@@ -445,6 +457,7 @@
 "software_license_agreement" = "Acuerdo de licencia y servicio de software";
 "privacy_policy_summary" = "Resumen de la política de privacidad";
 "privacy_policy" = "Política de privacidad";
+"weather_attribution" = "Fuente de datos meteorológicos";
 "customer_service_phone" = "Servicio al cliente";
 "copyright" = "Derechos de autor";
 "all_rights_reserved" = "Todos los derechos reservados";

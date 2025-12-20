@@ -133,11 +133,11 @@ struct BetaReminderView: View {
                             VStack(spacing: 8) {
                                 Text("beta_reminder_title".localized)
                                     .font(.title.bold())
-                                    .foregroundStyle(.primary)
+                                    .foregroundStyle(Color.black)
                                 
                                 Text("beta_reminder_subtitle".localized)
                                     .font(.subheadline)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(Color(white: 0.4))
                                     .multilineTextAlignment(.center)
                             }
                             .padding(.top, 24)

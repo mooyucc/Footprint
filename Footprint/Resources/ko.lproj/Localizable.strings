@@ -169,6 +169,10 @@
 "profile" = "프로필";
 "create_trip" = "여행 추가";
 "import_trip" = "여행 가져오기";
+"import_result" = "가져오기 결과";
+"import_success" = "가져오기 성공";
+"trip_exists" = "여행이 이미 존재합니다";
+"import_failed" = "가져오기 실패";
 "share" = "공유";
 
 // Profile View
@@ -374,6 +378,14 @@
 "trip_share_route" = "여행 경로";
 "trip_share_locations_count" = "개 장소";
 "trip_share_no_destinations" = "아직 목적지가 추가되지 않았습니다";
+
+// Route Card
+"route_card_location" = "장소";
+"route_card_total_distance" = "총 거리";
+"route_card_calculating" = "계산 중...";
+"route_card_start_point" = "출발지";
+"route_card_end_point" = "도착지";
+
 "trip_share_signature" = "✨ 모어풋프린트 • 모든 여행 기록";
 "trip_share_subtitle" = "아름다운 여행을 기록하고 멋진 순간을 공유하세요";
 "trip_share_layout_list" = "목록 레이아웃";
@@ -444,6 +456,7 @@
 "software_license_agreement" = "《소프트웨어 라이선스 및 서비스 계약》";
 "privacy_policy_summary" = "《개인정보 보호 가이드 요약》";
 "privacy_policy" = "《개인정보 보호 가이드》";
+"weather_attribution" = "날씨 데이터 출처";
 "customer_service_phone" = "고객 서비스";
 "copyright" = "저작권";
 "all_rights_reserved" = "All Rights Reserved";

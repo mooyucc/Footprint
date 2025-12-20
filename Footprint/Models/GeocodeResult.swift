@@ -9,6 +9,7 @@
 import Foundation
 import CoreLocation
 import MapKit
+import Contacts
 
 /// 统一的地理编码结果模型
 struct GeocodeResult {
@@ -102,7 +103,76 @@ struct GeocodeResult {
     
     /// 转换为MKMapItem（用于显示和后续处理）
     func toMapItem() -> MKMapItem {
-        let placemark = MKPlacemark(coordinate: coordinate)
+        // 构建地址字典，用于创建包含完整地址信息的MKPlacemark
+        var addressDictionary: [String: Any] = [:]
+        
+        // 填充地址信息
+        // 先检查省份，判断是否是中国的特别行政区
+        var finalCountry = address.country
+        var finalCountryCode: String?
+        
+        if let province = address.province, !province.isEmpty {
+            // 检查是否是中国的特别行政区或省份
+            let normalizedProvince = province.lowercased()
+            if normalizedProvince.contains("香港") || normalizedProvince.contains("hong kong") {
+                finalCountry = "中国"
+                finalCountryCode = "CN"
+            } else if normalizedProvince.contains("澳门") || normalizedProvince.contains("macau") || normalizedProvince.contains("macao") {
+                finalCountry = "中国"
+                finalCountryCode = "CN"
+            } else if normalizedProvince.contains("台湾") || normalizedProvince.contains("taiwan") {
+                finalCountry = "中国"
+                finalCountryCode = "CN"
+            }
+            
+            // 使用CNPostalAddress键名
+            addressDictionary[CNPostalAddressStateKey] = province
+        }
+        
+        // 设置国家信息
+        if let country = finalCountry, !country.isEmpty {
+            var countryToUse = country
+            var countryCodeToUse: String?
+            
+            if let code = finalCountryCode {
+                countryCodeToUse = code
+            } else if country == "中国" || country == "China" {
+                countryCodeToUse = "CN"
+            } else if country.contains("香港") || country == "Hong Kong" {
+                countryCodeToUse = "CN"
+                countryToUse = "中国"
+            } else if country.contains("澳门") || country == "Macau" || country == "Macao" {
+                countryCodeToUse = "CN"
+                countryToUse = "中国"
+            } else if country.contains("台湾") || country == "Taiwan" {
+                countryCodeToUse = "CN"
+                countryToUse = "中国"
+            }
+            
+            addressDictionary[CNPostalAddressCountryKey] = countryToUse
+            if let code = countryCodeToUse {
+                addressDictionary["CountryCode"] = code
+            }
+        }
+        
+        if let city = address.city, !city.isEmpty {
+            addressDictionary[CNPostalAddressCityKey] = city
+        }
+        
+        if let district = address.district, !district.isEmpty {
+            addressDictionary[CNPostalAddressSubAdministrativeAreaKey] = district
+        }
+        
+        if let street = address.street, !street.isEmpty {
+            addressDictionary[CNPostalAddressStreetKey] = street
+        }
+        
+        if let streetNumber = address.streetNumber, !streetNumber.isEmpty {
+            addressDictionary[CNPostalAddressSubLocalityKey] = streetNumber
+        }
+        
+        // 创建包含地址信息的MKPlacemark
+        let placemark = MKPlacemark(coordinate: coordinate, addressDictionary: addressDictionary.isEmpty ? nil : addressDictionary)
         let mapItem = MKMapItem(placemark: placemark)
         
         // 设置名称：优先使用POI名称，否则使用地址

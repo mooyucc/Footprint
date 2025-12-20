@@ -169,6 +169,10 @@
 "profile" = "マイページ";
 "create_trip" = "旅程を追加";
 "import_trip" = "旅程をインポート";
+"import_result" = "インポート結果";
+"import_success" = "インポート成功";
+"trip_exists" = "旅程が既に存在します";
+"import_failed" = "インポート失敗";
 "share" = "共有";
 
 // Profile View
@@ -374,6 +378,14 @@
 "trip_share_route" = "旅程ルート";
 "trip_share_locations_count" = "場所";
 "trip_share_no_destinations" = "まだ目的地が追加されていません";
+
+// Route Card
+"route_card_location" = "場所";
+"route_card_total_distance" = "総距離";
+"route_card_calculating" = "計算中...";
+"route_card_start_point" = "出発点";
+"route_card_end_point" = "終点";
+
 "trip_share_signature" = "✨ MooFootprint • すべての旅程を記録";
 "trip_share_subtitle" = "素晴らしい旅程を記録し、美しい瞬間を共有";
 "trip_share_layout_list" = "リストレイアウト";
@@ -444,6 +456,7 @@
 "software_license_agreement" = "ソフトウェアライセンスおよびサービス契約";
 "privacy_policy_summary" = "プライバシーポリシー要約";
 "privacy_policy" = "プライバシーポリシー";
+"weather_attribution" = "気象データの出典";
 "customer_service_phone" = "カスタマーサービス";
 "copyright" = "著作権";
 "all_rights_reserved" = "All Rights Reserved";

@@ -198,7 +198,7 @@ final class DestinationWeatherManager: ObservableObject {
             lastFailure[destination.id] = nil
         } catch {
             lastFailure[destination.id] = Date()
-            #if DEBUG
+            #if DEBUG || BETA
             print("🌧️ WeatherKit请求失败: \(error.localizedDescription)")
             #endif
         }

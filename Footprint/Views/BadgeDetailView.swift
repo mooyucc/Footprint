@@ -114,7 +114,7 @@ struct BadgeDetailView: View {
     
     private var badgeFrontView: some View {
         GeometryReader { geometry in
-            let cardSize = min(geometry.size.width, geometry.size.height) * 0.7
+            let cardSize = min(geometry.size.width, geometry.size.height) * 0.85
             
             ZStack {
                 // 背景图片

@@ -167,6 +167,10 @@
 "profile" = "我的";
 "create_trip" = "添加旅程";
 "import_trip" = "導入旅程";
+"import_result" = "導入結果";
+"import_success" = "導入成功";
+"trip_exists" = "旅程已存在";
+"import_failed" = "導入失敗";
 "share" = "分享";
 
 // Profile View
@@ -237,6 +241,14 @@
 "photo" = "照片";
 "add_photo" = "添加照片";
 "change_photo" = "更換照片";
+"video" = "視頻";
+"select_video" = "選擇視頻";
+"photo_limit_hint" = "最多可添加9張照片";
+"video_limit_hint" = "僅支持1段視頻，時長不超過10秒";
+"video_duration_limit" = "視頻時長限制：%d秒以內";
+"video_error" = "視頻錯誤";
+"video_load_failed" = "無法加載視頻，請重試。";
+"video_too_long" = "視頻時長超過%d秒限制，請選擇更短的視頻。";
 "notes" = "筆記";
 "unknown_place" = "未知地點";
 "latitude_longitude" = "緯度: %.4f, 經度: %.4f";
@@ -373,6 +385,14 @@
 "trip_share_route" = "行程路線";
 "trip_share_locations_count" = "個地點";
 "trip_share_no_destinations" = "還沒有添加目的地";
+
+// Route Card
+"route_card_location" = "地點";
+"route_card_total_distance" = "總距離";
+"route_card_calculating" = "計算中...";
+"route_card_start_point" = "起點";
+"route_card_end_point" = "終點";
+
 "trip_share_signature" = "✨ 墨魚足跡 · 記錄每一步旅程";
 "trip_share_subtitle" = "記錄美好旅程，分享精彩瞬間";
 "trip_share_layout_list" = "清單版面";
@@ -443,6 +463,7 @@
 "software_license_agreement" = "《軟件許可及服務協議》";
 "privacy_policy_summary" = "《隱私保護指引摘要》";
 "privacy_policy" = "《隱私保護指引》";
+"weather_attribution" = "天氣數據來源";
 "customer_service_phone" = "客服電話";
 "copyright" = "版權所有";
 "all_rights_reserved" = "All Rights Reserved";

@@ -102,7 +102,7 @@ class RouteManager: ObservableObject {
     /// - Parameters:
     ///   - source: 起点坐标
     ///   - destination: 终点坐标
-    ///   - transportType: 交通方式（nil 表示自动选择：近距离优先徒步，远距离使用机动车）
+    ///   - transportType: 交通方式（nil 表示使用用户偏好或默认机动车）
     ///   - completion: 完成回调，返回计算出的路线或 nil
     func calculateRoute(
         from source: CLLocationCoordinate2D,
@@ -110,41 +110,26 @@ class RouteManager: ObservableObject {
         transportType: MKDirectionsTransportType? = nil,
         completion: @escaping (MKRoute?) -> Void
     ) {
-        let cacheKey = routeKey(from: source, to: destination)
-        
-        // 确定使用的交通方式：优先使用传入的参数，其次使用用户偏好，最后使用自动选择
-        let finalTransportType: MKDirectionsTransportType?
+        // 确定使用的交通方式：优先使用传入的参数，其次使用用户偏好，最后使用默认机动车
+        let finalTransportType: MKDirectionsTransportType
         if let specifiedType = transportType {
             finalTransportType = specifiedType
         } else if let userPreference = getUserTransportType(from: source, to: destination) {
             finalTransportType = userPreference
         } else {
-            finalTransportType = nil // 使用自动选择
+            // 默认使用机动车
+            finalTransportType = .automobile
         }
         
-        // 计算两点间的直线距离
-        let sourceLocation = CLLocation(latitude: source.latitude, longitude: source.longitude)
-        let destinationLocation = CLLocation(latitude: destination.latitude, longitude: destination.longitude)
-        let distance = sourceLocation.distance(from: destinationLocation)
+        let cacheKey = routeKey(from: source, to: destination, transportType: finalTransportType)
+        
+        // 计算两点间的直线距离（使用可复用函数）
+        let distance = Self.calculateDistance(from: source, to: destination)
         
         // 检查缓存（线程安全）
         cacheQueue.async { [weak self] in
             guard let self = self else {
                 completion(nil)
-                return
-            }
-            
-            // 检查是否在失败列表中
-            var isFailed = false
-            self.failedRoutesQueue.sync {
-                isFailed = self.failedRoutes.contains(cacheKey)
-            }
-            
-            if isFailed {
-                print("⏭️ 跳过已知失败的路线: 距离 \(String(format: "%.1f", distance/1000))km")
-                DispatchQueue.main.async {
-                    completion(nil)
-                }
                 return
             }
             
@@ -191,8 +176,6 @@ class RouteManager: ObservableObject {
             
             // 请求节流：避免短时间内发送过多请求导致被限流
             // 在后台队列中等待，避免阻塞主线程
-            // 捕获 finalTransportType 以便在嵌套闭包中使用
-            let capturedTransportType = finalTransportType
             self.requestThrottleQueue.async {
                 let now = Date()
                 let timeSinceLastRequest = now.timeIntervalSince(self.lastRequestTime)
@@ -208,7 +191,7 @@ class RouteManager: ObservableObject {
                     destination: destination,
                     distance: distance,
                     cacheKey: cacheKey,
-                    transportType: capturedTransportType,
+                    transportType: finalTransportType,
                     completion: completion
                 )
             }
@@ -221,7 +204,7 @@ class RouteManager: ObservableObject {
         destination: CLLocationCoordinate2D,
         distance: CLLocationDistance,
         cacheKey: String,
-        transportType: MKDirectionsTransportType? = nil,
+        transportType: MKDirectionsTransportType,
         completion: @escaping (MKRoute?) -> Void
     ) {
         // 等待信号量（限制并发请求数）
@@ -239,25 +222,8 @@ class RouteManager: ObservableObject {
         let sourceMapItem = MKMapItem(placemark: sourcePlacemark)
         let destinationMapItem = MKMapItem(placemark: destinationPlacemark)
         
-        // 智能选择交通方式
-        let selectedTransportType: MKDirectionsTransportType
-        if let specifiedType = transportType {
-            // 如果明确指定了交通方式，使用指定的
-            selectedTransportType = specifiedType
-        } else {
-            // 自动选择：近距离（5公里内）优先尝试徒步，远距离使用机动车
-            // 对于徒步场景（山上、无道路），徒步模式更准确
-            if distance <= 5_000 {
-                // 5公里内，优先尝试徒步模式
-                selectedTransportType = .walking
-            } else if distance > 1_000_000 {
-                // 超过1000公里，使用 .any 可能成功率更高
-                selectedTransportType = .any
-            } else {
-                // 中等距离，使用机动车
-                selectedTransportType = .automobile
-            }
-        }
+        // 使用确定的交通方式（已在 calculateRoute 中确定）
+        let selectedTransportType = transportType
         
         // 如果是飞机模式，直接计算直线距离，不调用 MKDirections
         if selectedTransportType == Self.airplane {
@@ -317,15 +283,8 @@ class RouteManager: ObservableObject {
                 
                 // 不再自动退回，直接返回 nil，让 UI 显示占位线
                 
-                // 对于某些错误类型，记录到失败列表（避免重复尝试）
-                // 某些错误（如找不到路线、地点不存在）应该跳过，避免重复尝试
-                // 其他错误（如服务器错误、限流）可以重试
-                let shouldSkip = errorCode == 3 || errorCode == 4 // directionsNotFound 或 placemarkNotFound 的常见错误码
-                if shouldSkip {
-                    self?.failedRoutesQueue.async(flags: .barrier) {
-                        self?.failedRoutes.insert(cacheKey)
-                    }
-                }
+                // 不将失败路线永久记录到失败列表，允许后续重试
+                // 占位线会在卡片切换时重新尝试计算
                 
                 DispatchQueue.main.async {
                     completion(nil)
@@ -336,12 +295,7 @@ class RouteManager: ObservableObject {
             guard let route = response?.routes.first else {
                 print("⚠️ 未找到路线 [距离: \(String(format: "%.1f", distance/1000))km, 耗时: \(String(format: "%.2f", elapsedTime))s]")
                 
-                // 不再自动退回，直接返回 nil，让 UI 显示占位线
-                
-                // 记录到失败列表
-                self?.failedRoutesQueue.async(flags: .barrier) {
-                    self?.failedRoutes.insert(cacheKey)
-                }
+                // 不记录到失败列表，允许后续重试（占位线会在卡片切换时重新尝试）
                 DispatchQueue.main.async {
                     completion(nil)
                 }
@@ -456,12 +410,24 @@ class RouteManager: ObservableObject {
     /// - Parameters:
     ///   - source: 起点坐标
     ///   - destination: 终点坐标
+    ///   - transportType: 交通方式（nil 表示使用用户偏好或默认机动车）
     /// - Returns: 如果已缓存则返回路线，否则返回 nil
     func getCachedRoute(
         from source: CLLocationCoordinate2D,
-        to destination: CLLocationCoordinate2D
+        to destination: CLLocationCoordinate2D,
+        transportType: MKDirectionsTransportType? = nil
     ) -> MKRoute? {
-        let cacheKey = routeKey(from: source, to: destination)
+        // 确定使用的交通方式（与 calculateRoute 逻辑一致）
+        let finalTransportType: MKDirectionsTransportType
+        if let specifiedType = transportType {
+            finalTransportType = specifiedType
+        } else if let userPreference = getUserTransportType(from: source, to: destination) {
+            finalTransportType = userPreference
+        } else {
+            finalTransportType = .automobile
+        }
+        
+        let cacheKey = routeKey(from: source, to: destination, transportType: finalTransportType)
         
         if let cachedRoute = cacheQueue.sync(execute: { routeCache[cacheKey] }) {
             return cachedRoute
@@ -493,10 +459,21 @@ class RouteManager: ObservableObject {
     }
     
     /// 生成缓存的 key
-    /// 注意：缓存key不包含交通方式，因为同一段路径可能用不同交通方式计算
-    /// 如果交通方式改变，需要清除旧缓存
-    private func routeKey(from source: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D) -> String {
-        return "\(source.latitude),\(source.longitude)->\(destination.latitude),\(destination.longitude)"
+    /// 包含交通方式信息，确保不同交通方式的路线分别缓存
+    private func routeKey(from source: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D, transportType: MKDirectionsTransportType? = nil) -> String {
+        let baseKey = "\(source.latitude),\(source.longitude)->\(destination.latitude),\(destination.longitude)"
+        if let transportType = transportType {
+            return "\(baseKey)|\(transportType.rawValue)"
+        }
+        // 如果没有指定交通方式，使用默认的机动车方式作为 key
+        return "\(baseKey)|\(MKDirectionsTransportType.automobile.rawValue)"
+    }
+    
+    /// 计算两点间的直线距离（可复用函数）
+    static func calculateDistance(from source: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D) -> CLLocationDistance {
+        let sourceLocation = CLLocation(latitude: source.latitude, longitude: source.longitude)
+        let destinationLocation = CLLocation(latitude: destination.latitude, longitude: destination.longitude)
+        return sourceLocation.distance(from: destinationLocation)
     }
     
     // MARK: - User Transport Preferences
@@ -583,20 +560,36 @@ class RouteManager: ObservableObject {
     /// - Parameters:
     ///   - source: 起点坐标
     ///   - destination: 终点坐标
-    func clearRouteCache(from source: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D) {
-        let cacheKey = routeKey(from: source, to: destination)
-        
-        cacheQueue.async(flags: .barrier) {
-            self.routeCache.removeValue(forKey: cacheKey)
+    ///   - transportType: 交通方式（nil 表示清除所有交通方式的缓存）
+    func clearRouteCache(from source: CLLocationCoordinate2D, to destination: CLLocationCoordinate2D, transportType: MKDirectionsTransportType? = nil) {
+        if let transportType = transportType {
+            // 清除特定交通方式的缓存
+            let cacheKey = routeKey(from: source, to: destination, transportType: transportType)
+            cacheQueue.async(flags: .barrier) {
+                self.routeCache.removeValue(forKey: cacheKey)
+            }
+            removePersistedRoute(for: cacheKey)
+            failedRoutesQueue.async(flags: .barrier) {
+                self.failedRoutes.remove(cacheKey)
+            }
+        } else {
+            // 清除所有交通方式的缓存（遍历所有可能的交通方式）
+            let transportTypes: [MKDirectionsTransportType] = [.automobile, .walking, .transit, .any]
+            for type in transportTypes {
+                let cacheKey = routeKey(from: source, to: destination, transportType: type)
+                cacheQueue.async(flags: .barrier) {
+                    self.routeCache.removeValue(forKey: cacheKey)
+                }
+                removePersistedRoute(for: cacheKey)
+                failedRoutesQueue.async(flags: .barrier) {
+                    self.failedRoutes.remove(cacheKey)
+                }
+            }
+            print("🗑️ 已清除所有交通方式的路径缓存")
+            return
         }
         
-        removePersistedRoute(for: cacheKey)
-        
-        failedRoutesQueue.async(flags: .barrier) {
-            self.failedRoutes.remove(cacheKey)
-        }
-        
-        print("🗑️ 已清除路径缓存: \(cacheKey)")
+        print("🗑️ 已清除路径缓存")
     }
     
     /// 清除所有路径缓存

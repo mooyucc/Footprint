@@ -62,24 +62,14 @@ struct TripRouteMapView: View {
         from source: TravelDestination,
         to destination: TravelDestination
     ) -> MKDirectionsTransportType {
-        // 获取用户选择的交通方式，如果没有则使用自动选择的逻辑
+        // 获取用户选择的交通方式，如果没有则使用默认机动车
         let userTransportType = routeManager.getUserTransportType(
             from: source.coordinate,
             to: destination.coordinate
         )
         
-        // 确定显示的交通方式：优先使用用户选择，否则根据距离智能选择
-        if let userType = userTransportType {
-            return userType
-        } else {
-            // 自动选择逻辑：近距离步行，远距离机动车
-            let distance = source.coordinate.distance(to: destination.coordinate)
-            if distance <= 5_000 {
-                return .walking
-            } else {
-                return .automobile
-            }
-        }
+        // 优先使用用户选择，否则使用默认机动车
+        return userTransportType ?? .automobile
     }
     
     // 占位线绘制视图（提取复杂逻辑，避免类型检查超时）

@@ -17,14 +17,18 @@ struct PhotoSelectionSection: View {
     
     var body: some View {
         Section("photo".localized) {
-            PhotosPicker(selection: $selectedPhotos, maxSelectionCount: 10, matching: .images) {
+            PhotosPicker(selection: $selectedPhotos, maxSelectionCount: 9, matching: .images) {
                 HStack {
                     Image(systemName: "photo")
-                        .foregroundColor(AppColorScheme.iconColor)
+                        .foregroundColor(Color.footprintRed)
                     Text("select_photo".localized)
                         .foregroundColor(.primary)
                 }
             }
+            
+            Text("photo_limit_hint".localized)
+                .font(.caption)
+                .foregroundColor(.secondary)
             
             if !photoDatas.isEmpty {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 90), spacing: 8)], spacing: 8) {

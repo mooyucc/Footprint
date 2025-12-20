@@ -36,6 +36,7 @@ struct QuickCheckInView: View {
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var photoDatas: [Data] = []
     @State private var photoThumbnailDatas: [Data] = []
+    @State private var videoData: Data?
     @State private var selectedTrip: TravelTrip?
     @State private var notes = ""
     @State private var isFavorite = false
@@ -90,6 +91,9 @@ struct QuickCheckInView: View {
                     photoDatas: $photoDatas,
                     photoThumbnailDatas: $photoThumbnailDatas
                 )
+                
+                // 使用可复用的视频选择组件
+                VideoSelectionSection(videoData: $videoData)
                 
                 // 使用可复用的笔记组件，传递天气信息
                 NotesSection(notes: $notes, weatherSummary: currentWeatherSummary)
@@ -275,6 +279,7 @@ struct QuickCheckInView: View {
             photoDatas: photoDatas,
             photoThumbnailData: photoThumbnailDatas.first,
             photoThumbnailDatas: photoThumbnailDatas,
+            videoData: videoData,
             category: category,
             isFavorite: isFavorite
         )
@@ -312,6 +317,7 @@ struct QuickCheckInView: View {
         existing.photoDatas = photoDatas
         existing.photoThumbnailData = photoThumbnailDatas.first
         existing.photoThumbnailDatas = photoThumbnailDatas
+        existing.videoData = videoData
         existing.category = category
         existing.isFavorite = isFavorite
         

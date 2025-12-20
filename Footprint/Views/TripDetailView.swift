@@ -21,8 +21,6 @@ struct TripDetailView: View {
     @State private var shareFileItem: TripShareItem?
     @State private var showingLayoutSelection = false // 控制版面选择视图显示
     @State private var selectedLayout: TripShareLayout = .list // 默认选择清单版面
-    @StateObject private var routeManager = RouteManager.shared
-    @State private var routeDistances: [UUID: CLLocationDistance] = [:]
     @EnvironmentObject var languageManager: LanguageManager
     
     var sortedDestinations: [TravelDestination] {
@@ -120,11 +118,6 @@ struct TripDetailView: View {
                     .background(Color(.secondarySystemBackground))
                     .cornerRadius(12)
                     
-                    // 线路地图示意图
-                    if !sortedDestinations.isEmpty && sortedDestinations.count >= 2 {
-                        TripRouteMapView(destinations: sortedDestinations, height: 300)
-                    }
-                    
                     // 目的地列表
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
@@ -162,37 +155,14 @@ struct TripDetailView: View {
                             .padding(.vertical, 30)
                         } else {
                             ForEach(Array(sortedDestinations.enumerated()), id: \.element.id) { index, destination in
-                                VStack(spacing: 0) {
-                                    NavigationLink {
-                                        DestinationDetailView(destination: destination)
-                                    } label: {
-                                        TripDestinationRow(destination: destination, index: index + 1)
-                                    }
-                                    
-                                    // 显示到下一个地点的距离
-                                    if index < sortedDestinations.count - 1 {
-                                        let nextDestination = sortedDestinations[index + 1]
-                                        if let distance = routeDistances[destination.id] {
-                                            HStack(spacing: 6) {
-                                                Image(systemName: "arrow.right.circle.fill")
-                                                    .font(.caption2)
-                                                    .foregroundColor(.secondary.opacity(0.6))
-                                                Text(formatDistance(distance))
-                                                    .font(.caption2)
-                                                    .foregroundColor(.secondary)
-                                                Text("→")
-                                                    .font(.caption2)
-                                                    .foregroundColor(.secondary.opacity(0.6))
-                                                Text(nextDestination.name)
-                                                    .font(.caption2)
-                                                    .foregroundColor(.secondary)
-                                                Spacer()
-                                            }
-                                            .padding(.leading, 96) // 与内容对齐
-                                            .padding(.top, 4)
-                                            .padding(.bottom, 8)
-                                        }
-                                    }
+                                NavigationLink {
+                                    DestinationDetailView(destination: destination)
+                                } label: {
+                                    TripDestinationRow(
+                                        destination: destination,
+                                        index: index + 1,
+                                        nextDestination: index < sortedDestinations.count - 1 ? sortedDestinations[index + 1] : nil
+                                    )
                                 }
                             }
                         }
@@ -285,12 +255,6 @@ struct TripDetailView: View {
         } message: {
             Text("confirm_delete_trip".localized)
         }
-        .onAppear {
-            calculateRouteDistances()
-        }
-        .onChange(of: sortedDestinations.count) { _, _ in
-            calculateRouteDistances()
-        }
     }
     
     private func deleteTrip() {
@@ -316,47 +280,55 @@ struct TripDetailView: View {
         // 创建分享项
         shareFileItem = TripShareItem(text: shareText, image: nil, url: fileURL)
     }
+}
+
+struct TripDestinationRow: View {
+    let destination: TravelDestination
+    let index: Int
+    let nextDestination: TravelDestination?
     
-    /// 计算所有地点之间的距离
-    private func calculateRouteDistances() {
-        guard sortedDestinations.count >= 2 else {
-            routeDistances = [:]
-            return
-        }
-        
-        routeDistances = [:]
-        
-        Task {
-            for i in 0..<sortedDestinations.count - 1 {
-                let source = sortedDestinations[i]
-                let destination = sortedDestinations[i + 1]
-                
-                await withCheckedContinuation { continuation in
-                    routeManager.calculateRoute(from: source.coordinate, to: destination.coordinate) { route in
-                        if let route = route {
-                            Task { @MainActor in
-                                routeDistances[source.id] = route.footprintDistance
-                            }
-                        }
-                        continuation.resume()
-                    }
-                }
-            }
-        }
+    @StateObject private var routeManager = RouteManager.shared
+    @StateObject private var languageManager = LanguageManager.shared
+    
+    // 计算到下一个地点的距离
+    private var distanceToNext: CLLocationDistance? {
+        guard let next = nextDestination else { return nil }
+        return RouteManager.calculateDistance(from: destination.coordinate, to: next.coordinate)
     }
     
-    /// 格式化距离
+    // 获取交通方式
+    private var transportType: MKDirectionsTransportType {
+        guard let next = nextDestination else { return .automobile }
+        return routeManager.getUserTransportType(from: destination.coordinate, to: next.coordinate) ?? .automobile
+    }
+    
+    // 格式化距离
     private func formatDistance(_ distance: CLLocationDistance) -> String {
         let formatter = MKDistanceFormatter()
         formatter.unitStyle = .abbreviated
         formatter.locale = languageManager.currentLanguage == .chinese ? Locale(identifier: "zh_CN") : Locale(identifier: "en_US")
         return formatter.string(fromDistance: distance)
     }
-}
-
-struct TripDestinationRow: View {
-    let destination: TravelDestination
-    let index: Int
+    
+    // 获取交通方式图标名称
+    private var transportIconName: String {
+        transportType.iconName
+    }
+    
+    // 获取交通方式颜色
+    private var transportColor: Color {
+        if transportType == RouteManager.airplane {
+            return .orange
+        } else if transportType.contains(.walking) && transportType == .walking {
+            return .green
+        } else if transportType.contains(.automobile) && transportType == .automobile {
+            return .blue
+        } else if transportType.contains(.transit) && transportType == .transit {
+            return .purple
+        } else {
+            return .gray
+        }
+    }
     
     var body: some View {
         HStack(spacing: 12) {
@@ -411,6 +383,21 @@ struct TripDestinationRow: View {
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
+                }
+                
+                // 显示到下一个地点的距离和交通方式
+                if let distance = distanceToNext {
+                    HStack(spacing: 4) {
+                        Image(systemName: transportIconName)
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundColor(transportColor)
+                            .frame(width: 14, height: 14)
+                        
+                        Text(formatDistance(distance))
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.top, 2)
                 }
             }
             

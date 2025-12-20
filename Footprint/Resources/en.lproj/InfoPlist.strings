@@ -1,0 +1,9 @@
+/* 
+  InfoPlist.strings
+  Footprint
+  
+  English localization for App Display Name
+*/
+
+CFBundleDisplayName = "MooFootprint";
+
