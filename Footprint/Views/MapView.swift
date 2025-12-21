@@ -146,6 +146,7 @@ struct MapView: View {
     @State private var cachedDestinationsCount: Int = 0
     @State private var cachedVisibleRegionKey: String = "" // 缓存可见区域的标识
     @State private var lastCalculationTime: Date = Date()
+    @State private var isCalculatingClusters = false // 标记是否正在计算，避免重复触发
     
     // 地图样式相关状态
     @State private var currentMapStyle: MapStyle = .muted
@@ -157,6 +158,7 @@ struct MapView: View {
     @State private var addDestinationPrefill: AddDestinationPrefill?
     @State private var isWaitingForLocation = false // 等待定位状态（用于打卡功能）
     @State private var pendingPhotoPrefill: PendingPhotoPrefill?
+    @State private var shouldUsePrefillForAddDestination = false // 标记是否应该在"添加目的地"中使用预填充数据（用于照片导入等场景）
     @State private var lastReverseGeocodePlacemark: CLPlacemark?
     @State private var lastReverseGeocodeCoordinate: CLLocationCoordinate2D?
     @State private var lastReverseGeocodeTimestamp: Date?
@@ -191,6 +193,9 @@ struct MapView: View {
     @State private var isSearching = false
     @State private var showSearchBar = false // 控制搜索栏显示
     @FocusState private var isSearchFocused: Bool
+    
+    // AI功能相关状态
+    @State private var showingAIAssistant = false // 控制AI助手界面显示
     
     // 线路卡片相关状态
     @State private var showRouteCards = false
@@ -420,12 +425,13 @@ struct MapView: View {
                     onImportPhoto: handleFootprintsImport
                 )
             }
-            // 普通“添加目的地”弹窗
+            // 普通"添加目的地"弹窗
             .sheet(isPresented: $showingAddDestination, onDismiss: {
                 addDestinationPrefill = nil
                 pendingPhotoPrefill = nil
                 isWaitingForLocation = false
                 isGeocodingLocation = false
+                shouldUsePrefillForAddDestination = false  // 重置标志
             }) {
                 addDestinationSheet
             }
@@ -440,6 +446,9 @@ struct MapView: View {
             }
             .sheet(isPresented: $showingMapStylePicker) {
                 mapStylePicker
+            }
+            .sheet(isPresented: $showingAIAssistant) {
+                AIAssistantView()
             }
             .photosPicker(isPresented: $showingPhotoImportPicker, selection: $photoImportItem, matching: .images)
             .onChange(of: photoImportItem) { _, newValue in
@@ -924,9 +933,12 @@ struct MapView: View {
     private func handleFootprintsAdd() {
         showingFootprintsDrawer = false
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            // 清空所有预填充数据，确保普通"添加目的地"页面不会使用打卡功能的预填充数据
             addDestinationPrefill = nil
             pendingPhotoPrefill = nil
             isWaitingForLocation = false
+            isGeocodingLocation = false  // 确保清空地理编码状态
+            shouldUsePrefillForAddDestination = false  // 确保不使用预填充数据
             showingAddDestination = true
         }
     }
@@ -2105,37 +2117,41 @@ struct MapView: View {
         
         print("🔄 切换到旅程: \(trip.name)，包含 \(destinations.count) 个地点")
         
-        // 更新选中的旅程ID
-        selectedTripId = trip.id
-        selectionFeedbackGenerator.selectionChanged()
-        selectionFeedbackGenerator.prepare()
-        
-        // 如果在线路tab，清除聚合缓存，以便重新计算只显示当前线路的地点
-        if autoShowRouteCards {
-            clearClusterCache()
-            if destinations.count >= 2 {
-                // 确保显示旅程连线
-                if !showTripConnections {
+        // 使用DispatchQueue.main.async来修改状态，避免在视图更新期间修改状态
+        // 但确保在主线程上立即执行，避免延迟
+        DispatchQueue.main.async {
+            // 更新选中的旅程ID
+            selectedTripId = trip.id
+            selectionFeedbackGenerator.selectionChanged()
+            selectionFeedbackGenerator.prepare()
+            
+            // 如果在线路tab，清除聚合缓存，以便重新计算只显示当前线路的地点
+            if autoShowRouteCards {
+                clearClusterCache()
+                if destinations.count >= 2 {
+                    // 确保显示旅程连线
+                    if !showTripConnections {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            showTripConnections = true
+                        }
+                    }
+                } else if showTripConnections {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        showTripConnections = true
+                        showTripConnections = false
                     }
                 }
-            } else if showTripConnections {
-                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                    showTripConnections = false
-                }
             }
-        }
-        
-        // 缩放地图到该旅程的范围
-        zoomToTripDestinations(destinations)
-        
-        // 确保该旅程的路线已计算（如果还没有计算，使用incremental模式检查缓存）
-        if tripRoutes[trip.id] == nil || tripRoutes[trip.id]?.isEmpty == true {
-            let coordinates = destinations.map { $0.coordinate }
-            Task {
-                // 使用incremental模式，会先检查缓存，避免重复计算
-                await calculateRoutesForTrip(tripId: trip.id, coordinates: coordinates, incremental: true)
+            
+            // 缩放地图到该旅程的范围
+            zoomToTripDestinations(destinations)
+            
+            // 确保该旅程的路线已计算（如果还没有计算，使用incremental模式检查缓存）
+            if tripRoutes[trip.id] == nil || tripRoutes[trip.id]?.isEmpty == true {
+                let coordinates = destinations.map { $0.coordinate }
+                Task {
+                    // 使用incremental模式，会先检查缓存，避免重复计算
+                    await calculateRoutesForTrip(tripId: trip.id, coordinates: coordinates, incremental: true)
+                }
             }
         }
     }
@@ -2482,6 +2498,15 @@ struct MapView: View {
                 action: {
                     triggerMemoryBubble()
                 }
+            ),
+            AssistiveMenuAction(
+                id: "ai",
+                icon: "sparkles",
+                title: "map_button_ai".localized,
+                isActive: showingAIAssistant,
+                action: {
+                    handleAIAssistant()
+                }
             )
         ]
     }
@@ -2700,13 +2725,15 @@ struct MapView: View {
         }
     }
     
-    // 普通“添加目的地”弹窗内容
+    // 普通"添加目的地"弹窗内容
     @ViewBuilder
     private var addDestinationSheet: some View {
-        if let prefill = addDestinationPrefill {
-            AddDestinationView(prefill: prefill)
-        } else if isGeocodingLocation {
-            // 显示加载状态，等待地理编码完成
+        // 只有在明确标记应该使用预填充数据时才使用（例如照片导入）
+        // 普通"添加目的地"功能不使用自动地理编码的残留数据
+        if shouldUsePrefillForAddDestination, let prefill = addDestinationPrefill {
+            AddDestinationView(prefill: prefill, mapRegion: visibleRegion)
+        } else if isGeocodingLocation && shouldUsePrefillForAddDestination {
+            // 只有在明确需要预填充时才显示加载状态（例如照片导入正在地理编码）
             VStack(spacing: 20) {
                 ProgressView()
                     .scaleEffect(1.2)
@@ -2721,7 +2748,8 @@ struct MapView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Color(.systemBackground))
         } else {
-            AddDestinationView()
+            // 普通"添加目的地"：显示空页面，不使用预填充数据
+            AddDestinationView(mapRegion: visibleRegion)
         }
     }
     
@@ -2884,33 +2912,78 @@ struct MapView: View {
             return cachedClusterAnnotations
         }
         
-        // 性能监控：记录计算开始时间
-        let startTime = Date()
-        
-        let distance = clusterDistance
-        var clusters: [ClusterAnnotation] = []
-        
-        // 如果聚合距离为0，返回所有单独的点
-        if distance == 0 {
-            clusters = visibleDestinations.map { ClusterAnnotation(destinations: [$0]) }
-        } else {
-            // 优化的聚合算法：减少重复计算
-            clusters = calculateClustersOptimized(distance: distance, from: visibleDestinations)
+        // 如果缓存失效，触发异步更新
+        // 如果正在计算，直接返回旧缓存，避免重复触发
+        if isCalculatingClusters {
+            return cachedClusterAnnotations
         }
         
-        // 更新缓存
-        cachedClusterAnnotations = clusters
-        cachedZoomLevelEnum = currentZoomEnum
-        cachedDestinationsCount = currentCount
-        cachedVisibleRegionKey = currentRegionKey
-        lastCalculationTime = Date()
+        // 如果旧缓存为空且可见地点也为空，直接返回空数组（避免不必要的计算）
+        if cachedClusterAnnotations.isEmpty && visibleDestinations.isEmpty {
+            return []
+        }
         
-        // 性能监控：记录计算耗时和级别变化
-        let calculationTime = Date().timeIntervalSince(startTime)
-        let totalDestinations = destinations.count
-        print("🔄 聚合计算完成: \(currentZoomEnum.description)级别, 耗时: \(String(format: "%.3f", calculationTime))秒, 可见地点: \(currentCount)/\(totalDestinations)个")
+        // 如果旧缓存不为空，先返回旧缓存，然后异步更新
+        let oldCache = cachedClusterAnnotations
         
-        return clusters
+        // 标记正在计算
+        isCalculatingClusters = true
+        
+        // 创建新的异步计算任务
+        // 捕获当前值，避免在异步任务中访问计算属性导致循环
+        let capturedZoomEnum = currentZoomEnum
+        let capturedDestinations = visibleDestinations
+        let capturedCount = currentCount
+        let capturedRegionKey = currentRegionKey
+        let capturedDistance = clusterDistance
+        
+        // 使用 DispatchQueue 异步执行计算
+        DispatchQueue.main.async {
+            // 再次检查缓存是否仍然失效（可能在异步等待期间已经更新）
+            let checkZoomEnum = currentZoomLevelEnum
+            let checkVisibleDestinations = visibleDestinationsInRegion
+            let checkCount = checkVisibleDestinations.count
+            let checkRegionKey = visibleRegionKey
+            
+            if !cachedClusterAnnotations.isEmpty &&
+               cachedZoomLevelEnum == checkZoomEnum &&
+               cachedDestinationsCount == checkCount &&
+               cachedVisibleRegionKey == checkRegionKey {
+                // 缓存已经更新，不需要重新计算
+                isCalculatingClusters = false
+                return
+            }
+            
+            // 性能监控：记录计算开始时间
+            let startTime = Date()
+            
+            // 使用捕获的值进行计算
+            var clusters: [ClusterAnnotation] = []
+            
+            // 如果聚合距离为0，返回所有单独的点
+            if capturedDistance == 0 {
+                clusters = capturedDestinations.map { ClusterAnnotation(destinations: [$0]) }
+            } else {
+                // 优化的聚合算法：减少重复计算
+                clusters = calculateClustersOptimized(distance: capturedDistance, from: capturedDestinations)
+            }
+            
+            // 更新缓存
+            cachedClusterAnnotations = clusters
+            cachedZoomLevelEnum = checkZoomEnum
+            cachedDestinationsCount = checkCount
+            cachedVisibleRegionKey = checkRegionKey
+            lastCalculationTime = Date()
+            isCalculatingClusters = false
+            
+            // 性能监控：记录计算耗时和级别变化
+            let calculationTime = Date().timeIntervalSince(startTime)
+            let totalDestinations = destinations.count
+            print("🔄 聚合计算完成: \(checkZoomEnum.description)级别, 耗时: \(String(format: "%.3f", calculationTime))秒, 可见地点: \(checkCount)/\(totalDestinations)个")
+        }
+        
+        // 如果旧缓存不为空，返回旧缓存；否则返回空数组，等待异步任务完成
+        return oldCache
     }
     
     // 优化的聚合计算算法
@@ -2953,12 +3026,18 @@ struct MapView: View {
     
     // 清除聚合缓存
     private func clearClusterCache() {
-        cachedClusterAnnotations = []
-        cachedZoomLevelEnum = .world
-        cachedDestinationsCount = 0
-        cachedVisibleRegionKey = ""
-        lastCalculationTime = Date()
-        print("🧹 已清除聚合缓存")
+        // 重置计算标志
+        isCalculatingClusters = false
+        
+        // 使用异步方式清除缓存，避免在视图更新期间修改状态
+        DispatchQueue.main.async {
+            cachedClusterAnnotations = []
+            cachedZoomLevelEnum = .world
+            cachedDestinationsCount = 0
+            cachedVisibleRegionKey = ""
+            lastCalculationTime = Date()
+            print("🧹 已清除聚合缓存")
+        }
     }
     
     // 处理地点变化（立即更新路线）
@@ -2968,23 +3047,27 @@ struct MapView: View {
         clearClusterCache()
         // 清除路线缓存，强制重新计算
         tripRoutes.removeAll()
-        // 如果显示连线，重新计算所有路线
-        if showTripConnections {
-            calculateRoutesForAllTrips()
-        }
-        // 如果在线路tab且选中了线路，重新计算该线路的路线
-        if autoShowRouteCards, let selectedTripId = selectedTripId,
-           let selectedTrip = trips.first(where: { $0.id == selectedTripId }),
-           let tripDestinations = selectedTrip.destinations?.sorted(by: { $0.visitDate < $1.visitDate }),
-           tripDestinations.count >= 2 {
-            let coordinates = tripDestinations.map { $0.coordinate }
-            Task {
-                // 强制重新计算（不使用缓存）
-                await calculateRoutesForTrip(tripId: selectedTripId, coordinates: coordinates, incremental: false)
+        
+        // 如果在线路tab，只计算当前选中旅程的路线
+        if autoShowRouteCards {
+            if let selectedTripId = selectedTripId,
+               let selectedTrip = trips.first(where: { $0.id == selectedTripId }),
+               let tripDestinations = selectedTrip.destinations?.sorted(by: { $0.visitDate < $1.visitDate }),
+               tripDestinations.count >= 2 {
+                let coordinates = tripDestinations.map { $0.coordinate }
+                Task {
+                    // 强制重新计算（不使用缓存）
+                    await calculateRoutesForTrip(tripId: selectedTripId, coordinates: coordinates, incremental: false)
+                }
+            } else if let selectedTripId = selectedTripId {
+                // 如果选中线路的地点数量不足2个，清除该线路的路线
+                tripRoutes.removeValue(forKey: selectedTripId)
             }
-        } else if autoShowRouteCards, let selectedTripId = selectedTripId {
-            // 如果选中线路的地点数量不足2个，清除该线路的路线
-            tripRoutes.removeValue(forKey: selectedTripId)
+        } else {
+            // 如果显示连线，重新计算所有路线（地图 tab）
+            if showTripConnections {
+                calculateRoutesForAllTrips()
+            }
         }
         // 更新签名
         lastDestinationsSignature = destinationsSignature
@@ -3897,6 +3980,7 @@ struct MapView: View {
                         thumbnailData: processed.1
                     )
                     photoImportError = nil
+                    shouldUsePrefillForAddDestination = true  // 标记照片导入场景需要使用预填充数据
                     showingAddDestination = true
                     addDestinationPrefill = nil
                     
@@ -3909,6 +3993,7 @@ struct MapView: View {
                     }
                     
                     pendingPhotoPrefill = nil
+                    shouldUsePrefillForAddDestination = true  // 标记照片导入场景需要使用预填充数据
                     addDestinationPrefill = AddDestinationPrefill(
                         visitDate: metadata.captureDate,
                         photoDatas: [processed.0],
@@ -4653,6 +4738,24 @@ struct MapView: View {
         }
     }
     
+    // 处理AI助手功能
+    private func handleAIAssistant() {
+        print("🤖 点击AI助手按钮")
+        
+        // 触觉反馈
+        let impactFeedback = UIImpactFeedbackGenerator(style: .medium)
+        impactFeedback.impactOccurred()
+        
+        // 切换AI助手界面显示状态
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            showingAIAssistant.toggle()
+        }
+        
+        // TODO: 后续实现AI功能入口
+        // 可以打开AI助手界面、显示AI功能列表等
+        // 参考：可以创建一个AIAssistantView来展示AI功能
+    }
+    
     // 检查地图是否已到达目标地点，如果到达则触发肥皂泡泡
     private func checkAndTriggerBubbles() {
         guard waitingForMapToReachDestination,
@@ -4758,28 +4861,26 @@ struct MapView: View {
         
         isSearching = true
         
-        let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = searchText
+        // 获取当前屏幕中心点坐标（用于距离排序）
+        let centerCoordinate = visibleRegion?.center
         
-        // 设置搜索区域为当前可见区域
-        if let region = visibleRegion {
-            request.region = region
-        }
-        
-        let search = MKLocalSearch(request: request)
-        search.start { response, error in
+        // 使用可复用的搜索辅助类
+        LocationSearchHelper.search(
+            query: searchText,
+            region: visibleRegion,
+            centerCoordinate: centerCoordinate
+        ) { result in
             DispatchQueue.main.async {
                 self.isSearching = false
                 
-                if let error = error {
+                switch result {
+                case .success(let items):
+                    self.searchResults = items
+                    print("✅ 搜索完成，找到 \(items.count) 个结果（已按距离排序）")
+                case .failure(let error):
                     print("❌ 搜索失败: \(error.localizedDescription)")
                     self.searchResults = []
-                    return
                 }
-                
-                self.searchResults = response?.mapItems ?? []
-                
-                print("✅ 搜索完成，找到 \(self.searchResults.count) 个结果")
             }
         }
     }
@@ -4798,11 +4899,23 @@ struct MapView: View {
             mapCameraPosition = .region(region)
         }
         
-        // 清除搜索
-        searchText = ""
-        searchResults = []
+        // 显示POI预览卡片（与点击地图POI的行为一致）
+        // 延迟一点显示，等待地图移动动画开始
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                self.selectedPOI = mapItem
+                self.showingPOIPreview = true
+            }
+        }
         
-        print("📍 移动到搜索结果: \(mapItem.name ?? "未知地点")")
+        // 关闭搜索栏，但保留搜索结果和搜索文本（用户关闭POI卡片后可以重新打开搜索栏查看其他结果）
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+            showSearchBar = false
+            isSearchFocused = false
+            // 注意：不清空 searchText 和 searchResults，这样用户重新打开搜索栏时还能看到结果
+        }
+        
+        print("📍 移动到搜索结果并显示POI预览: \(mapItem.name ?? "未知地点")")
     }
 }
 
@@ -6642,6 +6755,7 @@ struct RouteCard: View {
     @State private var lastDestinationsHash: Int = 0 // 用于检测 destinations 变化
     @State private var showingLayoutSelection = false // 控制版面选择视图显示
     @State private var selectedLayout: TripShareLayout = .list // 默认选择清单版面
+    @State private var isVisible = false // 卡片是否在可见区域
     
     init(trip: TravelTrip, destinations: [TravelDestination], onTap: (() -> Void)? = nil) {
         self.trip = trip
@@ -6892,12 +7006,45 @@ struct RouteCard: View {
         .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 4)
         .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 2)
         .contentShape(Rectangle()) // 确保整个区域可点击
+        .background(
+            GeometryReader { geometry in
+                let frame = geometry.frame(in: .global)
+                Color.clear
+                    .onAppear {
+                        // 检测卡片是否在可见区域
+                        checkVisibility(frame: frame)
+                    }
+                    .task {
+                        // 定期检查可见性（当滚动时位置会变化）
+                        var lastFrame = frame
+                        while !Task.isCancelled {
+                            let currentFrame = geometry.frame(in: .global)
+                            // 只有当位置发生变化时才检查
+                            if currentFrame != lastFrame {
+                                checkVisibility(frame: currentFrame)
+                                lastFrame = currentFrame
+                            }
+                            try? await Task.sleep(nanoseconds: 100_000_000) // 每100ms检查一次
+                        }
+                    }
+            }
+        )
         .onTapGesture {
             onTap?()
         }
         .onAppear {
-            // 首次出现时计算路线
-            calculateRoutes()
+            // 首次出现时，延迟一点检查可见性（确保 GeometryReader 已经计算好位置）
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                if isVisible {
+                    calculateRoutes()
+                }
+            }
+        }
+        .onChange(of: isVisible) { oldValue, newValue in
+            // 当可见性从不可见变为可见时，计算路线
+            if !oldValue && newValue {
+                calculateRoutes()
+            }
         }
         .onChange(of: destinations.count) { oldValue, newValue in
             // 当地点数量变化时，重新计算
@@ -6914,8 +7061,32 @@ struct RouteCard: View {
         }
     }
     
+    // 检测卡片是否在可见区域
+    private func checkVisibility(frame: CGRect) {
+        let screenWidth = UIScreen.main.bounds.width
+        
+        // 检查卡片是否在屏幕可见区域内（考虑左右边距，允许一些预加载）
+        // 可见区域：屏幕宽度 + 左右各一个卡片宽度的缓冲区（用于预加载）
+        let buffer: CGFloat = 400 // 左右各200点的缓冲区
+        let visibleMinX = -buffer
+        let visibleMaxX = screenWidth + buffer
+        
+        let wasVisible = isVisible
+        isVisible = frame.maxX > visibleMinX && frame.minX < visibleMaxX
+        
+        // 如果从不可见变为可见，立即计算路线
+        if !wasVisible && isVisible {
+            calculateRoutes()
+        }
+    }
+    
     // 计算路线（优化版：并发计算 + 缓存检查 + 实时更新）
     private func calculateRoutes() {
+        // 只有可见的卡片才计算路线
+        guard isVisible else {
+            return
+        }
+        
         guard destinations.count >= 2 else {
             routes = []
             totalDistance = 0

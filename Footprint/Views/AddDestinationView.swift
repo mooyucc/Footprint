@@ -51,9 +51,14 @@ struct AddDestinationView: View {
     @Query(sort: \TravelTrip.startDate, order: .reverse) private var trips: [TravelTrip]
     @Query private var allDestinations: [TravelDestination]
     @StateObject private var languageManager = LanguageManager.shared
+    @ObservedObject private var locationManager = LocationManager.shared
     
     // 支持从外部传入预填充数据
     private let prefill: AddDestinationPrefill?
+    // 地图显示区域（用于搜索排序，优先使用地图显示区域中心）
+    private let mapRegion: MKCoordinateRegion?
+    // 保存成功后的回调，用于关闭父窗口（如从快速打卡页进入时）
+    private let onSaveSuccess: (() -> Void)?
     
     @State private var name: String
     @State private var country: String
@@ -71,6 +76,7 @@ struct AddDestinationView: View {
     @State private var selectedLocation: MKMapItem?
     @State private var isSearching = false
     @State private var selectedTrip: TravelTrip?
+    @State private var searchTask: DispatchWorkItem? // 用于防抖搜索任务
     @State private var showDuplicateAlert = false
     @State private var duplicateDestinationName = ""
     @State private var existingDestination: TravelDestination?
@@ -81,8 +87,10 @@ struct AddDestinationView: View {
     // 城市数据管理器实例
     private let cityDataManager = CityDataManager.shared
     
-    init(prefill: AddDestinationPrefill? = nil) {
+    init(prefill: AddDestinationPrefill? = nil, mapRegion: MKCoordinateRegion? = nil, onSaveSuccess: (() -> Void)? = nil) {
         self.prefill = prefill
+        self.mapRegion = mapRegion
+        self.onSaveSuccess = onSaveSuccess
         let initialName = prefill?.name ?? ""
         let initialCountry = prefill?.country ?? ""
         let initialProvince = prefill?.province ?? ""
@@ -139,8 +147,31 @@ struct AddDestinationView: View {
                         HStack {
                             TextField("search_place".localized, text: $searchText)
                                 .textFieldStyle(.roundedBorder)
+                                .onSubmit {
+                                    // 提交时立即搜索（取消防抖）
+                                    searchTask?.cancel()
+                                    searchLocation()
+                                }
+                                .onChange(of: searchText) { _, newValue in
+                                    // 实时搜索（带防抖，与悬浮按钮搜索体验一致）
+                                    searchTask?.cancel()
+                                    
+                                    if newValue.isEmpty {
+                                        searchResults = []
+                                        isSearching = false
+                                    } else {
+                                        // 防抖：延迟0.3秒执行搜索，避免频繁请求
+                                        let task = DispatchWorkItem {
+                                            searchLocation()
+                                        }
+                                        searchTask = task
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: task)
+                                    }
+                                }
                             
+                            // 保留搜索按钮作为手动触发选项
                             Button("search".localized) {
+                                searchTask?.cancel()
                                 searchLocation()
                             }
                             .disabled(searchText.isEmpty)
@@ -342,45 +373,63 @@ struct AddDestinationView: View {
     private func searchDomesticWithLocalData() {
         print("search_domestic_with_amap".localized(with: searchText))
         
-        let searchRequest = MKLocalSearch.Request()
-        searchRequest.naturalLanguageQuery = searchText
-        
-        // 设置搜索区域为中国（提高搜索准确性）
+        // 优先使用地图显示区域作为搜索区域（与悬浮按钮搜索保持一致）
+        // 如果没有地图区域，则使用整个中国区域作为备选
+        let searchRegion: MKCoordinateRegion
         let chinaRegion = MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: 35.8617, longitude: 104.1954), // 中国中心点
             span: MKCoordinateSpan(latitudeDelta: 50.0, longitudeDelta: 60.0) // 覆盖中国全境
         )
-        searchRequest.region = chinaRegion
         
-        // 设置结果类型
-        if #available(iOS 13.0, *) {
-            searchRequest.resultTypes = [.address, .pointOfInterest]
+        if let mapRegion = mapRegion {
+            searchRegion = mapRegion
+            print("📍 使用地图显示区域作为搜索区域: (\(mapRegion.center.latitude), \(mapRegion.center.longitude))")
+        } else {
+            searchRegion = chinaRegion
+            print("📍 地图区域不可用，使用整个中国区域作为搜索范围")
         }
         
-        let search = MKLocalSearch(request: searchRequest)
-        search.start { response, error in
+        // 优先使用地图显示区域中心，其次是用户位置，最后使用搜索区域中心（与悬浮按钮搜索保持一致）
+        let centerCoordinate: CLLocationCoordinate2D
+        if let mapCenter = mapRegion?.center {
+            centerCoordinate = mapCenter
+            print("📍 使用地图显示区域中心作为排序参考点: (\(mapCenter.latitude), \(mapCenter.longitude))")
+        } else if let userLoc = locationManager.lastKnownLocation {
+            centerCoordinate = userLoc
+            print("📍 使用用户位置作为排序参考点: (\(userLoc.latitude), \(userLoc.longitude))")
+        } else {
+            centerCoordinate = searchRegion.center
+            print("📍 使用搜索区域中心作为排序参考点")
+        }
+        
+        // 使用可复用的搜索辅助类（与悬浮按钮搜索功能保持一致）
+        LocationSearchHelper.search(
+            query: searchText,
+            region: searchRegion,
+            centerCoordinate: centerCoordinate
+        ) { result in
             DispatchQueue.main.async {
                 self.isSearching = false
                 
-                if let error = error {
+                switch result {
+                case .success(let items):
+                    if items.isEmpty {
+                        print("⚠️ 高德地图未找到结果，尝试备用搜索")
+                        self.fallbackToCLGeocoderForChina()
+                    } else {
+                        self.searchResults = items
+                        print("amap_found_results".localized(with: items.count))
+                        
+                        for (index, item) in items.prefix(3).enumerated() {
+                            let locality = item.placemark.locality ?? ""
+                            let province = item.placemark.administrativeArea ?? ""
+                            let country = item.placemark.country ?? ""
+                            print("结果 \(index + 1): \(locality) - \(province), \(country)")
+                        }
+                    }
+                case .failure(let error):
                     print("amap_search_error".localized(with: error.localizedDescription))
                     // 如果高德搜索失败，尝试 CLGeocoder
-                    self.fallbackToCLGeocoderForChina()
-                    return
-                }
-                
-                if let response = response {
-                    self.searchResults = response.mapItems
-                    print("amap_found_results".localized(with: response.mapItems.count))
-                    
-                    for (index, item) in response.mapItems.prefix(3).enumerated() {
-                        let locality = item.placemark.locality ?? ""
-                        let province = item.placemark.administrativeArea ?? ""
-                        let country = item.placemark.country ?? ""
-                        print("结果 \(index + 1): \(locality) - \(province), \(country)")
-                    }
-                } else {
-                    print("⚠️ 高德地图未找到结果，尝试备用搜索")
                     self.fallbackToCLGeocoderForChina()
                 }
             }
@@ -410,8 +459,17 @@ struct AddDestinationView: View {
                             return MKMapItem(placemark: MKPlacemark(placemark: placemark))
                         }
                         
-                        self.searchResults = mapItems
-                        print("✅ CLGeocoder 找到 \(mapItems.count) 个国内地点")
+                        // 优先使用地图显示区域中心，其次是用户位置，最后使用中国中心点（与悬浮按钮搜索保持一致）
+                        let centerCoordinate: CLLocationCoordinate2D
+                        if let mapCenter = self.mapRegion?.center {
+                            centerCoordinate = mapCenter
+                        } else if let userLoc = self.locationManager.lastKnownLocation {
+                            centerCoordinate = userLoc
+                        } else {
+                            centerCoordinate = CLLocationCoordinate2D(latitude: 35.8617, longitude: 104.1954)
+                        }
+                        self.searchResults = LocationSearchHelper.sortByDistance(items: mapItems, from: centerCoordinate)
+                        print("✅ CLGeocoder 找到 \(mapItems.count) 个国内地点（已按距离排序）")
                     } else {
                         self.searchResults = []
                         print("❌ 未找到国内地点")
@@ -498,8 +556,17 @@ struct AddDestinationView: View {
                     
                     let finalResults = internationalItems.isEmpty ? allMapItems : internationalItems
                     
-                    self.searchResults = finalResults
-                    print("✅ Apple 国际数据最终显示 \(finalResults.count) 个地点")
+                    // 优先使用地图显示区域中心，其次是用户位置，最后保持原顺序（与悬浮按钮搜索功能保持一致）
+                    if let mapCenter = self.mapRegion?.center {
+                        self.searchResults = LocationSearchHelper.sortByDistance(items: finalResults, from: mapCenter)
+                        print("✅ Apple 国际数据最终显示 \(finalResults.count) 个地点（已按地图区域中心距离排序）")
+                    } else if let userLocation = self.locationManager.lastKnownLocation {
+                        self.searchResults = LocationSearchHelper.sortByDistance(items: finalResults, from: userLocation)
+                        print("✅ Apple 国际数据最终显示 \(finalResults.count) 个地点（已按用户位置距离排序）")
+                    } else {
+                        self.searchResults = finalResults
+                        print("✅ Apple 国际数据最终显示 \(finalResults.count) 个地点")
+                    }
                     
                     for (index, item) in finalResults.prefix(3).enumerated() {
                         let country = item.placemark.country ?? "未知国家"
@@ -516,30 +583,23 @@ struct AddDestinationView: View {
     
     // 备用搜索方法：使用 MKLocalSearch
     private func fallbackToMKLocalSearch() {
-        let searchRequest = MKLocalSearch.Request()
-        searchRequest.naturalLanguageQuery = searchText
-        
-        // 不设置 region，让系统根据查询内容自动匹配
-        // 设置结果类型（仅包括 address 和 pointOfInterest）
-        if #available(iOS 13.0, *) {
-            searchRequest.resultTypes = [.address, .pointOfInterest]
-        }
-        
-        searchRequest.pointOfInterestFilter = nil
-        
-        let search = MKLocalSearch(request: searchRequest)
-        search.start { response, error in
+        // 优先使用地图显示区域中心，其次是用户位置（与悬浮按钮搜索功能保持一致）
+        let centerCoordinate = mapRegion?.center ?? locationManager.lastKnownLocation
+        // 使用可复用的搜索辅助类（不设置region，但使用地图区域中心或用户位置进行排序）
+        LocationSearchHelper.search(
+            query: searchText,
+            region: nil,
+            centerCoordinate: centerCoordinate
+        ) { result in
             DispatchQueue.main.async {
                 self.isSearching = false
                 
-                if let error = error {
+                switch result {
+                case .success(let items):
+                    self.searchResults = items
+                    print("✅ MKLocalSearch 搜索到 \(items.count) 个结果\(centerCoordinate != nil ? "（已按距离排序）" : "")")
+                case .failure(let error):
                     print("❌ MKLocalSearch 搜索错误: \(error.localizedDescription)")
-                    return
-                }
-                
-                if let response = response {
-                    self.searchResults = response.mapItems
-                    print("✅ MKLocalSearch 搜索到 \(response.mapItems.count) 个结果")
                 }
             }
         }
@@ -635,6 +695,11 @@ struct AddDestinationView: View {
         try? modelContext.save()
         // 发送更新通知，通知徽章视图更新（新增目的地）
         NotificationCenter.default.post(name: .destinationUpdated, object: nil)
+        
+        // 如果提供了保存成功回调（如从快速打卡页进入），先调用回调关闭父窗口
+        if let onSaveSuccess = onSaveSuccess {
+            onSaveSuccess()
+        }
         dismiss()
     }
     
@@ -664,6 +729,11 @@ struct AddDestinationView: View {
         try? modelContext.save()
         // 发送更新通知，通知徽章视图更新（覆盖现有目的地）
         NotificationCenter.default.post(name: .destinationUpdated, object: nil)
+        
+        // 如果提供了保存成功回调（如从快速打卡页进入），先调用回调关闭父窗口
+        if let onSaveSuccess = onSaveSuccess {
+            onSaveSuccess()
+        }
         dismiss()
     }
     

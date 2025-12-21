@@ -259,6 +259,7 @@
 "map_button_search" = "검색";
 "map_button_style" = "스타일";
 "map_button_import_photo" = "사진 가져오기";
+"map_button_ai" = "AI 어시스턴트";
 "footprints_action_menu" = "빠른 작업";
 "search_places" = "장소 검색";
 "photo_import_error_title" = "사진 가져오기";

@@ -67,5 +67,10 @@ enum SubscriptionEntitlement: String, Codable {
         // 仅 Pro 可以使用本地数据导入/导出
         self == .pro
     }
+    
+    var canUseAIFeatures: Bool {
+        // 仅 Pro 可以使用AI功能
+        self == .pro
+    }
 }
 

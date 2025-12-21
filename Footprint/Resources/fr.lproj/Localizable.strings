@@ -260,6 +260,7 @@
 "map_button_style" = "Style";
 "map_button_menu" = "Actions rapides";
 "map_button_import_photo" = "Importer une photo";
+"map_button_ai" = "Assistant IA";
 "footprints_action_menu" = "Actions rapides";
 "search_places" = "Rechercher des lieux";
 "photo_import_error_title" = "Importation de photo";

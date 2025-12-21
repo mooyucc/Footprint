@@ -64,6 +64,10 @@ final class EntitlementManager: ObservableObject {
     var canUseLocalDataIO: Bool {
         currentEntitlement.canUseLocalDataIO
     }
+    
+    var canUseAIFeatures: Bool {
+        currentEntitlement.canUseAIFeatures
+    }
 
     // MARK: - 权益更新
 

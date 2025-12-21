@@ -260,6 +260,35 @@
 "map_button_style" = "Style";
 "map_button_menu" = "Quick Actions";
 "map_button_import_photo" = "Import Photo";
+"map_button_ai" = "AI Assistant";
+
+// AI Assistant
+"ai_assistant_title" = "AI Assistant";
+"ai_assistant_welcome" = "Let AI Help You Record Your Travel";
+"ai_assistant_subtitle" = "Intelligently generate notes, descriptions, and tags to enrich your travel memories";
+"ai_function_notes_title" = "Smart Note Generation";
+"ai_function_notes_desc" = "Automatically generate travel notes based on photos and location information";
+"ai_function_trip_desc_title" = "Trip Description Generation";
+"ai_function_trip_desc_desc" = "Generate overall trip descriptions based on multiple destinations";
+"ai_function_photo_analysis_title" = "Photo Analysis";
+"ai_function_photo_analysis_desc" = "Identify scenes, objects, and landmarks in photos";
+"ai_generating_notes" = "Generating notes...";
+"ai_generating_description" = "Generating description...";
+"ai_analyzing_photos" = "Analyzing photos...";
+"ai_copy_result" = "Copy Result";
+"ai_error_occurred" = "Error Occurred";
+"ai_error_unknown" = "Unknown error";
+"ai_retry" = "Retry";
+"ai_select_destination" = "Select Destination";
+"ai_select_trip" = "Select Trip";
+"ai_no_destinations" = "No Destinations";
+"ai_no_trips" = "No Trips";
+"ai_beta_not_available_title" = "AI Features Not Available in Beta";
+"ai_beta_not_available_message" = "AI features are only available in the full version. Please download the full version from the App Store to enjoy the complete AI assistant experience.";
+"ai_download_full_version" = "Download Full Version from App Store";
+"ai_subscription_required_title" = "AI Features Require Pro Subscription";
+"ai_subscription_required_message" = "AI Assistant is a Pro-exclusive feature. Upgrade to Pro to access smart note generation, trip description generation, and other AI features.";
+"ai_upgrade_to_pro" = "Upgrade to Pro";
 "footprints_action_menu" = "Quick Actions";
 "search_places" = "Search places";
 "photo_import_error_title" = "Photo Import";

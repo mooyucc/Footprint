@@ -259,6 +259,25 @@
 "map_button_search" = "検索";
 "map_button_style" = "スタイル";
 "map_button_import_photo" = "写真をインポート";
+"map_button_ai" = "AI アシスタント";
+
+// AI Assistant
+"ai_assistant_title" = "AI アシスタント";
+"ai_assistant_welcome" = "AI に旅行記録を手伝ってもらう";
+"ai_assistant_subtitle" = "ノート、説明、タグを自動生成して、旅行の思い出をより豊かに";
+"ai_function_notes_title" = "スマートノート生成";
+"ai_function_notes_desc" = "写真と場所情報に基づいて旅行ノートを自動生成";
+"ai_function_trip_desc_title" = "旅行説明生成";
+"ai_function_trip_desc_desc" = "複数の目的地に基づいて全体的な旅行説明を生成";
+"ai_function_photo_analysis_title" = "写真分析";
+"ai_function_photo_analysis_desc" = "写真内のシーン、オブジェクト、ランドマークを識別";
+"ai_generating_notes" = "ノートを生成中...";
+"ai_generating_description" = "説明を生成中...";
+"ai_analyzing_photos" = "写真を分析中...";
+"ai_copy_result" = "結果をコピー";
+"ai_error_occurred" = "エラーが発生しました";
+"ai_error_unknown" = "不明なエラー";
+"ai_retry" = "再試行";
 "footprints_action_menu" = "クイックアクション";
 "search_places" = "場所を検索";
 "photo_import_error_title" = "写真インポート";

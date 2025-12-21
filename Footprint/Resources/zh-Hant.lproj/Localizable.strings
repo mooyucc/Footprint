@@ -264,6 +264,25 @@
 "map_button_footprints" = "足跡";
 "map_button_search" = "搜索";
 "map_button_style" = "樣式";
+"map_button_ai" = "AI 助手";
+
+// AI Assistant
+"ai_assistant_title" = "AI 助手";
+"ai_assistant_welcome" = "讓 AI 幫你記錄旅行";
+"ai_assistant_subtitle" = "智能生成筆記、描述和標籤，讓你的旅行回憶更豐富";
+"ai_function_notes_title" = "智能筆記生成";
+"ai_function_notes_desc" = "根據照片和地點信息，自動生成旅行筆記";
+"ai_function_trip_desc_title" = "旅程描述生成";
+"ai_function_trip_desc_desc" = "基於多個目的地，生成整體旅程描述";
+"ai_function_photo_analysis_title" = "照片智能分析";
+"ai_function_photo_analysis_desc" = "識別照片中的場景、物體和地標";
+"ai_generating_notes" = "正在生成筆記...";
+"ai_generating_description" = "正在生成描述...";
+"ai_analyzing_photos" = "正在分析照片...";
+"ai_copy_result" = "複製結果";
+"ai_error_occurred" = "出錯了";
+"ai_error_unknown" = "未知錯誤";
+"ai_retry" = "重試";
 "map_button_menu" = "快捷操作";
 "map_button_import_photo" = "導入照片";
 "footprints_action_menu" = "快捷操作";
@@ -484,7 +503,7 @@
 "delete_account_error_title" = "刪除失敗";
 
 // Quick Check In View
-"quick_check_in" = "快速打卡";
+"quick_check_in" = "快速添加";
 "more_options" = "更多選項";
 "loading_location" = "正在載入位置...";
 "notes_guide_question" = "今天的心情如何？";

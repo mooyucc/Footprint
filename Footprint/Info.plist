@@ -8,5 +8,7 @@
 	</array>
 	<key>AMapAPIKey</key>
 	<string>4981e329454fa25fd1bb4fdf2806bbe7</string>
+	<key>DeepSeekAPIKey</key>
+	<string>sk-ecb42705bf694cd4b5b9c3261143872d</string>
 </dict>
 </plist>

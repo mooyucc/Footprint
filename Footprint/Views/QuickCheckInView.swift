@@ -160,7 +160,14 @@ struct QuickCheckInView: View {
             }
             .sheet(isPresented: $showFullEditor) {
                 // 打开完整编辑界面，传递当前数据
-                AddDestinationView(prefill: buildPrefillForFullEditor())
+                // 当从快速打卡页进入时，保存成功后同时关闭快速打卡页
+                AddDestinationView(
+                    prefill: buildPrefillForFullEditor(),
+                    onSaveSuccess: {
+                        // 保存成功后关闭快速打卡页
+                        dismiss()
+                    }
+                )
             }
         }
     }
