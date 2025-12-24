@@ -1,5 +1,5 @@
 "paywall_title" = "解鎖 Pro";
-"paywall_subtitle" = "解鎖本地數據導入/導出功能，輕鬆備份和恢復你的旅行數據。";
+"paywall_subtitle" = "解鎖AI助手、無限記錄等Pro功能，讓旅行記錄更智慧、更完整。";
 "paywall_button_upgrade" = "查看訂閱方案";
 "paywall_button_restore" = "恢復購買";
 
@@ -14,8 +14,11 @@
 // Paywall lifetime unlocked
 "paywall_lifetime_unlocked" = "已解鎖終身版權益，無需再次購買。";
 "paywall_lifetime_sync_hint" = "如需在新裝置同步，可使用下方「恢復購買」。";
+"paywall_current_subscription" = "當前訂閱";
+"paywall_expires_on" = "到期時間：";
 "paywall_terms_privacy" = "購買即表示同意《服務條款》和《隱私政策》。自動續訂，可在系統訂閱中隨時取消。";
 "paywall_feature_title" = "Pro 功能";
+"paywall_feature_ai" = "AI 助手：智慧筆記、旅程描述、照片分析、標籤生成";
 "paywall_feature_unlimited" = "無限目的地與旅程卡片";
 "paywall_feature_share_layouts" = "完整版旅程分享圖片版面";
 "paywall_feature_import_export" = "本地數據導入/導出";
@@ -218,6 +221,9 @@
 "add_year_travel_footprints" = "去添加你的%d年旅行足跡吧！";
 "add_first_destination" = "添加第一個目的地";
 "start_recording_footprints" = "點擊右上角的 + 按鈕開始記錄你的旅行足跡吧！";
+"show_all_destinations" = "所有地點";
+"all_destinations" = "所有地點";
+"no_destinations_found" = "未找到地點";
 
 // Edit Destination View
 "edit_destination" = "編輯目的地";
@@ -274,15 +280,27 @@
 "ai_function_notes_desc" = "根據照片和地點信息，自動生成旅行筆記";
 "ai_function_trip_desc_title" = "旅程描述生成";
 "ai_function_trip_desc_desc" = "基於多個目的地，生成整體旅程描述";
+"ai_function_tags_title" = "生成標籤";
+"ai_function_tags_desc" = "根據照片與地點，智慧推薦適合的標籤";
 "ai_function_photo_analysis_title" = "照片智能分析";
 "ai_function_photo_analysis_desc" = "識別照片中的場景、物體和地標";
 "ai_generating_notes" = "正在生成筆記...";
 "ai_generating_description" = "正在生成描述...";
+"ai_generating_tags" = "正在生成標籤...";
 "ai_analyzing_photos" = "正在分析照片...";
+"ai_tags_result_prefix" = "建議的標籤：";
+"ai_tags_empty" = "暫未生成標籤，請稍後重試。";
 "ai_copy_result" = "複製結果";
 "ai_error_occurred" = "出錯了";
 "ai_error_unknown" = "未知錯誤";
 "ai_retry" = "重試";
+"ai_note_preview_title" = "智能筆記預覽";
+"ai_note_edit_hint" = "點擊下方區域開始編輯筆記";
+"ai_note_placeholder" = "在此編輯你的筆記...";
+"ai_note_edit_button" = "編輯筆記";
+"ai_subscription_required_title" = "AI 功能需 Pro 訂閱";
+"ai_subscription_required_message" = "AI 助手為 Pro 會員專享。升級 Pro 以使用智慧筆記生成、旅程描述生成等 AI 功能。";
+"ai_upgrade_to_pro" = "升級到 Pro";
 "map_button_menu" = "快捷操作";
 "map_button_import_photo" = "導入照片";
 "footprints_action_menu" = "快捷操作";
@@ -568,3 +586,10 @@
 "onboarding_page2_color_description" = "自定義應用的主題顏色，將應用於圖標、按鈕和其他UI元素";
 "onboarding_next" = "下一步";
 "onboarding_complete" = "開始使用";
+
+// Profile - Identity Tag & MBTI
+"identity_tag" = "身份標籤";
+"identity_tag_description" = "選擇或填寫一個身份標籤，讓 AI 更貼近你的風格回覆。";
+"identity_tag_placeholder" = "旅行家、美食家、設計師…";
+"mbti_title" = "MBTI";
+"mbti_description" = "選擇你的性格類型以獲得更貼合的回答。";

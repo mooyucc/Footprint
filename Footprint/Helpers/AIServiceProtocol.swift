@@ -15,21 +15,32 @@ protocol AIServiceProtocol {
     /// - Parameters:
     ///   - images: 照片数据数组
     ///   - location: 地点名称
+    ///   - province: 省份/州（可选）
     ///   - country: 国家/地区
     ///   - date: 访问日期
+    ///   - persona: 用户身份标签（用于个性化文风）
+    ///   - mbti: 用户 MBTI 标签（用于个性化文风）
     /// - Returns: 生成的笔记文本
     func generateNotes(
         from images: [Data],
         location: String,
+        province: String,
         country: String,
-        date: Date
+        date: Date,
+        persona: String,
+        mbti: String
     ) async throws -> String
     
     /// 生成旅程描述
-    /// - Parameter destinations: 目的地列表
+    /// - Parameters:
+    ///   - destinations: 目的地列表
+    ///   - persona: 用户身份标签（用于个性化文风）
+    ///   - mbti: 用户 MBTI 标签（用于个性化文风）
     /// - Returns: 生成的旅程描述
     func generateTripDescription(
-        for destinations: [TravelDestination]
+        for destinations: [TravelDestination],
+        persona: String,
+        mbti: String
     ) async throws -> String
     
     /// 分析照片内容

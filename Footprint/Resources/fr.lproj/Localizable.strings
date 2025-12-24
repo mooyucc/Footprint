@@ -7,7 +7,7 @@
 
 // Paywall
 "paywall_title" = "Débloquer Pro";
-"paywall_subtitle" = "Débloquez l'importation/exportation de données locales pour sauvegarder et restaurer facilement vos données de voyage.";
+"paywall_subtitle" = "Débloquez l'Assistant IA, les enregistrements illimités et d'autres fonctionnalités Pro pour rendre vos souvenirs de voyage plus intelligents et complets.";
 "paywall_button_upgrade" = "Voir le plan d'abonnement";
 "paywall_button_restore" = "Restaurer les achats";
 
@@ -22,8 +22,11 @@
 // Paywall lifetime unlocked
 "paywall_lifetime_unlocked" = "Accès à vie débloqué, pas besoin d'acheter à nouveau.";
 "paywall_lifetime_sync_hint" = "Pour synchroniser sur un nouvel appareil, utilisez \"Restaurer les achats\" ci-dessous.";
+"paywall_current_subscription" = "Actuel";
+"paywall_expires_on" = "Expire le : ";
 "paywall_terms_privacy" = "En achetant, vous acceptez les Conditions d'utilisation et la Politique de confidentialité. Renouvellement automatique; annulez à tout moment dans les abonnements système.";
 "paywall_feature_title" = "Fonctionnalités Pro";
+"paywall_feature_ai" = "Assistant IA : notes intelligentes, descriptions de voyage, analyse photo, génération d'étiquettes";
 "paywall_feature_unlimited" = "Destinations et cartes de voyage illimitées";
 "paywall_feature_share_layouts" = "Mises en page de partage complètes";
 "paywall_feature_import_export" = "Importation/exportation de données locales";
@@ -220,6 +223,9 @@
 "add_year_travel_footprints" = "Commencez à ajouter vos empreintes de voyage de %d !";
 "add_first_destination" = "Ajouter la première destination";
 "start_recording_footprints" = "Appuyez sur le bouton + en haut à droite pour commencer à enregistrer vos empreintes de voyage !";
+"show_all_destinations" = "Tous les lieux";
+"all_destinations" = "Toutes les destinations";
+"no_destinations_found" = "Aucune destination trouvée";
 
 // Edit Destination View
 "edit_destination" = "Modifier la destination";
@@ -282,6 +288,23 @@
 "getting_user_location" = "Obtention de l'emplacement de l'utilisateur...";
 "preloaded_country_region" = "Région de pays préchargée : %@ (%@)";
 "user_location" = "Mon emplacement";
+"ai_assistant_title" = "Assistant IA";
+"ai_assistant_welcome" = "Laisse l'IA t'aider à enregistrer tes voyages";
+"ai_assistant_subtitle" = "Génère des notes, descriptions et étiquettes pour enrichir tes souvenirs de voyage";
+"ai_function_notes_title" = "Générer des notes";
+"ai_function_notes_desc" = "Crée automatiquement des notes de voyage à partir des photos et de la localisation";
+"ai_function_trip_desc_title" = "Générer une description de voyage";
+"ai_function_trip_desc_desc" = "Génère une description globale basée sur plusieurs destinations";
+"ai_function_tags_title" = "Générer des étiquettes";
+"ai_function_tags_desc" = "Recommande des étiquettes pertinentes selon les photos et la localisation";
+"ai_function_photo_analysis_title" = "Analyse photo";
+"ai_function_photo_analysis_desc" = "Identifie les scènes, objets et points d'intérêt sur les photos";
+"ai_generating_notes" = "Génération des notes...";
+"ai_generating_description" = "Génération de la description...";
+"ai_generating_tags" = "Génération des étiquettes...";
+"ai_analyzing_photos" = "Analyse des photos...";
+"ai_tags_result_prefix" = "Étiquettes suggérées :";
+"ai_tags_empty" = "Aucune étiquette générée. Réessaie plus tard.";
 
 // Add Destination View
 "add_destination" = "Ajouter une destination";
@@ -544,3 +567,8 @@
 "onboarding_page2_color_description" = "Personnalisez la couleur du thème de l'application, qui sera appliquée aux icônes, boutons et autres éléments de l'interface";
 "onboarding_next" = "Suivant";
 "onboarding_complete" = "Commencer";
+
+// Profile - Identity Tag & MBTI
+"identity_tag" = "Étiquette d'Identité";
+"identity_tag_description" = "Choisissez une étiquette d'identité ou entrez la vôtre pour aider l'IA à répondre dans votre style.";
+"identity_tag_placeholder" = "Voyageur, gourmet, designer…";

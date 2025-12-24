@@ -16,6 +16,7 @@ final class EntitlementManager: ObservableObject {
     @Published private(set) var currentEntitlement: SubscriptionEntitlement = .free
     @Published private(set) var subscriptionExpiryDate: Date?
     @Published private(set) var isSubscriptionActive: Bool = false
+    @Published private(set) var currentSubscriptionProductID: String?
 
     private let purchaseManager = PurchaseManager.shared
     private var cancellables = Set<AnyCancellable>()
@@ -73,18 +74,19 @@ final class EntitlementManager: ObservableObject {
 
     func updateEntitlement() {
         Task {
-            let hasPro = await hasActiveProSubscription()
+            let (hasPro, productID) = await hasActiveProSubscription()
             let expiry = await latestExpiryDate()
 
             await MainActor.run {
                 currentEntitlement = hasPro ? .pro : .free
                 isSubscriptionActive = hasPro
                 subscriptionExpiryDate = expiry
+                currentSubscriptionProductID = productID
             }
         }
     }
 
-    private func hasActiveProSubscription() async -> Bool {
+    private func hasActiveProSubscription() async -> (Bool, String?) {
         for await result in Transaction.currentEntitlements {
             do {
                 let transaction = try checkVerified(result)
@@ -92,11 +94,11 @@ final class EntitlementManager: ObservableObject {
                 case .autoRenewable:
                     if transaction.productID == SubscriptionProductID.proMonthly ||
                         transaction.productID == SubscriptionProductID.proYearly {
-                        return true
+                        return (true, transaction.productID)
                     }
                 case .nonConsumable:
                     if transaction.productID == SubscriptionProductID.proLifetime {
-                        return true
+                        return (true, transaction.productID)
                     }
                 default:
                     break
@@ -105,7 +107,7 @@ final class EntitlementManager: ObservableObject {
                 continue
             }
         }
-        return false
+        return (false, nil)
     }
 
     private func latestExpiryDate() async -> Date? {

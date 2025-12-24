@@ -147,7 +147,9 @@ class RouteManager: ObservableObject {
             }
             
             if let cachedRoute = self.cacheQueue.sync(execute: { self.routeCache[cacheKey] }) {
+                // 更新 published 属性在主线程，确保触发 objectWillChange（即使是从缓存返回）
                 DispatchQueue.main.async {
+                    self.routes[cacheKey] = cachedRoute
                     completion(cachedRoute)
                 }
                 return
@@ -165,7 +167,9 @@ class RouteManager: ObservableObject {
                     self.cacheQueue.async(flags: .barrier) {
                         self.routeCache[cacheKey] = restoredRoute
                     }
+                    // 更新 published 属性在主线程，确保触发 objectWillChange（即使是从持久化存储恢复）
                     DispatchQueue.main.async {
+                        self.routes[cacheKey] = restoredRoute
                         completion(restoredRoute)
                     }
                     return
@@ -248,7 +252,9 @@ class RouteManager: ObservableObject {
             }
             self.persistRoute(route, cacheKey: cacheKey, source: source, destination: destination)
             
+            // 更新 published 属性在主线程（与机动车模式保持一致，触发 objectWillChange）
             DispatchQueue.main.async {
+                self.routes[cacheKey] = route
                 completion(route)
             }
             return
@@ -281,13 +287,31 @@ class RouteManager: ObservableObject {
                 print("⚠️ 路线计算失败 [距离: \(String(format: "%.1f", distance/1000))km, 交通方式: \(self?.transportTypeDescription(selectedTransportType) ?? "未知"), 耗时: \(String(format: "%.2f", elapsedTime))s]")
                 print("   错误: \(errorDescription) (代码: \(errorCode))")
                 
-                // 不再自动退回，直接返回 nil，让 UI 显示占位线
-                
-                // 不将失败路线永久记录到失败列表，允许后续重试
-                // 占位线会在卡片切换时重新尝试计算
-                
-                DispatchQueue.main.async {
-                    completion(nil)
+                // 创建占位路线（使用直线距离），以便卡片能够获取距离信息
+                if let self = self {
+                    let coordinates = [source, destination]
+                    let polyline = MKPolyline(coordinates: coordinates, count: coordinates.count)
+                    let placeholderRoute = MKRoute()
+                    placeholderRoute.setValue(polyline, forKey: "polyline")
+                    placeholderRoute.footprintDistance = distance // 使用直线距离
+                    placeholderRoute.footprintExpectedTravelTime = distance / 50.0 // 假设平均速度 50 km/h（保守估计）
+                    placeholderRoute.footprintTransportType = selectedTransportType
+                    
+                    // 缓存占位路线（标记为占位线，允许后续重试）
+                    self.cacheQueue.async(flags: .barrier) {
+                        self.routeCache[cacheKey] = placeholderRoute
+                    }
+                    // 注意：占位路线不持久化，因为它们是临时性的
+                    
+                    // 更新 published 属性在主线程，触发卡片更新
+                    DispatchQueue.main.async {
+                        self.routes[cacheKey] = placeholderRoute
+                        completion(placeholderRoute)
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        completion(nil)
+                    }
                 }
                 return
             }
@@ -295,9 +319,31 @@ class RouteManager: ObservableObject {
             guard let route = response?.routes.first else {
                 print("⚠️ 未找到路线 [距离: \(String(format: "%.1f", distance/1000))km, 耗时: \(String(format: "%.2f", elapsedTime))s]")
                 
-                // 不记录到失败列表，允许后续重试（占位线会在卡片切换时重新尝试）
-                DispatchQueue.main.async {
-                    completion(nil)
+                // 创建占位路线（使用直线距离），以便卡片能够获取距离信息
+                if let self = self {
+                    let coordinates = [source, destination]
+                    let polyline = MKPolyline(coordinates: coordinates, count: coordinates.count)
+                    let placeholderRoute = MKRoute()
+                    placeholderRoute.setValue(polyline, forKey: "polyline")
+                    placeholderRoute.footprintDistance = distance // 使用直线距离
+                    placeholderRoute.footprintExpectedTravelTime = distance / 50.0 // 假设平均速度 50 km/h（保守估计）
+                    placeholderRoute.footprintTransportType = selectedTransportType
+                    
+                    // 缓存占位路线（标记为占位线，允许后续重试）
+                    self.cacheQueue.async(flags: .barrier) {
+                        self.routeCache[cacheKey] = placeholderRoute
+                    }
+                    // 注意：占位路线不持久化，因为它们是临时性的
+                    
+                    // 更新 published 属性在主线程，触发卡片更新
+                    DispatchQueue.main.async {
+                        self.routes[cacheKey] = placeholderRoute
+                        completion(placeholderRoute)
+                    }
+                } else {
+                    DispatchQueue.main.async {
+                        completion(nil)
+                    }
                 }
                 return
             }

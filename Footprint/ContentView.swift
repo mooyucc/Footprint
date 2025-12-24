@@ -183,6 +183,7 @@ struct ProfileView: View {
     @State private var shareImage: UIImage?
     @State private var pendingShare = false
     @State private var refreshID = UUID()
+    @State private var showAllDestinations = false
     @Environment(\.colorScheme) var colorScheme
     
     // MARK: - 配色（使用统一的 AppColorScheme 工具类）
@@ -282,6 +283,9 @@ struct ProfileView: View {
                 if let image = shareImage {
                     SystemShareSheet(items: [image])
                 }
+            }
+            .sheet(isPresented: $showAllDestinations) {
+                AllDestinationsListView()
             }
             .onChange(of: shareImage) { newImage in
                 if newImage != nil && pendingShare {
@@ -396,6 +400,7 @@ struct ProfileView: View {
             }
             
             VStack(alignment: .leading, spacing: 6) {
+                featureRow(title: "paywall_feature_ai".localized)
                 featureRow(title: "paywall_feature_import_export".localized)
             }
             
@@ -534,20 +539,40 @@ struct ProfileView: View {
                 
                 Spacer()
                 
-                Button {
-                    generateAndShareStatsImage()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "square.and.arrow.up")
-                        Text("share".localized)
+                HStack(spacing: 8) {
+                    Button {
+                        showAllDestinations = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "list.bullet")
+                            Text("show_all_destinations".localized)
+                        }
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(brandColorManager.currentBrandColor)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.white)
+                        .cornerRadius(16)
                     }
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(brandColorManager.currentBrandColor)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Color.white)
-                    .cornerRadius(20)
+                    .fixedSize(horizontal: true, vertical: false)
+                    
+                    Button {
+                        generateAndShareStatsImage()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "square.and.arrow.up")
+                            Text("share".localized)
+                        }
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(brandColorManager.currentBrandColor)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.white)
+                        .cornerRadius(16)
+                    }
+                    .fixedSize(horizontal: true, vertical: false)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

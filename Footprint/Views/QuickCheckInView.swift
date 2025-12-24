@@ -20,6 +20,7 @@ struct QuickCheckInView: View {
     @Query(sort: \TravelTrip.startDate, order: .reverse) private var trips: [TravelTrip]
     @Query private var allDestinations: [TravelDestination]
     @StateObject private var languageManager = LanguageManager.shared
+    @EnvironmentObject private var entitlementManager: EntitlementManager
     
     // 从外部传入的预填充数据（位置信息）
     private let prefill: AddDestinationPrefill?
@@ -47,6 +48,8 @@ struct QuickCheckInView: View {
     @State private var duplicateDestinationName = ""
     @State private var existingDestination: TravelDestination?
     @State private var isSaving = false
+    @State private var showingAINotePreview = false
+    @State private var tempDestinationForAI: TravelDestination?
     
     // 天气信息
     @State private var currentWeatherSummary: WeatherSummary?
@@ -95,8 +98,16 @@ struct QuickCheckInView: View {
                 // 使用可复用的视频选择组件
                 VideoSelectionSection(videoData: $videoData)
                 
-                // 使用可复用的笔记组件，传递天气信息
-                NotesSection(notes: $notes, weatherSummary: currentWeatherSummary)
+                // 使用可复用的笔记组件，传递天气信息，并在标题旁显示归因
+                NotesSection(
+                    notes: $notes,
+                    weatherSummary: currentWeatherSummary,
+                    showWeatherAttribution: currentWeatherSummary != nil,
+                    onAITap: {
+                        handleAITap()
+                    },
+                    canUseAI: canUseAI
+                )
                 
                 Section {
                     Button {
@@ -168,6 +179,17 @@ struct QuickCheckInView: View {
                         dismiss()
                     }
                 )
+            }
+            .sheet(isPresented: $showingAINotePreview) {
+                if let tempDestination = tempDestinationForAI {
+                    AINotePreviewSheetForQuickAdd(
+                        tempDestination: tempDestination,
+                        onSave: { generatedNotes in
+                            notes = generatedNotes
+                            tempDestinationForAI = nil
+                        }
+                    )
+                }
             }
         }
     }
@@ -353,6 +375,52 @@ struct QuickCheckInView: View {
             photoDatas: photoDatas,
             photoThumbnailDatas: photoThumbnailDatas
         )
+    }
+    
+    // MARK: - AI功能
+    
+    /// 检查是否有权限使用AI功能
+    private var canUseAI: Bool {
+        !BetaInfo.isBetaBuild && entitlementManager.canUseAIFeatures
+    }
+    
+    /// 处理AI按钮点击
+    private func handleAITap() {
+        guard canUseAI else {
+            // 如果没有权限，可以在这里显示提示
+            return
+        }
+        
+        guard let location = selectedLocation else {
+            // 如果没有选择位置，无法生成笔记
+            return
+        }
+        
+        // 创建临时目的地用于AI生成
+        let tempDestination = TravelDestination(
+            name: name.isEmpty ? (location.name ?? "未知地点") : name,
+            country: country.isEmpty ? (location.placemark.country ?? "") : country,
+            province: province.isEmpty ? CountryManager.extractProvince(
+                administrativeArea: location.placemark.administrativeArea,
+                locality: location.placemark.locality,
+                country: location.placemark.country ?? "",
+                isoCountryCode: location.placemark.isoCountryCode
+            ) : province,
+            latitude: location.placemark.coordinate.latitude,
+            longitude: location.placemark.coordinate.longitude,
+            visitDate: visitDate,
+            notes: notes,
+            photoData: photoDatas.first,
+            photoDatas: photoDatas,
+            photoThumbnailData: photoThumbnailDatas.first,
+            photoThumbnailDatas: photoThumbnailDatas,
+            videoData: videoData,
+            category: category,
+            isFavorite: isFavorite
+        )
+        
+        tempDestinationForAI = tempDestination
+        showingAINotePreview = true
     }
     
     // MARK: - 天气获取

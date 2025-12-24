@@ -17,6 +17,8 @@ class AppleSignInManager: NSObject, ObservableObject, ASAuthorizationControllerD
     @Published var userEmail: String = ""
     @Published var customUserName: String = "" // 自定义用户名
     @Published var userAvatarData: Data? = nil // 用户头像数据
+    @Published var personaTag: String = "" // 身份标签
+    @Published var mbtiType: String = "" // MBTI 标签
     
     static let shared = AppleSignInManager()
     
@@ -32,6 +34,8 @@ class AppleSignInManager: NSObject, ObservableObject, ASAuthorizationControllerD
             self.userName = UserDefaults.standard.string(forKey: "appleUserName") ?? "Apple ID 用户"
             self.userEmail = UserDefaults.standard.string(forKey: "appleUserEmail") ?? ""
             let savedCustomName = UserDefaults.standard.string(forKey: "customUserName") ?? ""
+            let savedPersona = UserDefaults.standard.string(forKey: "personaTag") ?? ""
+            let savedMbti = UserDefaults.standard.string(forKey: "mbtiType") ?? ""
             
             // 如果还没有设置过自定义用户名，但已有Apple ID用户名，则自动使用Apple ID用户名
             if savedCustomName.isEmpty && !self.userName.isEmpty && self.userName != "Apple ID 用户" {
@@ -42,6 +46,8 @@ class AppleSignInManager: NSObject, ObservableObject, ASAuthorizationControllerD
             }
             
             self.userAvatarData = UserDefaults.standard.data(forKey: "userAvatarData")
+            self.personaTag = savedPersona
+            self.mbtiType = savedMbti
             
             // 检查凭证状态
             let provider = ASAuthorizationAppleIDProvider()
@@ -171,6 +177,26 @@ class AppleSignInManager: NSObject, ObservableObject, ASAuthorizationControllerD
             UserDefaults.standard.removeObject(forKey: "userAvatarData")
         }
     }
+
+    // 设置身份标签
+    func setPersonaTag(_ tag: String) {
+        personaTag = tag.trimmingCharacters(in: .whitespacesAndNewlines)
+        if personaTag.isEmpty {
+            UserDefaults.standard.removeObject(forKey: "personaTag")
+        } else {
+            UserDefaults.standard.set(personaTag, forKey: "personaTag")
+        }
+    }
+    
+    // 设置 MBTI 标签
+    func setMbtiType(_ type: String) {
+        mbtiType = type.trimmingCharacters(in: .whitespacesAndNewlines)
+        if mbtiType.isEmpty {
+            UserDefaults.standard.removeObject(forKey: "mbtiType")
+        } else {
+            UserDefaults.standard.set(mbtiType, forKey: "mbtiType")
+        }
+    }
     
     // 获取用户头像图片
     var userAvatarImage: UIImage? {
@@ -196,11 +222,15 @@ class AppleSignInManager: NSObject, ObservableObject, ASAuthorizationControllerD
         UserDefaults.standard.removeObject(forKey: "appleUserEmail")
         UserDefaults.standard.removeObject(forKey: "customUserName")
         UserDefaults.standard.removeObject(forKey: "userAvatarData")
+        UserDefaults.standard.removeObject(forKey: "personaTag")
+        UserDefaults.standard.removeObject(forKey: "mbtiType")
         userID = ""
         userName = ""
         userEmail = ""
         customUserName = ""
         userAvatarData = nil
+        personaTag = ""
+        mbtiType = ""
     }
     
     // MARK: - ASAuthorizationControllerDelegate

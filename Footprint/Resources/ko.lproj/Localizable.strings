@@ -7,7 +7,7 @@
 
 // Paywall
 "paywall_title" = "Pro 잠금 해제";
-"paywall_subtitle" = "로컬 데이터 가져오기/내보내기를 잠금 해제하여 여행 데이터를 쉽게 백업하고 복원할 수 있습니다.";
+"paywall_subtitle" = "AI 어시스턴트, 무제한 기록 등 Pro 기능을 잠금 해제하여 여행 기록을 더 스마트하고 완전하게 만드세요.";
 "paywall_button_upgrade" = "구독 플랜 보기";
 "paywall_button_restore" = "구매 복원";
 
@@ -22,8 +22,11 @@
 // Paywall lifetime unlocked
 "paywall_lifetime_unlocked" = "평생 액세스가 잠금 해제되었습니다. 다시 구매할 필요가 없습니다.";
 "paywall_lifetime_sync_hint" = "새 기기에서 동기화하려면 아래의 \"구매 복원\"을 사용하세요.";
+"paywall_current_subscription" = "현재 구독";
+"paywall_expires_on" = "만료 시간: ";
 "paywall_terms_privacy" = "구매하면 이용 약관 및 개인정보 보호정책에 동의하는 것입니다. 자동 갱신; 시스템 구독 설정에서 언제든지 취소할 수 있습니다.";
 "paywall_feature_title" = "Pro 기능";
+"paywall_feature_ai" = "AI 어시스턴트: 스마트 노트, 여행 설명, 사진 분석, 태그 생성";
 "paywall_feature_unlimited" = "무제한 목적지 및 여행 카드";
 "paywall_feature_share_layouts" = "전체 공유 레이아웃";
 "paywall_feature_import_export" = "로컬 데이터 가져오기/내보내기";
@@ -220,6 +223,9 @@
 "add_year_travel_footprints" = "%d년 여행 발자국을 추가하세요!";
 "add_first_destination" = "첫 번째 목적지 추가";
 "start_recording_footprints" = "오른쪽 상단의 + 버튼을 탭하여 여행 발자국 기록을 시작하세요!";
+"show_all_destinations" = "모든 장소";
+"all_destinations" = "모든 장소";
+"no_destinations_found" = "장소를 찾을 수 없습니다";
 
 // Edit Destination View
 "edit_destination" = "목적지 편집";
@@ -281,6 +287,25 @@
 "getting_user_location" = "사용자 위치 가져오는 중...";
 "preloaded_country_region" = "국가 지역 사전 로드: %@ (%@)";
 "user_location" = "내 위치";
+
+// AI Assistant
+"ai_assistant_title" = "AI 어시스턴트";
+"ai_assistant_welcome" = "AI가 여행 기록을 도와줄게요";
+"ai_assistant_subtitle" = "노트, 여정 설명, 태그를 똑똑하게 생성해 여행 추억을 더 풍부하게";
+"ai_function_notes_title" = "노트 생성";
+"ai_function_notes_desc" = "사진과 위치 정보를 바탕으로 여행 노트를 자동 생성";
+"ai_function_trip_desc_title" = "여정 설명 생성";
+"ai_function_trip_desc_desc" = "여러 목적지를 기반으로 전체 여정 설명을 생성";
+"ai_function_tags_title" = "태그 생성";
+"ai_function_tags_desc" = "사진과 위치를 기반으로 알맞은 태그를 추천";
+"ai_function_photo_analysis_title" = "사진 분석";
+"ai_function_photo_analysis_desc" = "사진 속 장면, 물체, 랜드마크를 식별";
+"ai_generating_notes" = "노트 생성 중...";
+"ai_generating_description" = "설명 생성 중...";
+"ai_generating_tags" = "태그 생성 중...";
+"ai_analyzing_photos" = "사진 분석 중...";
+"ai_tags_result_prefix" = "추천 태그:";
+"ai_tags_empty" = "태그를 생성하지 못했어요. 잠시 후 다시 시도해주세요.";
 
 // Add Destination View
 "add_destination" = "목적지 추가";
@@ -543,3 +568,8 @@
 "onboarding_page2_color_description" = "앱의 테마 색상을 사용자 정의합니다. 아이콘, 버튼 및 기타 UI 요소에 적용됩니다";
 "onboarding_next" = "다음";
 "onboarding_complete" = "시작하기";
+
+// Profile - Identity Tag & MBTI
+"identity_tag" = "신원 태그";
+"identity_tag_description" = "신원 태그를 선택하거나 직접 입력하여 AI가 당신의 스타일에 맞게 응답하도록 도와줍니다.";
+"identity_tag_placeholder" = "여행자, 미식가, 디자이너…";

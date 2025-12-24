@@ -1,5 +1,5 @@
 "paywall_title" = "解锁 Pro";
-"paywall_subtitle" = "解锁本地数据导入/导出功能，轻松备份和恢复你的旅行数据。";
+"paywall_subtitle" = "解锁AI助手、无限记录等Pro功能，让旅行记录更智能、更完整。";
 "paywall_button_upgrade" = "查看订阅方案";
 "paywall_button_restore" = "恢复购买";
 
@@ -14,8 +14,11 @@
 // Paywall lifetime unlocked
 "paywall_lifetime_unlocked" = "已解锁终身版权益，无需再次购买。";
 "paywall_lifetime_sync_hint" = "如需在新设备同步，可使用下方\"恢复购买\"。";
+"paywall_current_subscription" = "当前订阅";
+"paywall_expires_on" = "到期时间：";
 "paywall_terms_privacy" = "购买即表示同意《服务条款》和《隐私政策》。自动续订，可在系统订阅中随时取消。";
 "paywall_feature_title" = "Pro 功能";
+"paywall_feature_ai" = "AI 助手：智能笔记、旅程描述、照片分析、标签生成";
 "paywall_feature_unlimited" = "无限目的地与旅程卡片";
 "paywall_feature_share_layouts" = "完整版旅程分享图片版面";
 "paywall_feature_import_export" = "本地数据导入/导出";
@@ -42,6 +45,7 @@
 "import_trip_locked_message" = "旅程导入为 Pro 功能，升级后使用。";
 "loading" = "正在加载…";
 "one_time_purchase" = "一次性买断";
+"retry" = "重试";
 /* 
   Localizable.strings
   Footprint
@@ -212,6 +216,9 @@
 "add_year_travel_footprints" = "去添加你的%d年旅行足迹吧！";
 "add_first_destination" = "添加第一个目的地";
 "start_recording_footprints" = "点击右上角的 + 按钮开始记录你的旅行足迹吧！";
+"show_all_destinations" = "所有地点";
+"all_destinations" = "所有地点";
+"no_destinations_found" = "未找到地点";
 
 // Edit Destination View
 "edit_destination" = "编辑目的地";
@@ -566,17 +573,33 @@
 "ai_function_notes_desc" = "根据照片和地点信息，自动生成旅行笔记";
 "ai_function_trip_desc_title" = "旅程描述生成";
 "ai_function_trip_desc_desc" = "基于多个目的地，生成整体旅程描述";
+"ai_function_tags_title" = "生成标签";
+"ai_function_tags_desc" = "根据照片与地点，智能推荐适合的标签";
 "ai_function_photo_analysis_title" = "照片智能分析";
 "ai_function_photo_analysis_desc" = "识别照片中的场景、物体和地标";
 "ai_generating_notes" = "正在生成笔记...";
 "ai_generating_description" = "正在生成描述...";
+"ai_generating_tags" = "正在生成标签...";
 "ai_analyzing_photos" = "正在分析照片...";
+"ai_tags_result_prefix" = "建议的标签：";
+"ai_tags_empty" = "暂未生成标签，请稍后重试。";
 "ai_copy_result" = "复制结果";
 "ai_error_occurred" = "出错了";
 "ai_error_unknown" = "未知错误";
 "ai_retry" = "重试";
+"ai_note_preview_title" = "智能笔记预览";
+"ai_note_edit_hint" = "点击下方区域开始编辑笔记";
+"ai_note_placeholder" = "在此编辑你的笔记...";
+"ai_note_edit_button" = "编辑笔记";
 "ai_select_destination" = "选择目的地";
 "ai_select_trip" = "选择旅程";
+
+// Profile - Identity Tag & MBTI
+"identity_tag" = "身份标签";
+"identity_tag_description" = "选择或填写一个身份标签，让 AI 更贴近你的风格回复。";
+"identity_tag_placeholder" = "旅行家、美食家、设计师…";
+"mbti_title" = "MBTI";
+"mbti_description" = "选择你的性格类型以获得更贴合的回答。";
 "ai_no_destinations" = "暂无目的地";
 "ai_no_trips" = "暂无旅程";
 "ai_beta_not_available_title" = "试用版暂不支持AI功能";

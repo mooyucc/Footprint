@@ -20,9 +20,7 @@ struct SettingsView: View {
     @EnvironmentObject private var purchaseManager: PurchaseManager
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) private var systemColorScheme
-    @State private var showingEditName = false
-    @State private var editingName = ""
-    @State private var showingEditAvatar = false
+    @State private var showingEditProfile = false
     @State private var showingAboutView = false
     @State private var showingGeneralSettings = false
     @State private var showingDataSettings = false
@@ -33,65 +31,68 @@ struct SettingsView: View {
                 // 账户信息
                 Section {
                     if appleSignInManager.isSignedIn {
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                // 用户头像（可点击编辑）
-                                Button(action: {
-                                    showingEditAvatar = true
-                                }) {
-                                    ZStack(alignment: .bottomTrailing) {
-                                        Group {
-                                            if let avatarImage = appleSignInManager.userAvatarImage {
-                                                Image(uiImage: avatarImage)
-                                                    .resizable()
-                                                    .aspectRatio(contentMode: .fill)
-                                                    .frame(width: 50, height: 50)
-                                                    .clipShape(Circle())
-                                            } else {
-                                                Image(systemName: "person.circle.fill")
-                                                    .font(.system(size: 50))
-                                                    .foregroundStyle(.blue.gradient)
-                                            }
-                                        }
-                                        
-                                        // 编辑图标（右下角）
-                                        Image(systemName: "pencil.circle.fill")
-                                            .font(.system(size: 18))
-                                            .foregroundColor(.blue)
-                                            .background(Color(.systemBackground))
-                                            .clipShape(Circle())
-                                            .offset(x: 4, y: 4)
+                        Button {
+                            showingEditProfile = true
+                        } label: {
+                            HStack(spacing: 12) {
+                                Group {
+                                    if let avatarImage = appleSignInManager.userAvatarImage {
+                                        Image(uiImage: avatarImage)
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                    } else {
+                                        Image(systemName: "person.circle.fill")
+                                            .resizable()
+                                            .scaledToFit()
+                                            .foregroundStyle(.blue.gradient)
                                     }
                                 }
-                                .buttonStyle(.plain)
+                                .frame(width: 50, height: 50)
+                                .clipShape(Circle())
                                 
                                 VStack(alignment: .leading, spacing: 4) {
-                                    HStack {
-                                        Text(appleSignInManager.displayName)
-                                            .font(.title2)
-                                            .fontWeight(.bold)
-                                        
-                                        Button(action: {
-                                            editingName = appleSignInManager.customUserName
-                                            showingEditName = true
-                                        }) {
-                                            Image(systemName: "pencil.circle")
-                                                .font(.caption)
-                                                .foregroundColor(.blue)
-                                        }
-                                    }
+                                    Text(appleSignInManager.displayName)
+                                        .font(.title2)
+                                        .fontWeight(.bold)
                                     
                                     if !appleSignInManager.userEmail.isEmpty {
                                         Text(appleSignInManager.userEmail)
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                     }
+                                    
+                                    HStack(spacing: 6) {
+                                        if !appleSignInManager.personaTag.isEmpty {
+                                            Label(appleSignInManager.personaTag, systemImage: "person.crop.circle.badge.questionmark")
+                                                .font(.caption2)
+                                                .foregroundColor(.primary)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .background(Color(.secondarySystemBackground))
+                                                .clipShape(Capsule())
+                                        }
+                                        
+                                        if !appleSignInManager.mbtiType.isEmpty {
+                                            Label(appleSignInManager.mbtiType, systemImage: "brain.head.profile")
+                                                .font(.caption2)
+                                                .foregroundColor(.primary)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .background(Color(.secondarySystemBackground))
+                                                .clipShape(Capsule())
+                                        }
+                                    }
                                 }
                                 
                                 Spacer()
+                                
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.secondary)
                             }
                             .padding(.vertical, 8)
                         }
+                        .buttonStyle(.plain)
                     } else {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
@@ -195,27 +196,21 @@ struct SettingsView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingEditName) {
-                EditUserNameView(
-                    currentName: $editingName,
-                    onSave: { newName in
-                        appleSignInManager.setCustomUserName(newName)
-                        showingEditName = false
-                    },
-                    onCancel: {
-                        showingEditName = false
-                    }
-                )
-            }
-            .sheet(isPresented: $showingEditAvatar) {
-                EditUserAvatarView(
+            .sheet(isPresented: $showingEditProfile) {
+                EditUserProfileView(
+                    currentName: appleSignInManager.customUserName,
                     currentAvatarData: appleSignInManager.userAvatarData,
-                    onSave: { imageData in
+                    currentPersona: appleSignInManager.personaTag,
+                    currentMbti: appleSignInManager.mbtiType,
+                    onSave: { newName, imageData, persona, mbti in
+                        appleSignInManager.setCustomUserName(newName)
                         appleSignInManager.setUserAvatar(imageData)
-                        showingEditAvatar = false
+                        appleSignInManager.setPersonaTag(persona)
+                        appleSignInManager.setMbtiType(mbti)
+                        showingEditProfile = false
                     },
                     onCancel: {
-                        showingEditAvatar = false
+                        showingEditProfile = false
                     }
                 )
             }
@@ -778,6 +773,7 @@ struct GeneralSettingsView: View {
     @EnvironmentObject var countryManager: CountryManager
     @EnvironmentObject var brandColorManager: BrandColorManager
     @ObservedObject var appearanceManager: AppearanceManager
+    @AppStorage("mapStyle") private var mapStyleRawValue: String = MapStyle.muted.rawValue
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var systemColorScheme
     @State private var showingLanguagePicker = false
@@ -908,6 +904,25 @@ struct GeneralSettingsView: View {
                 } footer: {
                     Text("brand_color_description".localized)
                 }
+                
+                // 地图样式
+                Section {
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 10) {
+                        ForEach(MapStyle.allCases, id: \.self) { style in
+                            MapStyleCard(
+                                style: style,
+                                isSelected: currentMapStyle == style
+                            ) {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                    mapStyleRawValue = style.rawValue
+                                }
+                            }
+                        }
+                    }
+                    .padding(.vertical, 4)
+                } header: {
+                    Text("map_style_title".localized)
+                }
             }
             .navigationTitle("general_settings".localized)
             .navigationBarTitleDisplayMode(.inline)
@@ -943,6 +958,10 @@ struct GeneralSettingsView: View {
         }
     }
     
+    private var currentMapStyle: MapStyle {
+        MapStyle(rawValue: mapStyleRawValue) ?? .muted
+    }
+    
     /// 获取外观模式的图标
     private func modeIcon(for mode: AppearanceManager.AppearanceMode) -> String {
         switch mode {
@@ -975,90 +994,183 @@ struct SettingsRowLabel: View {
 }
 
 
-// 编辑用户头像视图
-struct EditUserAvatarView: View {
+// 编辑用户档案视图（头像 + 用户名）
+struct EditUserProfileView: View {
+    let currentName: String
     let currentAvatarData: Data?
-    let onSave: (Data?) -> Void
+    let currentPersona: String
+    let currentMbti: String
+    let onSave: (String, Data?, String, String) -> Void
     let onCancel: () -> Void
     
+    @State private var editedName: String
     @State private var selectedItem: PhotosPickerItem?
     @State private var selectedImageData: Data?
     @State private var shouldRemoveAvatar = false
     @State private var showingDeleteConfirm = false
+    @State private var selectedPersonaOption: String
+    @State private var customPersona: String
+    @State private var selectedMbti: String
+    @FocusState private var isTextFieldFocused: Bool
+    
+    private let personaOptions: [String] = [
+        "旅行家", "徒步爱好者", "摄影师", "设计师", "美食家", "数码玩家", "自定义"
+    ]
+    
+    private let mbtiOptions: [String] = [
+        "INTJ","INTP","ENTJ","ENTP",
+        "INFJ","INFP","ENFJ","ENFP",
+        "ISTJ","ISFJ","ESTJ","ESFJ",
+        "ISTP","ISFP","ESTP","ESFP"
+    ]
+    
+    init(
+        currentName: String,
+        currentAvatarData: Data?,
+        currentPersona: String,
+        currentMbti: String,
+        onSave: @escaping (String, Data?, String, String) -> Void,
+        onCancel: @escaping () -> Void
+    ) {
+        self.currentName = currentName
+        self.currentAvatarData = currentAvatarData
+        self.currentPersona = currentPersona
+        self.currentMbti = currentMbti
+        self.onSave = onSave
+        self.onCancel = onCancel
+        _editedName = State(initialValue: currentName)
+        let personaInOptions = personaOptions.contains(currentPersona)
+        _selectedPersonaOption = State(initialValue: personaInOptions ? currentPersona : "自定义")
+        _customPersona = State(initialValue: personaInOptions ? "" : currentPersona)
+        _selectedMbti = State(initialValue: currentMbti.isEmpty ? "INTJ" : currentMbti)
+    }
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 24) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("edit_avatar".localized)
-                        .font(.headline)
-                    
-                    Text("avatar_description".localized)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                
-                // 头像预览
-                VStack(spacing: 16) {
-                    Group {
-                        if shouldRemoveAvatar {
-                            Image(systemName: "person.circle.fill")
-                                .font(.system(size: 120))
-                                .foregroundStyle(.blue.gradient)
-                        } else if let imageData = selectedImageData, let uiImage = UIImage(data: imageData) {
-                            Image(uiImage: uiImage)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                        } else if let currentData = currentAvatarData, let uiImage = UIImage(data: currentData) {
-                            Image(uiImage: uiImage)
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                        } else {
-                            Image(systemName: "person.circle.fill")
-                                .font(.system(size: 120))
-                                .foregroundStyle(.blue.gradient)
-                        }
-                    }
-                    .frame(width: 120, height: 120)
-                    .clipShape(Circle())
-                    .overlay(
-                        Circle()
-                            .stroke(Color.blue.opacity(0.3), lineWidth: 2)
-                    )
-                    
-                    // 选择照片按钮
-                    PhotosPicker(selection: $selectedItem, matching: .images) {
-                        Label("select_photo".localized, systemImage: "photo")
+            ScrollView {
+                VStack(spacing: 24) {
+                    // 头像区
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("edit_avatar".localized)
                             .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .cornerRadius(12)
-                    }
-                    
-                    // 删除头像按钮（仅在有头像时显示）
-                    if currentAvatarData != nil || selectedImageData != nil {
-                        Button(role: .destructive) {
-                            showingDeleteConfirm = true
-                        } label: {
-                            Label(shouldRemoveAvatar ? "restore_avatar".localized : "remove_avatar".localized, systemImage: shouldRemoveAvatar ? "arrow.uturn.backward" : "trash")
-                                .font(.headline)
-                                .foregroundColor(.red)
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.red.opacity(0.1))
-                                .cornerRadius(12)
+                        
+                        Text("avatar_description".localized)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        VStack(spacing: 16) {
+                            Group {
+                                if shouldRemoveAvatar {
+                                    Image(systemName: "person.circle.fill")
+                                        .font(.system(size: 120))
+                                        .foregroundStyle(.blue.gradient)
+                                } else if let imageData = selectedImageData, let uiImage = UIImage(data: imageData) {
+                                    Image(uiImage: uiImage)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                } else if let currentData = currentAvatarData, let uiImage = UIImage(data: currentData) {
+                                    Image(uiImage: uiImage)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                } else {
+                                    Image(systemName: "person.circle.fill")
+                                        .font(.system(size: 120))
+                                        .foregroundStyle(.blue.gradient)
+                                }
+                            }
+                            .frame(width: 120, height: 120)
+                            .clipShape(Circle())
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.blue.opacity(0.3), lineWidth: 2)
+                            )
+                            
+                            PhotosPicker(selection: $selectedItem, matching: .images) {
+                                Label("select_photo".localized, systemImage: "photo")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                    .background(Color.blue)
+                                    .cornerRadius(12)
+                            }
+                            
+                            if currentAvatarData != nil || selectedImageData != nil {
+                                Button(role: .destructive) {
+                                    showingDeleteConfirm = true
+                                } label: {
+                                    Label(shouldRemoveAvatar ? "restore_avatar".localized : "remove_avatar".localized, systemImage: shouldRemoveAvatar ? "arrow.uturn.backward" : "trash")
+                                        .font(.headline)
+                                        .foregroundColor(.red)
+                                        .frame(maxWidth: .infinity)
+                                        .padding()
+                                        .background(Color.red.opacity(0.1))
+                                        .cornerRadius(12)
+                                }
+                            }
                         }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    // 用户名
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("custom_username".localized)
+                            .font(.headline)
+                        
+                        Text("username_description".localized)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        TextField("enter_username".localized, text: $editedName)
+                            .textFieldStyle(RoundedBorderTextFieldStyle())
+                            .focused($isTextFieldFocused)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    // 身份标签
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("identity_tag".localized)
+                            .font(.headline)
+                        
+                        Text("identity_tag_description".localized)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Picker("identity_tag".localized, selection: $selectedPersonaOption) {
+                            ForEach(personaOptions, id: \.self) { option in
+                                Text(option).tag(option)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        
+                        if selectedPersonaOption == "自定义" {
+                            TextField("identity_tag_placeholder".localized, text: $customPersona)
+                                .textFieldStyle(RoundedBorderTextFieldStyle())
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    
+                    // MBTI
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("mbti_title".localized)
+                            .font(.headline)
+                        
+                        Text("mbti_description".localized)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Picker("mbti_title".localized, selection: $selectedMbti) {
+                            ForEach(mbtiOptions, id: \.self) { type in
+                                Text(type).tag(type)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(.vertical)
-                
-                Spacer()
+                .padding()
             }
-            .padding()
-            .navigationTitle("edit_avatar".localized)
+            .navigationTitle("account".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -1069,13 +1181,22 @@ struct EditUserAvatarView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("save".localized) {
-                        if shouldRemoveAvatar {
-                            onSave(nil)
-                        } else {
-                            onSave(selectedImageData ?? currentAvatarData)
-                        }
+                        let trimmedName = editedName.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let finalAvatar = shouldRemoveAvatar ? nil : (selectedImageData ?? currentAvatarData)
+                        let personaValue: String = {
+                            if selectedPersonaOption == "自定义" {
+                                return customPersona.trimmingCharacters(in: .whitespacesAndNewlines)
+                            } else {
+                                return selectedPersonaOption
+                            }
+                        }()
+                        onSave(trimmedName, finalAvatar, personaValue, selectedMbti)
                     }
+                    .disabled(editedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
+            }
+            .onAppear {
+                isTextFieldFocused = true
             }
             .onChange(of: selectedItem) { _, newItem in
                 Task {
@@ -1083,7 +1204,7 @@ struct EditUserAvatarView: View {
                         if let data = try? await newItem.loadTransferable(type: Data.self) {
                             await MainActor.run {
                                 selectedImageData = data
-                                shouldRemoveAvatar = false // 选择新图片时取消删除标记
+                                shouldRemoveAvatar = false
                             }
                         }
                     }
@@ -1097,59 +1218,6 @@ struct EditUserAvatarView: View {
                 }
             } message: {
                 Text("remove_avatar_confirm_message".localized)
-            }
-        }
-    }
-}
-
-// 编辑用户名视图
-struct EditUserNameView: View {
-    @Binding var currentName: String
-    let onSave: (String) -> Void
-    let onCancel: () -> Void
-    
-    @State private var editedName: String = ""
-    @FocusState private var isTextFieldFocused: Bool
-    
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 20) {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("custom_username".localized)
-                        .font(.headline)
-                    
-                    Text("username_description".localized)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                
-                TextField("enter_username".localized, text: $editedName)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-                    .focused($isTextFieldFocused)
-                    .onAppear {
-                        editedName = currentName
-                        isTextFieldFocused = true
-                    }
-                
-                Spacer()
-            }
-            .padding()
-            .navigationTitle("edit_username".localized)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("cancel".localized) {
-                        onCancel()
-                    }
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("save".localized) {
-                        onSave(editedName)
-                    }
-                    .disabled(editedName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                }
             }
         }
     }

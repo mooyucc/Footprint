@@ -49,7 +49,7 @@ class SoapBubbleNode: SKNode {
         fatalError("init(coder:) has not been implemented")
     }
     
-    /// 创建泡泡纹理
+    /// 创建泡泡纹理（模拟肥皂泡薄膜干涉彩虹效果）
     private func createBubbleTexture(size: CGFloat, color: UIColor, isDarkMapStyle: Bool) -> SKTexture {
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: size, height: size))
         let image = renderer.image { context in
@@ -58,66 +58,134 @@ class SoapBubbleNode: SKNode {
             // 设置透明背景
             context.cgContext.clear(rect)
             
-            // 根据地图样式调整透明度参数（边框保持不变）
-            let alphaValues: (high: CGFloat, mid: CGFloat, low: CGFloat)
-            let highlightAlpha: CGFloat
-            
-            if isDarkMapStyle {
-                // 深色地图：使用较低透明度，保持透明感
-                alphaValues = (0.3, 0.15, 0.05)
-                highlightAlpha = 0.4
-            } else {
-                // 浅色地图：增加透明度，提高可见性
-                alphaValues = (0.5, 0.3, 0.15)  // 提高透明度
-                highlightAlpha = 0.5  // 更明显的高光
-            }
+            // 根据地图样式调整透明度参数
+            let baseAlpha: CGFloat = isDarkMapStyle ? 0.25 : 0.35
+            let highlightAlpha: CGFloat = isDarkMapStyle ? 0.5 : 0.7
             
             // 创建圆形裁剪路径
             let circlePath = UIBezierPath(ovalIn: rect.insetBy(dx: 0.5, dy: 0.5))
             context.cgContext.addPath(circlePath.cgPath)
             context.cgContext.clip()
             
-            // 绘制径向渐变背景
-            let gradient = CGGradient(
+            // 生成薄膜干涉彩虹色（基于HSL色彩空间，模拟肥皂泡的彩虹效果）
+            // 肥皂泡的薄膜干涉会产生从红色到紫色的彩虹色带
+            let rainbowColors = generateRainbowColors(baseColor: color, alpha: baseAlpha)
+            
+            // 添加随机偏移，让每个泡泡的彩虹色分布略有不同（模拟真实的薄膜厚度变化）
+            let randomOffset = CGFloat.random(in: -0.1...0.1) // 随机偏移，让颜色分布更自然
+            
+            // 绘制多层径向渐变，模拟薄膜干涉的彩虹色带
+            // 从中心向外，颜色逐渐变化，模拟不同厚度的薄膜干涉
+            let centerX = size * 0.5 + randomOffset * size * 0.1
+            let centerY = size * 0.5 + randomOffset * size * 0.1
+            let maxRadius = size * 0.5
+            
+            // 第一层：中心区域（较厚的薄膜，偏红/橙/黄）
+            let innerGradient = CGGradient(
                 colorsSpace: CGColorSpaceCreateDeviceRGB(),
                 colors: [
-                    color.withAlphaComponent(alphaValues.high).cgColor,
-                    color.withAlphaComponent(alphaValues.mid).cgColor,
-                    color.withAlphaComponent(alphaValues.low).cgColor
+                    rainbowColors.red.withAlphaComponent(baseAlpha * 0.8).cgColor,
+                    rainbowColors.orange.withAlphaComponent(baseAlpha * 0.65).cgColor,
+                    rainbowColors.yellow.withAlphaComponent(baseAlpha * 0.5).cgColor,
+                    rainbowColors.green.withAlphaComponent(baseAlpha * 0.35).cgColor
                 ] as CFArray,
-                locations: [0.0, 0.5, 1.0]
+                locations: [0.0, 0.33, 0.66, 1.0]
             )!
-            
             context.cgContext.drawRadialGradient(
-                gradient,
-                startCenter: CGPoint(x: size * 0.3, y: size * 0.3),
+                innerGradient,
+                startCenter: CGPoint(x: centerX * 0.7, y: centerY * 0.7),
                 startRadius: 0,
-                endCenter: CGPoint(x: size * 0.5, y: size * 0.5),
-                endRadius: size * 0.5,
+                endCenter: CGPoint(x: centerX, y: centerY),
+                endRadius: maxRadius * 0.45,
                 options: []
             )
             
-            // 绘制边框（保持原有样式不变）
-            let borderPath = UIBezierPath(ovalIn: rect.insetBy(dx: 1, dy: 1))
-            context.cgContext.setStrokeColor(color.withAlphaComponent(0.6).cgColor)
-            context.cgContext.setLineWidth(1.5)
+            // 第二层：中间区域（中等厚度，偏青/蓝）
+            let midGradient = CGGradient(
+                colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                colors: [
+                    rainbowColors.cyan.withAlphaComponent(baseAlpha * 0.5).cgColor,
+                    rainbowColors.blue.withAlphaComponent(baseAlpha * 0.4).cgColor,
+                    rainbowColors.purple.withAlphaComponent(baseAlpha * 0.3).cgColor
+                ] as CFArray,
+                locations: [0.0, 0.5, 1.0]
+            )!
+            context.cgContext.drawRadialGradient(
+                midGradient,
+                startCenter: CGPoint(x: centerX * 0.8, y: centerY * 0.8),
+                startRadius: maxRadius * 0.35,
+                endCenter: CGPoint(x: centerX, y: centerY),
+                endRadius: maxRadius * 0.75,
+                options: []
+            )
+            
+            // 第三层：边缘区域（较薄的薄膜，偏紫/粉，逐渐透明）
+            let outerGradient = CGGradient(
+                colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                colors: [
+                    rainbowColors.purple.withAlphaComponent(baseAlpha * 0.4).cgColor,
+                    rainbowColors.pink.withAlphaComponent(baseAlpha * 0.3).cgColor,
+                    UIColor.clear.cgColor
+                ] as CFArray,
+                locations: [0.0, 0.5, 1.0]
+            )!
+            context.cgContext.drawRadialGradient(
+                outerGradient,
+                startCenter: CGPoint(x: centerX * 0.9, y: centerY * 0.9),
+                startRadius: maxRadius * 0.65,
+                endCenter: CGPoint(x: centerX, y: centerY),
+                endRadius: maxRadius,
+                options: []
+            )
+            
+            // 绘制柔和的彩虹色边框（模拟薄膜边缘的干涉条纹）
+            // 真实的肥皂泡边缘有薄膜干涉产生的彩色边缘，但应该更柔和、更微妙
+            let borderPath = UIBezierPath(ovalIn: rect.insetBy(dx: 0.5, dy: 0.5))
+            
+            // 根据泡泡大小和地图样式调整边框粗细和透明度
+            let borderWidth: CGFloat = size < 30 ? 1.0 : 1.2  // 小泡泡用更细的边框
+            let borderAlpha: CGFloat = isDarkMapStyle ? 0.4 : 0.5  // 降低透明度，更柔和
+            
+            // 使用边缘区域的主要颜色（紫/粉/青）作为边框色，更自然
+            // 根据基础颜色动态选择边框色，让每个泡泡的边框略有不同
+            var hue: CGFloat = 0
+            var saturation: CGFloat = 0
+            var brightness: CGFloat = 0
+            var alpha: CGFloat = 0
+            if color.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha) {
+                // 基于基础色相选择边框色（偏向边缘的彩虹色：青、蓝、紫）
+                let borderHue = (hue + 0.5).truncatingRemainder(dividingBy: 1.0)  // 选择互补色相区域
+                let borderColor = UIColor(
+                    hue: borderHue,
+                    saturation: min(saturation * 0.8, 1.0),
+                    brightness: min(brightness * 1.1, 1.0),
+                    alpha: borderAlpha
+                )
+                context.cgContext.setLineWidth(borderWidth)
+                context.cgContext.setStrokeColor(borderColor.cgColor)
+            } else {
+                // 回退到使用彩虹色中的青色/蓝色
+                context.cgContext.setLineWidth(borderWidth)
+                context.cgContext.setStrokeColor(rainbowColors.cyan.withAlphaComponent(borderAlpha).cgColor)
+            }
+            
             context.cgContext.addPath(borderPath.cgPath)
             context.cgContext.strokePath()
             
-            // 浅色地图上添加外环阴影以提高可见性
+            // 浅色地图上添加外环阴影以提高可见性（更柔和的阴影）
             if !isDarkMapStyle {
                 let shadowPath = UIBezierPath(ovalIn: rect.insetBy(dx: 0.5, dy: 0.5))
                 context.cgContext.setShadow(
                     offset: CGSize(width: 0, height: 1),
-                    blur: 3,
-                    color: UIColor.black.withAlphaComponent(0.25).cgColor
+                    blur: 2,  // 减小模糊半径，更柔和
+                    color: UIColor.black.withAlphaComponent(0.15).cgColor  // 降低阴影透明度
                 )
                 context.cgContext.addPath(shadowPath.cgPath)
                 context.cgContext.strokePath()
                 context.cgContext.setShadow(offset: .zero, blur: 0, color: nil)
             }
             
-            // 绘制高光
+            // 绘制高光（模拟光线反射）
             let highlightPath = UIBezierPath(ovalIn: CGRect(
                 x: size * 0.2,
                 y: size * 0.2,
@@ -131,7 +199,57 @@ class SoapBubbleNode: SKNode {
         return SKTexture(image: image)
     }
     
-    /// 创建光泽纹理
+    /// 生成薄膜干涉彩虹色（模拟肥皂泡的彩虹效果）
+    private func generateRainbowColors(baseColor: UIColor, alpha: CGFloat) -> (red: UIColor, orange: UIColor, yellow: UIColor, green: UIColor, cyan: UIColor, blue: UIColor, purple: UIColor, pink: UIColor) {
+        // 基于HSL色彩空间生成彩虹色
+        // 肥皂泡的薄膜干涉会产生从红色到紫色的连续光谱
+        
+        // 提取基础色的色相，作为彩虹色的起点
+        var hue: CGFloat = 0
+        var saturation: CGFloat = 0
+        var brightness: CGFloat = 0
+        var baseAlpha: CGFloat = 0
+        
+        if baseColor.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &baseAlpha) {
+            // 基于基础色相生成彩虹色变体
+            // 薄膜干涉的彩虹色通常从红色开始，经过橙、黄、绿、青、蓝、紫
+            let rainbowHues: [CGFloat] = [
+                hue,                           // 保持基础色
+                (hue + 0.05).truncatingRemainder(dividingBy: 1.0),  // 橙
+                (hue + 0.1).truncatingRemainder(dividingBy: 1.0),   // 黄
+                (hue + 0.3).truncatingRemainder(dividingBy: 1.0),   // 绿
+                (hue + 0.45).truncatingRemainder(dividingBy: 1.0),  // 青
+                (hue + 0.6).truncatingRemainder(dividingBy: 1.0),   // 蓝
+                (hue + 0.75).truncatingRemainder(dividingBy: 1.0),  // 紫
+                (hue + 0.9).truncatingRemainder(dividingBy: 1.0)    // 粉
+            ]
+            
+            return (
+                red: UIColor(hue: rainbowHues[0], saturation: min(saturation * 1.2, 1.0), brightness: min(brightness * 1.1, 1.0), alpha: alpha),
+                orange: UIColor(hue: rainbowHues[1], saturation: min(saturation * 1.1, 1.0), brightness: min(brightness * 1.15, 1.0), alpha: alpha),
+                yellow: UIColor(hue: rainbowHues[2], saturation: min(saturation * 0.9, 1.0), brightness: min(brightness * 1.2, 1.0), alpha: alpha),
+                green: UIColor(hue: rainbowHues[3], saturation: min(saturation * 1.0, 1.0), brightness: min(brightness * 0.95, 1.0), alpha: alpha),
+                cyan: UIColor(hue: rainbowHues[4], saturation: min(saturation * 1.1, 1.0), brightness: min(brightness * 1.05, 1.0), alpha: alpha),
+                blue: UIColor(hue: rainbowHues[5], saturation: min(saturation * 1.2, 1.0), brightness: min(brightness * 0.9, 1.0), alpha: alpha),
+                purple: UIColor(hue: rainbowHues[6], saturation: min(saturation * 1.1, 1.0), brightness: min(brightness * 0.85, 1.0), alpha: alpha),
+                pink: UIColor(hue: rainbowHues[7], saturation: min(saturation * 0.95, 1.0), brightness: min(brightness * 1.0, 1.0), alpha: alpha)
+            )
+        } else {
+            // 默认彩虹色（如果无法提取HSL值）
+            return (
+                red: UIColor(red: 1.0, green: 0.2, blue: 0.2, alpha: alpha),
+                orange: UIColor(red: 1.0, green: 0.5, blue: 0.0, alpha: alpha),
+                yellow: UIColor(red: 1.0, green: 0.9, blue: 0.2, alpha: alpha),
+                green: UIColor(red: 0.2, green: 0.9, blue: 0.3, alpha: alpha),
+                cyan: UIColor(red: 0.2, green: 0.8, blue: 0.9, alpha: alpha),
+                blue: UIColor(red: 0.2, green: 0.4, blue: 1.0, alpha: alpha),
+                purple: UIColor(red: 0.6, green: 0.2, blue: 0.9, alpha: alpha),
+                pink: UIColor(red: 1.0, green: 0.4, blue: 0.7, alpha: alpha)
+            )
+        }
+    }
+    
+    /// 创建光泽纹理（模拟光线在肥皂泡表面的反射和折射）
     private func createShimmerTexture(size: CGFloat) -> SKTexture {
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: size, height: size))
         let image = renderer.image { context in
@@ -145,22 +263,44 @@ class SoapBubbleNode: SKNode {
             context.cgContext.addPath(circlePath.cgPath)
             context.cgContext.clip()
             
-            // 绘制水平渐变光泽
+            // 绘制彩虹色光泽（模拟光线在薄膜表面的干涉）
+            // 使用轻微的色彩变化，模拟薄膜干涉产生的彩虹光泽
             let gradient = CGGradient(
                 colorsSpace: CGColorSpaceCreateDeviceRGB(),
                 colors: [
                     UIColor.clear.cgColor,
-                    UIColor.white.withAlphaComponent(0.5).cgColor,
+                    UIColor(red: 0.9, green: 0.95, blue: 1.0, alpha: 0.4).cgColor,  // 淡蓝白
+                    UIColor(red: 1.0, green: 0.95, blue: 0.9, alpha: 0.5).cgColor,  // 淡黄白
+                    UIColor(red: 0.95, green: 0.9, blue: 1.0, alpha: 0.4).cgColor,  // 淡紫白
+                    UIColor.clear.cgColor
+                ] as CFArray,
+                locations: [0.0, 0.3, 0.5, 0.7, 1.0]
+            )!
+            
+            // 水平渐变（模拟光线从左到右的反射）
+            context.cgContext.drawLinearGradient(
+                gradient,
+                start: CGPoint(x: 0, y: size * 0.5),
+                end: CGPoint(x: size, y: size * 0.5),
+                options: []
+            )
+            
+            // 添加垂直方向的轻微渐变，增强立体感
+            let verticalGradient = CGGradient(
+                colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                colors: [
+                    UIColor.clear.cgColor,
+                    UIColor.white.withAlphaComponent(0.2).cgColor,
                     UIColor.clear.cgColor
                 ] as CFArray,
                 locations: [0.0, 0.5, 1.0]
             )!
             
             context.cgContext.drawLinearGradient(
-                gradient,
-                start: CGPoint(x: 0, y: size * 0.5),
-                end: CGPoint(x: size, y: size * 0.5),
-                options: []
+                verticalGradient,
+                start: CGPoint(x: size * 0.5, y: 0),
+                end: CGPoint(x: size * 0.5, y: size),
+                options: [.drawsBeforeStartLocation, .drawsAfterEndLocation]
             )
         }
         return SKTexture(image: image)
@@ -185,7 +325,7 @@ class SoapBubblesScene: SKScene {
         UIColor(BrandColorManager.shared.currentBrandColor)
     }
     
-    /// 生成泡泡颜色变体
+    /// 生成泡泡颜色变体（基于薄膜干涉彩虹色）
     private func generateBubbleColors() -> [UIColor] {
         var hue: CGFloat = 0
         var saturation: CGFloat = 0
@@ -193,41 +333,73 @@ class SoapBubblesScene: SKScene {
         var alpha: CGFloat = 0
         
         guard baseColor.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha) else {
-            // 默认颜色：浅色地图使用更深的颜色以提高可见性
+            // 默认彩虹色：模拟肥皂泡的薄膜干涉效果
             if isDarkMapStyle {
                 return [
-                    UIColor(red: 255/255, green: 120/255, blue: 100/255, alpha: 0.3),
-                    UIColor(red: 255/255, green: 200/255, blue: 180/255, alpha: 0.25),
-                    UIColor(red: 240/255, green: 180/255, blue: 200/255, alpha: 0.2),
+                    UIColor(red: 1.0, green: 0.3, blue: 0.3, alpha: 0.3),      // 红
+                    UIColor(red: 1.0, green: 0.6, blue: 0.2, alpha: 0.25),     // 橙
+                    UIColor(red: 0.3, green: 0.9, blue: 0.4, alpha: 0.25),      // 绿
+                    UIColor(red: 0.2, green: 0.7, blue: 0.9, alpha: 0.25),      // 青
+                    UIColor(red: 0.3, green: 0.5, blue: 1.0, alpha: 0.25),     // 蓝
+                    UIColor(red: 0.7, green: 0.3, blue: 0.9, alpha: 0.2),       // 紫
                 ]
             } else {
                 return [
-                    UIColor(red: 255/255, green: 100/255, blue: 80/255, alpha: 0.5),   // 更深的颜色，更高透明度
-                    UIColor(red: 255/255, green: 160/255, blue: 140/255, alpha: 0.45),
-                    UIColor(red: 240/255, green: 140/255, blue: 160/255, alpha: 0.4),
+                    UIColor(red: 1.0, green: 0.2, blue: 0.2, alpha: 0.5),        // 红
+                    UIColor(red: 1.0, green: 0.5, blue: 0.0, alpha: 0.45),       // 橙
+                    UIColor(red: 0.2, green: 0.9, blue: 0.3, alpha: 0.45),       // 绿
+                    UIColor(red: 0.2, green: 0.8, blue: 0.9, alpha: 0.45),       // 青
+                    UIColor(red: 0.2, green: 0.4, blue: 1.0, alpha: 0.45),      // 蓝
+                    UIColor(red: 0.6, green: 0.2, blue: 0.9, alpha: 0.4),       // 紫
                 ]
             }
         }
         
         // 根据地图样式调整颜色参数
-        let saturationMultiplier: CGFloat = isDarkMapStyle ? 0.4 : 0.55  // 浅色地图增加饱和度
-        let brightnessAdjustment: CGFloat = isDarkMapStyle ? 1.0 : 0.9  // 浅色地图稍微降低亮度以增加对比
+        let saturationMultiplier: CGFloat = isDarkMapStyle ? 0.5 : 0.65  // 增加饱和度，让彩虹色更鲜艳
+        let brightnessAdjustment: CGFloat = isDarkMapStyle ? 1.0 : 0.95
+        let baseAlpha: CGFloat = isDarkMapStyle ? 0.3 : 0.45
         
-        // 生成多个颜色变体
+        // 生成薄膜干涉彩虹色变体（覆盖整个光谱）
+        // 每个泡泡会有不同的主要颜色，模拟不同厚度的薄膜干涉
         return [
-            UIColor(hue: hue, saturation: min(saturation * saturationMultiplier, 1.0), brightness: brightness * brightnessAdjustment, alpha: isDarkMapStyle ? 0.3 : 0.5),
+            // 红色系（较厚的薄膜）
+            UIColor(hue: hue, saturation: min(saturation * saturationMultiplier * 1.2, 1.0), brightness: brightness * brightnessAdjustment * 1.1, alpha: baseAlpha),
+            // 橙色系
             UIColor(hue: (hue + 0.05).truncatingRemainder(dividingBy: 1.0), 
-                   saturation: min(saturation * (saturationMultiplier * 0.9), 1.0), 
-                   brightness: brightness * brightnessAdjustment * 1.1, 
-                   alpha: isDarkMapStyle ? 0.25 : 0.45),
-            UIColor(hue: (hue - 0.05 + 1.0).truncatingRemainder(dividingBy: 1.0), 
-                   saturation: min(saturation * (saturationMultiplier * 0.85), 1.0), 
-                   brightness: brightness * brightnessAdjustment * 0.95, 
-                   alpha: isDarkMapStyle ? 0.2 : 0.4),
+                   saturation: min(saturation * saturationMultiplier * 1.1, 1.0), 
+                   brightness: brightness * brightnessAdjustment * 1.15, 
+                   alpha: baseAlpha * 0.95),
+            // 黄色系
             UIColor(hue: (hue + 0.1).truncatingRemainder(dividingBy: 1.0), 
-                   saturation: min(saturation * (saturationMultiplier * 0.8), 1.0), 
+                   saturation: min(saturation * saturationMultiplier * 0.9, 1.0), 
+                   brightness: brightness * brightnessAdjustment * 1.2, 
+                   alpha: baseAlpha * 0.9),
+            // 绿色系（中等厚度）
+            UIColor(hue: (hue + 0.3).truncatingRemainder(dividingBy: 1.0), 
+                   saturation: min(saturation * saturationMultiplier * 1.0, 1.0), 
+                   brightness: brightness * brightnessAdjustment * 0.95, 
+                   alpha: baseAlpha),
+            // 青色系
+            UIColor(hue: (hue + 0.45).truncatingRemainder(dividingBy: 1.0), 
+                   saturation: min(saturation * saturationMultiplier * 1.1, 1.0), 
                    brightness: brightness * brightnessAdjustment * 1.05, 
-                   alpha: isDarkMapStyle ? 0.22 : 0.42),
+                   alpha: baseAlpha * 0.95),
+            // 蓝色系（较薄的薄膜）
+            UIColor(hue: (hue + 0.6).truncatingRemainder(dividingBy: 1.0), 
+                   saturation: min(saturation * saturationMultiplier * 1.2, 1.0), 
+                   brightness: brightness * brightnessAdjustment * 0.9, 
+                   alpha: baseAlpha * 0.9),
+            // 紫色系
+            UIColor(hue: (hue + 0.75).truncatingRemainder(dividingBy: 1.0), 
+                   saturation: min(saturation * saturationMultiplier * 1.1, 1.0), 
+                   brightness: brightness * brightnessAdjustment * 0.85, 
+                   alpha: baseAlpha * 0.85),
+            // 粉色系
+            UIColor(hue: (hue + 0.9).truncatingRemainder(dividingBy: 1.0), 
+                   saturation: min(saturation * saturationMultiplier * 0.95, 1.0), 
+                   brightness: brightness * brightnessAdjustment * 1.0, 
+                   alpha: baseAlpha * 0.9),
         ]
     }
     

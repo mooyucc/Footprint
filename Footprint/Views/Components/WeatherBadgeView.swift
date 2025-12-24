@@ -92,3 +92,16 @@ struct WeatherBadgeView: View {
     }
 }
 
+/// Apple Weather 归因链接（符合 WeatherKit 要求）
+struct WeatherAttributionLink: View {
+    private let attributionURL = URL(string: "https://weatherkit.apple.com/legal-attribution.html")!
+    
+    var body: some View {
+        Link(" Weather", destination: attributionURL)
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .tint(.secondary)
+            .accessibilityLabel("Apple Weather")
+    }
+}
+

@@ -7,7 +7,7 @@
 
 // Paywall
 "paywall_title" = "Proをアンロック";
-"paywall_subtitle" = "ローカルデータのインポート/エクスポートをアンロックして、旅行データを簡単にバックアップおよび復元できます。";
+"paywall_subtitle" = "AIアシスタント、無制限の記録などのPro機能をアンロックして、旅行記録をよりスマートで完全にします。";
 "paywall_button_upgrade" = "購読プランを表示";
 "paywall_button_restore" = "購入を復元";
 
@@ -22,8 +22,11 @@
 // Paywall lifetime unlocked
 "paywall_lifetime_unlocked" = "生涯アクセスがアンロックされました。再度購入する必要はありません。";
 "paywall_lifetime_sync_hint" = "新しいデバイスで同期するには、以下の「購入を復元」を使用してください。";
+"paywall_current_subscription" = "現在の購読";
+"paywall_expires_on" = "有効期限: ";
 "paywall_terms_privacy" = "購入することで、利用規約とプライバシーポリシーに同意したことになります。自動更新。システムの購読設定でいつでもキャンセルできます。";
 "paywall_feature_title" = "Pro機能";
+"paywall_feature_ai" = "AIアシスタント：スマートノート、旅の説明、写真分析、タグ生成";
 "paywall_feature_unlimited" = "無制限の目的地と旅行カード";
 "paywall_feature_share_layouts" = "完全な共有レイアウト";
 "paywall_feature_import_export" = "ローカルデータのインポート/エクスポート";
@@ -220,6 +223,9 @@
 "add_year_travel_footprints" = "%d年の旅行の足跡を追加しましょう！";
 "add_first_destination" = "最初の目的地を追加";
 "start_recording_footprints" = "右上の+ボタンをタップして、旅行の足跡を記録し始めましょう！";
+"show_all_destinations" = "すべての場所";
+"all_destinations" = "すべての場所";
+"no_destinations_found" = "場所が見つかりません";
 
 // Edit Destination View
 "edit_destination" = "目的地を編集";
@@ -269,11 +275,16 @@
 "ai_function_notes_desc" = "写真と場所情報に基づいて旅行ノートを自動生成";
 "ai_function_trip_desc_title" = "旅行説明生成";
 "ai_function_trip_desc_desc" = "複数の目的地に基づいて全体的な旅行説明を生成";
+"ai_function_tags_title" = "タグ生成";
+"ai_function_tags_desc" = "写真と場所に基づいて適切なタグをおすすめ";
 "ai_function_photo_analysis_title" = "写真分析";
 "ai_function_photo_analysis_desc" = "写真内のシーン、オブジェクト、ランドマークを識別";
 "ai_generating_notes" = "ノートを生成中...";
 "ai_generating_description" = "説明を生成中...";
+"ai_generating_tags" = "タグを生成中...";
 "ai_analyzing_photos" = "写真を分析中...";
+"ai_tags_result_prefix" = "おすすめのタグ：";
+"ai_tags_empty" = "タグを生成できませんでした。しばらくしてから再試行してください。";
 "ai_copy_result" = "結果をコピー";
 "ai_error_occurred" = "エラーが発生しました";
 "ai_error_unknown" = "不明なエラー";
@@ -561,3 +572,8 @@
 "onboarding_page2_color_description" = "アプリのテーマカラーをカスタマイズします。アイコン、ボタン、その他のUI要素に適用されます";
 "onboarding_next" = "次へ";
 "onboarding_complete" = "始める";
+
+// Profile - Identity Tag & MBTI
+"identity_tag" = "アイデンティティタグ";
+"identity_tag_description" = "アイデンティティタグを選択するか、独自に入力して、AIがあなたのスタイルに合わせて応答できるようにします。";
+"identity_tag_placeholder" = "旅行者、美食家、デザイナー…";

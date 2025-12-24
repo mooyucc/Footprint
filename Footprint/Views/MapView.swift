@@ -149,7 +149,7 @@ struct MapView: View {
     @State private var isCalculatingClusters = false // 标记是否正在计算，避免重复触发
     
     // 地图样式相关状态
-    @State private var currentMapStyle: MapStyle = .muted
+    @AppStorage("mapStyle") private var mapStyleRawValue: String = MapStyle.muted.rawValue
     @State private var showingMapStylePicker = false
     
     // 长按添加目的地相关状态
@@ -332,6 +332,11 @@ struct MapView: View {
         "search_places".localized
     }
     
+    // 当前地图样式（持久化）
+    private var currentMapStyle: MapStyle {
+        MapStyle(rawValue: mapStyleRawValue) ?? .muted
+    }
+    
     // 根据地图样式返回图标颜色
     private var iconColor: Color {
         switch currentMapStyle {
@@ -421,8 +426,7 @@ struct MapView: View {
                 FootprintsDrawerView(
                     destinations: destinations.sorted(by: { $0.visitDate > $1.visitDate }),
                     onSelect: handleFootprintsSelect,
-                    onAdd: handleFootprintsAdd,
-                    onImportPhoto: handleFootprintsImport
+                    onAdd: handleFootprintsAdd
                 )
             }
             // 普通"添加目的地"弹窗
@@ -985,7 +989,7 @@ struct MapView: View {
                 }
             }
             .gesture(longPressGesture(proxy: proxy))
-            .simultaneousGesture(
+            .gesture(
                 DragGesture(minimumDistance: 0)
                     .onEnded { value in
                         // 在旅程页面禁用点击地图的POI搜索
@@ -993,6 +997,7 @@ struct MapView: View {
                             return
                         }
                         
+                        // 如果卡片正在显示，不处理地图点击（避免点击穿透）
                         guard selectedDestination == nil,
                               !showingPOIPreview,
                               !showSearchBar else { return }
@@ -2432,12 +2437,21 @@ struct MapView: View {
     private var assistiveMenuActions: [AssistiveMenuAction] {
         [
             AssistiveMenuAction(
-                id: "footprints",
-                icon: "mappin.and.ellipse",
-                title: "map_button_footprints".localized,
-                isActive: showingFootprintsDrawer,
+                id: "ai",
+                icon: "sparkles",
+                title: "map_button_ai".localized,
+                isActive: showingAIAssistant,
                 action: {
-                    showingFootprintsDrawer = true
+                    handleAIAssistant()
+                }
+            ),
+            AssistiveMenuAction(
+                id: "import_photo",
+                icon: "photo.badge.plus",
+                title: "map_button_import_photo".localized,
+                isActive: false,
+                action: {
+                    handleFootprintsImport()
                 }
             ),
             AssistiveMenuAction(
@@ -2462,32 +2476,12 @@ struct MapView: View {
                 }
             ),
             AssistiveMenuAction(
-                id: "style",
-                icon: currentMapStyle.iconName,
-                title: "map_button_style".localized,
-                isActive: showingMapStylePicker,
-                action: {
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        showingMapStylePicker.toggle()
-                    }
-                }
-            ),
-            AssistiveMenuAction(
                 id: "locate",
                 icon: "location.fill",
                 title: "map_button_locate".localized,
                 isActive: false,
                 action: {
                     centerMapOnCurrentLocation()
-                }
-            ),
-            AssistiveMenuAction(
-                id: "check_in",
-                icon: "DakaIcon",
-                title: "map_button_check_in".localized,
-                isActive: false,
-                action: {
-                    handleCheckIn()
                 }
             ),
             AssistiveMenuAction(
@@ -2500,12 +2494,12 @@ struct MapView: View {
                 }
             ),
             AssistiveMenuAction(
-                id: "ai",
-                icon: "sparkles",
-                title: "map_button_ai".localized,
-                isActive: showingAIAssistant,
+                id: "check_in",
+                icon: "DakaIcon",
+                title: "map_button_check_in".localized,
+                isActive: false,
                 action: {
-                    handleAIAssistant()
+                    handleCheckIn()
                 }
             )
         ]
@@ -2524,8 +2518,14 @@ struct MapView: View {
                     .frame(width: 22, height: 22)
             )
         case "DakaIcon":
-            // 浮动菜单中的打卡按钮使用与底部大按钮一致的玻璃+脉冲视觉
-            return AnyView(assistiveCheckInMenuIcon)
+            return AnyView(
+                Image(icon)
+                    .resizable()
+                    .renderingMode(.template)
+                    .scaledToFit()
+                    .foregroundColor(buttonIconColor(isActive: isActive))
+                    .frame(width: 22, height: 22)
+            )
         default:
             return AnyView(
                 Image(systemName: icon)
@@ -2678,7 +2678,7 @@ struct MapView: View {
                             isSelected: currentMapStyle == style
                         ) {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                currentMapStyle = style
+                                mapStyleRawValue = style.rawValue
                                 showingMapStylePicker = false
                             }
                         }
@@ -3935,7 +3935,7 @@ struct MapView: View {
                 print("❌ 图片加载失败：无法从 PhotosPickerItem 获取数据")
                 await MainActor.run {
                     photoImportError = .failedToLoad
-                    showingAddDestination = false
+                    showingQuickCheckIn = false
                     pendingPhotoPrefill = nil
                     photoImportItem = nil
                     showingPhotoImportPicker = false
@@ -3980,8 +3980,7 @@ struct MapView: View {
                         thumbnailData: processed.1
                     )
                     photoImportError = nil
-                    shouldUsePrefillForAddDestination = true  // 标记照片导入场景需要使用预填充数据
-                    showingAddDestination = true
+                    showingQuickCheckIn = true
                     addDestinationPrefill = nil
                     
                     print("🔄 开始逆地理编码...")
@@ -3993,14 +3992,13 @@ struct MapView: View {
                     }
                     
                     pendingPhotoPrefill = nil
-                    shouldUsePrefillForAddDestination = true  // 标记照片导入场景需要使用预填充数据
                     addDestinationPrefill = AddDestinationPrefill(
                         visitDate: metadata.captureDate,
                         photoDatas: [processed.0],
                         photoThumbnailDatas: [processed.1]
                     )
                     isGeocodingLocation = false
-                    showingAddDestination = true
+                    showingQuickCheckIn = true
                     photoImportError = .missingLocation
                 }
             }
@@ -5517,7 +5515,9 @@ struct DestinationPreviewCard: View {
     let onOpenDetail: () -> Void
     @State private var shareItem: TripShareItem?
     @State private var showingSelectTrip = false
+    @State private var showingAINotePreview = false
     @Environment(\.modelContext) private var modelContext
+    @EnvironmentObject private var entitlementManager: EntitlementManager
     
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -5564,14 +5564,9 @@ struct DestinationPreviewCard: View {
                         .foregroundColor(.secondary)
                 }
                 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(destination.visitDate.localizedFormatted(dateStyle: .medium))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text(destination.visitDate.localizedFormatted(dateStyle: .none, timeStyle: .short))
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
+                Text(destination.visitDate.localizedFormatted(dateStyle: .medium))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
                 
                 // 显示笔记
                 if !destination.notes.isEmpty {
@@ -5616,8 +5611,23 @@ struct DestinationPreviewCard: View {
                     }
                 }
                 
-                // 第二行：创建/添加旅程按钮
+                // 第二行：AI笔记和创建/添加旅程按钮
                 HStack(spacing: 8) {
+                    // AI笔记生成按钮
+                    Button {
+                        showingAINotePreview = true
+                    } label: {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.black)
+                            .padding(10)
+                            .background(
+                                Circle().fill(Color.white.opacity(0.5))
+                            )
+                    }
+                    .disabled(!canUseAI)
+                    .opacity(canUseAI ? 1.0 : 0.5)
+                    
                     // 创建/添加旅程按钮
                     Button {
                         showingSelectTrip = true
@@ -5630,10 +5640,6 @@ struct DestinationPreviewCard: View {
                                 Circle().fill(Color.white.opacity(0.5))
                             )
                     }
-                    
-                    // 占位，保持布局对称
-                    Spacer()
-                        .frame(width: 36, height: 36)
                 }
             }
         }
@@ -5657,6 +5663,14 @@ struct DestinationPreviewCard: View {
         .sheet(isPresented: $showingSelectTrip) {
             SelectOrCreateTripView(destination: destination)
         }
+        .sheet(isPresented: $showingAINotePreview) {
+            AINotePreviewSheet(destination: destination)
+        }
+    }
+    
+    // 检查是否有权限使用AI功能
+    private var canUseAI: Bool {
+        !BetaInfo.isBetaBuild && entitlementManager.canUseAIFeatures
     }
     
     private var photoThumbnail: some View {
@@ -6501,28 +6515,22 @@ private struct FloatingAssistiveMenu: View {
     
     private func radialButton(for action: AssistiveMenuAction, at index: Int) -> some View {
         let offsets = radialOffsets(for: index)
-        let isCheckInAction = action.id == "check_in"
         
         return Button {
             select(action)
         } label: {
             VStack(spacing: 0) {
-                if isCheckInAction {
-                    // 打卡按钮：直接使用外部提供的完整玻璃+脉冲视图，不再额外包一层圆形背景
-                    iconProvider(action.icon, action.isActive)
-                } else {
-                    iconProvider(action.icon, action.isActive)
-                        .frame(width: 24, height: 24)
-                        .padding(14)
-                        .background(
-                            Circle()
-                                .fill(buttonBackground(isActive: action.isActive))
-                                .overlay(
-                                    Circle()
-                                        .stroke(Color.white.opacity(isDarkStyle ? 0.25 : 0.2), lineWidth: action.isActive ? 1.6 : 1)
-                                )
-                        )
-                }
+                iconProvider(action.icon, action.isActive)
+                    .frame(width: 24, height: 24)
+                    .padding(14)
+                    .background(
+                        Circle()
+                            .fill(buttonBackground(isActive: action.isActive))
+                            .overlay(
+                                Circle()
+                                    .stroke(Color.white.opacity(isDarkStyle ? 0.25 : 0.2), lineWidth: action.isActive ? 1.6 : 1)
+                            )
+                    )
             }
             .opacity(isExpanded ? 1 : 0)
             .scaleEffect(isExpanded ? 1 : 0.5, anchor: .center)
@@ -6756,6 +6764,7 @@ struct RouteCard: View {
     @State private var showingLayoutSelection = false // 控制版面选择视图显示
     @State private var selectedLayout: TripShareLayout = .list // 默认选择清单版面
     @State private var isVisible = false // 卡片是否在可见区域
+    @State private var cacheCheckTimer: Timer? // 用于定期检查缓存更新
     
     init(trip: TravelTrip, destinations: [TravelDestination], onTap: (() -> Void)? = nil) {
         self.trip = trip
@@ -7044,6 +7053,9 @@ struct RouteCard: View {
             // 当可见性从不可见变为可见时，计算路线
             if !oldValue && newValue {
                 calculateRoutes()
+            } else if !newValue {
+                // 当卡片不可见时，停止定时器
+                stopCacheCheckTimer()
             }
         }
         .onChange(of: destinations.count) { oldValue, newValue in
@@ -7054,6 +7066,16 @@ struct RouteCard: View {
             // 当地点列表发生变化时（新增、删除、顺序变化），重新计算
             if oldValue != 0 && oldValue != newValue {
                 calculateRoutes()
+            }
+        }
+        .onReceive(routeManager.objectWillChange) { _ in
+            // 当 RouteManager 有任何变化时（包括路线计算完成），检查并更新总距离
+            // 这会在用户更改交通方式后，地图重新计算路线时触发
+            if isVisible && destinations.count >= 2 {
+                // 使用延迟检查，确保路线已经更新到缓存中
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    self.updateTotalDistanceFromCache()
+                }
             }
         }
         .sheet(isPresented: $showingLayoutSelection) {
@@ -7149,6 +7171,66 @@ struct RouteCard: View {
         }
     }
     
+    // 从缓存更新总距离（用于响应 RouteManager 路线缓存更新）
+    private func updateTotalDistanceFromCache() {
+        guard destinations.count >= 2 else {
+            stopCacheCheckTimer()
+            return
+        }
+        
+        let coordinates = destinations.map { $0.coordinate }
+        var cachedRoutes: [MKRoute] = []
+        
+        // 检查所有路线是否都已缓存
+        for i in 0..<coordinates.count - 1 {
+            if let cachedRoute = routeManager.getCachedRoute(
+                from: coordinates[i],
+                to: coordinates[i + 1]
+            ) {
+                cachedRoutes.append(cachedRoute)
+            } else {
+                // 如果有路线未缓存，启动定期检查机制
+                startCacheCheckTimer()
+                return
+            }
+        }
+        
+        // 所有路线都已缓存，停止定时器并更新总距离
+        stopCacheCheckTimer()
+        if cachedRoutes.count == coordinates.count - 1 {
+            routes = cachedRoutes
+            let newTotalDistance = cachedRoutes.reduce(0) { $0 + $1.footprintDistance }
+            // 只有当距离发生变化时才更新，避免不必要的视图刷新
+            if abs(newTotalDistance - totalDistance) > 1.0 { // 1米的最小变化阈值
+                totalDistance = newTotalDistance
+            }
+        }
+    }
+    
+    // 启动定期检查缓存的定时器
+    private func startCacheCheckTimer() {
+        // 如果定时器已经在运行，不重复启动
+        guard cacheCheckTimer == nil else { return }
+        
+        // RouteCard 是 struct，不需要 weak/unowned，但需要确保在视图消失时停止定时器
+        cacheCheckTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { timer in
+            // 通过检查定时器是否仍然有效来判断视图是否还存在
+            // 如果 isVisible 为 false，停止定时器
+            if !self.isVisible {
+                timer.invalidate()
+                self.cacheCheckTimer = nil
+                return
+            }
+            self.updateTotalDistanceFromCache()
+        }
+    }
+    
+    // 停止定期检查缓存的定时器
+    private func stopCacheCheckTimer() {
+        cacheCheckTimer?.invalidate()
+        cacheCheckTimer = nil
+    }
+    
     // 格式化日期范围
     private func formatDateRange(_ start: Date, _ end: Date) -> String {
         let formatter = DateFormatter()
@@ -7211,7 +7293,6 @@ struct FootprintsDrawerView: View {
     let destinations: [TravelDestination]
     let onSelect: (TravelDestination) -> Void
     let onAdd: () -> Void
-    let onImportPhoto: () -> Void
     
     private var orderedDestinations: [TravelDestination] {
         destinations.sorted { $0.visitDate > $1.visitDate }
@@ -7261,25 +7342,14 @@ struct FootprintsDrawerView: View {
             .navigationTitle("my_footprints".localized)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    HStack(spacing: 10) {
-                        // 添加目的地按钮
-                        Button {
-                            onAdd()
-                        } label: {
-                            FootprintsToolbarIcon(systemName: "plus")
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.vertical, 2)
-                        
-                        // 导入照片按钮
-                        Button {
-                            onImportPhoto()
-                        } label: {
-                            FootprintsToolbarIcon(systemName: "photo.badge.plus")
-                        }
-                        .buttonStyle(.plain)
-                        .padding(.vertical, 2)
+                    // 添加目的地按钮
+                    Button {
+                        onAdd()
+                    } label: {
+                        FootprintsToolbarIcon(systemName: "plus")
                     }
+                    .buttonStyle(.plain)
+                    .padding(.vertical, 2)
                 }
             }
         }
@@ -7470,6 +7540,47 @@ struct RoutePreviewCard: View {
         }
         .onAppear {
             calculateRoutes()
+        }
+        .onReceive(routeManager.objectWillChange) { _ in
+            // 当 RouteManager 有任何变化时（包括路线计算完成），检查并更新总距离
+            // 这会在用户更改交通方式后，地图重新计算路线时触发
+            // 使用延迟检查，确保路线已经更新到缓存中
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.updateTotalDistanceFromCache()
+            }
+        }
+    }
+    
+    // 从缓存更新总距离（用于响应 RouteManager 路线缓存更新）
+    private func updateTotalDistanceFromCache() {
+        guard destinations.count >= 2 else {
+            return
+        }
+        
+        let coordinates = destinations.map { $0.coordinate }
+        var cachedRoutes: [MKRoute] = []
+        
+        // 检查所有路线是否都已缓存
+        for i in 0..<coordinates.count - 1 {
+            if let cachedRoute = routeManager.getCachedRoute(
+                from: coordinates[i],
+                to: coordinates[i + 1]
+            ) {
+                cachedRoutes.append(cachedRoute)
+            } else {
+                // 如果有路线未缓存，不更新（可能正在计算中）
+                return
+            }
+        }
+        
+        // 所有路线都已缓存，更新总距离
+        if cachedRoutes.count == coordinates.count - 1 {
+            routes = cachedRoutes
+            let newTotalDistance = cachedRoutes.reduce(0) { $0 + $1.footprintDistance }
+            // 只有当距离发生变化时才更新，避免不必要的视图刷新
+            if abs(newTotalDistance - totalDistance) > 1.0 { // 1米的最小变化阈值
+                totalDistance = newTotalDistance
+            }
         }
     }
     

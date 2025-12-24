@@ -16,6 +16,7 @@ struct PaywallView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     @State private var isRestoring: Bool = false
+    @State private var isPurchasing: Set<String> = []
     
     // 引导流程相关
     var isOnboarding: Bool = false
@@ -63,6 +64,10 @@ struct PaywallView: View {
                 )
                 .ignoresSafeArea()
             )
+            .task {
+                // 每次打开 PaywallView 时重新加载产品列表
+                await purchaseManager.loadProducts()
+            }
         }
     }
 
@@ -73,7 +78,7 @@ struct PaywallView: View {
             Image(systemName: "sparkles.rectangle.stack")
                 .symbolRenderingMode(.hierarchical)
                 .font(.system(size: 48, weight: .semibold))
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(brandColorManager.currentBrandColor)
 
             Text("paywall_title".localized)
                 .font(.title2.bold())
@@ -97,6 +102,7 @@ struct PaywallView: View {
             Text("paywall_feature_title".localized)
                 .font(.headline)
 
+            featureRow(icon: "sparkles", title: "paywall_feature_ai".localized)
             featureRow(icon: "tray.and.arrow.down.fill", title: "paywall_feature_import_export".localized)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -112,13 +118,46 @@ struct PaywallView: View {
             if hasLifetime {
                 lifetimeUnlockedCard
             } else {
-                if purchaseManager.products.isEmpty && purchaseManager.errorMessage == nil {
+                if purchaseManager.isLoading {
                     ProgressView("loading".localized)
-                } else if let message = purchaseManager.errorMessage {
-                    Text(message)
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                } else if purchaseManager.products.isEmpty {
+                    if let message = purchaseManager.errorMessage {
+                        VStack(spacing: 12) {
+                            Text(message)
+                                .font(.footnote)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                            
+                            Button {
+                                Task {
+                                    await purchaseManager.loadProducts()
+                                }
+                            } label: {
+                                Text("retry".localized)
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                            }
+                            .buttonStyle(.bordered)
+                        }
+                        .padding()
+                    } else {
+                        ProgressView("loading".localized)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                    }
                 } else {
+                    // 显示错误信息（如果有）
+                    if let errorMessage = purchaseManager.errorMessage, !errorMessage.isEmpty {
+                        Text(errorMessage)
+                            .font(.footnote)
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal)
+                            .padding(.bottom, 8)
+                    }
+                    
                     ForEach(sortedProducts(), id: \.id) { product in
                         purchaseButton(for: product)
                     }
@@ -186,7 +225,7 @@ struct PaywallView: View {
     private func featureRow(icon: String, title: String) -> some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
-                .foregroundColor(.accentColor)
+                .foregroundColor(brandColorManager.currentBrandColor)
                 .frame(width: 26)
             Text(title)
                 .font(.subheadline)
@@ -196,33 +235,110 @@ struct PaywallView: View {
     }
 
     private func purchaseButton(for product: Product) -> some View {
-        Button {
-            Task {
-                _ = await purchaseManager.purchase(product)
-                entitlementManager.updateEntitlement()
+        let isPurchasingThis = isPurchasing.contains(product.id)
+        let isCurrentSubscription = entitlementManager.currentSubscriptionProductID == product.id && entitlementManager.isSubscriptionActive
+        
+        return Button {
+            guard !isPurchasingThis else { 
+                print("⚠️ 购买进行中，忽略重复点击")
+                return 
+            }
+            
+            print("🔄 用户点击购买: \(product.id)")
+            
+            // 立即设置购买状态，提供即时反馈
+            isPurchasing.insert(product.id)
+            
+            Task { @MainActor in
+                // 清除之前的错误信息
+                purchaseManager.errorMessage = nil
+                // 执行购买
+                let transaction = await purchaseManager.purchase(product)
+                
+                // 如果购买成功，更新权益
+                if transaction != nil {
+                    entitlementManager.updateEntitlement()
+                }
+                
+                // 延迟移除购买状态，确保用户看到反馈
+                // 如果购买失败，立即移除状态以便重试
+                if transaction == nil && purchaseManager.errorMessage == nil {
+                    // 用户取消，立即移除状态
+                    isPurchasing.remove(product.id)
+                } else {
+                    // 购买成功或失败，延迟移除状态
+                    try? await Task.sleep(nanoseconds: 1_000_000_000) // 1秒延迟
+                    isPurchasing.remove(product.id)
+                }
             }
         } label: {
-            VStack(spacing: 6) {
-                HStack {
-                    Text(product.displayName)
-                        .font(.headline)
-                    Spacer()
-                    Text(product.displayPrice)
-                        .font(.headline)
+            HStack {
+                VStack(spacing: 6) {
+                    HStack {
+                        Text(product.displayName)
+                            .font(.headline)
+                        Spacer()
+                        if isCurrentSubscription {
+                            HStack(spacing: 4) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                    .font(.subheadline)
+                                Text("paywall_current_subscription".localized)
+                                    .font(.caption)
+                                    .foregroundColor(.green)
+                            }
+                        } else {
+                            Text(product.displayPrice)
+                                .font(.headline)
+                        }
+                    }
+                    HStack {
+                        Text(subtitle(for: product))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        if isCurrentSubscription {
+                            if let expiryDate = entitlementManager.subscriptionExpiryDate {
+                                Text("paywall_expires_on".localized + formatDate(expiryDate))
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            } else {
+                                Text("membership_status_lifetime_active".localized)
+                                    .font(.caption)
+                                    .foregroundColor(.green)
+                            }
+                        }
+                    }
                 }
-                Text(subtitle(for: product))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                
+                if isPurchasingThis {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                }
             }
             .padding()
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.accentColor.opacity(colorScheme == .dark ? 0.25 : 0.15))
+                    .fill(isCurrentSubscription ? 
+                          Color.green.opacity(colorScheme == .dark ? 0.2 : 0.1) :
+                          brandColorManager.currentBrandColor.opacity(colorScheme == .dark ? 0.25 : 0.15))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(isCurrentSubscription ? Color.green.opacity(0.5) : Color.clear, lineWidth: 1.5)
             )
         }
         .buttonStyle(.plain)
+        .disabled(isPurchasingThis || isCurrentSubscription)
+    }
+    
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        formatter.locale = Locale.current
+        return formatter.string(from: date)
     }
 
     private func sortedProducts() -> [Product] {

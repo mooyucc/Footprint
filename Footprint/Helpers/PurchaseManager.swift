@@ -52,23 +52,43 @@ final class PurchaseManager: ObservableObject {
     // MARK: - 购买与恢复
 
     func purchase(_ product: Product) async -> Transaction? {
+        await MainActor.run {
+            errorMessage = nil // 清除之前的错误信息
+        }
+        
         do {
+            print("🛒 开始购买产品: \(product.id)")
             let result = try await product.purchase()
+            
             switch result {
             case .success(let verification):
+                print("✅ 购买成功，验证交易...")
                 let transaction = try checkVerified(verification)
                 await transaction.finish()
                 await updatePurchasedProducts()
+                print("✅ 交易完成")
                 return transaction
             case .userCancelled:
+                print("⚠️ 用户取消购买")
+                await MainActor.run {
+                    errorMessage = nil // 用户取消不需要显示错误
+                }
                 return nil
             case .pending:
+                print("⏳ 购买待处理")
+                await MainActor.run {
+                    errorMessage = "购买正在处理中，请稍候..."
+                }
                 return nil
             @unknown default:
+                print("❓ 未知购买结果")
                 return nil
             }
         } catch {
-            errorMessage = "购买失败：\(error.localizedDescription)"
+            print("❌ 购买失败: \(error.localizedDescription)")
+            await MainActor.run {
+                errorMessage = "购买失败：\(error.localizedDescription)"
+            }
             return nil
         }
     }

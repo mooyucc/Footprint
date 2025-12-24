@@ -48,17 +48,49 @@ class DeepSeekProvider: AIServiceProtocol {
     func generateNotes(
         from images: [Data],
         location: String,
+        province: String,
         country: String,
-        date: Date
+        date: Date,
+        persona: String,
+        mbti: String
     ) async throws -> String {
-        print("🤖 [DeepSeek] 开始生成笔记，地点: \(location), 国家: \(country)")
+        print("🤖 [DeepSeek] 开始生成笔记，地点: \(location), 省份: \(province), 国家: \(country)")
         
         // 构建 Prompt
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy年MM月dd日"
         let dateString = dateFormatter.string(from: date)
         
-        var promptText = "你是一位旅行作家。根据以下信息生成一段旅行笔记：\n- 地点：\(location)\n- 国家：\(country)\n- 访问日期：\(dateString)"
+        let trimmedPersona = persona.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedMbti = mbti.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // 根据身份标签动态设置身份，如果没有则默认使用"旅行作家"
+        let identity = !trimmedPersona.isEmpty ? trimmedPersona : "旅行作家"
+        
+        // 构建完整的地点信息
+        var locationInfo = "地点：\(location)"
+        if !province.isEmpty {
+            locationInfo += "（\(province)）"
+        }
+        locationInfo += "\n- 国家：\(country)"
+        
+        var promptText = "你是一位\(identity)。根据以下信息生成一段旅行笔记：\n- \(locationInfo)\n- 访问日期：\(dateString)"
+        
+        // 如果有身份标签或MBTI，用于指导文风（但不写入笔记内容）
+        var styleGuidance = ""
+        if !trimmedPersona.isEmpty {
+            styleGuidance += "请以\(trimmedPersona)的身份和口吻来写作"
+        }
+        if !trimmedMbti.isEmpty {
+            if !styleGuidance.isEmpty {
+                styleGuidance += "，"
+            }
+            styleGuidance += "用词和情绪表达应符合\(trimmedMbti)的性格倾向"
+        }
+        
+        if !styleGuidance.isEmpty {
+            promptText += "\n\n**文风指导**（仅用于调整写作风格，不要写入笔记内容）：\(styleGuidance)。"
+        }
         
         // 如果有照片，使用 Apple Vision API 识别图片内容
         if !images.isEmpty {
@@ -82,9 +114,9 @@ class DeepSeekProvider: AIServiceProtocol {
                 print("⚠️ [Vision] 所有照片识别失败，使用通用描述")
             }
             
-            promptText += "\n\n请根据以上信息，特别是照片内容描述，生成一段旅行笔记，**严格限制在144字以内**。要求：\n1. 结合照片中实际看到的场景和内容\n2. 结合这个地点的特色和文化背景\n3. 体现当地文化或自然风貌\n4. 语言自然流畅，带有个人感受\n5. 使用中文输出\n6. **重要：字数必须严格控制在144字以内，不要超过**"
+            promptText += "\n\n**重要提示**：请严格按照上面提供的地点信息（\(location)\(province.isEmpty ? "" : "，\(province)")，\(country)）生成笔记。即使照片中可能包含其他地点的信息或特征，也必须使用提供的地点信息，不要从照片中推断或猜测地点。\n\n请根据以上信息，特别是照片内容描述，生成一段旅行笔记，**严格限制在144字以内**。要求：\n1. **必须使用提供的地点信息（\(location)\(province.isEmpty ? "" : "，\(province)")，\(country)），不要使用照片中可能出现的其他地点名称**\n2. 结合照片中实际看到的场景和内容（但地点必须是\(location)）\n3. 结合这个地点的特色和文化背景\n4. 体现当地文化或自然风貌\n5. 语言自然流畅，带有个人感受\n6. 使用中文输出\n7. **不要提及身份标签、MBTI等元数据信息，只写纯粹的旅行笔记内容**\n8. **重要：字数必须严格控制在144字以内，不要超过**"
         } else {
-            promptText += "\n\n请生成一段旅行笔记，**严格限制在144字以内**。要求：\n1. 描述这个地点的特色\n2. 体现当地文化或自然风貌\n3. 语言自然流畅，带有个人感受\n4. 使用中文输出\n5. **重要：字数必须严格控制在144字以内，不要超过**"
+            promptText += "\n\n请生成一段旅行笔记，**严格限制在144字以内**。要求：\n1. 描述这个地点（\(location)\(province.isEmpty ? "" : "，\(province)")，\(country)）的特色\n2. 体现当地文化或自然风貌\n3. 语言自然流畅，带有个人感受\n4. 使用中文输出\n5. **不要提及身份标签、MBTI等元数据信息，只写纯粹的旅行笔记内容**\n6. **重要：字数必须严格控制在144字以内，不要超过**"
         }
         
         let messages: [ChatMessage] = [
@@ -98,13 +130,21 @@ class DeepSeekProvider: AIServiceProtocol {
     }
     
     func generateTripDescription(
-        for destinations: [TravelDestination]
+        for destinations: [TravelDestination],
+        persona: String,
+        mbti: String
     ) async throws -> String {
         print("🤖 [DeepSeek] 开始生成旅程描述，目的地数量: \(destinations.count)")
         
         guard !destinations.isEmpty else {
             throw AIError.invalidInput("目的地列表为空")
         }
+        
+        let trimmedPersona = persona.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedMbti = mbti.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        // 根据身份标签动态设置身份，如果没有则默认使用"旅行作家"
+        let identity = !trimmedPersona.isEmpty ? trimmedPersona : "旅行作家"
         
         // 构建目的地信息（包含笔记）
         let dateFormatter = DateFormatter()
@@ -128,7 +168,23 @@ class DeepSeekProvider: AIServiceProtocol {
             }
         }
         
-        var promptText = "你是一位旅行作家。分析以下旅程信息，生成一段旅程整体描述：\n\n目的地列表：\n\(destinationsInfo)"
+        var promptText = "你是一位\(identity)。分析以下旅程信息，生成一段旅程整体描述：\n\n目的地列表：\n\(destinationsInfo)"
+        
+        // 如果有身份标签或MBTI，用于指导文风（但不写入描述内容）
+        var styleGuidance = ""
+        if !trimmedPersona.isEmpty {
+            styleGuidance += "请以\(trimmedPersona)的身份和口吻来写作"
+        }
+        if !trimmedMbti.isEmpty {
+            if !styleGuidance.isEmpty {
+                styleGuidance += "，"
+            }
+            styleGuidance += "用词和情绪表达应符合\(trimmedMbti)的性格倾向"
+        }
+        
+        if !styleGuidance.isEmpty {
+            promptText += "\n\n**文风指导**（仅用于调整写作风格，不要写入描述内容）：\(styleGuidance)。"
+        }
         
         // 如果有照片，使用 Apple Vision API 识别图片内容
         if !allImages.isEmpty {
@@ -162,9 +218,9 @@ class DeepSeekProvider: AIServiceProtocol {
                 print("⚠️ [Vision] 所有照片识别失败，使用通用描述")
             }
             
-            promptText += "\n\n请根据以上信息，特别是照片内容描述和各个地点的笔记，生成一段旅程整体描述，**严格限制在300字以内**。要求：\n1. 结合照片中实际看到的场景和内容\n2. 参考各个地点的笔记内容，体现旅程的连贯性和特色\n3. 语言自然流畅，带有个人感受\n4. 使用中文输出\n5. **重要：字数必须严格控制在300字以内，不要超过**"
+            promptText += "\n\n请根据以上信息，特别是照片内容描述和各个地点的笔记，生成一段旅程整体描述，**严格限制在300字以内**。要求：\n1. 结合照片中实际看到的场景和内容\n2. 参考各个地点的笔记内容，体现旅程的连贯性和特色\n3. 语言自然流畅，带有个人感受\n4. 使用中文输出\n5. **不要提及身份标签、MBTI等元数据信息，只写纯粹的旅程描述内容**\n6. **重要：字数必须严格控制在300字以内，不要超过**"
         } else {
-            promptText += "\n\n请根据以上信息，特别是各个地点的笔记，生成一段旅程整体描述，**严格限制在300字以内**。要求：\n1. 参考各个地点的笔记内容，体现旅程的连贯性和特色\n2. 语言自然流畅，带有个人感受\n3. 使用中文输出\n4. **重要：字数必须严格控制在300字以内，不要超过**"
+            promptText += "\n\n请根据以上信息，特别是各个地点的笔记，生成一段旅程整体描述，**严格限制在300字以内**。要求：\n1. 参考各个地点的笔记内容，体现旅程的连贯性和特色\n2. 语言自然流畅，带有个人感受\n3. 使用中文输出\n4. **不要提及身份标签、MBTI等元数据信息，只写纯粹的旅程描述内容**\n5. **重要：字数必须严格控制在300字以内，不要超过**"
         }
         
         let messages: [ChatMessage] = [

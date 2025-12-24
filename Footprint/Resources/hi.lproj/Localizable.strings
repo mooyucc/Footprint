@@ -1,0 +1,28 @@
+"paywall_current_subscription" = "वर्तमान सदस्यता";
+"paywall_expires_on" = "समाप्ति समय: ";
+"paywall_feature_ai" = "AI सहायक: स्मार्ट नोट्स, यात्रा विवरण, फोटो विश्लेषण, टैग जनरेशन";
+"ai_assistant_title" = "AI सहायक";
+"ai_assistant_welcome" = "AI को आपकी यात्रा दर्ज करने में मदद करने दें";
+"ai_assistant_subtitle" = "नोट्स, विवरण और टैग बुद्धिमानी से बनाएँ, ताकि आपकी यात्रा की यादें समृद्ध हों";
+"ai_function_notes_title" = "नोट्स बनाएं";
+"ai_function_notes_desc" = "फोटो और स्थान के आधार पर यात्रा नोट्स स्वतः जनरेट करें";
+"ai_function_trip_desc_title" = "यात्रा विवरण बनाएं";
+"ai_function_trip_desc_desc" = "कई गंतव्यों के आधार पर संपूर्ण यात्रा विवरण तैयार करें";
+"ai_function_tags_title" = "टैग जनरेट करें";
+"ai_function_tags_desc" = "फोटो और स्थान के अनुसार उपयुक्त टैग सुझाएँ";
+"ai_function_photo_analysis_title" = "फोटो विश्लेषण";
+"ai_function_photo_analysis_desc" = "फोटो में दृश्य, वस्तुएँ और स्थलों की पहचान करें";
+"ai_generating_notes" = "नोट्स बनाए जा रहे हैं...";
+"ai_generating_description" = "विवरण बनाया जा रहा है...";
+"ai_generating_tags" = "टैग बनाए जा रहे हैं...";
+"ai_analyzing_photos" = "फोटो का विश्लेषण हो रहा है...";
+"ai_tags_result_prefix" = "सुझाए गए टैग:";
+"ai_tags_empty" = "टैग जनरेट नहीं हो सके। कृपया बाद में पुनः प्रयास करें।";
+
+// Profile - Identity Tag & MBTI
+"identity_tag" = "पहचान टैग";
+"identity_tag_description" = "एक पहचान टैग चुनें या अपना खुद का दर्ज करें ताकि AI आपकी शैली में उत्तर दे सके।";
+"identity_tag_placeholder" = "यात्री, खाने के शौकीन, डिज़ाइनर…";
+"show_all_destinations" = "सभी स्थान";
+"all_destinations" = "सभी गंतव्य";
+"no_destinations_found" = "कोई गंतव्य नहीं मिला";

@@ -11,7 +11,11 @@ import SwiftUI
 struct NotesSection: View {
     @Binding var notes: String
     var weatherSummary: WeatherSummary? = nil  // 可选的天气信息
+    var showWeatherAttribution: Bool = false   // 是否在标题旁展示归因链接
+    var onAITap: (() -> Void)? = nil  // 可选的AI按钮点击回调
+    var canUseAI: Bool = false  // 是否有权限使用AI功能
     @FocusState private var isFocused: Bool
+    @EnvironmentObject private var brandColorManager: BrandColorManager
     
     // 动态占位符提示 - 结合时间和天气
     private var placeholderText: String {
@@ -127,6 +131,30 @@ struct NotesSection: View {
                         .scrollContentBackground(.hidden)
                 }
                 
+                // AI按钮（如果提供了回调）
+                if let onAITap = onAITap {
+                    Button {
+                        onAITap()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "sparkles")
+                                .font(.system(size: 16, weight: .medium))
+                            Text("AI 生成笔记")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                        }
+                        .foregroundColor(canUseAI ? .white : .secondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(canUseAI ? brandColorManager.currentBrandColor : Color(.secondarySystemFill))
+                        )
+                    }
+                    .disabled(!canUseAI)
+                    .padding(.top, 8)
+                }
+                
                 // 字数统计和鼓励
                 if wordCount > 0 {
                     HStack {
@@ -140,6 +168,7 @@ struct NotesSection: View {
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
+                    .padding(.top, 4)
                 }
             }
             .padding(.vertical, 4)
@@ -148,6 +177,11 @@ struct NotesSection: View {
                 Image(systemName: "note.text")
                     .font(.caption)
                 Text("notes".localized)
+                Spacer(minLength: 8)
+                
+                if showWeatherAttribution {
+                    WeatherAttributionLink()
+                }
             }
         }
     }

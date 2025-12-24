@@ -21,6 +21,7 @@ final class AIModelManager: ObservableObject {
     @Published var errorMessage: String?
     
     private var service: AIServiceProtocol
+    private let appleSignInManager = AppleSignInManager.shared
     
     /// 初始化AI管理器
     /// - Parameter service: 可选的AI服务实例，如果为nil则自动选择合适的服务
@@ -60,8 +61,11 @@ final class AIModelManager: ObservableObject {
             let notes = try await service.generateNotes(
                 from: images,
                 location: destination.name,
+                province: destination.province,
                 country: destination.country,
-                date: destination.visitDate
+                date: destination.visitDate,
+                persona: appleSignInManager.personaTag,
+                mbti: appleSignInManager.mbtiType
             )
             
             print("✅ [AIModelManager] 笔记生成成功，长度: \(notes.count)")
@@ -95,7 +99,11 @@ final class AIModelManager: ObservableObject {
             }
             
             // 调用AI服务生成描述
-            let description = try await service.generateTripDescription(for: destinations)
+            let description = try await service.generateTripDescription(
+                for: destinations,
+                persona: appleSignInManager.personaTag,
+                mbti: appleSignInManager.mbtiType
+            )
             
             print("✅ [AIModelManager] 旅程描述生成成功，长度: \(description.count)")
             return description

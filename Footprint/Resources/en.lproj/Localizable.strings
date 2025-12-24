@@ -1,5 +1,5 @@
 "paywall_title" = "Unlock Pro";
-"paywall_subtitle" = "Unlock local data import/export to easily backup and restore your travel data.";
+"paywall_subtitle" = "Unlock AI Assistant, unlimited records, and more Pro features to make your travel memories smarter and complete.";
 "paywall_button_upgrade" = "View Subscription Plan";
 "paywall_button_restore" = "Restore Purchases";
 
@@ -14,8 +14,11 @@
 // Paywall lifetime unlocked
 "paywall_lifetime_unlocked" = "Lifetime access unlocked, no need to purchase again.";
 "paywall_lifetime_sync_hint" = "To sync on a new device, use \"Restore Purchases\" below.";
+"paywall_current_subscription" = "Current";
+"paywall_expires_on" = "Expires: ";
 "paywall_terms_privacy" = "By purchasing you agree to the Terms of Use and Privacy Policy. Auto-renewable; cancel anytime in system subscriptions.";
 "paywall_feature_title" = "Pro features";
+"paywall_feature_ai" = "AI Assistant: smart notes, trip descriptions, photo analysis, tag generation";
 "paywall_feature_unlimited" = "Unlimited destinations and trip cards";
 "paywall_feature_share_layouts" = "Full share layouts";
 "paywall_feature_import_export" = "Local data import/export";
@@ -42,6 +45,7 @@
 "import_trip_locked_message" = "Trip import requires Pro. Upgrade to continue.";
 "loading" = "Loading…";
 "one_time_purchase" = "One-time purchase";
+"retry" = "Retry";
 /* 
   Localizable.strings
   Footprint
@@ -212,6 +216,9 @@
 "add_year_travel_footprints" = "Start adding your %d travel footprints!";
 "add_first_destination" = "Add First Destination";
 "start_recording_footprints" = "Tap the + button in the top right to start recording your travel footprints!";
+"show_all_destinations" = "All Places";
+"all_destinations" = "All Destinations";
+"no_destinations_found" = "No destinations found";
 
 // Edit Destination View
 "edit_destination" = "Edit Destination";
@@ -270,15 +277,24 @@
 "ai_function_notes_desc" = "Automatically generate travel notes based on photos and location information";
 "ai_function_trip_desc_title" = "Trip Description Generation";
 "ai_function_trip_desc_desc" = "Generate overall trip descriptions based on multiple destinations";
+"ai_function_tags_title" = "Generate Tags";
+"ai_function_tags_desc" = "Recommend relevant tags based on photos and locations";
 "ai_function_photo_analysis_title" = "Photo Analysis";
 "ai_function_photo_analysis_desc" = "Identify scenes, objects, and landmarks in photos";
 "ai_generating_notes" = "Generating notes...";
 "ai_generating_description" = "Generating description...";
+"ai_generating_tags" = "Generating tags...";
 "ai_analyzing_photos" = "Analyzing photos...";
+"ai_tags_result_prefix" = "Suggested tags:";
+"ai_tags_empty" = "No tags were generated. Please try again later.";
 "ai_copy_result" = "Copy Result";
 "ai_error_occurred" = "Error Occurred";
 "ai_error_unknown" = "Unknown error";
 "ai_retry" = "Retry";
+"ai_note_preview_title" = "Smart Note Preview";
+"ai_note_edit_hint" = "Tap the area below to start editing your note";
+"ai_note_placeholder" = "Edit your note here...";
+"ai_note_edit_button" = "Edit Note";
 "ai_select_destination" = "Select Destination";
 "ai_select_trip" = "Select Trip";
 "ai_no_destinations" = "No Destinations";
@@ -586,3 +602,10 @@
 "onboarding_page2_color_description" = "Customize the app's theme color, which will be applied to icons, buttons, and other UI elements";
 "onboarding_next" = "Next";
 "onboarding_complete" = "Get Started";
+
+// Profile - Identity Tag & MBTI
+"identity_tag" = "Identity Tag";
+"identity_tag_description" = "Pick an identity tag or enter your own to help AI reply in your style.";
+"identity_tag_placeholder" = "Traveler, foodie, designer…";
+"mbti_title" = "MBTI";
+"mbti_description" = "Select your personality type for more tailored responses.";
