@@ -244,7 +244,14 @@ struct PaywallView: View {
                 return 
             }
             
+            // 如果已经是当前订阅，不允许再次购买
+            guard !isCurrentSubscription else {
+                print("ℹ️ 用户已拥有该订阅: \(product.id)，不允许重复购买")
+                return
+            }
+            
             print("🔄 用户点击购买: \(product.id)")
+            print("🔄 当前订阅状态: isActive=\(entitlementManager.isSubscriptionActive), productID=\(entitlementManager.currentSubscriptionProductID ?? "nil")")
             
             // 立即设置购买状态，提供即时反馈
             isPurchasing.insert(product.id)
@@ -252,21 +259,46 @@ struct PaywallView: View {
             Task { @MainActor in
                 // 清除之前的错误信息
                 purchaseManager.errorMessage = nil
+                
+                print("🔄 准备调用 purchase()，等待系统弹窗...")
                 // 执行购买
                 let transaction = await purchaseManager.purchase(product)
                 
+                print("🔄 purchase() 返回: transaction=\(transaction != nil ? "有" : "无")")
+                
                 // 如果购买成功，更新权益
-                if transaction != nil {
-                    entitlementManager.updateEntitlement()
+                if let transaction = transaction {
+                    print("🔄 购买成功，基于交易直接更新权益状态...")
+                    
+                    // 使用刚完成的交易直接更新权益（不依赖 currentEntitlements）
+                    // 这样可以处理沙箱环境中订阅立即过期的情况
+                    entitlementManager.updateEntitlement(from: transaction)
+                    
+                    // 等待权益更新完成
+                    try? await Task.sleep(nanoseconds: 300_000_000) // 0.3秒
+                    
+                    print("🔄 权益更新完成，当前状态: entitlement=\(entitlementManager.currentEntitlement), isActive=\(entitlementManager.isSubscriptionActive), productID=\(entitlementManager.currentSubscriptionProductID ?? "nil")")
+                    
+                    // 如果权益更新成功，关闭 PaywallView
+                    if entitlementManager.isSubscriptionActive {
+                        print("✅ 订阅已激活，关闭 PaywallView")
+                        dismiss()
+                    } else {
+                        print("⚠️ 订阅状态未更新，尝试使用标准方法更新...")
+                        // 如果直接更新失败，尝试使用标准方法
+                        entitlementManager.updateEntitlement()
+                    }
                 }
                 
                 // 延迟移除购买状态，确保用户看到反馈
                 // 如果购买失败，立即移除状态以便重试
                 if transaction == nil && purchaseManager.errorMessage == nil {
                     // 用户取消，立即移除状态
+                    print("🔄 用户取消或购买失败，移除购买状态")
                     isPurchasing.remove(product.id)
                 } else {
                     // 购买成功或失败，延迟移除状态
+                    print("🔄 延迟移除购买状态...")
                     try? await Task.sleep(nanoseconds: 1_000_000_000) // 1秒延迟
                     isPurchasing.remove(product.id)
                 }

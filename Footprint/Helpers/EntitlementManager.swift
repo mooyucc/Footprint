@@ -85,6 +85,75 @@ final class EntitlementManager: ObservableObject {
             }
         }
     }
+    
+    /// 基于刚完成的交易直接更新权益（用于购买成功后立即更新）
+    /// 这个方法优先使用，因为它可以立即更新权益，不依赖 currentEntitlements 的延迟更新
+    func updateEntitlement(from transaction: Transaction) {
+        Task {
+            print("🔄 基于交易直接更新权益: \(transaction.productID)")
+            
+            var hasPro = false
+            var productID: String? = nil
+            var expiry: Date? = nil
+            
+            // 检查交易类型和产品ID
+            switch transaction.productType {
+            case .autoRenewable:
+                if transaction.productID == SubscriptionProductID.proMonthly ||
+                    transaction.productID == SubscriptionProductID.proYearly {
+                    // 检查订阅是否过期
+                    if let expirationDate = transaction.expirationDate {
+                        if expirationDate > Date() {
+                            // 订阅未过期（生产环境和沙箱环境正常情况）
+                            hasPro = true
+                            productID = transaction.productID
+                            expiry = expirationDate
+                            print("✅ 订阅有效: \(transaction.productID), 到期: \(expirationDate)")
+                        } else {
+                            // 订阅已过期，但可能是刚购买的交易
+                            // 在生产环境中，这种情况不应该发生（订阅应该有正常的有效期）
+                            // 在沙箱环境中，订阅可能只有几分钟有效期，所以需要容错处理
+                            let purchaseTime = transaction.purchaseDate
+                            let timeSincePurchase = Date().timeIntervalSince(purchaseTime)
+                            let fiveMinutes: TimeInterval = 5 * 60
+                            
+                            if timeSincePurchase < fiveMinutes {
+                                // 订阅已过期，但是刚刚购买（5分钟内），认为是有效的
+                                // 这主要用于处理沙箱环境中订阅立即过期的情况
+                                // 在生产环境中，这种情况理论上不应该发生
+                                hasPro = true
+                                productID = transaction.productID
+                                expiry = expirationDate
+                                print("⚠️ 订阅刚购买但已过期（可能是沙箱环境），仍认为有效: \(transaction.productID), 到期: \(expirationDate), 购买后: \(Int(timeSincePurchase))秒")
+                            } else {
+                                print("⚠️ 订阅已过期且购买时间超过5分钟: \(transaction.productID)")
+                            }
+                        }
+                    } else {
+                        print("⚠️ 订阅没有过期时间: \(transaction.productID)")
+                    }
+                }
+            case .nonConsumable:
+                if transaction.productID == SubscriptionProductID.proLifetime {
+                    hasPro = true
+                    productID = transaction.productID
+                    expiry = nil
+                    print("✅ 终身订阅: \(transaction.productID)")
+                }
+            default:
+                break
+            }
+            
+            await MainActor.run {
+                currentEntitlement = hasPro ? .pro : .free
+                isSubscriptionActive = hasPro
+                subscriptionExpiryDate = expiry
+                currentSubscriptionProductID = productID
+                
+                print("🔄 权益更新完成: entitlement=\(currentEntitlement), isActive=\(isSubscriptionActive), productID=\(currentSubscriptionProductID ?? "nil")")
+            }
+        }
+    }
 
     private func hasActiveProSubscription() async -> (Bool, String?) {
         for await result in Transaction.currentEntitlements {
@@ -94,19 +163,34 @@ final class EntitlementManager: ObservableObject {
                 case .autoRenewable:
                     if transaction.productID == SubscriptionProductID.proMonthly ||
                         transaction.productID == SubscriptionProductID.proYearly {
-                        return (true, transaction.productID)
+                        // 检查订阅是否过期
+                        if let expirationDate = transaction.expirationDate {
+                            if expirationDate > Date() {
+                                print("✅ 找到有效订阅: \(transaction.productID), 到期时间: \(expirationDate)")
+                                return (true, transaction.productID)
+                            } else {
+                                print("⚠️ 订阅已过期: \(transaction.productID), 到期时间: \(expirationDate)")
+                            }
+                        } else {
+                            // 如果没有过期时间，认为是有效的（不应该发生，但保险起见）
+                            print("⚠️ 订阅没有过期时间: \(transaction.productID)")
+                            return (true, transaction.productID)
+                        }
                     }
                 case .nonConsumable:
                     if transaction.productID == SubscriptionProductID.proLifetime {
+                        print("✅ 找到终身订阅: \(transaction.productID)")
                         return (true, transaction.productID)
                     }
                 default:
                     break
                 }
             } catch {
+                print("❌ 交易验证失败: \(error)")
                 continue
             }
         }
+        print("ℹ️ 未找到有效的 Pro 订阅")
         return (false, nil)
     }
 

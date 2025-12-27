@@ -1058,6 +1058,7 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         // 计算内容高度
         let contentHeight = calculateContentHeight(for: trip, width: screenWidth)
         let imageSize = CGSize(width: screenWidth, height: contentHeight)
+        print("📏 [ListLayout] 计算高度: \(contentHeight), 图片尺寸: \(imageSize)")
         
         // 创建图片渲染器（禁用Alpha通道以减少文件体积）
         let rendererFormat = UIGraphicsImageRendererFormat.default()
@@ -1103,10 +1104,8 @@ struct ListLayoutGenerator: TripLayoutGenerator {
             
             currentY = 250
             
-            // 绘制内容区域背景 - 使用与"我的"tab一致的浅米白色背景 #f7f3eb
-            let contentRect = CGRect(x: 0, y: currentY, width: screenWidth, height: imageSize.height - currentY)
-            cgContext.setFillColor(UIColor(red: 0.969, green: 0.953, blue: 0.922, alpha: 1.0).cgColor) // #f7f3eb
-            cgContext.fill(contentRect)
+            // 内容区域使用渐变背景（已在整体背景中绘制，符合App配色标准）
+            // 渐变背景已覆盖整个图片区域，无需额外绘制单色背景
             
             // 绘制内容
             currentY += 20
@@ -1148,14 +1147,13 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         // 标题区域
         height += 28 + 12 // title + spacing
         if !trip.desc.isEmpty {
-            // 动态计算描述文字的实际高度（支持多行）
+            // 动态计算描述文字的实际高度（支持多行，使用无限高度以完整显示所有文本）
             let descAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 16)
             ]
             let descString = NSAttributedString(string: trip.desc, attributes: descAttributes)
-            let maxHeight: CGFloat = 200 // 最大高度限制
             let descRect = descString.boundingRect(
-                with: CGSize(width: width - 40, height: maxHeight),
+                with: CGSize(width: width - 40, height: CGFloat.greatestFiniteMagnitude),
                 options: [.usesLineFragmentOrigin, .usesFontLeading],
                 context: nil
             )
@@ -1206,7 +1204,13 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         )
         let subtitleHeight = ceil(subtitleRect.height)
         
-        height += 40 + signatureHeight + 25 + subtitleHeight + 20 // 与上面地点图片的间距 + 主签名实际高度 + 间距 + 副标题实际高度 + 底部padding
+        // 底部签名区域总高度计算：
+        // - 与上面地点图片的间距: 40
+        // - 主签名高度: signatureHeight
+        // - 主副标题间距: 25
+        // - 副标题高度: subtitleHeight
+        // - 底部边距: 30 (增加以确保副标题完整显示，特别是考虑字体行高)
+        height += 40 + signatureHeight + 25 + subtitleHeight + 30
         
         return height
     }
@@ -1277,10 +1281,9 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         ]
         
         let attributedString = NSAttributedString(string: description, attributes: attributes)
-        // 计算多行文本的实际高度
-        let maxHeight: CGFloat = 200 // 最大高度限制，防止过长
+        // 计算多行文本的实际高度（使用无限高度以完整显示所有文本）
         let textRect = attributedString.boundingRect(
-            with: CGSize(width: width, height: maxHeight),
+            with: CGSize(width: width, height: CGFloat.greatestFiniteMagnitude),
             options: [.usesLineFragmentOrigin, .usesFontLeading],
             context: nil
         )
@@ -1707,12 +1710,13 @@ struct GridLayoutGenerator: TripLayoutGenerator {
         // 设置页边距
         let horizontalPadding: CGFloat = 32 // 左右边距
         let topPadding: CGFloat = 40 // 顶部边距
-        let bottomPadding: CGFloat = 20 // 底部边距
+        let bottomPadding: CGFloat = 30 // 底部边距（增加以确保副标题完整显示）
         let contentWidth = screenWidth - horizontalPadding * 2
         
         // 计算内容高度
         let contentHeight = calculateContentHeight(for: trip, destinations: sortedDestinations, width: screenWidth, horizontalPadding: horizontalPadding, topPadding: topPadding, bottomPadding: bottomPadding)
         let imageSize = CGSize(width: screenWidth, height: contentHeight)
+        print("📏 [GridLayout] 计算高度: \(contentHeight), 图片尺寸: \(imageSize), 描述长度: \(trip.desc.count)")
         
         // 创建图片渲染器
         let rendererFormat = UIGraphicsImageRendererFormat.default()
@@ -1749,9 +1753,11 @@ struct GridLayoutGenerator: TripLayoutGenerator {
                 currentY += 200
             }
             
-            // 绘制底部签名（与上面地点图片间距40，离底部边缘20）
+            // 绘制底部签名（与上面地点图片间距40，离底部边缘bottomPadding）
             currentY += 40 // 与上面地点图片的间距
             drawSignature(at: CGPoint(x: screenWidth/2, y: currentY), width: contentWidth, context: cgContext)
+            // 确保底部有足够的边距
+            currentY += 25 + 20 // 副标题位置偏移 + 底部边距（确保签名完整显示）
         }
     }
     
@@ -1776,30 +1782,16 @@ struct GridLayoutGenerator: TripLayoutGenerator {
             }()
         ]
         let titleString = NSAttributedString(string: trip.name, attributes: titleAttributes)
-        // 计算多行文本的实际高度
-        let maxTitleHeight: CGFloat = 200 // 最大高度限制
+        // 计算多行文本的实际高度（使用无限高度以完整显示所有文本）
         let titleRect = titleString.boundingRect(
-            with: CGSize(width: contentWidth, height: maxTitleHeight),
+            with: CGSize(width: contentWidth, height: CGFloat.greatestFiniteMagnitude),
             options: [.usesLineFragmentOrigin, .usesFontLeading],
             context: nil
         )
         let titleSize = ceil(titleRect.height)
-        var headerHeight: CGFloat = titleSize + 20 // 标题高度 + 到描述的间距
-        
-        if !trip.desc.isEmpty {
-            let descAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 17, weight: .regular) // 与地点分享图片一致
-            ]
-            let descString = NSAttributedString(string: trip.desc, attributes: descAttributes)
-            let maxHeight: CGFloat = 200
-            let descRect = descString.boundingRect(
-                with: CGSize(width: contentWidth, height: maxHeight),
-                options: [.usesLineFragmentOrigin, .usesFontLeading],
-                context: nil
-            )
-            headerHeight += ceil(descRect.height)
-        }
-        height += headerHeight + 20 // 描述后的间距 + 到时间卡片的间距
+        // 九宫格版面不显示描述文字，只显示标题
+        var headerHeight: CGFloat = titleSize + 20 // 标题高度 + 到时间卡片的间距
+        height += headerHeight + 20 // 标题后的间距 + 到时间卡片的间距
         
         // 时间信息卡片
         height += 100 + 20 // 与地点卡片间距20
@@ -1836,7 +1828,13 @@ struct GridLayoutGenerator: TripLayoutGenerator {
         )
         let subtitleHeight = ceil(subtitleRect.height)
         
-        height += 40 + signatureHeight + 25 + subtitleHeight + bottomPadding // 与上面地点图片的间距 + 主签名实际高度 + 间距 + 副标题实际高度 + 底部padding
+        // 底部签名区域总高度计算：
+        // - 与上面地点图片的间距: 40
+        // - 主签名高度: signatureHeight
+        // - 主副标题间距: 25
+        // - 副标题高度: subtitleHeight
+        // - 底部边距: 30 (增加以确保副标题完整显示，特别是考虑字体行高)
+        height += 40 + signatureHeight + 25 + subtitleHeight + 30
         
         return height
     }
@@ -1860,38 +1858,8 @@ struct GridLayoutGenerator: TripLayoutGenerator {
             width: width,
             context: context
         )
-        currentY += titleHeight + 20 // 标题高度 + 到描述的间距
-        
-        // 3. 绘制描述文字（支持多行）
-        if !trip.desc.isEmpty {
-            let descAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 17, weight: .regular),
-                .foregroundColor: UIColor(red: 0.35, green: 0.35, blue: 0.35, alpha: 1.0), // 与地点分享图片的笔记颜色一致
-                .paragraphStyle: {
-                    let style = NSMutableParagraphStyle()
-                    style.lineSpacing = 6 // 增加行距，提升可读性
-                    style.lineBreakMode = .byWordWrapping
-                    return style
-                }()
-            ]
-            let descString = NSAttributedString(string: trip.desc, attributes: descAttributes)
-            // 计算多行文本的实际高度
-            let maxHeight: CGFloat = 200 // 最大高度限制
-            let descRect = descString.boundingRect(
-                with: CGSize(width: width, height: maxHeight),
-                options: [.usesLineFragmentOrigin, .usesFontLeading],
-                context: nil
-            )
-            
-            let drawRect = CGRect(
-                x: point.x,
-                y: currentY,
-                width: width,
-                height: ceil(descRect.height)
-            )
-            descString.draw(in: drawRect)
-            currentY += drawRect.height
-        }
+        // 扩展网格版面不显示描述文字，只显示标题
+        currentY += titleHeight + 20 // 标题高度 + 到时间卡片的间距
         
         return currentY - point.y // 返回实际占用的高度
     }
@@ -2623,6 +2591,7 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
         // 计算内容高度
         let contentHeight = calculateContentHeight(for: trip, destinations: sortedDestinations, width: screenWidth)
         let imageSize = CGSize(width: screenWidth, height: contentHeight)
+        print("📏 [ExtendedGridLayout] 计算高度: \(contentHeight), 图片尺寸: \(imageSize), 描述长度: \(trip.desc.count), 地点数量: \(sortedDestinations.count)")
         
         // 创建图片渲染器
         let rendererFormat = UIGraphicsImageRendererFormat.default()
@@ -2663,6 +2632,9 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
             // 绘制底部签名（与上面地点图片间距40，离底部边缘20）
             currentY += 40 // 与上面地点图片的间距
             drawSignature(at: CGPoint(x: screenWidth/2, y: currentY), width: screenWidth - 40, context: cgContext)
+            // 确保底部有足够的边距（副标题在 point.y + 25，需要额外空间）
+            // 高度计算中已包含：signatureHeight + 25 + subtitleHeight + 20
+            // 这里不需要额外添加，因为 currentY 只是用于绘制定位
         }
     }
     
@@ -2687,30 +2659,16 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
             }()
         ]
         let titleString = NSAttributedString(string: trip.name, attributes: titleAttributes)
-        // 计算多行文本的实际高度
-        let maxTitleHeight: CGFloat = 200 // 最大高度限制
+        // 计算多行文本的实际高度（使用无限高度以完整显示所有文本）
         let titleRect = titleString.boundingRect(
-            with: CGSize(width: contentWidth, height: maxTitleHeight),
+            with: CGSize(width: contentWidth, height: CGFloat.greatestFiniteMagnitude),
             options: [.usesLineFragmentOrigin, .usesFontLeading],
             context: nil
         )
         let titleSize = ceil(titleRect.height)
-        var headerHeight: CGFloat = titleSize + 20 // 标题高度 + 到描述的间距
-        
-        if !trip.desc.isEmpty {
-            let descAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 17, weight: .regular) // 与地点分享图片一致
-            ]
-            let descString = NSAttributedString(string: trip.desc, attributes: descAttributes)
-            let maxHeight: CGFloat = 200
-            let descRect = descString.boundingRect(
-                with: CGSize(width: width - 40, height: maxHeight),
-                options: [.usesLineFragmentOrigin, .usesFontLeading],
-                context: nil
-            )
-            headerHeight += ceil(descRect.height)
-        }
-        height += headerHeight + 20 // 描述后的间距 + 到时间卡片的间距
+        // 扩展网格版面不显示描述文字，只显示标题
+        var headerHeight: CGFloat = titleSize + 20 // 标题高度 + 到时间卡片的间距
+        height += headerHeight + 20 // 标题后的间距 + 到时间卡片的间距
         
         // 时间信息卡片
         height += 100 + 20 // 与地点卡片间距20
@@ -2718,9 +2676,11 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
         // 扩展网格区域（动态计算行数）
         if !destinations.isEmpty {
             let columns: CGFloat = 3 // 固定3列
+            let spacing: CGFloat = 8 // 格子之间的间距（与drawExtendedGrid一致）
             let rows = ceil(CGFloat(destinations.count) / columns) // 根据地点数量计算行数
-            let gridSize = (width - 40) / 3 // 每个格子的大小
-            height += gridSize * rows + 20 // 格子高度 + padding
+            // 注意：contentWidth = width - 40，所以这里使用 contentWidth 而不是 width - 40
+            let gridSize = (contentWidth - spacing * 2) / 3 // 每个格子的实际大小（考虑间距，与drawExtendedGrid一致）
+            height += gridSize * rows + spacing * (rows - 1) + 20 // 格子高度 + 行间距 + padding
         } else {
             height += 200 // 空状态高度
         }
@@ -2749,7 +2709,13 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
         )
         let subtitleHeight = ceil(subtitleRect.height)
         
-        height += 40 + signatureHeight + 25 + subtitleHeight + 20 // 与上面地点图片的间距 + 主签名实际高度 + 间距 + 副标题实际高度 + 底部padding
+        // 底部签名区域总高度计算：
+        // - 与上面地点图片的间距: 40
+        // - 主签名高度: signatureHeight
+        // - 主副标题间距: 25
+        // - 副标题高度: subtitleHeight
+        // - 底部边距: 30 (增加以确保副标题完整显示，特别是考虑字体行高)
+        height += 40 + signatureHeight + 25 + subtitleHeight + 30
         
         return height
     }
@@ -2773,38 +2739,8 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
             width: width,
             context: context
         )
-        currentY += titleHeight + 20 // 标题高度 + 到描述的间距
-        
-        // 3. 绘制描述文字（支持多行）
-        if !trip.desc.isEmpty {
-            let descAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 17, weight: .regular),
-                .foregroundColor: UIColor(red: 0.35, green: 0.35, blue: 0.35, alpha: 1.0), // 与地点分享图片的笔记颜色一致
-                .paragraphStyle: {
-                    let style = NSMutableParagraphStyle()
-                    style.lineSpacing = 6 // 增加行距，提升可读性
-                    style.lineBreakMode = .byWordWrapping
-                    return style
-                }()
-            ]
-            let descString = NSAttributedString(string: trip.desc, attributes: descAttributes)
-            // 计算多行文本的实际高度
-            let maxHeight: CGFloat = 200 // 最大高度限制
-            let descRect = descString.boundingRect(
-                with: CGSize(width: width, height: maxHeight),
-                options: [.usesLineFragmentOrigin, .usesFontLeading],
-                context: nil
-            )
-            
-            let drawRect = CGRect(
-                x: point.x,
-                y: currentY,
-                width: width,
-                height: ceil(descRect.height)
-            )
-            descString.draw(in: drawRect)
-            currentY += drawRect.height
-        }
+        // 扩展网格版面不显示描述文字，只显示标题
+        currentY += titleHeight + 20 // 标题高度 + 到时间卡片的间距
         
         return currentY - point.y // 返回实际占用的高度
     }

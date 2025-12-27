@@ -56,17 +56,43 @@ final class PurchaseManager: ObservableObject {
             errorMessage = nil // 清除之前的错误信息
         }
         
+        // 注意：不检查 purchasedProductIDs，因为：
+        // 1. purchasedProductIDs 只包含当前有效的订阅（通过 Transaction.currentEntitlements 获取）
+        // 2. 如果订阅过期了，它不会在 purchasedProductIDs 中
+        // 3. 如果订阅过期，用户应该能够重新购买，系统会显示购买弹窗
+        
         do {
             print("🛒 开始购买产品: \(product.id)")
+            print("🛒 调用 product.purchase()，等待系统弹窗...")
+            
             let result = try await product.purchase()
+            
+            print("🛒 product.purchase() 返回结果: \(result)")
             
             switch result {
             case .success(let verification):
                 print("✅ 购买成功，验证交易...")
                 let transaction = try checkVerified(verification)
+                print("✅ 交易验证成功，产品ID: \(transaction.productID), 交易ID: \(transaction.id)")
+                print("✅ 交易类型: \(transaction.productType), 购买日期: \(transaction.purchaseDate)")
+                
+                // 检查订阅信息
+                if let expirationDate = transaction.expirationDate {
+                    print("ℹ️ 订阅到期时间: \(expirationDate)")
+                    if expirationDate > Date() {
+                        print("ℹ️ 订阅当前有效")
+                    } else {
+                        print("ℹ️ 订阅已过期")
+                    }
+                }
+                
+                // 注意：在沙箱环境中，如果用户之前购买过该订阅，
+                // StoreKit 2 可能会自动恢复/续订而不显示购买弹窗
+                // 这是正常行为，因为系统认为这是续订而不是新购买
+                
                 await transaction.finish()
                 await updatePurchasedProducts()
-                print("✅ 交易完成")
+                print("✅ 交易完成并已标记为完成")
                 return transaction
             case .userCancelled:
                 print("⚠️ 用户取消购买")
@@ -81,11 +107,15 @@ final class PurchaseManager: ObservableObject {
                 }
                 return nil
             @unknown default:
-                print("❓ 未知购买结果")
+                print("❓ 未知购买结果: \(result)")
                 return nil
             }
         } catch {
-            print("❌ 购买失败: \(error.localizedDescription)")
+            print("❌ 购买失败: \(error)")
+            print("❌ 错误详情: \(error.localizedDescription)")
+            if let storeKitError = error as? StoreKitError {
+                print("❌ StoreKit错误: \(storeKitError)")
+            }
             await MainActor.run {
                 errorMessage = "购买失败：\(error.localizedDescription)"
             }
