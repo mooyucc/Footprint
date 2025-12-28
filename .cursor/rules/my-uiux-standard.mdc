@@ -232,6 +232,42 @@ Image(systemName: "icon.name")
 - 大卡片：20点
 - 按钮：20点（胶囊形）或8-12点（圆角矩形）
 
+#### 响应式布局
+- **宽度适配**
+  - iPhone：卡片宽度应适配屏幕宽度，使用`.frame(maxWidth: .infinity)`实现全宽，或使用`.frame(maxWidth: 600)`限制最大宽度以提升可读性
+  - iPad：使用`.frame(maxWidth: 600)`或`.containerRelativeFrame(.horizontal, count: 1, spacing: 16)`限制卡片宽度，避免在大屏上过度拉伸
+  - 多列布局：iPad横屏时考虑使用`LazyVGrid`或`Grid`实现2-3列卡片布局
+> **iOS 26+**：优先使用`.containerRelativeFrame(.horizontal, count:columns, spacing:spacing)`实现容器相对尺寸，自动适配分屏、浮窗和不同设备尺寸。使用`ViewThatFits`让卡片在空间不足时自动调整布局。
+>
+> **iOS 18-25**：使用`GeometryReader`读取容器宽度，通过计算实现响应式布局。iPad横屏时使用`@Environment(\.horizontalSizeClass)`判断并调整列数。
+
+- **间距适配**
+  - iPhone竖屏：卡片之间间距16-20点，屏幕边缘间距16点
+  - iPhone横屏：适当增加卡片间距至20-24点
+  - iPad：卡片间距20-24点，屏幕边缘间距20-32点
+  - 使用`.padding(.horizontal, 16)`和`.padding(.vertical, 12)`作为基础内边距
+> **iOS 26+**：使用`Spacing.standard(.l)`等系统间距常量，配合`.containerRelativeFrame`实现自适应间距。
+>
+> **iOS 18-25**：使用显式数值，通过`@Environment(\.horizontalSizeClass)`和`@Environment(\.verticalSizeClass)`判断设备类型并调整间距。
+
+- **内容适配**
+  - 文本内容：使用`.lineLimit(nil)`允许文本换行，避免在小屏上被截断
+  - 图片内容：使用`.aspectRatio(contentMode: .fit)`保持比例，配合`.frame(maxHeight: 200)`限制高度
+  - 按钮和操作：在小屏上考虑将水平布局改为垂直布局，使用`ViewThatFits`自动选择最佳布局
+> **iOS 26+**：使用`ViewThatFits`让卡片内容根据可用空间自动选择最佳布局（如水平/垂直按钮排列）。使用`LayoutThatFits`实现更复杂的自适应布局。
+>
+> **iOS 18-25**：通过`GeometryReader`读取可用宽度，使用条件判断（如`if width > 400`）切换布局方式。
+
+- **最小尺寸限制**
+  - 卡片最小宽度：iPhone上不小于屏幕宽度减去32点（左右各16点边距）
+  - 卡片最小高度：根据内容动态调整，但不应小于60点（确保可读性）
+  - 避免在小屏设备上使用过小的卡片，考虑使用全宽布局替代
+
+- **横竖屏适配**
+  - 竖屏：卡片通常使用全宽或接近全宽布局
+  - 横屏：考虑使用多列布局或限制卡片最大宽度，避免内容过度拉伸
+  - 使用`.environment(\.horizontalSizeClass)`和`.environment(\.verticalSizeClass)`判断方向并调整布局
+
 ### 3.3 阴影和深度
 
 #### 阴影使用

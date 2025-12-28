@@ -47,7 +47,7 @@ struct MapCoordinatePickerView: View {
             }
             .overlay(alignment: .top) {
                 VStack(spacing: 8) {
-                    Text("在地图上长按以选择新位置")
+                    Text("long_press_on_map_to_select".localized)
                         .font(.subheadline)
                         .padding(8)
                         .background(.ultraThinMaterial)
@@ -60,7 +60,7 @@ struct MapCoordinatePickerView: View {
                 Button {
                     dismiss()
                 } label: {
-                    Text("取消")
+                    Text("cancel".localized)
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
@@ -68,7 +68,7 @@ struct MapCoordinatePickerView: View {
                 Button {
                     confirmPick()
                 } label: {
-                    if isGeocoding { ProgressView() } else { Text("使用此位置") }
+                    if isGeocoding { ProgressView() } else { Text("use_this_location".localized) }
                 }
                 .disabled(pickedCoordinate == nil || isGeocoding)
                 .buttonStyle(.borderedProminent)
@@ -82,7 +82,7 @@ struct MapCoordinatePickerView: View {
                     .padding(.bottom, 8)
             }
         }
-        .navigationTitle("选择位置")
+        .navigationTitle("select_location".localized)
         .navigationBarTitleDisplayMode(.inline)
     }
     
@@ -111,7 +111,7 @@ struct MapCoordinatePickerView: View {
             DispatchQueue.main.async {
                 self.isGeocoding = false
                 if let error = error {
-                    self.geocodeError = "反向地理编码失败：\(error.localizedDescription)"
+                    self.geocodeError = "reverse_geocoding_failed".localized(with: error.localizedDescription)
                     // 即便失败，也返回一个最基本的 MKMapItem
                     let item = MKMapItem(placemark: MKPlacemark(coordinate: coord))
                     self.onPicked(item)

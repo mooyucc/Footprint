@@ -139,7 +139,7 @@ struct EditDestinationView: View {
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "mappin.and.ellipse")
-                            Text("在地图上选点")
+                            Text("select_point_on_map".localized)
                         }
                     }
                     

@@ -1076,49 +1076,105 @@ struct ListLayoutGenerator: TripLayoutGenerator {
             
             var currentY: CGFloat = 0
             
-            // 绘制封面图片区域
+            // 绘制封面图片区域（增加高度以容纳标题和描述）
+            let coverHeight: CGFloat = 380 // 增加封面高度以容纳文字
+            let coverRect = CGRect(x: 0, y: 0, width: screenWidth, height: coverHeight)
+            
             if let photoData = trip.coverPhotoData,
                let coverImage = UIImage(data: photoData) {
-                // 绘制封面图片，保持宽高比，不变形
-                let coverRect = CGRect(x: 0, y: 0, width: screenWidth, height: 250)
+                // 绘制封面图片，使用 scaledToFill 模式，填充整个封面区域，超出部分裁剪
+                // 这样可以确保图片不会变形，也不会超出 380 的高度限制
                 let imageAspectRatio = coverImage.size.width / coverImage.size.height
                 let rectAspectRatio = coverRect.width / coverRect.height
                 
+                // 先设置裁剪区域，确保图片不会超出封面范围
+                cgContext.saveGState()
+                cgContext.clip(to: coverRect)
+                
                 var drawRect = coverRect
                 if imageAspectRatio > rectAspectRatio {
-                    // 图片更宽，以高度为准
+                    // 图片更宽（横向），以高度为准填充，宽度会被裁剪
                     let scaledWidth = coverRect.height * imageAspectRatio
-                    drawRect = CGRect(x: (coverRect.width - scaledWidth) / 2, y: 0, width: scaledWidth, height: coverRect.height)
+                    drawRect = CGRect(
+                        x: (coverRect.width - scaledWidth) / 2,
+                        y: 0,
+                        width: scaledWidth,
+                        height: coverRect.height
+                    )
                 } else {
-                    // 图片更高，以宽度为准
+                    // 图片更高（纵向）或等比例，以宽度为准填充，高度会被裁剪
                     let scaledHeight = coverRect.width / imageAspectRatio
-                    drawRect = CGRect(x: 0, y: (coverRect.height - scaledHeight) / 2, width: coverRect.width, height: scaledHeight)
+                    drawRect = CGRect(
+                        x: 0,
+                        y: (coverRect.height - scaledHeight) / 2,
+                        width: coverRect.width,
+                        height: scaledHeight
+                    )
                 }
                 
                 coverImage.draw(in: drawRect)
+                cgContext.restoreGState()
             } else {
                 // 绘制默认封面
-                let coverRect = CGRect(x: 0, y: 0, width: screenWidth, height: 250)
                 drawDefaultCover(for: trip, in: cgContext, rect: coverRect)
             }
             
-            currentY = 250
+            // 在封面图片上绘制半透明灰色遮罩
+            cgContext.saveGState()
+            cgContext.setFillColor(UIColor.black.withAlphaComponent(0.4).cgColor)
+            cgContext.fill(coverRect)
+            cgContext.restoreGState()
             
-            // 内容区域使用渐变背景（已在整体背景中绘制，符合App配色标准）
-            // 渐变背景已覆盖整个图片区域，无需额外绘制单色背景
+            // 在封面图片上绘制标题和描述（使用白色文字）
+            // 从底部向上布局，确保文字在封面区域内显示
+            let horizontalPadding: CGFloat = 20
+            let textWidth = screenWidth - horizontalPadding * 2
+            let bottomPadding: CGFloat = 24 // 距离封面底部的间距（优化后减小空白）
             
-            // 绘制内容
-            currentY += 20
-            
-            // 绘制标题
-            drawTitle(trip.name, at: CGPoint(x: 20, y: currentY), width: screenWidth - 40, context: cgContext)
-            currentY += 40
-            
-            // 绘制描述
+            // 计算描述高度（如果有）
+            var descHeight: CGFloat = 0
             if !trip.desc.isEmpty {
-                let descHeight = drawDescription(trip.desc, at: CGPoint(x: 20, y: currentY), width: screenWidth - 40, context: cgContext)
-                currentY += descHeight + 12 // 描述高度 + 间距
+                let descAttributes: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 17)
+                ]
+                let descString = NSAttributedString(string: trip.desc, attributes: descAttributes)
+                let descRect = descString.boundingRect(
+                    with: CGSize(width: textWidth, height: CGFloat.greatestFiniteMagnitude),
+                    options: [.usesLineFragmentOrigin, .usesFontLeading],
+                    context: nil
+                )
+                descHeight = ceil(descRect.height)
             }
+            
+            // 计算标题高度
+            let titleAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 32, weight: .bold)
+            ]
+            let titleString = NSAttributedString(string: trip.name, attributes: titleAttributes)
+            let titleRect = titleString.boundingRect(
+                with: CGSize(width: textWidth, height: CGFloat.greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                context: nil
+            )
+            let titleHeight = ceil(titleRect.height)
+            
+            // 计算总文字高度和间距
+            let textSpacing: CGFloat = 16
+            let totalTextHeight = titleHeight + textSpacing + descHeight
+            
+            // 从底部向上布局
+            var textY = coverHeight - bottomPadding - totalTextHeight
+            
+            // 绘制标题（白色，粗体）
+            drawTitleOnCover(trip.name, at: CGPoint(x: horizontalPadding, y: textY), width: textWidth, context: cgContext)
+            textY += titleHeight + textSpacing
+            
+            // 绘制描述（白色，稍小字体）
+            if !trip.desc.isEmpty {
+                drawDescriptionOnCover(trip.desc, at: CGPoint(x: horizontalPadding, y: textY), width: textWidth, context: cgContext)
+            }
+            
+            currentY = coverHeight
             
             // 绘制时间信息卡片
             currentY += 20
@@ -1129,8 +1185,8 @@ struct ListLayoutGenerator: TripLayoutGenerator {
             let routeCardHeight = drawRouteCard(for: trip, at: CGPoint(x: 20, y: currentY), width: screenWidth - 40, context: cgContext)
             currentY += routeCardHeight
             
-            // 绘制底部签名（与上面地点图片间距40，离底部边缘20）
-            currentY += 40 // 与上面地点图片的间距
+            // 绘制底部签名（优化间距以减少空白）
+            currentY += 24 // 与上面地点图片的间距（从40优化为24）
             drawSignature(at: CGPoint(x: screenWidth/2, y: currentY), width: screenWidth - 40, context: cgContext)
         }
     }
@@ -1138,43 +1194,25 @@ struct ListLayoutGenerator: TripLayoutGenerator {
     private func calculateContentHeight(for trip: TravelTrip, width: CGFloat) -> CGFloat {
         var height: CGFloat = 0
         
-        // 封面图片区域
-        height += 250 // 封面图片高度
+        // 封面图片区域（包含标题和描述）
+        height += 380 // 封面图片高度（已包含标题和描述的空间）
         
-        // 内容区域padding
+        // 内容区域padding（封面到时间卡片的间距）
         height += 20
-        
-        // 标题区域
-        height += 28 + 12 // title + spacing
-        if !trip.desc.isEmpty {
-            // 动态计算描述文字的实际高度（支持多行，使用无限高度以完整显示所有文本）
-            let descAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 16)
-            ]
-            let descString = NSAttributedString(string: trip.desc, attributes: descAttributes)
-            let descRect = descString.boundingRect(
-                with: CGSize(width: width - 40, height: CGFloat.greatestFiniteMagnitude),
-                options: [.usesLineFragmentOrigin, .usesFontLeading],
-                context: nil
-            )
-            height += ceil(descRect.height) + 12 // 实际描述高度 + 间距
-        }
         
         // 时间信息卡片
         height += 20 + 100 + 20 // padding + card + margin (增加卡片高度)
         
-        // 行程路线卡片
+        // 行程路线卡片（使用卡片样式）
         let sortedDestinations = trip.destinations?.sorted { $0.visitDate < $1.visitDate } ?? []
         let destinationCount = sortedDestinations.count
         var routeHeight: CGFloat = 0
         if destinationCount > 0 {
-            // 动态计算每个地点项的高度（包括笔记和距离信息）
-            var totalItemsHeight: CGFloat = 0
-            for (index, destination) in sortedDestinations.enumerated() {
-                let nextDestination = index < sortedDestinations.count - 1 ? sortedDestinations[index + 1] : nil
-                totalItemsHeight += calculateDestinationItemHeight(destination, nextDestination: nextDestination, width: width - 40)
-            }
-            routeHeight = 50 + totalItemsHeight + 20 // header + destinations + bottom padding
+            // 每个卡片固定高度160pt，卡片间距12pt
+            let cardHeight: CGFloat = 160
+            let cardSpacing: CGFloat = 12
+            let totalCardsHeight = CGFloat(destinationCount) * cardHeight + CGFloat(destinationCount - 1) * cardSpacing
+            routeHeight = 50 + totalCardsHeight + 20 // header + cards + bottom padding
         } else {
             routeHeight = 136 // empty state
         }
@@ -1204,13 +1242,13 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         )
         let subtitleHeight = ceil(subtitleRect.height)
         
-        // 底部签名区域总高度计算：
-        // - 与上面地点图片的间距: 40
+        // 底部签名区域总高度计算（优化间距以减少空白）：
+        // - 与上面地点图片的间距: 24（从40优化为24）
         // - 主签名高度: signatureHeight
         // - 主副标题间距: 25
         // - 副标题高度: subtitleHeight
-        // - 底部边距: 30 (增加以确保副标题完整显示，特别是考虑字体行高)
-        height += 40 + signatureHeight + 25 + subtitleHeight + 30
+        // - 底部边距: 16（从30优化为16，仍确保副标题完整显示）
+        height += 24 + signatureHeight + 12 + subtitleHeight + 4
         
         return height
     }
@@ -1254,6 +1292,58 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         let titleString = NSAttributedString(string: trip.name, attributes: titleAttributes)
         let titleSize = titleString.size()
         titleString.draw(at: CGPoint(x: centerX - titleSize.width/2, y: centerY + 20))
+    }
+    
+    // 在封面上绘制标题（白色文字）
+    private func drawTitleOnCover(_ title: String, at point: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 32, weight: .bold),
+            .foregroundColor: UIColor.white
+        ]
+        
+        let attributedString = NSAttributedString(string: title, attributes: attributes)
+        // 计算多行文本的实际高度
+        let textRect = attributedString.boundingRect(
+            with: CGSize(width: width, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        
+        let drawRect = CGRect(
+            x: point.x,
+            y: point.y,
+            width: width,
+            height: ceil(textRect.height)
+        )
+        
+        attributedString.draw(in: drawRect)
+        return drawRect.height
+    }
+    
+    // 在封面上绘制描述（白色文字）
+    private func drawDescriptionOnCover(_ description: String, at point: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 17),
+            .foregroundColor: UIColor.white.withAlphaComponent(0.95) // 稍许透明以增加层次感
+        ]
+        
+        let attributedString = NSAttributedString(string: description, attributes: attributes)
+        // 计算多行文本的实际高度（使用无限高度以完整显示所有文本）
+        let textRect = attributedString.boundingRect(
+            with: CGSize(width: width, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        
+        let drawRect = CGRect(
+            x: point.x,
+            y: point.y,
+            width: width,
+            height: ceil(textRect.height)
+        )
+        
+        attributedString.draw(in: drawRect)
+        return drawRect.height
     }
     
     private func drawTitle(_ title: String, at point: CGPoint, width: CGFloat, context: CGContext) {
@@ -1386,53 +1476,11 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         valueString.draw(in: valueRect)
     }
     
-    /// 计算单个地点项的高度（包括笔记和距离信息）
+    /// 计算单个地点卡片的高度（卡片样式，固定高度）
     private func calculateDestinationItemHeight(_ destination: TravelDestination, nextDestination: TravelDestination?, width: CGFloat) -> CGFloat {
-        var height: CGFloat = 60 // 基础高度（序号、照片、名称、副标题）
-        
-        // 日期下方的基础间距
-        height += 16 // 日期到距离信息或笔记的初始间距
-        
-        // 如果有下一个地点，添加距离信息高度
-        if let nextDestination = nextDestination {
-            let distance = destination.coordinate.distance(to: nextDestination.coordinate)
-            let distanceText = formatDistance(distance)
-            let distanceInfo = "→ \(distanceText) → \(nextDestination.name)"
-            
-            // 计算距离信息的实际高度
-            let distanceAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 11)
-            ]
-            let distanceString = NSAttributedString(string: distanceInfo, attributes: distanceAttributes)
-            let distanceSize = distanceString.size()
-            height += ceil(distanceSize.height) + 6 // 距离信息实际高度 + 间距
-        }
-        
-        // 如果有笔记，计算笔记高度
-        if !destination.notes.isEmpty {
-            let notesWidth = width - 110 // 减去左侧的序号和照片区域
-            let notesAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 13, weight: .regular),
-                .paragraphStyle: {
-                    let style = NSMutableParagraphStyle()
-                    style.lineSpacing = 4
-                    style.lineBreakMode = .byWordWrapping
-                    return style
-                }()
-            ]
-            let notesString = NSAttributedString(string: destination.notes, attributes: notesAttributes)
-            let notesRect = notesString.boundingRect(
-                with: CGSize(width: notesWidth, height: CGFloat.greatestFiniteMagnitude),
-                options: [.usesLineFragmentOrigin, .usesFontLeading],
-                context: nil
-            )
-            // 使用实际计算的高度，不限制最大高度，确保完整显示
-            let notesHeight = ceil(notesRect.height)
-            let notesSpacing: CGFloat = nextDestination != nil ? 4 : 8 // 如果有距离信息，间距更小
-            height += notesHeight + notesSpacing // 笔记高度 + 间距
-        }
-        
-        return height
+        let cardHeight: CGFloat = 160 // 固定卡片高度
+        let cardSpacing: CGFloat = 12 // 卡片之间的间距
+        return cardHeight + cardSpacing
     }
     
     /// 格式化距离（优化版本，避免 Preference Access 错误）
@@ -1455,13 +1503,12 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         var currentY = point.y
         let headerHeight: CGFloat = 50
         
-        // 计算总高度（动态计算每个地点项的高度）
+        // 计算总高度（卡片样式，固定高度）
         var totalItemsHeight: CGFloat = 0
         if destinationCount > 0 {
-            for (index, destination) in sortedDestinations.enumerated() {
-                let nextDestination = index < sortedDestinations.count - 1 ? sortedDestinations[index + 1] : nil
-                totalItemsHeight += calculateDestinationItemHeight(destination, nextDestination: nextDestination, width: width - 40)
-            }
+            let cardHeight: CGFloat = 160
+            let cardSpacing: CGFloat = 12
+            totalItemsHeight = CGFloat(destinationCount) * cardHeight + CGFloat(destinationCount - 1) * cardSpacing
         }
         
         // 绘制卡片背景
@@ -1508,13 +1555,16 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         currentY += 30
         
         if destinationCount > 0 {
-            // 绘制目的地列表
+            // 绘制目的地卡片列表
+            let cardSpacing: CGFloat = 12
+            let cardHeight: CGFloat = 160
             for (index, destination) in sortedDestinations.enumerated() {
-                // 获取下一个地点（如果有）
-                let nextDestination = index < sortedDestinations.count - 1 ? sortedDestinations[index + 1] : nil
-                drawDestinationItem(destination, index: index + 1, nextDestination: nextDestination, at: CGPoint(x: point.x + 20, y: currentY), width: width - 40, context: context)
-                // 使用动态高度
-                currentY += calculateDestinationItemHeight(destination, nextDestination: nextDestination, width: width - 40)
+                drawDestinationCard(destination, at: CGPoint(x: point.x + 20, y: currentY), width: width - 40, context: context)
+                currentY += cardHeight
+                // 最后一个卡片不添加间距
+                if index < sortedDestinations.count - 1 {
+                    currentY += cardSpacing
+                }
             }
         } else {
             // 绘制空状态
@@ -1528,6 +1578,160 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         }
         
         return totalHeight
+    }
+    
+    /// 绘制地点卡片（卡片样式，类似 DestinationRowCard）
+    private func drawDestinationCard(_ destination: TravelDestination, at point: CGPoint, width: CGFloat, context: CGContext) {
+        let cardHeight: CGFloat = 160
+        let cardRect = CGRect(x: point.x, y: point.y, width: width, height: cardHeight)
+        let cornerRadius: CGFloat = 12
+        
+        // 1. 绘制卡片背景（照片或蓝色背景）
+        let backgroundPath = UIBezierPath(roundedRect: cardRect, cornerRadius: cornerRadius)
+        context.saveGState()
+        context.addPath(backgroundPath.cgPath)
+        context.clip()
+        
+        if let photoData = destination.photoData ?? destination.photoThumbnailData,
+           let photoImage = UIImage(data: photoData) {
+            // 绘制照片，保持宽高比填充
+            let imageAspectRatio = photoImage.size.width / photoImage.size.height
+            let rectAspectRatio = cardRect.width / cardRect.height
+            
+            var drawRect = cardRect
+            if imageAspectRatio > rectAspectRatio {
+                // 图片更宽，以高度为准
+                let scaledWidth = cardRect.height * imageAspectRatio
+                drawRect = CGRect(x: cardRect.midX - scaledWidth/2, y: cardRect.minY, width: scaledWidth, height: cardRect.height)
+            } else {
+                // 图片更高，以宽度为准
+                let scaledHeight = cardRect.width / imageAspectRatio
+                drawRect = CGRect(x: cardRect.minX, y: cardRect.midY - scaledHeight/2, width: cardRect.width, height: scaledHeight)
+            }
+            photoImage.draw(in: drawRect)
+        } else {
+            // 绘制默认蓝色背景 #6793C3
+            context.setFillColor(UIColor(red: 0x67/255.0, green: 0x93/255.0, blue: 0xC3/255.0, alpha: 1.0).cgColor)
+            context.fill(cardRect)
+        }
+        context.restoreGState()
+        
+        // 2. 绘制深色渐变遮罩（从透明到黑色，底部更暗）
+        context.saveGState()
+        context.addPath(backgroundPath.cgPath)
+        context.clip()
+        
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let gradientColors = [
+            UIColor.clear.cgColor,
+            UIColor.black.withAlphaComponent(0.2).cgColor,
+            UIColor.black.withAlphaComponent(0.6).cgColor
+        ]
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors as CFArray, locations: [0.0, 0.5, 1.0])!
+        context.drawLinearGradient(gradient, start: CGPoint(x: cardRect.midX, y: cardRect.minY), end: CGPoint(x: cardRect.midX, y: cardRect.maxY), options: [])
+        context.restoreGState()
+        
+        // 3. 绘制左上角标签（国内/国际）
+        let countryManager = CountryManager.shared
+        let isDomestic = countryManager.isDomestic(country: destination.country)
+        if !destination.country.isEmpty {
+            let tagText = isDomestic ? "domestic".localized : "international".localized
+            let tagColor = isDomestic ? 
+                UIColor(red: 0x3A/255.0, green: 0x8B/255.0, blue: 0xBB/255.0, alpha: 0.85) : // #3A8BBB
+                UIColor(red: 0x50/255.0, green: 0xA3/255.0, blue: 0x7B/255.0, alpha: 0.85) // #50A37B
+            
+            let tagAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 11, weight: .semibold),
+                .foregroundColor: UIColor.white
+            ]
+            let tagString = NSAttributedString(string: tagText, attributes: tagAttributes)
+            let tagSize = tagString.boundingRect(with: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude), options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).size
+            
+            let tagPaddingX: CGFloat = 8
+            let tagPaddingY: CGFloat = 4
+            let tagWidth = tagSize.width + tagPaddingX * 2
+            let tagHeight = tagSize.height + tagPaddingY * 2
+            let tagRect = CGRect(x: cardRect.minX + 16, y: cardRect.minY + 12, width: tagWidth, height: tagHeight)
+            
+            // 绘制胶囊形状的标签背景
+            let tagPath = UIBezierPath(roundedRect: tagRect, cornerRadius: tagHeight / 2)
+            context.setFillColor(tagColor.cgColor)
+            context.addPath(tagPath.cgPath)
+            context.fillPath()
+            
+            // 绘制标签文字
+            tagString.draw(at: CGPoint(x: tagRect.minX + tagPaddingX, y: tagRect.midY - tagSize.height / 2))
+        }
+        
+        // 4. 绘制底部白色文字内容
+        let bottomPadding: CGFloat = 16
+        var textY = cardRect.maxY - bottomPadding
+        
+        // 绘制地点和时间信息（caption字体）
+        let dateFormatter = LanguageManager.shared.localizedDateFormatter(dateStyle: .medium)
+        var locationText = destination.country.isEmpty ? "-" : destination.country
+        if !destination.province.isEmpty {
+            locationText = "\(destination.province) · \(locationText)"
+        }
+        let dateText = dateFormatter.string(from: destination.visitDate)
+        let subtitleText = "\(locationText) · \(dateText)"
+        
+        let subtitleAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 12),
+            .foregroundColor: UIColor.white.withAlphaComponent(0.9)
+        ]
+        let subtitleString = NSAttributedString(string: subtitleText, attributes: subtitleAttributes)
+        let subtitleSize = subtitleString.size()
+        subtitleString.draw(at: CGPoint(x: cardRect.minX + bottomPadding, y: textY - subtitleSize.height))
+        textY -= subtitleSize.height + 2
+        
+        // 绘制标题（24pt粗体，带收藏图标）
+        let titleText = destination.name.isEmpty ? "-" : destination.name
+        let titleAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 24, weight: .bold),
+            .foregroundColor: UIColor.white
+        ]
+        let titleString = NSAttributedString(string: titleText, attributes: titleAttributes)
+        let titleX = cardRect.minX + bottomPadding
+        
+        // 计算标题尺寸（单行显示）
+        let titleSize = titleString.size()
+        
+        // 绘制收藏图标（如果有，先绘制以便正确计算标题位置）
+        var heartWidth: CGFloat = 0
+        if destination.isFavorite {
+            if let heartImage = UIImage(systemName: "heart.fill") {
+                let heartSize: CGFloat = 16
+                let heartSpacing: CGFloat = 6
+                heartWidth = heartSize + heartSpacing
+                let heartX = cardRect.maxX - bottomPadding - heartSize
+                let heartY = textY - titleSize.height / 2 - heartSize / 2
+                let tintedHeart = heartImage.withTintColor(.systemPink, renderingMode: .alwaysOriginal)
+                tintedHeart.draw(in: CGRect(x: heartX, y: heartY, width: heartSize, height: heartSize))
+            }
+        }
+        
+        // 绘制标题（限制宽度，避免与收藏图标重叠）
+        let titleMaxWidth = width - bottomPadding * 2 - heartWidth
+        let titleRect = titleString.boundingRect(with: CGSize(width: titleMaxWidth, height: CGFloat.greatestFiniteMagnitude), options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil)
+        // 如果标题过长，截断显示
+        if titleRect.width > titleMaxWidth {
+            // 使用单行绘制，自动截断
+            titleString.draw(in: CGRect(x: titleX, y: textY - titleRect.height, width: titleMaxWidth, height: titleRect.height))
+        } else {
+            titleString.draw(at: CGPoint(x: titleX, y: textY - titleSize.height))
+        }
+        
+        // 5. 绘制卡片边框和阴影
+        context.saveGState()
+        // 绘制阴影
+        context.setShadow(offset: CGSize(width: 0, height: 2), blur: 6, color: UIColor.black.withAlphaComponent(0.08).cgColor)
+        // 绘制边框（浅色半透明边框）
+        context.setStrokeColor(UIColor.white.withAlphaComponent(0.3).cgColor)
+        context.setLineWidth(1)
+        context.addPath(backgroundPath.cgPath)
+        context.strokePath()
+        context.restoreGState()
     }
     
     private func drawDestinationItem(_ destination: TravelDestination, index: Int, nextDestination: TravelDestination?, at point: CGPoint, width: CGFloat, context: CGContext) {

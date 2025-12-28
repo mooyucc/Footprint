@@ -197,7 +197,7 @@ struct OnboardingPage2View: View {
                 }
                 .padding(.horizontal, 20)
                 
-                // 页面指示器
+                // 页面指示器（显示基本设置的6个步骤）
                 HStack(spacing: 8) {
                     Circle()
                         .fill(Color(.systemGray4))
@@ -205,6 +205,22 @@ struct OnboardingPage2View: View {
                     
                     Circle()
                         .fill(brandColorManager.currentBrandColor)
+                        .frame(width: 8, height: 8)
+                    
+                    Circle()
+                        .fill(Color(.systemGray4))
+                        .frame(width: 8, height: 8)
+                    
+                    Circle()
+                        .fill(Color(.systemGray4))
+                        .frame(width: 8, height: 8)
+                    
+                    Circle()
+                        .fill(Color(.systemGray4))
+                        .frame(width: 8, height: 8)
+                    
+                    Circle()
+                        .fill(Color(.systemGray4))
                         .frame(width: 8, height: 8)
                 }
                 .padding(.bottom, 20)

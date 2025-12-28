@@ -20,6 +20,9 @@ protocol AIServiceProtocol {
     ///   - date: 访问日期
     ///   - persona: 用户身份标签（用于个性化文风）
     ///   - mbti: 用户 MBTI 标签（用于个性化文风）
+    ///   - gender: 用户性别（用于个性化文风）
+    ///   - ageGroup: 用户年龄段（用于个性化文风）
+    ///   - constellation: 用户星座（用于个性化文风）
     /// - Returns: 生成的笔记文本
     func generateNotes(
         from images: [Data],
@@ -28,7 +31,10 @@ protocol AIServiceProtocol {
         country: String,
         date: Date,
         persona: String,
-        mbti: String
+        mbti: String,
+        gender: String,
+        ageGroup: String,
+        constellation: String
     ) async throws -> String
     
     /// 生成旅程描述
@@ -36,11 +42,17 @@ protocol AIServiceProtocol {
     ///   - destinations: 目的地列表
     ///   - persona: 用户身份标签（用于个性化文风）
     ///   - mbti: 用户 MBTI 标签（用于个性化文风）
+    ///   - gender: 用户性别（用于个性化文风）
+    ///   - ageGroup: 用户年龄段（用于个性化文风）
+    ///   - constellation: 用户星座（用于个性化文风）
     /// - Returns: 生成的旅程描述
     func generateTripDescription(
         for destinations: [TravelDestination],
         persona: String,
-        mbti: String
+        mbti: String,
+        gender: String,
+        ageGroup: String,
+        constellation: String
     ) async throws -> String
     
     /// 分析照片内容

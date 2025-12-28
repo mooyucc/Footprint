@@ -93,7 +93,7 @@ struct YearFilteredDestinationView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 20) {
+                LazyVStack(spacing: 20) {
                     // 年份统计信息卡片
                     YearStatisticsCard(
                         year: year,
@@ -125,7 +125,7 @@ struct YearFilteredDestinationView: View {
                     
                     // 目的地列表
                     if !filteredDestinations.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
+                        LazyVStack(alignment: .leading, spacing: 12) {
                             Text("travel_destinations".localized)
                                 .font(.headline)
                                 .fontWeight(.semibold)
@@ -290,76 +290,127 @@ struct DestinationRowCard: View {
         DestinationRowCard.dateFormatter.string(from: destination.visitDate)
     }
     
+    private var regionTag: (text: String, color: Color)? {
+        if countryManager.isDomestic(country: destination.country) {
+            return ("domestic".localized, Color(red: 0x3A/255.0, green: 0x8B/255.0, blue: 0xBB/255.0)) // #3A8BBB
+        } else if !destination.country.isEmpty {
+            return ("international".localized, Color(red: 0x50/255.0, green: 0xA3/255.0, blue: 0x7B/255.0)) // #50A37B
+        }
+        return nil
+    }
+    
     var body: some View {
-        HStack(spacing: 12) {
-            thumbnail
-                .frame(width: 54, height: 54)
+        ZStack(alignment: .bottomLeading) {
+            // 背景图片层（参考图2：使用地点照片作为背景）
+            // 优先使用原图，如果没有原图才使用缩略图
+            if let data = destination.photoData ?? destination.photoThumbnailData,
+               let image = UIImage(data: data) {
+                GeometryReader { geometry in
+                    Image(uiImage: image)
+                        .resizable()
+                        .interpolation(.high)  // 高质量插值
+                        .antialiased(true)     // 启用抗锯齿
+                        .scaledToFill()
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                        .clipped()
+                }
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color.white.opacity(0.6), lineWidth: 1)
-                }
-                .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
-            
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
-                    Text(destination.name.isEmpty ? "-" : destination.name)
-                        .font(.headline)
-                        .foregroundColor(primaryTextColor)
-                        .lineLimit(1)
-                    
-                    if destination.isFavorite {
-                        Image(systemName: "heart.fill")
-                            .foregroundColor(.pink)
-                            .font(.caption)
-                    }
-                }
-                
-                HStack(spacing: 4) {
-                    if !destination.province.isEmpty {
-                        Text(destination.province)
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                        Text("·")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    Text(destination.country.isEmpty ? "-" : destination.country)
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                }
-                
-                Text(visitDateText)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+            } else {
+                // 如果没有图片，使用新的背景颜色
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(red: 0x67/255.0, green: 0x93/255.0, blue: 0xC3/255.0)) // #6793C3
             }
             
-            Spacer()
+            // 深色渐变遮罩（无论是否有图片都显示）
+            LinearGradient(
+                gradient: Gradient(colors: [
+                    Color.clear,
+                    Color.black.opacity(0.2),
+                    Color.black.opacity(0.6)
+                ]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             
-            if countryManager.isDomestic(country: destination.country) {
-                Image(systemName: "house.fill")
-                    .foregroundColor(AppColorScheme.iconColor)
-                    .font(.subheadline)
-                    .padding(8)
-                    .background(AppColorScheme.iconColor.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-            } else if !destination.country.isEmpty {
-                Image(systemName: "airplane")
-                    .foregroundColor(AppColorScheme.iconColor)
-                    .font(.subheadline)
-                    .padding(8)
-                    .background(AppColorScheme.iconColor.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            // 内容层
+            ZStack(alignment: .topLeading) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Spacer()
+                    
+                    // 底部内容区域
+                    VStack(alignment: .leading, spacing: 2) {
+                        // 标题行：标题和收藏图标
+                        HStack(spacing: 6) {
+                            Text(destination.name.isEmpty ? "-" : destination.name)
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundColor(.white) // 统一使用白色文字
+                                .lineLimit(1)
+                                .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+                            
+                            if destination.isFavorite {
+                                Image(systemName: "heart.fill")
+                                    .foregroundColor(.pink)
+                                    .font(.caption)
+                            }
+                            
+                            Spacer()
+                        }
+                    
+                        // 地点和时间放在最底下一排
+                        HStack(spacing: 8) {
+                            // 地点信息
+                            HStack(spacing: 4) {
+                                if !destination.province.isEmpty {
+                                    Text(destination.province)
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.9))
+                                        .lineLimit(1)
+                                    Text("·")
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.9))
+                                }
+                                Text(destination.country.isEmpty ? "-" : destination.country)
+                                    .font(.caption)
+                                    .foregroundColor(.white.opacity(0.9))
+                                    .lineLimit(1)
+                            }
+                            
+                            // 分隔符
+                            Text("·")
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.7))
+                            
+                            // 日期
+                            Text(visitDateText)
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.9))
+                            
+                            Spacer()
+                        }
+                    }
+                    .padding(16)
+                }
+                
+                // 左上角标签（独立显示在卡片左上角）
+                if let tag = regionTag {
+                    Text(tag.text)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(tag.color.opacity(0.85))
+                        .clipShape(Capsule())
+                        .padding(.leading, 16)
+                        .padding(.top, 12)
+                }
             }
         }
-        .padding(16)
-        .background(cardBackgroundColor)
+        .frame(height: 160)
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(borderColor, lineWidth: 1)
+                .stroke(borderColor.opacity(0.3), lineWidth: 1)
         )
         .shadow(color: shadowColor, radius: 6, x: 0, y: 2)
     }
@@ -387,6 +438,32 @@ struct DestinationRowCard: View {
         formatter.timeStyle = .none
         return formatter
     }()
+}
+
+// 独立的地区图标容器组件
+struct RegionIconView: View {
+    let isDomestic: Bool
+    let hasCountry: Bool
+    
+    var body: some View {
+        Group {
+            if isDomestic {
+                Image(systemName: "house.fill")
+                    .foregroundColor(.white.opacity(0.7))
+                    .font(.system(size: 18))
+                    .frame(width: 40, height: 40)
+                    .background(Color.black.opacity(0.4)) // 深灰色透明背景
+                    .clipShape(Circle())
+            } else if hasCountry {
+                Image(systemName: "airplane")
+                    .foregroundColor(.white.opacity(0.7))
+                    .font(.system(size: 18))
+                    .frame(width: 40, height: 40)
+                    .background(Color.black.opacity(0.4)) // 深灰色透明背景
+                    .clipShape(Circle())
+            }
+        }
+    }
 }
 
 struct EmptyYearStateView: View {

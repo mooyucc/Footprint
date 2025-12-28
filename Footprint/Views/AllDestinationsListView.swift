@@ -194,3 +194,4 @@ struct AllDestinationsListView: View {
         .environmentObject(LanguageManager.shared)
 }
 
+

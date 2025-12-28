@@ -59,6 +59,7 @@
 "account" = "账户";
 "not_logged_in" = "未登录";
 "login_sync_description" = "登录后数据自动同步到 iCloud";
+"user_profile_settings" = "用户属性设置";
 "data_sync" = "数据同步";
 "data_settings" = "数据";
 "icloud_sync" = "iCloud 同步";
@@ -246,6 +247,40 @@
 "select_video" = "选择视频";
 "photo_limit_hint" = "最多可添加9张照片";
 "video_limit_hint" = "仅支持1段视频，时长不超过10秒";
+
+// Notes Section Placeholders
+"notes_placeholder_morning" = "早上好！记录一下此刻的心情吧 ☀️";
+"notes_placeholder_afternoon" = "下午时光，想记录些什么？🌤️";
+"notes_placeholder_evening" = "傍晚时分，记录今天的心情吧 🌆";
+"notes_placeholder_night" = "夜深了，记录下今天的心情吧 🌙";
+
+// Notes Section Weather Placeholders
+"notes_placeholder_weather_sun_morning" = "今天天气真好（%@），阳光明媚，心情如何？☀️";
+"notes_placeholder_weather_sun_afternoon" = "%@的晴朗午后，想记录些什么？🌞";
+"notes_placeholder_weather_sun_evening" = "今天天气很棒（%@），记录下此刻的心情吧 ✨";
+"notes_placeholder_weather_cloud" = "今天%@，%@，想记录些什么？☁️";
+"notes_placeholder_weather_rain" = "今天%@，%@，在这样的天气里有什么感受？🌧️";
+"notes_placeholder_weather_storm" = "今天%@，%@，记录下这个特别的时刻吧 ⛈️";
+"notes_placeholder_weather_snow" = "今天%@，%@，雪天的心情如何？❄️";
+"notes_placeholder_weather_haze" = "今天%@，%@，记录下此刻的感受吧 🌫️";
+"notes_placeholder_weather_night" = "夜晚的%@，%@，想记录些什么？🌙";
+"notes_placeholder_weather_default" = "今天%@，%@，记录下此刻的心情吧 ✨";
+
+// Notes Section Encouragement
+"notes_encouragement_short" = "再写一点，让回忆更完整 💫";
+"notes_encouragement_medium" = "很棒！继续记录更多细节 ✨";
+"notes_encouragement_long" = "太棒了！这些文字会成为珍贵的回忆 🌟";
+
+// Notes Section Actions
+"ai_generate_notes" = "AI 生成笔记";
+"notes_word_count" = "%d 字";
+
+// Map Coordinate Picker
+"select_point_on_map" = "在地图上选点";
+"long_press_on_map_to_select" = "在地图上长按以选择新位置";
+"use_this_location" = "使用此位置";
+"select_location" = "选择位置";
+"reverse_geocoding_failed" = "反向地理编码失败：%@";
 "video_duration_limit" = "视频时长限制：%d秒以内";
 "video_error" = "视频错误";
 "video_load_failed" = "无法加载视频，请重试。";
@@ -554,6 +589,15 @@
 "onboarding_page1_language_title" = "语言";
 "onboarding_page1_country_title" = "所在国家";
 "onboarding_page1_country_description" = "设置你的国家，以区分国内和国际旅行";
+"onboarding_identity_tag_title" = "身份标签";
+"onboarding_identity_tag_description" = "选择或填写一个身份标签，让 AI 更贴近您的风格回答。";
+"onboarding_personality_tag_title" = "性格标签";
+"onboarding_personality_tag_description" = "选择性格类型，让 AI 的回答更贴合您的风格。";
+"onboarding_user_attributes_title" = "用户属性";
+"onboarding_user_attributes_description" = "选择您的性别、年龄段和星座，帮助 AI 更好地了解您，提供更个性化的回答。";
+"onboarding_user_attributes_description_short" = "选择您的性别和年龄段，帮助 AI 更好地了解您，提供更个性化的回答。";
+"onboarding_constellation_title" = "星座";
+"onboarding_constellation_description" = "选择您的星座，让 AI 的回答更贴近您的个性。";
 "onboarding_page2_title" = "外观";
 "onboarding_page2_appearance_title" = "外观模式";
 "onboarding_page2_appearance_description" = "选择应用的外观模式。跟随系统将根据系统设置自动切换";
@@ -600,6 +644,53 @@
 "identity_tag_placeholder" = "旅行家、美食家、设计师…";
 "mbti_title" = "MBTI";
 "mbti_description" = "选择你的性格类型以获得更贴合的回答。";
+"gender_title" = "性别";
+"gender_description" = "选择您的性别，帮助 AI 提供更个性化的回答。";
+"age_group_title" = "年龄段";
+"age_group_description" = "选择您的年龄段，帮助 AI 更好地理解您的需求。";
+"constellation_title" = "星座";
+"constellation_description" = "选择您的星座，让 AI 的回答更贴近您的个性。";
+
+// Profile Options - Persona
+"persona_option_traveler" = "旅行家";
+"persona_option_hiker" = "徒步爱好者";
+"persona_option_photographer" = "摄影师";
+"persona_option_designer" = "设计师";
+"persona_option_foodie" = "美食家";
+"persona_option_techie" = "数码玩家";
+"persona_option_custom" = "自定义";
+"persona_option_prefer_not_to_say" = "不愿透露";
+
+// Profile Options - Gender
+"gender_option_male" = "男";
+"gender_option_female" = "女";
+"gender_option_other" = "其他";
+"gender_option_prefer_not_to_say" = "不愿透露";
+
+// Profile Options - Age Group
+"age_group_option_under_18" = "18岁以下";
+"age_group_option_18_25" = "18-25岁";
+"age_group_option_26_35" = "26-35岁";
+"age_group_option_36_45" = "36-45岁";
+"age_group_option_46_55" = "46-55岁";
+"age_group_option_over_56" = "56岁以上";
+"age_group_option_prefer_not_to_say" = "不愿透露";
+
+// Profile Options - Constellation
+"constellation_option_aries" = "白羊座";
+"constellation_option_taurus" = "金牛座";
+"constellation_option_gemini" = "双子座";
+"constellation_option_cancer" = "巨蟹座";
+"constellation_option_leo" = "狮子座";
+"constellation_option_virgo" = "处女座";
+"constellation_option_libra" = "天秤座";
+"constellation_option_scorpio" = "天蝎座";
+"constellation_option_sagittarius" = "射手座";
+"constellation_option_capricorn" = "摩羯座";
+"constellation_option_aquarius" = "水瓶座";
+"constellation_option_pisces" = "双鱼座";
+"constellation_option_prefer_not_to_say" = "不愿透露";
+
 "ai_no_destinations" = "暂无目的地";
 "ai_no_trips" = "暂无旅程";
 "ai_beta_not_available_title" = "试用版暂不支持AI功能";

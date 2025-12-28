@@ -58,6 +58,7 @@
 "done" = "Done";
 "account" = "Account";
 "not_logged_in" = "Not logged in";
+"user_profile_settings" = "User Profile Settings";
 "login_sync_description" = "Data will automatically sync to iCloud after logging in";
 "data_sync" = "Data Sync";
 "data_settings" = "Data";
@@ -246,6 +247,40 @@
 "select_video" = "Select Video";
 "photo_limit_hint" = "You can add up to 9 photos";
 "video_limit_hint" = "Only 1 video supported, max 10 seconds";
+
+// Notes Section Placeholders
+"notes_placeholder_morning" = "Good morning! How are you feeling right now? ☀️";
+"notes_placeholder_afternoon" = "Afternoon time, what would you like to record? 🌤️";
+"notes_placeholder_evening" = "Evening time, record today's mood 🌆";
+"notes_placeholder_night" = "Late at night, record today's mood 🌙";
+
+// Notes Section Weather Placeholders
+"notes_placeholder_weather_sun_morning" = "Great weather today (%@), sunny and bright, how are you feeling? ☀️";
+"notes_placeholder_weather_sun_afternoon" = "Sunny afternoon at %@, what would you like to record? 🌞";
+"notes_placeholder_weather_sun_evening" = "Great weather today (%@), record your mood now ✨";
+"notes_placeholder_weather_cloud" = "Today %@, %@, what would you like to record? ☁️";
+"notes_placeholder_weather_rain" = "Today %@, %@, how do you feel in this weather? 🌧️";
+"notes_placeholder_weather_storm" = "Today %@, %@, record this special moment ⛈️";
+"notes_placeholder_weather_snow" = "Today %@, %@, how do you feel on a snowy day? ❄️";
+"notes_placeholder_weather_haze" = "Today %@, %@, record your feelings now 🌫️";
+"notes_placeholder_weather_night" = "Night at %@, %@, what would you like to record? 🌙";
+"notes_placeholder_weather_default" = "Today %@, %@, record your mood now ✨";
+
+// Notes Section Encouragement
+"notes_encouragement_short" = "Write a bit more to make memories complete 💫";
+"notes_encouragement_medium" = "Great! Keep recording more details ✨";
+"notes_encouragement_long" = "Excellent! These words will become precious memories 🌟";
+
+// Notes Section Actions
+"ai_generate_notes" = "AI Generate Notes";
+"notes_word_count" = "%d words";
+
+// Map Coordinate Picker
+"select_point_on_map" = "Select Point on Map";
+"long_press_on_map_to_select" = "Long press on map to select new location";
+"use_this_location" = "Use This Location";
+"select_location" = "Select Location";
+"reverse_geocoding_failed" = "Reverse geocoding failed: %@";
 "video_duration_limit" = "Video duration limit: %d seconds";
 "video_error" = "Video Error";
 "video_load_failed" = "Failed to load video. Please try again.";
@@ -592,6 +627,15 @@
 "onboarding_page1_language_title" = "Language";
 "onboarding_page1_country_title" = "Country";
 "onboarding_page1_country_description" = "Set your country to distinguish between domestic and international travel";
+"onboarding_identity_tag_title" = "Identity Tag";
+"onboarding_identity_tag_description" = "Pick an identity tag or enter your own to help AI reply in your style.";
+"onboarding_personality_tag_title" = "Personality Type";
+"onboarding_personality_tag_description" = "Select your personality type to help AI respond in a style that matches you.";
+"onboarding_user_attributes_title" = "User Attributes";
+"onboarding_user_attributes_description" = "Select your gender, age group, and zodiac sign to help AI better understand you and provide more personalized responses.";
+"onboarding_user_attributes_description_short" = "Select your gender and age group to help AI better understand you and provide more personalized responses.";
+"onboarding_constellation_title" = "Zodiac Sign";
+"onboarding_constellation_description" = "Select your zodiac sign to help AI respond in a style that matches your personality.";
 "onboarding_page2_title" = "Appearance";
 "onboarding_page2_appearance_title" = "Appearance Mode";
 "onboarding_page2_appearance_description" = "Choose the app's appearance mode. Follow System will automatically switch based on system settings";
@@ -609,3 +653,49 @@
 "identity_tag_placeholder" = "Traveler, foodie, designer…";
 "mbti_title" = "MBTI";
 "mbti_description" = "Select your personality type for more tailored responses.";
+"gender_title" = "Gender";
+"gender_description" = "Select your gender to help AI provide more personalized responses.";
+"age_group_title" = "Age Group";
+"age_group_description" = "Select your age group to help AI better understand your needs.";
+"constellation_title" = "Zodiac Sign";
+"constellation_description" = "Select your zodiac sign to help AI respond in a style that matches your personality.";
+
+// Profile Options - Persona
+"persona_option_traveler" = "Traveler";
+"persona_option_hiker" = "Hiker";
+"persona_option_photographer" = "Photographer";
+"persona_option_designer" = "Designer";
+"persona_option_foodie" = "Foodie";
+"persona_option_techie" = "Techie";
+"persona_option_custom" = "Custom";
+"persona_option_prefer_not_to_say" = "Prefer not to say";
+
+// Profile Options - Gender
+"gender_option_male" = "Male";
+"gender_option_female" = "Female";
+"gender_option_other" = "Other";
+"gender_option_prefer_not_to_say" = "Prefer not to say";
+
+// Profile Options - Age Group
+"age_group_option_under_18" = "Under 18";
+"age_group_option_18_25" = "18-25";
+"age_group_option_26_35" = "26-35";
+"age_group_option_36_45" = "36-45";
+"age_group_option_46_55" = "46-55";
+"age_group_option_over_56" = "Over 56";
+"age_group_option_prefer_not_to_say" = "Prefer not to say";
+
+// Profile Options - Constellation
+"constellation_option_aries" = "Aries";
+"constellation_option_taurus" = "Taurus";
+"constellation_option_gemini" = "Gemini";
+"constellation_option_cancer" = "Cancer";
+"constellation_option_leo" = "Leo";
+"constellation_option_virgo" = "Virgo";
+"constellation_option_libra" = "Libra";
+"constellation_option_scorpio" = "Scorpio";
+"constellation_option_sagittarius" = "Sagittarius";
+"constellation_option_capricorn" = "Capricorn";
+"constellation_option_aquarius" = "Aquarius";
+"constellation_option_pisces" = "Pisces";
+"constellation_option_prefer_not_to_say" = "Prefer not to say";

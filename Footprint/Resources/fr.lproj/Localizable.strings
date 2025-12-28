@@ -60,6 +60,7 @@
 "account" = "Compte";
 "not_logged_in" = "Non connecté";
 "login_sync_description" = "Les données seront automatiquement synchronisées avec iCloud après la connexion";
+"user_profile_settings" = "Paramètres de Profil Utilisateur";
 "data_sync" = "Synchronisation des données";
 "data_settings" = "Données";
 "icloud_sync" = "Synchronisation iCloud";
@@ -250,6 +251,41 @@
 "add_photo" = "Ajouter une photo";
 "change_photo" = "Changer la photo";
 "notes" = "Notes";
+
+// Notes Section Placeholders
+"notes_placeholder_morning" = "Bonjour ! Comment vous sentez-vous maintenant ? ☀️";
+"notes_placeholder_afternoon" = "Après-midi, que souhaitez-vous enregistrer ? 🌤️";
+"notes_placeholder_evening" = "Soir, enregistrez l'humeur d'aujourd'hui 🌆";
+"notes_placeholder_night" = "Tard dans la nuit, enregistrez l'humeur d'aujourd'hui 🌙";
+
+// Notes Section Weather Placeholders
+"notes_placeholder_weather_sun_morning" = "Quel beau temps aujourd'hui (%@), ensoleillé et lumineux, comment vous sentez-vous ? ☀️";
+"notes_placeholder_weather_sun_afternoon" = "Après-midi ensoleillé à %@, que souhaitez-vous enregistrer ? 🌞";
+"notes_placeholder_weather_sun_evening" = "Quel beau temps aujourd'hui (%@), enregistrez votre humeur maintenant ✨";
+"notes_placeholder_weather_cloud" = "Aujourd'hui %@, %@, que souhaitez-vous enregistrer ? ☁️";
+"notes_placeholder_weather_rain" = "Aujourd'hui %@, %@, comment vous sentez-vous par ce temps ? 🌧️";
+"notes_placeholder_weather_storm" = "Aujourd'hui %@, %@, enregistrez ce moment spécial ⛈️";
+"notes_placeholder_weather_snow" = "Aujourd'hui %@, %@, comment vous sentez-vous par temps de neige ? ❄️";
+"notes_placeholder_weather_haze" = "Aujourd'hui %@, %@, enregistrez vos sentiments maintenant 🌫️";
+"notes_placeholder_weather_night" = "Nuit à %@, %@, que souhaitez-vous enregistrer ? 🌙";
+"notes_placeholder_weather_default" = "Aujourd'hui %@, %@, enregistrez votre humeur maintenant ✨";
+
+// Notes Section Encouragement
+"notes_encouragement_short" = "Écrivez un peu plus pour rendre les souvenirs plus complets 💫";
+"notes_encouragement_medium" = "Super ! Continuez à enregistrer plus de détails ✨";
+"notes_encouragement_long" = "Excellent ! Ces mots deviendront des souvenirs précieux 🌟";
+
+// Notes Section Actions
+"ai_generate_notes" = "Générer Notes avec IA";
+"notes_word_count" = "%d mots";
+
+// Map Coordinate Picker
+"select_point_on_map" = "Sélectionner un Point sur la Carte";
+"long_press_on_map_to_select" = "Appuyez longuement sur la carte pour sélectionner un nouvel emplacement";
+"use_this_location" = "Utiliser Cet Emplacement";
+"select_location" = "Sélectionner l'Emplacement";
+"reverse_geocoding_failed" = "Le géocodage inverse a échoué : %@";
+
 "unknown_place" = "Lieu inconnu";
 "latitude_longitude" = "Latitude : %.4f, Longitude : %.4f";
 
@@ -557,6 +593,15 @@
 "onboarding_page1_language_title" = "Langue";
 "onboarding_page1_country_title" = "Pays";
 "onboarding_page1_country_description" = "Définissez votre pays pour distinguer les voyages nationaux et internationaux";
+"onboarding_identity_tag_title" = "Étiquette d'Identité";
+"onboarding_identity_tag_description" = "Choisissez une étiquette d'identité ou entrez la vôtre pour aider l'IA à répondre dans votre style.";
+"onboarding_personality_tag_title" = "Type de Personnalité";
+"onboarding_personality_tag_description" = "Sélectionnez votre type de personnalité pour que l'IA réponde dans un style qui vous correspond.";
+"onboarding_user_attributes_title" = "Attributs Utilisateur";
+"onboarding_user_attributes_description" = "Sélectionnez votre sexe, groupe d'âge et signe astrologique pour aider l'IA à mieux vous connaître et fournir des réponses plus personnalisées.";
+"onboarding_user_attributes_description_short" = "Sélectionnez votre sexe et groupe d'âge pour aider l'IA à mieux vous connaître et fournir des réponses plus personnalisées.";
+"onboarding_constellation_title" = "Signe Astrologique";
+"onboarding_constellation_description" = "Sélectionnez votre signe astrologique pour aider l'IA à répondre dans un style qui correspond à votre personnalité.";
 "onboarding_page2_title" = "Apparence";
 "onboarding_page2_appearance_title" = "Mode d'Apparence";
 "onboarding_page2_appearance_description" = "Choisissez le mode d'apparence de l'application. Suivre le système basculera automatiquement en fonction des paramètres du système";
@@ -572,3 +617,50 @@
 "identity_tag" = "Étiquette d'Identité";
 "identity_tag_description" = "Choisissez une étiquette d'identité ou entrez la vôtre pour aider l'IA à répondre dans votre style.";
 "identity_tag_placeholder" = "Voyageur, gourmet, designer…";
+"mbti_title" = "MBTI";
+"gender_title" = "Sexe";
+"gender_description" = "Sélectionnez votre sexe pour aider l'IA à fournir des réponses plus personnalisées.";
+"age_group_title" = "Groupe d'Âge";
+"age_group_description" = "Sélectionnez votre groupe d'âge pour aider l'IA à mieux comprendre vos besoins.";
+"constellation_title" = "Signe Astrologique";
+"constellation_description" = "Sélectionnez votre signe astrologique pour aider l'IA à répondre dans un style qui correspond à votre personnalité.";
+
+// Profile Options - Persona
+"persona_option_traveler" = "Voyageur";
+"persona_option_hiker" = "Randonneur";
+"persona_option_photographer" = "Photographe";
+"persona_option_designer" = "Designer";
+"persona_option_foodie" = "Gourmet";
+"persona_option_techie" = "Technophile";
+"persona_option_custom" = "Personnalisé";
+"persona_option_prefer_not_to_say" = "Je préfère ne pas le dire";
+
+// Profile Options - Gender
+"gender_option_male" = "Homme";
+"gender_option_female" = "Femme";
+"gender_option_other" = "Autre";
+"gender_option_prefer_not_to_say" = "Je préfère ne pas le dire";
+
+// Profile Options - Age Group
+"age_group_option_under_18" = "Moins de 18 ans";
+"age_group_option_18_25" = "18-25 ans";
+"age_group_option_26_35" = "26-35 ans";
+"age_group_option_36_45" = "36-45 ans";
+"age_group_option_46_55" = "46-55 ans";
+"age_group_option_over_56" = "Plus de 56 ans";
+"age_group_option_prefer_not_to_say" = "Je préfère ne pas le dire";
+
+// Profile Options - Constellation
+"constellation_option_aries" = "Bélier";
+"constellation_option_taurus" = "Taureau";
+"constellation_option_gemini" = "Gémeaux";
+"constellation_option_cancer" = "Cancer";
+"constellation_option_leo" = "Lion";
+"constellation_option_virgo" = "Vierge";
+"constellation_option_libra" = "Balance";
+"constellation_option_scorpio" = "Scorpion";
+"constellation_option_sagittarius" = "Sagittaire";
+"constellation_option_capricorn" = "Capricorne";
+"constellation_option_aquarius" = "Verseau";
+"constellation_option_pisces" = "Poissons";
+"constellation_option_prefer_not_to_say" = "Je préfère ne pas le dire";

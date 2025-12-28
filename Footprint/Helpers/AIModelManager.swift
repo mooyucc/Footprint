@@ -65,7 +65,10 @@ final class AIModelManager: ObservableObject {
                 country: destination.country,
                 date: destination.visitDate,
                 persona: appleSignInManager.personaTag,
-                mbti: appleSignInManager.mbtiType
+                mbti: appleSignInManager.mbtiType,
+                gender: appleSignInManager.gender,
+                ageGroup: appleSignInManager.ageGroup,
+                constellation: appleSignInManager.constellation
             )
             
             print("✅ [AIModelManager] 笔记生成成功，长度: \(notes.count)")
@@ -102,7 +105,10 @@ final class AIModelManager: ObservableObject {
             let description = try await service.generateTripDescription(
                 for: destinations,
                 persona: appleSignInManager.personaTag,
-                mbti: appleSignInManager.mbtiType
+                mbti: appleSignInManager.mbtiType,
+                gender: appleSignInManager.gender,
+                ageGroup: appleSignInManager.ageGroup,
+                constellation: appleSignInManager.constellation
             )
             
             print("✅ [AIModelManager] 旅程描述生成成功，长度: \(description.count)")

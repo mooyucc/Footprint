@@ -147,7 +147,7 @@ struct YearImageGenerator {
         valueString.draw(in: valueRect)
     }
     
-    // MARK: - 绘制目的地列表卡片（共享方法）
+    // MARK: - 绘制目的地列表卡片（共享方法，使用卡片样式）
     static func drawDestinationsCard(destinations: [TravelDestination], at point: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
         let sortedDestinations = destinations.sorted { $0.visitDate < $1.visitDate }
         let displayCount = sortedDestinations.count // 显示所有目的地
@@ -155,10 +155,12 @@ struct YearImageGenerator {
         
         var currentY = point.y
         let headerHeight: CGFloat = 50
-        let itemHeight: CGFloat = 60
+        let cardHeight: CGFloat = 160
+        let cardSpacing: CGFloat = 12
         
-        // 绘制卡片背景
-        let totalHeight = headerHeight + (displayCount > 0 ? CGFloat(displayCount) * itemHeight : 80) + 40
+        // 计算总高度（卡片样式）
+        let totalCardsHeight = displayCount > 0 ? CGFloat(displayCount) * cardHeight + CGFloat(displayCount - 1) * cardSpacing : 0
+        let totalHeight = headerHeight + (displayCount > 0 ? totalCardsHeight : 80) + 40
         let cardRect = CGRect(x: point.x, y: point.y, width: width, height: totalHeight)
         
         let path = UIBezierPath(roundedRect: cardRect, cornerRadius: 20)
@@ -200,10 +202,14 @@ struct YearImageGenerator {
         currentY += 30
         
         if displayCount > 0 {
-            // 绘制所有目的地列表
+            // 绘制所有目的地卡片列表
             for (index, destination) in sortedDestinations.enumerated() {
-                drawDestinationItem(destination, index: index + 1, at: CGPoint(x: point.x + 20, y: currentY), width: width - 40, context: context)
-                currentY += itemHeight
+                drawDestinationCard(destination, at: CGPoint(x: point.x + 20, y: currentY), width: width - 40, context: context)
+                currentY += cardHeight
+                // 最后一个卡片不添加间距
+                if index < sortedDestinations.count - 1 {
+                    currentY += cardSpacing
+                }
             }
         } else {
             // 绘制空状态
@@ -218,6 +224,160 @@ struct YearImageGenerator {
         }
         
         return totalHeight
+    }
+    
+    /// 绘制地点卡片（卡片样式，类似 DestinationRowCard）
+    static func drawDestinationCard(_ destination: TravelDestination, at point: CGPoint, width: CGFloat, context: CGContext) {
+        let cardHeight: CGFloat = 160
+        let cardRect = CGRect(x: point.x, y: point.y, width: width, height: cardHeight)
+        let cornerRadius: CGFloat = 12
+        
+        // 1. 绘制卡片背景（照片或蓝色背景）
+        let backgroundPath = UIBezierPath(roundedRect: cardRect, cornerRadius: cornerRadius)
+        context.saveGState()
+        context.addPath(backgroundPath.cgPath)
+        context.clip()
+        
+        if let photoData = destination.photoData ?? destination.photoThumbnailData,
+           let photoImage = UIImage(data: photoData) {
+            // 绘制照片，保持宽高比填充
+            let imageAspectRatio = photoImage.size.width / photoImage.size.height
+            let rectAspectRatio = cardRect.width / cardRect.height
+            
+            var drawRect = cardRect
+            if imageAspectRatio > rectAspectRatio {
+                // 图片更宽，以高度为准
+                let scaledWidth = cardRect.height * imageAspectRatio
+                drawRect = CGRect(x: cardRect.midX - scaledWidth/2, y: cardRect.minY, width: scaledWidth, height: cardRect.height)
+            } else {
+                // 图片更高，以宽度为准
+                let scaledHeight = cardRect.width / imageAspectRatio
+                drawRect = CGRect(x: cardRect.minX, y: cardRect.midY - scaledHeight/2, width: cardRect.width, height: scaledHeight)
+            }
+            photoImage.draw(in: drawRect)
+        } else {
+            // 绘制默认蓝色背景 #6793C3
+            context.setFillColor(UIColor(red: 0x67/255.0, green: 0x93/255.0, blue: 0xC3/255.0, alpha: 1.0).cgColor)
+            context.fill(cardRect)
+        }
+        context.restoreGState()
+        
+        // 2. 绘制深色渐变遮罩（从透明到黑色，底部更暗）
+        context.saveGState()
+        context.addPath(backgroundPath.cgPath)
+        context.clip()
+        
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let gradientColors = [
+            UIColor.clear.cgColor,
+            UIColor.black.withAlphaComponent(0.2).cgColor,
+            UIColor.black.withAlphaComponent(0.6).cgColor
+        ]
+        let gradient = CGGradient(colorsSpace: colorSpace, colors: gradientColors as CFArray, locations: [0.0, 0.5, 1.0])!
+        context.drawLinearGradient(gradient, start: CGPoint(x: cardRect.midX, y: cardRect.minY), end: CGPoint(x: cardRect.midX, y: cardRect.maxY), options: [])
+        context.restoreGState()
+        
+        // 3. 绘制左上角标签（国内/国际）
+        let countryManager = CountryManager.shared
+        let isDomestic = countryManager.isDomestic(country: destination.country)
+        if !destination.country.isEmpty {
+            let tagText = isDomestic ? "domestic".localized : "international".localized
+            let tagColor = isDomestic ?
+                UIColor(red: 0x3A/255.0, green: 0x8B/255.0, blue: 0xBB/255.0, alpha: 0.85) : // #3A8BBB
+                UIColor(red: 0x50/255.0, green: 0xA3/255.0, blue: 0x7B/255.0, alpha: 0.85) // #50A37B
+            
+            let tagAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 11, weight: .semibold),
+                .foregroundColor: UIColor.white
+            ]
+            let tagString = NSAttributedString(string: tagText, attributes: tagAttributes)
+            let tagSize = tagString.boundingRect(with: CGSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude), options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).size
+            
+            let tagPaddingX: CGFloat = 8
+            let tagPaddingY: CGFloat = 4
+            let tagWidth = tagSize.width + tagPaddingX * 2
+            let tagHeight = tagSize.height + tagPaddingY * 2
+            let tagRect = CGRect(x: cardRect.minX + 16, y: cardRect.minY + 12, width: tagWidth, height: tagHeight)
+            
+            // 绘制胶囊形状的标签背景
+            let tagPath = UIBezierPath(roundedRect: tagRect, cornerRadius: tagHeight / 2)
+            context.setFillColor(tagColor.cgColor)
+            context.addPath(tagPath.cgPath)
+            context.fillPath()
+            
+            // 绘制标签文字
+            tagString.draw(at: CGPoint(x: tagRect.minX + tagPaddingX, y: tagRect.midY - tagSize.height / 2))
+        }
+        
+        // 4. 绘制底部白色文字内容
+        let bottomPadding: CGFloat = 16
+        var textY = cardRect.maxY - bottomPadding
+        
+        // 绘制地点和时间信息（caption字体）
+        let dateFormatter = LanguageManager.shared.localizedDateFormatter(dateStyle: .medium)
+        var locationText = destination.country.isEmpty ? "-" : destination.country
+        if !destination.province.isEmpty {
+            locationText = "\(destination.province) · \(locationText)"
+        }
+        let dateText = dateFormatter.string(from: destination.visitDate)
+        let subtitleText = "\(locationText) · \(dateText)"
+        
+        let subtitleAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 12),
+            .foregroundColor: UIColor.white.withAlphaComponent(0.9)
+        ]
+        let subtitleString = NSAttributedString(string: subtitleText, attributes: subtitleAttributes)
+        let subtitleSize = subtitleString.size()
+        subtitleString.draw(at: CGPoint(x: cardRect.minX + bottomPadding, y: textY - subtitleSize.height))
+        textY -= subtitleSize.height + 2
+        
+        // 绘制标题（24pt粗体，带收藏图标）
+        let titleText = destination.name.isEmpty ? "-" : destination.name
+        let titleAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 24, weight: .bold),
+            .foregroundColor: UIColor.white
+        ]
+        let titleString = NSAttributedString(string: titleText, attributes: titleAttributes)
+        let titleX = cardRect.minX + bottomPadding
+        
+        // 计算标题尺寸（单行显示）
+        let titleSize = titleString.size()
+        
+        // 绘制收藏图标（如果有，先绘制以便正确计算标题位置）
+        var heartWidth: CGFloat = 0
+        if destination.isFavorite {
+            if let heartImage = UIImage(systemName: "heart.fill") {
+                let heartSize: CGFloat = 16
+                let heartSpacing: CGFloat = 6
+                heartWidth = heartSize + heartSpacing
+                let heartX = cardRect.maxX - bottomPadding - heartSize
+                let heartY = textY - titleSize.height / 2 - heartSize / 2
+                let tintedHeart = heartImage.withTintColor(.systemPink, renderingMode: .alwaysOriginal)
+                tintedHeart.draw(in: CGRect(x: heartX, y: heartY, width: heartSize, height: heartSize))
+            }
+        }
+        
+        // 绘制标题（限制宽度，避免与收藏图标重叠）
+        let titleMaxWidth = width - bottomPadding * 2 - heartWidth
+        let titleRect = titleString.boundingRect(with: CGSize(width: titleMaxWidth, height: CGFloat.greatestFiniteMagnitude), options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil)
+        // 如果标题过长，截断显示
+        if titleRect.width > titleMaxWidth {
+            // 使用单行绘制，自动截断
+            titleString.draw(in: CGRect(x: titleX, y: textY - titleRect.height, width: titleMaxWidth, height: titleRect.height))
+        } else {
+            titleString.draw(at: CGPoint(x: titleX, y: textY - titleSize.height))
+        }
+        
+        // 5. 绘制卡片边框和阴影
+        context.saveGState()
+        // 绘制阴影
+        context.setShadow(offset: CGSize(width: 0, height: 2), blur: 6, color: UIColor.black.withAlphaComponent(0.08).cgColor)
+        // 绘制边框（浅色半透明边框）
+        context.setStrokeColor(UIColor.white.withAlphaComponent(0.3).cgColor)
+        context.setLineWidth(1)
+        context.addPath(backgroundPath.cgPath)
+        context.strokePath()
+        context.restoreGState()
     }
     
     static func drawDestinationItem(_ destination: TravelDestination, index: Int, at point: CGPoint, width: CGFloat, context: CGContext) {
@@ -436,7 +596,7 @@ struct YearListLayoutGenerator: YearLayoutGenerator {
             var currentY: CGFloat = 0
             
             // 绘制内容
-            currentY += 20
+            currentY += 40
             
             // 绘制标题区域（使用共享方法，与九宫格拼图版面保持一致）
             let headerHeight = YearImageGenerator.drawHeader(year: year, at: CGPoint(x: 20, y: currentY), width: screenWidth - 40, context: cgContext)
@@ -451,7 +611,7 @@ struct YearListLayoutGenerator: YearLayoutGenerator {
             currentY += destinationsCardHeight
             
             // 绘制底部签名（与上面内容间距40，离底部边缘20）
-            currentY += 40
+            currentY += 24
             YearImageGenerator.drawSignature(at: CGPoint(x: screenWidth/2, y: currentY), width: screenWidth - 40, context: cgContext)
         }
     }
@@ -500,11 +660,13 @@ struct YearListLayoutGenerator: YearLayoutGenerator {
         // 统计信息卡片
         height += 100 + 20 // card + margin
         
-        // 目的地列表卡片（显示所有目的地）
+        // 目的地列表卡片（卡片样式，显示所有目的地）
         let destinationCount = destinations.count
-        let itemHeight: CGFloat = 60
+        let cardHeight: CGFloat = 160
+        let cardSpacing: CGFloat = 12
         let cardHeaderHeight: CGFloat = 50
-        let destinationsHeight = destinationCount > 0 ? cardHeaderHeight + CGFloat(destinationCount) * itemHeight + 40 : 80
+        let totalCardsHeight = destinationCount > 0 ? CGFloat(destinationCount) * cardHeight + CGFloat(destinationCount - 1) * cardSpacing : 0
+        let destinationsHeight = destinationCount > 0 ? cardHeaderHeight + totalCardsHeight + 40 : 80
         height += destinationsHeight
         
         // 底部签名（与绘制时完全一致：currentY += 40，然后绘制签名）

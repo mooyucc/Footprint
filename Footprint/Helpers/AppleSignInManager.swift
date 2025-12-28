@@ -19,6 +19,9 @@ class AppleSignInManager: NSObject, ObservableObject, ASAuthorizationControllerD
     @Published var userAvatarData: Data? = nil // 用户头像数据
     @Published var personaTag: String = "" // 身份标签
     @Published var mbtiType: String = "" // MBTI 标签
+    @Published var gender: String = "" // 性别
+    @Published var ageGroup: String = "" // 年龄段
+    @Published var constellation: String = "" // 星座
     
     static let shared = AppleSignInManager()
     
@@ -36,6 +39,9 @@ class AppleSignInManager: NSObject, ObservableObject, ASAuthorizationControllerD
             let savedCustomName = UserDefaults.standard.string(forKey: "customUserName") ?? ""
             let savedPersona = UserDefaults.standard.string(forKey: "personaTag") ?? ""
             let savedMbti = UserDefaults.standard.string(forKey: "mbtiType") ?? ""
+            let savedGender = UserDefaults.standard.string(forKey: "gender") ?? ""
+            let savedAgeGroup = UserDefaults.standard.string(forKey: "ageGroup") ?? ""
+            let savedConstellation = UserDefaults.standard.string(forKey: "constellation") ?? ""
             
             // 如果还没有设置过自定义用户名，但已有Apple ID用户名，则自动使用Apple ID用户名
             if savedCustomName.isEmpty && !self.userName.isEmpty && self.userName != "Apple ID 用户" {
@@ -48,6 +54,9 @@ class AppleSignInManager: NSObject, ObservableObject, ASAuthorizationControllerD
             self.userAvatarData = UserDefaults.standard.data(forKey: "userAvatarData")
             self.personaTag = savedPersona
             self.mbtiType = savedMbti
+            self.gender = savedGender
+            self.ageGroup = savedAgeGroup
+            self.constellation = savedConstellation
             
             // 检查凭证状态
             let provider = ASAuthorizationAppleIDProvider()
@@ -198,6 +207,36 @@ class AppleSignInManager: NSObject, ObservableObject, ASAuthorizationControllerD
         }
     }
     
+    // 设置性别
+    func setGender(_ genderValue: String) {
+        gender = genderValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        if gender.isEmpty {
+            UserDefaults.standard.removeObject(forKey: "gender")
+        } else {
+            UserDefaults.standard.set(gender, forKey: "gender")
+        }
+    }
+    
+    // 设置年龄段
+    func setAgeGroup(_ age: String) {
+        ageGroup = age.trimmingCharacters(in: .whitespacesAndNewlines)
+        if ageGroup.isEmpty {
+            UserDefaults.standard.removeObject(forKey: "ageGroup")
+        } else {
+            UserDefaults.standard.set(ageGroup, forKey: "ageGroup")
+        }
+    }
+    
+    // 设置星座
+    func setConstellation(_ constellationValue: String) {
+        constellation = constellationValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        if constellation.isEmpty {
+            UserDefaults.standard.removeObject(forKey: "constellation")
+        } else {
+            UserDefaults.standard.set(constellation, forKey: "constellation")
+        }
+    }
+    
     // 获取用户头像图片
     var userAvatarImage: UIImage? {
         guard let data = userAvatarData else { return nil }
@@ -224,6 +263,9 @@ class AppleSignInManager: NSObject, ObservableObject, ASAuthorizationControllerD
         UserDefaults.standard.removeObject(forKey: "userAvatarData")
         UserDefaults.standard.removeObject(forKey: "personaTag")
         UserDefaults.standard.removeObject(forKey: "mbtiType")
+        UserDefaults.standard.removeObject(forKey: "gender")
+        UserDefaults.standard.removeObject(forKey: "ageGroup")
+        UserDefaults.standard.removeObject(forKey: "constellation")
         userID = ""
         userName = ""
         userEmail = ""
@@ -231,6 +273,9 @@ class AppleSignInManager: NSObject, ObservableObject, ASAuthorizationControllerD
         userAvatarData = nil
         personaTag = ""
         mbtiType = ""
+        gender = ""
+        ageGroup = ""
+        constellation = ""
     }
     
     // MARK: - ASAuthorizationControllerDelegate

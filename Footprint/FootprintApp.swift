@@ -85,6 +85,7 @@ struct FootprintApp: App {
                         .environmentObject(appearanceManager)
                         .environmentObject(purchaseManager)
                         .environmentObject(entitlementManager)
+                        .environmentObject(appleSignInManager)
                         .zIndex(998)  // 低于启动画面和Beta提醒
                         .transition(.opacity)
                 }

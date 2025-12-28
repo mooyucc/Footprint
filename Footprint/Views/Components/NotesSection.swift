@@ -28,13 +28,13 @@ struct NotesSection: View {
         
         // 否则使用时间相关的提示
         if hour >= 6 && hour < 12 {
-            return "早上好！记录一下此刻的心情吧 ☀️"
+            return "notes_placeholder_morning".localized
         } else if hour >= 12 && hour < 18 {
-            return "下午时光，想记录些什么？🌤️"
+            return "notes_placeholder_afternoon".localized
         } else if hour >= 18 && hour < 22 {
-            return "傍晚时分，记录今天的心情吧 🌆"
+            return "notes_placeholder_evening".localized
         } else {
-            return "夜深了，记录下今天的心情吧 🌙"
+            return "notes_placeholder_night".localized
         }
     }
     
@@ -47,27 +47,27 @@ struct NotesSection: View {
         switch weather.palette {
         case .sun:
             if hour >= 6 && hour < 12 {
-                return "今天天气真好（\(temp)），阳光明媚，心情如何？☀️"
+                return "notes_placeholder_weather_sun_morning".localized(with: temp)
             } else if hour >= 12 && hour < 18 {
-                return "\(temp)的晴朗午后，想记录些什么？🌞"
+                return "notes_placeholder_weather_sun_afternoon".localized(with: temp)
             } else {
-                return "今天天气很棒（\(temp)），记录下此刻的心情吧 ✨"
+                return "notes_placeholder_weather_sun_evening".localized(with: temp)
             }
         case .warmCloud:
-            return "今天\(temp)，\(condition)，想记录些什么？☁️"
+            return "notes_placeholder_weather_cloud".localized(with: temp, condition)
         case .rain:
-            return "今天\(temp)，\(condition)，在这样的天气里有什么感受？🌧️"
+            return "notes_placeholder_weather_rain".localized(with: temp, condition)
         case .storm:
-            return "今天\(temp)，\(condition)，记录下这个特别的时刻吧 ⛈️"
+            return "notes_placeholder_weather_storm".localized(with: temp, condition)
         case .snow:
-            return "今天\(temp)，\(condition)，雪天的心情如何？❄️"
+            return "notes_placeholder_weather_snow".localized(with: temp, condition)
         case .haze:
-            return "今天\(temp)，\(condition)，记录下此刻的感受吧 🌫️"
+            return "notes_placeholder_weather_haze".localized(with: temp, condition)
         case .night:
             if hour >= 18 || hour < 6 {
-                return "夜晚的\(temp)，\(condition)，想记录些什么？🌙"
+                return "notes_placeholder_weather_night".localized(with: temp, condition)
             } else {
-                return "今天\(temp)，\(condition)，记录下此刻的心情吧 ✨"
+                return "notes_placeholder_weather_default".localized(with: temp, condition)
             }
         }
     }
@@ -80,11 +80,11 @@ struct NotesSection: View {
     private var encouragementText: String? {
         guard wordCount > 0 else { return nil }
         if wordCount < 10 {
-            return "再写一点，让回忆更完整 💫"
+            return "notes_encouragement_short".localized
         } else if wordCount < 30 {
-            return "很棒！继续记录更多细节 ✨"
+            return "notes_encouragement_medium".localized
         } else {
-            return "太棒了！这些文字会成为珍贵的回忆 🌟"
+            return "notes_encouragement_long".localized
         }
     }
     
@@ -139,7 +139,7 @@ struct NotesSection: View {
                         HStack(spacing: 6) {
                             Image(systemName: "sparkles")
                                 .font(.system(size: 16, weight: .medium))
-                            Text("AI 生成笔记")
+                            Text("ai_generate_notes".localized)
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                         }
@@ -164,7 +164,7 @@ struct NotesSection: View {
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
-                        Text("\(wordCount) 字")
+                        Text("notes_word_count".localized(with: wordCount))
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }

@@ -15,12 +15,17 @@ struct OnboardingCoordinatorView: View {
     @EnvironmentObject var appearanceManager: AppearanceManager
     @EnvironmentObject var purchaseManager: PurchaseManager
     @EnvironmentObject var entitlementManager: EntitlementManager
+    @EnvironmentObject var appleSignInManager: AppleSignInManager
     
     @State private var currentStep: OnboardingStep = .welcome
     @Binding var isPresented: Bool
     
     enum OnboardingStep {
         case welcome
+        case identityTag  // 身份标签设置
+        case personalityTag  // 性格标签设置
+        case userAttributes  // 用户属性设置（性别、年龄段）
+        case constellation  // 星座设置
         case page1  // 语言和国家设置
         case page2  // 外观模式和主题颜色设置
         case paywall  // 订阅页面
@@ -54,6 +59,50 @@ struct OnboardingCoordinatorView: View {
             
             case .page2:
                 OnboardingPage2View {
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                        currentStep = .identityTag
+                    }
+                }
+                .transition(.asymmetric(
+                    insertion: .move(edge: .trailing).combined(with: .opacity),
+                    removal: .move(edge: .leading).combined(with: .opacity)
+                ))
+            
+            case .identityTag:
+                OnboardingIdentityTagView {
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                        currentStep = .personalityTag
+                    }
+                }
+                .transition(.asymmetric(
+                    insertion: .move(edge: .trailing).combined(with: .opacity),
+                    removal: .move(edge: .leading).combined(with: .opacity)
+                ))
+            
+            case .personalityTag:
+                OnboardingPersonalityTagView {
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                        currentStep = .userAttributes
+                    }
+                }
+                .transition(.asymmetric(
+                    insertion: .move(edge: .trailing).combined(with: .opacity),
+                    removal: .move(edge: .leading).combined(with: .opacity)
+                ))
+            
+            case .userAttributes:
+                OnboardingUserAttributesView {
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                        currentStep = .constellation
+                    }
+                }
+                .transition(.asymmetric(
+                    insertion: .move(edge: .trailing).combined(with: .opacity),
+                    removal: .move(edge: .leading).combined(with: .opacity)
+                ))
+            
+            case .constellation:
+                OnboardingConstellationView {
                     withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                         currentStep = .paywall
                     }
@@ -98,5 +147,6 @@ struct OnboardingCoordinatorView: View {
         .environmentObject(AppearanceManager.shared)
         .environmentObject(PurchaseManager.shared)
         .environmentObject(EntitlementManager.shared)
+        .environmentObject(AppleSignInManager.shared)
 }
 

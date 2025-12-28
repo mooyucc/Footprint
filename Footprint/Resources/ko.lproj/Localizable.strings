@@ -60,6 +60,7 @@
 "account" = "계정";
 "not_logged_in" = "로그인하지 않음";
 "login_sync_description" = "로그인 후 데이터가 자동으로 iCloud에 동기화됩니다";
+"user_profile_settings" = "사용자 프로필 설정";
 "data_sync" = "데이터 동기화";
 "data_settings" = "데이터";
 "icloud_sync" = "iCloud 동기화";
@@ -250,6 +251,41 @@
 "add_photo" = "사진 추가";
 "change_photo" = "사진 변경";
 "notes" = "노트";
+
+// Notes Section Placeholders
+"notes_placeholder_morning" = "좋은 아침! 지금 기분이 어떠신가요? ☀️";
+"notes_placeholder_afternoon" = "오후 시간, 무엇을 기록하시겠어요? 🌤️";
+"notes_placeholder_evening" = "저녁 시간, 오늘의 기분을 기록해보세요 🌆";
+"notes_placeholder_night" = "밤 늦게, 오늘의 기분을 기록해보세요 🌙";
+
+// Notes Section Weather Placeholders
+"notes_placeholder_weather_sun_morning" = "오늘 날씨가 좋네요（%@），밝고 화창합니다，기분이 어떠신가요? ☀️";
+"notes_placeholder_weather_sun_afternoon" = "%@의 화창한 오후，무엇을 기록하시겠어요? 🌞";
+"notes_placeholder_weather_sun_evening" = "오늘 날씨가 좋네요（%@），지금 기분을 기록해보세요 ✨";
+"notes_placeholder_weather_cloud" = "오늘 %@，%@，무엇을 기록하시겠어요? ☁️";
+"notes_placeholder_weather_rain" = "오늘 %@，%@，이런 날씨에 어떤 기분인가요? 🌧️";
+"notes_placeholder_weather_storm" = "오늘 %@，%@，이 특별한 순간을 기록해보세요 ⛈️";
+"notes_placeholder_weather_snow" = "오늘 %@，%@，눈 오는 날의 기분은 어떠신가요? ❄️";
+"notes_placeholder_weather_haze" = "오늘 %@，%@，지금의 감정을 기록해보세요 🌫️";
+"notes_placeholder_weather_night" = "밤의 %@，%@，무엇을 기록하시겠어요? 🌙";
+"notes_placeholder_weather_default" = "오늘 %@，%@，지금 기분을 기록해보세요 ✨";
+
+// Notes Section Encouragement
+"notes_encouragement_short" = "조금 더 써서 추억을 더 완성도 있게 만들어보세요 💫";
+"notes_encouragement_medium" = "훌륭해요! 더 많은 세부사항을 계속 기록하세요 ✨";
+"notes_encouragement_long" = "완벽해요! 이 글들이 소중한 추억이 될 것입니다 🌟";
+
+// Notes Section Actions
+"ai_generate_notes" = "AI 노트 생성";
+"notes_word_count" = "%d자";
+
+// Map Coordinate Picker
+"select_point_on_map" = "지도에서 점 선택";
+"long_press_on_map_to_select" = "지도를 길게 눌러 새 위치 선택";
+"use_this_location" = "이 위치 사용";
+"select_location" = "위치 선택";
+"reverse_geocoding_failed" = "역 지오코딩 실패: %@";
+
 "unknown_place" = "알 수 없는 장소";
 "latitude_longitude" = "위도: %.4f, 경도: %.4f";
 
@@ -558,6 +594,15 @@
 "onboarding_page1_language_title" = "언어";
 "onboarding_page1_country_title" = "국가";
 "onboarding_page1_country_description" = "귀하의 국가를 설정하여 국내 여행과 해외 여행을 구분합니다";
+"onboarding_identity_tag_title" = "신원 태그";
+"onboarding_identity_tag_description" = "신원 태그를 선택하거나 직접 입력하여 AI가 당신의 스타일에 맞게 응답하도록 도와줍니다.";
+"onboarding_personality_tag_title" = "성격 유형";
+"onboarding_personality_tag_description" = "성격 유형을 선택하여 AI의 응답이 당신의 스타일에 맞도록 합니다.";
+"onboarding_user_attributes_title" = "사용자 속성";
+"onboarding_user_attributes_description" = "성별, 연령대, 별자리를 선택하여 AI가 당신을 더 잘 이해하고 더 개인화된 응답을 제공할 수 있도록 합니다.";
+"onboarding_user_attributes_description_short" = "성별과 연령대를 선택하여 AI가 당신을 더 잘 이해하고 더 개인화된 응답을 제공할 수 있도록 합니다.";
+"onboarding_constellation_title" = "별자리";
+"onboarding_constellation_description" = "별자리를 선택하여 AI의 응답이 당신의 개성에 맞도록 합니다.";
 "onboarding_page2_title" = "외관";
 "onboarding_page2_appearance_title" = "외관 모드";
 "onboarding_page2_appearance_description" = "앱의 외관 모드를 선택합니다. 시스템 따르기는 시스템 설정에 따라 자동으로 전환됩니다";
@@ -573,3 +618,50 @@
 "identity_tag" = "신원 태그";
 "identity_tag_description" = "신원 태그를 선택하거나 직접 입력하여 AI가 당신의 스타일에 맞게 응답하도록 도와줍니다.";
 "identity_tag_placeholder" = "여행자, 미식가, 디자이너…";
+"mbti_title" = "MBTI";
+"gender_title" = "성별";
+"gender_description" = "성별을 선택하여 AI가 더 개인화된 응답을 제공할 수 있도록 합니다.";
+"age_group_title" = "연령대";
+"age_group_description" = "연령대를 선택하여 AI가 당신의 요구를 더 잘 이해할 수 있도록 합니다.";
+"constellation_title" = "별자리";
+"constellation_description" = "별자리를 선택하여 AI의 응답이 당신의 개성에 맞도록 합니다.";
+
+// Profile Options - Persona
+"persona_option_traveler" = "여행자";
+"persona_option_hiker" = "등산가";
+"persona_option_photographer" = "사진작가";
+"persona_option_designer" = "디자이너";
+"persona_option_foodie" = "미식가";
+"persona_option_techie" = "테크 애호가";
+"persona_option_custom" = "사용자 정의";
+"persona_option_prefer_not_to_say" = "답변하지 않음";
+
+// Profile Options - Gender
+"gender_option_male" = "남성";
+"gender_option_female" = "여성";
+"gender_option_other" = "기타";
+"gender_option_prefer_not_to_say" = "답변하지 않음";
+
+// Profile Options - Age Group
+"age_group_option_under_18" = "18세 미만";
+"age_group_option_18_25" = "18-25세";
+"age_group_option_26_35" = "26-35세";
+"age_group_option_36_45" = "36-45세";
+"age_group_option_46_55" = "46-55세";
+"age_group_option_over_56" = "56세 이상";
+"age_group_option_prefer_not_to_say" = "답변하지 않음";
+
+// Profile Options - Constellation
+"constellation_option_aries" = "양자리";
+"constellation_option_taurus" = "황소자리";
+"constellation_option_gemini" = "쌍둥이자리";
+"constellation_option_cancer" = "게자리";
+"constellation_option_leo" = "사자자리";
+"constellation_option_virgo" = "처녀자리";
+"constellation_option_libra" = "천칭자리";
+"constellation_option_scorpio" = "전갈자리";
+"constellation_option_sagittarius" = "사수자리";
+"constellation_option_capricorn" = "염소자리";
+"constellation_option_aquarius" = "물병자리";
+"constellation_option_pisces" = "물고기자리";
+"constellation_option_prefer_not_to_say" = "답변하지 않음";

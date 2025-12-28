@@ -60,6 +60,7 @@
 "account" = "アカウント";
 "not_logged_in" = "ログインしていません";
 "login_sync_description" = "ログイン後、データは自動的にiCloudに同期されます";
+"user_profile_settings" = "ユーザープロフィール設定";
 "data_sync" = "データ同期";
 "data_settings" = "データ";
 "icloud_sync" = "iCloud同期";
@@ -250,6 +251,41 @@
 "add_photo" = "写真を追加";
 "change_photo" = "写真を変更";
 "notes" = "ノート";
+
+// Notes Section Placeholders
+"notes_placeholder_morning" = "おはようございます！今の気持ちを記録しましょう ☀️";
+"notes_placeholder_afternoon" = "午後の時間、何を記録しますか？🌤️";
+"notes_placeholder_evening" = "夕方、今日の気持ちを記録しましょう 🌆";
+"notes_placeholder_night" = "夜遅く、今日の気持ちを記録しましょう 🌙";
+
+// Notes Section Weather Placeholders
+"notes_placeholder_weather_sun_morning" = "今日は天気が良く（%@）、晴れていて明るいですね。気分はいかがですか？☀️";
+"notes_placeholder_weather_sun_afternoon" = "%@の晴れた午後、何を記録しますか？🌞";
+"notes_placeholder_weather_sun_evening" = "今日は天気が良く（%@）、今の気持ちを記録しましょう ✨";
+"notes_placeholder_weather_cloud" = "今日%@、%@、何を記録しますか？☁️";
+"notes_placeholder_weather_rain" = "今日%@、%@、この天気の中でどんな気持ちですか？🌧️";
+"notes_placeholder_weather_storm" = "今日%@、%@、この特別な瞬間を記録しましょう ⛈️";
+"notes_placeholder_weather_snow" = "今日%@、%@、雪の日の気持ちはいかがですか？❄️";
+"notes_placeholder_weather_haze" = "今日%@、%@、今の気持ちを記録しましょう 🌫️";
+"notes_placeholder_weather_night" = "夜の%@、%@、何を記録しますか？🌙";
+"notes_placeholder_weather_default" = "今日%@、%@、今の気持ちを記録しましょう ✨";
+
+// Notes Section Encouragement
+"notes_encouragement_short" = "もう少し書いて、思い出をより完全にしましょう 💫";
+"notes_encouragement_medium" = "素晴らしい！さらに詳細を記録し続けましょう ✨";
+"notes_encouragement_long" = "素晴らしい！これらの言葉は貴重な思い出になるでしょう 🌟";
+
+// Notes Section Actions
+"ai_generate_notes" = "AIでノートを生成";
+"notes_word_count" = "%d文字";
+
+// Map Coordinate Picker
+"select_point_on_map" = "地図上でポイントを選択";
+"long_press_on_map_to_select" = "地図上を長押しして新しい位置を選択";
+"use_this_location" = "この位置を使用";
+"select_location" = "位置を選択";
+"reverse_geocoding_failed" = "逆ジオコーディングに失敗しました：%@";
+
 "unknown_place" = "不明な場所";
 "latitude_longitude" = "緯度: %.4f, 経度: %.4f";
 
@@ -562,6 +598,15 @@
 "onboarding_page1_language_title" = "言語";
 "onboarding_page1_country_title" = "国";
 "onboarding_page1_country_description" = "あなたの国を設定して、国内旅行と海外旅行を区別します";
+"onboarding_identity_tag_title" = "アイデンティティタグ";
+"onboarding_identity_tag_description" = "アイデンティティタグを選択または入力して、AIがあなたのスタイルに合わせて応答できるようにします。";
+"onboarding_personality_tag_title" = "性格タイプ";
+"onboarding_personality_tag_description" = "性格タイプを選択して、AIの応答があなたのスタイルに合うようにします。";
+"onboarding_user_attributes_title" = "ユーザー属性";
+"onboarding_user_attributes_description" = "性別、年齢層、星座を選択して、AIがあなたをよりよく理解し、よりパーソナライズされた応答を提供できるようにします。";
+"onboarding_user_attributes_description_short" = "性別と年齢層を選択して、AIがあなたをよりよく理解し、よりパーソナライズされた応答を提供できるようにします。";
+"onboarding_constellation_title" = "星座";
+"onboarding_constellation_description" = "星座を選択して、AIの応答があなたの個性に合うようにします。";
 "onboarding_page2_title" = "外観";
 "onboarding_page2_appearance_title" = "外観モード";
 "onboarding_page2_appearance_description" = "アプリの外観モードを選択します。システムに従うと、システム設定に基づいて自動的に切り替わります";
@@ -577,3 +622,50 @@
 "identity_tag" = "アイデンティティタグ";
 "identity_tag_description" = "アイデンティティタグを選択するか、独自に入力して、AIがあなたのスタイルに合わせて応答できるようにします。";
 "identity_tag_placeholder" = "旅行者、美食家、デザイナー…";
+"mbti_title" = "MBTI";
+"gender_title" = "性別";
+"gender_description" = "性別を選択して、AIがよりパーソナライズされた応答を提供できるようにします。";
+"age_group_title" = "年齢層";
+"age_group_description" = "年齢層を選択して、AIがあなたのニーズをよりよく理解できるようにします。";
+"constellation_title" = "星座";
+"constellation_description" = "星座を選択して、AIの応答があなたの個性に合うようにします。";
+
+// Profile Options - Persona
+"persona_option_traveler" = "旅行者";
+"persona_option_hiker" = "ハイカー";
+"persona_option_photographer" = "写真家";
+"persona_option_designer" = "デザイナー";
+"persona_option_foodie" = "グルメ";
+"persona_option_techie" = "テクノロジー愛好家";
+"persona_option_custom" = "カスタム";
+"persona_option_prefer_not_to_say" = "答えたくない";
+
+// Profile Options - Gender
+"gender_option_male" = "男性";
+"gender_option_female" = "女性";
+"gender_option_other" = "その他";
+"gender_option_prefer_not_to_say" = "答えたくない";
+
+// Profile Options - Age Group
+"age_group_option_under_18" = "18歳未満";
+"age_group_option_18_25" = "18-25歳";
+"age_group_option_26_35" = "26-35歳";
+"age_group_option_36_45" = "36-45歳";
+"age_group_option_46_55" = "46-55歳";
+"age_group_option_over_56" = "56歳以上";
+"age_group_option_prefer_not_to_say" = "答えたくない";
+
+// Profile Options - Constellation
+"constellation_option_aries" = "牡羊座";
+"constellation_option_taurus" = "牡牛座";
+"constellation_option_gemini" = "双子座";
+"constellation_option_cancer" = "蟹座";
+"constellation_option_leo" = "獅子座";
+"constellation_option_virgo" = "乙女座";
+"constellation_option_libra" = "天秤座";
+"constellation_option_scorpio" = "蠍座";
+"constellation_option_sagittarius" = "射手座";
+"constellation_option_capricorn" = "山羊座";
+"constellation_option_aquarius" = "水瓶座";
+"constellation_option_pisces" = "魚座";
+"constellation_option_prefer_not_to_say" = "答えたくない";
