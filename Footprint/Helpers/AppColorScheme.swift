@@ -230,6 +230,7 @@ struct AppColorScheme {
     // MARK: - Core Graphics 渐变背景（用于图片生成）
     
     /// 绘制三色线性渐变背景（Core Graphics版本，用于分享图片生成）
+    /// - 注意：分享图片始终使用浅色模式背景，不受系统深色模式影响
     /// - Parameters:
     ///   - rect: 绘制区域
     ///   - context: Core Graphics 上下文
@@ -248,13 +249,14 @@ struct AppColorScheme {
         var pinkAlpha: CGFloat = 0
         UIColor.systemPink.getRed(&pinkRed, green: &pinkGreen, blue: &pinkBlue, alpha: &pinkAlpha)
         
-        // 创建半透明颜色（混合系统背景色以模拟opacity效果）
-        let systemBackground = UIColor.systemBackground
-        var bgRed: CGFloat = 0
-        var bgGreen: CGFloat = 0
-        var bgBlue: CGFloat = 0
-        var bgAlpha: CGFloat = 0
-        systemBackground.getRed(&bgRed, green: &bgGreen, blue: &bgBlue, alpha: &bgAlpha)
+        // 创建半透明颜色（混合白色背景以模拟opacity效果）
+        // 分享图片始终使用浅色模式背景（白色），不受系统深色模式影响
+        let lightBackground = UIColor.white
+        var bgRed: CGFloat = 1.0
+        var bgGreen: CGFloat = 1.0
+        var bgBlue: CGFloat = 1.0
+        var bgAlpha: CGFloat = 1.0
+        lightBackground.getRed(&bgRed, green: &bgGreen, blue: &bgBlue, alpha: &bgAlpha)
         
         // 计算混合后的颜色（color * opacity + background * (1 - opacity)）
         let color1 = UIColor(
@@ -271,7 +273,7 @@ struct AppColorScheme {
             alpha: 1.0
         ) // 浅粉色（8% 不透明度）
         
-        let color3 = systemBackground // 系统背景色
+        let color3 = lightBackground // 白色背景（始终使用浅色模式）
         
         // 创建颜色数组和位置数组
         let colors = [color1.cgColor, color2.cgColor, color3.cgColor]
@@ -279,8 +281,8 @@ struct AppColorScheme {
         
         // 创建渐变
         guard let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors as CFArray, locations: locations) else {
-            // 如果创建失败，使用单色背景作为降级方案
-            context.setFillColor(systemBackground.cgColor)
+            // 如果创建失败，使用白色背景作为降级方案
+            context.setFillColor(lightBackground.cgColor)
             context.fill(rect)
             return
         }

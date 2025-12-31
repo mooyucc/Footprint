@@ -451,9 +451,7 @@
 "trip_share_subtitle" = "Enregistrer de merveilleux voyages, partager de beaux moments";
 "trip_share_layout_list" = "Mise en page liste";
 "trip_share_layout_list_desc" = "Informations détaillées sur le voyage avec couverture, carte temporelle et itinéraire complet";
-"trip_share_layout_grid" = "Mise en page grille";
-"trip_share_layout_grid_desc" = "Afficher les photos de destination dans une grille 3x3, parfait pour le partage visuel";
-"trip_share_layout_extended_grid" = "Grille étendue";
+"trip_share_layout_extended_grid" = "Vue en grille";
 "trip_share_layout_extended_grid_desc" = "Afficher toutes les photos de destination dans une mise en page en grille, prend en charge plus de 9 lieux";
 
 // Travel Stats Share Image

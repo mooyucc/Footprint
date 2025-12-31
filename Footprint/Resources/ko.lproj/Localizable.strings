@@ -452,9 +452,7 @@
 "trip_share_subtitle" = "아름다운 여행을 기록하고 멋진 순간을 공유하세요";
 "trip_share_layout_list" = "목록 레이아웃";
 "trip_share_layout_list_desc" = "커버, 시간 카드 및 전체 여행 경로를 포함한 상세한 여행 정보";
-"trip_share_layout_grid" = "그리드 레이아웃";
-"trip_share_layout_grid_desc" = "3x3 그리드로 목적지 사진 표시, 시각적 공유에 적합";
-"trip_share_layout_extended_grid" = "확장 그리드";
+"trip_share_layout_extended_grid" = "그리드 보기";
 "trip_share_layout_extended_grid_desc" = "그리드 레이아웃으로 모든 목적지 사진 표시, 9개 이상의 장소 지원";
 
 // Travel Stats Share Image

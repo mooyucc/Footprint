@@ -456,9 +456,7 @@
 "trip_share_subtitle" = "素晴らしい旅程を記録し、美しい瞬間を共有";
 "trip_share_layout_list" = "リストレイアウト";
 "trip_share_layout_list_desc" = "カバー、時間カード、完全な旅程ルートを含む詳細な旅程情報";
-"trip_share_layout_grid" = "グリッドレイアウト";
-"trip_share_layout_grid_desc" = "3x3グリッドで目的地の写真を表示、視覚的な共有に最適";
-"trip_share_layout_extended_grid" = "拡張グリッド";
+"trip_share_layout_extended_grid" = "グリッドビュー";
 "trip_share_layout_extended_grid_desc" = "グリッドレイアウトですべての目的地の写真を表示、9つ以上の場所をサポート";
 
 // Travel Stats Share Image

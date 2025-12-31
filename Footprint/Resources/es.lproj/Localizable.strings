@@ -451,9 +451,7 @@
 "trip_share_subtitle" = "Registra viajes maravillosos, comparte momentos hermosos";
 "trip_share_layout_list" = "Diseño de lista";
 "trip_share_layout_list_desc" = "Información detallada del viaje con portada, tarjeta de tiempo y ruta completa";
-"trip_share_layout_grid" = "Diseño de cuadrícula";
-"trip_share_layout_grid_desc" = "Muestra fotos de destinos en una cuadrícula de 3x3, perfecto para compartir visualmente";
-"trip_share_layout_extended_grid" = "Cuadrícula extendida";
+"trip_share_layout_extended_grid" = "Vista de cuadrícula";
 "trip_share_layout_extended_grid_desc" = "Muestra todas las fotos de destinos en un diseño de cuadrícula, admite más de 9 ubicaciones";
 
 // Travel Stats Share Image

@@ -469,9 +469,7 @@
 "trip_share_subtitle" = "記錄美好旅程，分享精彩瞬間";
 "trip_share_layout_list" = "清單版面";
 "trip_share_layout_list_desc" = "詳細展示旅程信息，包含封面、時間卡片和完整行程路線";
-"trip_share_layout_grid" = "九宮格拼圖";
-"trip_share_layout_grid_desc" = "以九宮格形式展示目的地照片，適合視覺化分享";
-"trip_share_layout_extended_grid" = "擴展網格";
+"trip_share_layout_extended_grid" = "網格版面";
 "trip_share_layout_extended_grid_desc" = "以網格形式展示所有目的地照片，支持超過9個地點";
 
 // Travel Stats Share Image

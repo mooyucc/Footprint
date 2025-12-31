@@ -20,8 +20,6 @@ struct YearImageGenerator {
         switch layout {
         case .list:
             return YearListLayoutGenerator().generateImage(year: year, destinations: destinations)
-        case .grid:
-            return YearGridLayoutGenerator().generateImage(year: year, destinations: destinations)
         case .extendedGrid:
             return YearExtendedGridLayoutGenerator().generateImage(year: year, destinations: destinations)
         }
@@ -238,27 +236,29 @@ struct YearImageGenerator {
         context.addPath(backgroundPath.cgPath)
         context.clip()
         
-        if let photoData = destination.photoData ?? destination.photoThumbnailData,
-           let photoImage = UIImage(data: photoData) {
-            // 绘制照片，保持宽高比填充
-            let imageAspectRatio = photoImage.size.width / photoImage.size.height
-            let rectAspectRatio = cardRect.width / cardRect.height
-            
-            var drawRect = cardRect
-            if imageAspectRatio > rectAspectRatio {
-                // 图片更宽，以高度为准
-                let scaledWidth = cardRect.height * imageAspectRatio
-                drawRect = CGRect(x: cardRect.midX - scaledWidth/2, y: cardRect.minY, width: scaledWidth, height: cardRect.height)
+        autoreleasepool {
+            if let photoData = destination.photoData ?? destination.photoThumbnailData,
+               let photoImage = UIImage(data: photoData) {
+                // 绘制照片，保持宽高比填充
+                let imageAspectRatio = photoImage.size.width / photoImage.size.height
+                let rectAspectRatio = cardRect.width / cardRect.height
+                
+                var drawRect = cardRect
+                if imageAspectRatio > rectAspectRatio {
+                    // 图片更宽，以高度为准
+                    let scaledWidth = cardRect.height * imageAspectRatio
+                    drawRect = CGRect(x: cardRect.midX - scaledWidth/2, y: cardRect.minY, width: scaledWidth, height: cardRect.height)
+                } else {
+                    // 图片更高，以宽度为准
+                    let scaledHeight = cardRect.width / imageAspectRatio
+                    drawRect = CGRect(x: cardRect.minX, y: cardRect.midY - scaledHeight/2, width: cardRect.width, height: scaledHeight)
+                }
+                photoImage.draw(in: drawRect)
             } else {
-                // 图片更高，以宽度为准
-                let scaledHeight = cardRect.width / imageAspectRatio
-                drawRect = CGRect(x: cardRect.minX, y: cardRect.midY - scaledHeight/2, width: cardRect.width, height: scaledHeight)
+                // 绘制默认蓝色背景 #6793C3
+                context.setFillColor(UIColor(red: 0x67/255.0, green: 0x93/255.0, blue: 0xC3/255.0, alpha: 1.0).cgColor)
+                context.fill(cardRect)
             }
-            photoImage.draw(in: drawRect)
-        } else {
-            // 绘制默认蓝色背景 #6793C3
-            context.setFillColor(UIColor(red: 0x67/255.0, green: 0x93/255.0, blue: 0xC3/255.0, alpha: 1.0).cgColor)
-            context.fill(cardRect)
         }
         context.restoreGState()
         
@@ -464,14 +464,54 @@ struct YearImageGenerator {
     
     // MARK: - 绘制签名（共享方法）
     static func drawSignature(at point: CGPoint, width: CGFloat, context: CGContext) {
-        // 使用与旅程分享图片相同的签名
+        // 获取 AppIcon
+        let appIcon: UIImage? = {
+            if let icons = Bundle.main.infoDictionary?["CFBundleIcons"] as? [String: Any],
+               let primaryIcon = icons["CFBundlePrimaryIcon"] as? [String: Any],
+               let iconFiles = primaryIcon["CFBundleIconFiles"] as? [String],
+               let lastIcon = iconFiles.last {
+                return UIImage(named: lastIcon)
+            }
+            return UIImage(named: "AppIcon")
+        }()
+        
+        // 获取签名文本（移除星星图标）
+        let signatureText = "trip_share_signature".localized.replacingOccurrences(of: "✨", with: "").replacingOccurrences(of: "✨ ", with: "").trimmingCharacters(in: .whitespaces)
+        
         let signatureAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 14),
             .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
         ]
-        let signatureString = NSAttributedString(string: "trip_share_signature".localized, attributes: signatureAttributes)
+        let signatureString = NSAttributedString(string: signatureText, attributes: signatureAttributes)
         let signatureSize = signatureString.size()
-        signatureString.draw(at: CGPoint(x: point.x - signatureSize.width/2, y: point.y))
+        
+        // 图标尺寸
+        let iconSize: CGFloat = 20
+        let iconSpacing: CGFloat = 6 // 图标与文字的间距
+        
+        // 计算总宽度（图标 + 间距 + 文字）
+        let totalWidth = iconSize + iconSpacing + signatureSize.width
+        
+        // 绘制 AppIcon（圆形）
+        if let appIcon = appIcon {
+            let iconRect = CGRect(
+                x: point.x - totalWidth / 2,
+                y: point.y + (signatureSize.height - iconSize) / 2,
+                width: iconSize,
+                height: iconSize
+            )
+            // 绘制圆形图标
+            context.saveGState()
+            let iconPath = UIBezierPath(ovalIn: iconRect)
+            context.addPath(iconPath.cgPath)
+            context.clip()
+            appIcon.draw(in: iconRect)
+            context.restoreGState()
+        }
+        
+        // 绘制签名文字（在图标右侧）
+        let textX = point.x - totalWidth / 2 + iconSize + iconSpacing
+        signatureString.draw(at: CGPoint(x: textX, y: point.y))
         
         let subtitleAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 12),
@@ -516,51 +556,30 @@ struct YearImageGenerator {
         return minSize
     }
     
-    // MARK: - 绘制标题区域（共享方法，包含年份标题和用户名）
+    // MARK: - 绘制标题区域（共享方法，包含用户头像、用户名和年份标题，与旅程分享一致）
     static func drawHeader(year: Int, at point: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
         var currentY: CGFloat = point.y
         
-        let userName = AppleSignInManager.shared.displayName
+        // 1. 绘制用户头像和用户名（与旅程分享图片一致）
+        let avatarSize: CGFloat = 40
+        let userInfoHeight = TripImageGenerator.drawUserInfo(
+            at: CGPoint(x: point.x, y: currentY),
+            avatarSize: avatarSize,
+            context: context
+        )
+        currentY += userInfoHeight + 16 // 用户信息高度 + 到标题的间距
         
+        // 2. 绘制标题（带品牌色高亮，与旅程分享图片一致）
         let yearTitle = LanguageManager.shared.currentLanguage == .chinese ? "\(year)年旅行记录" : "\(year) Travel Records"
-        let fontSize = calculateDynamicTitleFontSize(for: yearTitle, availableWidth: width)
-        let titleAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: fontSize, weight: .bold),
-            .foregroundColor: UIColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 1.0),
-            .paragraphStyle: {
-                let style = NSMutableParagraphStyle()
-                style.alignment = .center
-                style.lineSpacing = 4
-                return style
-            }()
-        ]
-        let titleString = NSAttributedString(string: yearTitle, attributes: titleAttributes)
-        let maxHeight: CGFloat = fontSize * 2.5
-        let titleRect = titleString.boundingRect(
-            with: CGSize(width: width, height: maxHeight),
-            options: [.usesLineFragmentOrigin, .usesFontLeading],
-            context: nil
-        )
-        let titleDrawRect = CGRect(
-            x: point.x,
-            y: currentY,
+        let titleHeight = TripImageGenerator.drawDestinationTitle(
+            title: yearTitle,
+            at: CGPoint(x: point.x, y: currentY),
             width: width,
-            height: ceil(titleRect.height)
+            context: context
         )
-        titleString.draw(in: titleDrawRect)
-        currentY += ceil(titleRect.height) + 16
+        currentY += titleHeight + 20 // 标题高度 + 到统计卡片的间距
         
-        let userNameAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 14, weight: .regular),
-            .foregroundColor: UIColor(red: 0.0, green: 0.0, blue: 0.0, alpha: 1.0)
-        ]
-        let userNameString = NSAttributedString(string: userName, attributes: userNameAttributes)
-        let userNameSize = userNameString.size()
-        let userNameX = point.x + (width - userNameSize.width) / 2
-        userNameString.draw(at: CGPoint(x: userNameX, y: currentY))
-        currentY += userNameSize.height + 12
-        
-        return currentY - point.y
+        return currentY - point.y // 返回实际占用的高度
     }
 }
 
@@ -598,9 +617,9 @@ struct YearListLayoutGenerator: YearLayoutGenerator {
             // 绘制内容
             currentY += 40
             
-            // 绘制标题区域（使用共享方法，与九宫格拼图版面保持一致）
+            // 绘制标题区域（使用共享方法，与旅程分享一致）
             let headerHeight = YearImageGenerator.drawHeader(year: year, at: CGPoint(x: 20, y: currentY), width: screenWidth - 40, context: cgContext)
-            currentY += headerHeight + 12 + 20 // 描述后的间距 + 到统计卡片的间距
+            currentY += headerHeight // drawHeader 已经包含了到统计卡片的间距
             
             // 绘制统计信息卡片
             let statsCardHeight = YearImageGenerator.drawStatisticsCard(year: year, destinations: destinations, at: CGPoint(x: 20, y: currentY), width: screenWidth - 40, context: cgContext)
@@ -621,41 +640,32 @@ struct YearListLayoutGenerator: YearLayoutGenerator {
         var height: CGFloat = 0
         
         // 顶部padding（与绘制时保持一致）
-        height += 20
+        height += 40
         
         // 标题区域（使用与 drawHeader 相同的计算方式，确保完全一致）
+        // 1. 用户头像和用户名区域（高度：头像高度 + 间距）
+        let avatarSize: CGFloat = 40 // 头像大小
+        height += avatarSize + 16 // 头像 + 到标题的间距
+        
+        // 2. 标题区域（带品牌色高亮，与旅程分享一致）
         let yearTitle = LanguageManager.shared.currentLanguage == .chinese ? "\(year)年旅行记录" : "\(year) Travel Records"
-        let fontSize = YearImageGenerator.calculateDynamicTitleFontSize(for: yearTitle, availableWidth: width - 40)
         let titleAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: fontSize, weight: .bold),
+            .font: UIFont.systemFont(ofSize: 42, weight: .bold), // 与旅程分享一致
             .paragraphStyle: {
                 let style = NSMutableParagraphStyle()
-                style.alignment = .center
-                style.lineSpacing = 4
+                style.lineBreakMode = .byWordWrapping
                 return style
             }()
         ]
         let titleString = NSAttributedString(string: yearTitle, attributes: titleAttributes)
-        let maxHeight: CGFloat = fontSize * 2.5
+        // 计算多行文本的实际高度（使用无限高度以完整显示所有文本）
         let titleRect = titleString.boundingRect(
-            with: CGSize(width: width - 40, height: maxHeight),
+            with: CGSize(width: width - 40, height: CGFloat.greatestFiniteMagnitude),
             options: [.usesLineFragmentOrigin, .usesFontLeading],
             context: nil
         )
-        // 计算标题区域高度（与 drawHeader 中的计算完全一致）
-        var headerHeight: CGFloat = ceil(titleRect.height) + 16
-        
-        // 用户姓名高度（与 drawHeader 中的计算完全一致）
-        let userName = AppleSignInManager.shared.displayName
-        let userNameAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 14, weight: .regular)
-        ]
-        let userNameString = NSAttributedString(string: userName, attributes: userNameAttributes)
-        let userNameSize = userNameString.size()
-        headerHeight += userNameSize.height + 12
-        
-        // 标题区域总高度 + 间距（与绘制时完全一致：headerHeight + 12 + 20）
-        height += headerHeight + 12 + 20
+        let titleSize = ceil(titleRect.height)
+        height += titleSize + 20 // 标题高度 + 到统计卡片的间距
         
         // 统计信息卡片
         height += 100 + 20 // card + margin
@@ -669,11 +679,37 @@ struct YearListLayoutGenerator: YearLayoutGenerator {
         let destinationsHeight = destinationCount > 0 ? cardHeaderHeight + totalCardsHeight + 40 : 80
         height += destinationsHeight
         
-        // 底部签名（与绘制时完全一致：currentY += 40，然后绘制签名）
-        height += 40 // 与上面内容的间距
-        // 签名高度：签名文字14pt + 间距25pt + 副标题12pt ≈ 51pt，加上一些余量确保完整显示
-        height += 70 // 签名区域高度（包括签名和副标题，增加余量确保完整显示）
-        height += 30 // 底部padding（增加余量确保签名不会被裁剪）
+        // 底部签名区域（与旅程分享图片统一）
+        // 计算签名的实际高度
+        let signatureAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 14)
+        ]
+        let signatureString = NSAttributedString(string: "trip_share_signature".localized, attributes: signatureAttributes)
+        let signatureRect = signatureString.boundingRect(
+            with: CGSize(width: width - 40, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        let signatureHeight = ceil(signatureRect.height)
+        
+        let subtitleAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 12)
+        ]
+        let subtitleString = NSAttributedString(string: "trip_share_subtitle".localized, attributes: subtitleAttributes)
+        let subtitleRect = subtitleString.boundingRect(
+            with: CGSize(width: width - 40, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        let subtitleHeight = ceil(subtitleRect.height)
+        
+        // 底部签名区域总高度计算（与旅程分享图片统一）：
+        // - 与上面内容的间距: 24（与旅程分享统一）
+        // - 主签名高度: signatureHeight
+        // - 主副标题间距: 25（与drawSignature绘制时保持一致）
+        // - 副标题高度: subtitleHeight
+        // - 底部边距: 16（确保副标题完整显示，有足够的底部空间）
+        height += 24 + signatureHeight + 25 + subtitleHeight + 16
         
         return height
     }
@@ -860,6 +896,7 @@ struct YearGridLayoutGenerator: YearLayoutGenerator {
         let spacing: CGFloat = 6
         var currentY = point.y
         
+        // 加载图片数据（最多9张，内存影响有限，但绘制完成后会及时释放）
         let destinationImages: [UIImage] = displayDestinations.compactMap { destination in
             if let photoData = destination.photoData,
                let photoImage = UIImage(data: photoData) {
@@ -1262,16 +1299,15 @@ struct YearExtendedGridLayoutGenerator: YearLayoutGenerator {
         return renderer.image { context in
             let cgContext = context.cgContext
             
-            // 设置背景色
-            cgContext.setFillColor(UIColor(red: 0.969, green: 0.953, blue: 0.922, alpha: 1.0).cgColor) // #f7f3eb
-            cgContext.fill(CGRect(origin: .zero, size: imageSize))
+            // 绘制三色线性渐变背景（符合App配色标准，与旅程分享一致）
+            YearImageGenerator.drawGradientBackground(in: CGRect(origin: .zero, size: imageSize), context: cgContext)
             
             var currentY: CGFloat = 0
             
             // 绘制标题区域（使用共享方法）
             currentY += 40
             let headerHeight = YearImageGenerator.drawHeader(year: year, at: CGPoint(x: 20, y: currentY), width: screenWidth - 40, context: cgContext)
-            currentY += headerHeight + 12 + 20
+            currentY += headerHeight // drawHeader 已经包含了到统计卡片的间距
             
             // 绘制统计信息卡片
             let statsCardHeight = YearImageGenerator.drawStatisticsCard(year: year, destinations: destinations, at: CGPoint(x: 20, y: currentY), width: screenWidth - 40, context: cgContext)
@@ -1286,8 +1322,8 @@ struct YearExtendedGridLayoutGenerator: YearLayoutGenerator {
                 currentY += 200
             }
             
-            // 绘制底部签名
-            currentY += 40
+            // 绘制底部签名（与旅程分享图片统一）
+            currentY += 24 // 与上面内容的间距（与旅程分享统一）
             YearImageGenerator.drawSignature(at: CGPoint(x: screenWidth/2, y: currentY), width: screenWidth - 40, context: cgContext)
         }
     }
@@ -1297,129 +1333,181 @@ struct YearExtendedGridLayoutGenerator: YearLayoutGenerator {
         
         height += 40
         
-        // 标题区域
+        // 标题区域（使用与 drawHeader 相同的计算方式，确保完全一致）
+        // 1. 用户头像和用户名区域（高度：头像高度 + 间距）
+        let avatarSize: CGFloat = 40 // 头像大小
+        height += avatarSize + 16 // 头像 + 到标题的间距
+        
+        // 2. 标题区域（带品牌色高亮，与旅程分享一致）
         let yearTitle = LanguageManager.shared.currentLanguage == .chinese ? "\(year)年旅行记录" : "\(year) Travel Records"
-        let fontSize = YearImageGenerator.calculateDynamicTitleFontSize(for: yearTitle, availableWidth: width - 40)
         let titleAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: fontSize, weight: .bold),
+            .font: UIFont.systemFont(ofSize: 42, weight: .bold), // 与旅程分享一致
             .paragraphStyle: {
                 let style = NSMutableParagraphStyle()
-                style.alignment = .center
-                style.lineSpacing = 4
+                style.lineBreakMode = .byWordWrapping
                 return style
             }()
         ]
         let titleString = NSAttributedString(string: yearTitle, attributes: titleAttributes)
-        let maxHeight: CGFloat = fontSize * 2.5
+        // 计算多行文本的实际高度（使用无限高度以完整显示所有文本）
         let titleRect = titleString.boundingRect(
-            with: CGSize(width: width - 40, height: maxHeight),
+            with: CGSize(width: width - 40, height: CGFloat.greatestFiniteMagnitude),
             options: [.usesLineFragmentOrigin, .usesFontLeading],
             context: nil
         )
-        var headerHeight: CGFloat = ceil(titleRect.height) + 16
-        
-        let userName = AppleSignInManager.shared.displayName
-        let userNameAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 14, weight: .regular)
-        ]
-        let userNameString = NSAttributedString(string: userName, attributes: userNameAttributes)
-        let userNameSize = userNameString.size()
-        headerHeight += userNameSize.height + 12
-        
-        height += headerHeight + 12 + 20
+        let titleSize = ceil(titleRect.height)
+        height += titleSize + 20 // 标题高度 + 到统计卡片的间距
         
         // 统计信息卡片
         height += 100 + 20
         
-        // 扩展网格区域
+        // 扩展网格区域（每9张图片重复九宫格布局，与旅程分享一致）
         if !destinations.isEmpty {
-            let columns: CGFloat = 3
-            let rows = ceil(CGFloat(destinations.count) / columns)
-            let gridSize = (width - 40) / 3
-            height += gridSize * rows + 20
+            let groupSpacing: CGFloat = 6 // 每组九宫格之间的间距（与其他网格间距一致）
+            let chunkSize = 9
+            let chunks = destinations.chunked(into: chunkSize)
+            
+            for (chunkIndex, chunk) in chunks.enumerated() {
+                // 如果不是第一组，添加组间距
+                if chunkIndex > 0 {
+                    height += groupSpacing
+                }
+                
+                // 计算该组的高度（最多9张图片）
+                let groupCount = min(chunk.count, 9)
+                height += GridLayoutHelper.calculateGridHeight(photoCount: groupCount, width: width - 40)
+            }
+            
+            // 注意：不在这里添加padding，因为绘制时网格后直接是签名间距24，没有额外的20点padding
         } else {
-            height += 200
+            height += 200 // 空状态高度
         }
         
-        height += 40 + 40 + 20
+        // 底部签名区域（与旅程分享图片统一）
+        // 计算签名的实际高度
+        let signatureAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 14)
+        ]
+        let signatureString = NSAttributedString(string: "trip_share_signature".localized, attributes: signatureAttributes)
+        let signatureRect = signatureString.boundingRect(
+            with: CGSize(width: width - 40, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        let signatureHeight = ceil(signatureRect.height)
+        
+        let subtitleAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 12)
+        ]
+        let subtitleString = NSAttributedString(string: "trip_share_subtitle".localized, attributes: subtitleAttributes)
+        let subtitleRect = subtitleString.boundingRect(
+            with: CGSize(width: width - 40, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        let subtitleHeight = ceil(subtitleRect.height)
+        
+        // 底部签名区域总高度计算（与旅程分享图片统一）：
+        // - 与上面内容的间距: 24（与旅程分享统一）
+        // - 主签名高度: signatureHeight
+        // - 主副标题间距: 25（与drawSignature绘制时保持一致）
+        // - 副标题高度: subtitleHeight
+        // - 底部边距: 16（确保副标题完整显示，有足够的底部空间）
+        height += 24 + signatureHeight + 25 + subtitleHeight + 16
         
         return height
     }
     
     private func drawExtendedGrid(destinations: [TravelDestination], at point: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
-        let columns: CGFloat = 3
-        let spacing: CGFloat = 8
-        let actualGridSize = (width - spacing * 2) / 3
+        guard !destinations.isEmpty else { return 0 }
         
-        let displayCount = destinations.count
-        let rows = ceil(CGFloat(displayCount) / columns)
+        let groupSpacing: CGFloat = 6 // 每组九宫格之间的间距（与其他网格间距一致）
+        var currentY = point.y
+        var globalIndex = 1 // 全局序号，用于显示序号标签
         
-        for (index, destination) in destinations.enumerated() {
-            let row = index / 3
-            let col = index % 3
+        // 将目的地分成每9个一组
+        let chunkSize = 9
+        let chunks = destinations.chunked(into: chunkSize)
+        
+        for (chunkIndex, chunk) in chunks.enumerated() {
+            // 如果不是第一组，添加组间距
+            if chunkIndex > 0 {
+                currentY += groupSpacing
+            }
             
-            let x = point.x + CGFloat(col) * (actualGridSize + spacing)
-            let y = point.y + CGFloat(row) * (actualGridSize + spacing)
+            // 获取该组的地点照片数据（每组最多9张，绘制完成后会及时释放）
+            let destinationImages: [UIImage] = chunk.compactMap { destination in
+                if let photoData = destination.photoData,
+                   let photoImage = UIImage(data: photoData) {
+                    return photoImage
+                } else if let defaultImage = UIImage(named: "ImageMooyu") {
+                    return defaultImage.withRenderingMode(.alwaysOriginal)
+                }
+                return nil
+            }
             
-            let gridRect = CGRect(x: x, y: y, width: actualGridSize, height: actualGridSize)
-            drawGridItem(destination: destination, index: index + 1, in: gridRect, context: context)
+            guard !destinationImages.isEmpty else { continue }
+            
+            // 使用共享的九宫格布局工具绘制该组
+            let groupHeight = GridLayoutHelper.drawGridLayout(
+                images: destinationImages,
+                destinations: chunk,
+                startIndex: globalIndex,
+                at: CGPoint(x: point.x, y: currentY),
+                width: width,
+                context: context,
+                drawMainImage: { image, destination, index, rect, ctx in
+                    self.drawMainImageDestination(image, destination: destination, index: index, in: rect, context: ctx)
+                },
+                drawGridPhoto: { image, destination, index, rect, ctx in
+                    self.drawDestinationGridPhoto(image, destination: destination, index: index, in: rect, context: ctx)
+                }
+            )
+            
+            currentY += groupHeight
+            globalIndex += chunk.count
         }
         
-        return actualGridSize * rows + spacing * (rows - 1)
+        return currentY - point.y
     }
     
-    private func drawGridItem(destination: TravelDestination, index: Int, in rect: CGRect, context: CGContext) {
+    // 绘制主图（用于年份分享图片的地点主图）
+    private func drawMainImageDestination(_ image: UIImage, destination: TravelDestination, index: Int, in rect: CGRect, context: CGContext) {
+        // 绘制圆角矩形（圆角12pt）
         let path = UIBezierPath(roundedRect: rect, cornerRadius: 12)
         context.saveGState()
         context.addPath(path.cgPath)
         context.clip()
         
-        if let photoData = destination.photoData,
-           let photoImage = UIImage(data: photoData) {
-            let imageAspectRatio = photoImage.size.width / photoImage.size.height
-            let rectAspectRatio = rect.width / rect.height
-            
-            var drawRect = rect
-            if imageAspectRatio > rectAspectRatio {
-                let scaledWidth = rect.height * imageAspectRatio
-                drawRect = CGRect(x: rect.midX - scaledWidth/2, y: rect.minY, width: scaledWidth, height: rect.height)
-            } else {
-                let scaledHeight = rect.width / imageAspectRatio
-                drawRect = CGRect(x: rect.minX, y: rect.midY - scaledHeight/2, width: rect.width, height: scaledHeight)
-            }
-            
-            photoImage.draw(in: drawRect)
+        // 计算图片的绘制区域（保持宽高比，填充裁剪）
+        let imageAspectRatio = image.size.width / image.size.height
+        let rectAspectRatio = rect.width / rect.height
+        
+        var drawRect = rect
+        if imageAspectRatio > rectAspectRatio {
+            // 图片更宽，以高度为准，居中裁剪
+            let scaledWidth = rect.height * imageAspectRatio
+            drawRect = CGRect(
+                x: rect.midX - scaledWidth / 2,
+                y: rect.minY,
+                width: scaledWidth,
+                height: rect.height
+            )
         } else {
-            if let defaultImage = UIImage(named: "ImageMooyu") {
-                let originalImage = defaultImage.withRenderingMode(.alwaysOriginal)
-                let imageAspectRatio = defaultImage.size.width / defaultImage.size.height
-                let rectAspectRatio = rect.width / rect.height
-                
-                var drawRect: CGRect
-                if imageAspectRatio > rectAspectRatio {
-                    let scaledWidth = rect.height * imageAspectRatio
-                    drawRect = CGRect(
-                        x: rect.midX - scaledWidth/2,
-                        y: rect.minY,
-                        width: scaledWidth,
-                        height: rect.height
-                    )
-                } else {
-                    let scaledHeight = rect.width / imageAspectRatio
-                    drawRect = CGRect(
-                        x: rect.minX,
-                        y: rect.midY - scaledHeight/2,
-                        width: rect.width,
-                        height: scaledHeight
-                    )
-                }
-                
-                originalImage.draw(in: drawRect)
-            }
+            // 图片更高，以宽度为准，居中裁剪
+            let scaledHeight = rect.width / imageAspectRatio
+            drawRect = CGRect(
+                x: rect.minX,
+                y: rect.midY - scaledHeight / 2,
+                width: rect.width,
+                height: scaledHeight
+            )
         }
         
+        image.draw(in: drawRect)
         context.restoreGState()
         
+        // 绘制序号标签（左上角）
         let badgeSize: CGFloat = 28
         let badgeRect = CGRect(x: rect.minX + 8, y: rect.minY + 8, width: badgeSize, height: badgeSize)
         context.setFillColor(UIColor.white.withAlphaComponent(0.7).cgColor)
@@ -1433,20 +1521,37 @@ struct YearExtendedGridLayoutGenerator: YearLayoutGenerator {
         let numberSize = numberString.size()
         numberString.draw(at: CGPoint(x: badgeRect.midX - numberSize.width/2, y: badgeRect.midY - numberSize.height/2))
         
+        // 绘制目的地名称（底部，带半透明背景，支持文本截断）
+        let namePadding: CGFloat = 8
+        let availableWidth = rect.width - namePadding * 2 // 可用文本宽度
+        
         let nameAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 12, weight: .semibold),
-            .foregroundColor: UIColor.white
+            .foregroundColor: UIColor.white,
+            .paragraphStyle: {
+                let style = NSMutableParagraphStyle()
+                style.lineBreakMode = .byTruncatingTail // 超出部分用省略号截断
+                return style
+            }()
         ]
         let nameString = NSAttributedString(string: destination.name, attributes: nameAttributes)
-        let nameSize = nameString.size()
-        let namePadding: CGFloat = 8
+        
+        // 计算文本在有限宽度内的实际大小（支持截断）
+        let nameRect = nameString.boundingRect(
+            with: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        let nameHeight = ceil(nameRect.height)
+        
         let nameBackgroundRect = CGRect(
             x: rect.minX,
-            y: rect.maxY - nameSize.height - namePadding * 2,
+            y: rect.maxY - nameHeight - namePadding * 2,
             width: rect.width,
-            height: nameSize.height + namePadding * 2
+            height: nameHeight + namePadding * 2
         )
         
+        // 绘制半透明背景（带圆角，半径与主图一致为12）
         let cornerRadius: CGFloat = 12
         let backgroundPath = UIBezierPath(
             roundedRect: nameBackgroundRect,
@@ -1458,7 +1563,115 @@ struct YearExtendedGridLayoutGenerator: YearLayoutGenerator {
         context.addPath(backgroundPath.cgPath)
         context.fillPath()
         
-        nameString.draw(at: CGPoint(x: rect.minX + namePadding, y: nameBackgroundRect.midY - nameSize.height/2))
+        // 绘制文字（在指定矩形内绘制，自动处理截断）
+        let textRect = CGRect(
+            x: rect.minX + namePadding,
+            y: nameBackgroundRect.midY - nameHeight / 2,
+            width: availableWidth,
+            height: nameHeight
+        )
+        nameString.draw(in: textRect)
+    }
+    
+    // 绘制网格中的单张地点照片（带圆角12pt和智能裁剪，支持文本截断）
+    private func drawDestinationGridPhoto(_ image: UIImage, destination: TravelDestination, index: Int, in rect: CGRect, context: CGContext) {
+        // 绘制圆角矩形（圆角12pt）
+        let path = UIBezierPath(roundedRect: rect, cornerRadius: 12)
+        context.saveGState()
+        context.addPath(path.cgPath)
+        context.clip()
+        
+        // 计算图片的绘制区域（保持宽高比，填充裁剪）
+        let imageAspectRatio = image.size.width / image.size.height
+        var drawRect = rect
+        
+        if imageAspectRatio > 1.0 {
+            // 图片更宽，以高度为准，居中裁剪
+            let scaledWidth = rect.height * imageAspectRatio
+            drawRect = CGRect(
+                x: rect.midX - scaledWidth / 2,
+                y: rect.minY,
+                width: scaledWidth,
+                height: rect.height
+            )
+        } else {
+            // 图片更高，以宽度为准，居中裁剪
+            let scaledHeight = rect.width / imageAspectRatio
+            drawRect = CGRect(
+                x: rect.minX,
+                y: rect.midY - scaledHeight / 2,
+                width: rect.width,
+                height: scaledHeight
+            )
+        }
+        
+        image.draw(in: drawRect)
+        context.restoreGState()
+        
+        // 绘制序号标签（左上角）
+        let badgeSize: CGFloat = 28
+        let badgeRect = CGRect(x: rect.minX + 8, y: rect.minY + 8, width: badgeSize, height: badgeSize)
+        context.setFillColor(UIColor.white.withAlphaComponent(0.7).cgColor)
+        context.fillEllipse(in: badgeRect)
+        
+        let numberAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 14, weight: .bold),
+            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0)
+        ]
+        let numberString = NSAttributedString(string: "\(index)", attributes: numberAttributes)
+        let numberSize = numberString.size()
+        numberString.draw(at: CGPoint(x: badgeRect.midX - numberSize.width/2, y: badgeRect.midY - numberSize.height/2))
+        
+        // 绘制目的地名称（底部，带半透明背景，支持文本截断）
+        let namePadding: CGFloat = 8
+        let availableWidth = rect.width - namePadding * 2 // 可用文本宽度
+        
+        let nameAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 12, weight: .semibold),
+            .foregroundColor: UIColor.white,
+            .paragraphStyle: {
+                let style = NSMutableParagraphStyle()
+                style.lineBreakMode = .byTruncatingTail // 超出部分用省略号截断
+                return style
+            }()
+        ]
+        let nameString = NSAttributedString(string: destination.name, attributes: nameAttributes)
+        
+        // 计算文本在有限宽度内的实际大小（支持截断）
+        let nameRect = nameString.boundingRect(
+            with: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        let nameHeight = ceil(nameRect.height)
+        
+        let nameBackgroundRect = CGRect(
+            x: rect.minX,
+            y: rect.maxY - nameHeight - namePadding * 2,
+            width: rect.width,
+            height: nameHeight + namePadding * 2
+        )
+        
+        // 绘制半透明背景（带圆角，半径与网格照片一致为12）
+        let cornerRadius: CGFloat = 12
+        let backgroundPath = UIBezierPath(
+            roundedRect: nameBackgroundRect,
+            byRoundingCorners: [.bottomLeft, .bottomRight],
+            cornerRadii: CGSize(width: cornerRadius, height: cornerRadius)
+        )
+        
+        context.setFillColor(UIColor.black.withAlphaComponent(0.4).cgColor)
+        context.addPath(backgroundPath.cgPath)
+        context.fillPath()
+        
+        // 绘制文字（在指定矩形内绘制，自动处理截断）
+        let textRect = CGRect(
+            x: rect.minX + namePadding,
+            y: nameBackgroundRect.midY - nameHeight / 2,
+            width: availableWidth,
+            height: nameHeight
+        )
+        nameString.draw(in: textRect)
     }
     
     private func drawEmptyState(at point: CGPoint, width: CGFloat, context: CGContext) {

@@ -470,9 +470,7 @@
 "trip_share_subtitle" = "Record wonderful journeys, share beautiful moments";
 "trip_share_layout_list" = "List Layout";
 "trip_share_layout_list_desc" = "Detailed journey information with cover, time card and complete route";
-"trip_share_layout_grid" = "Grid Layout";
-"trip_share_layout_grid_desc" = "Display destination photos in a 3x3 grid, perfect for visual sharing";
-"trip_share_layout_extended_grid" = "Extended Grid";
+"trip_share_layout_extended_grid" = "Grid View";
 "trip_share_layout_extended_grid_desc" = "Display all destination photos in a grid layout, supports more than 9 locations";
 
 // Travel Stats Share Image
