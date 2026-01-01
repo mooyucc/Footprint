@@ -1025,28 +1025,53 @@ struct MapView: View {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         selectedDestination = newValue
                     }
+                } else if oldValue != nil && newValue == nil {
+                    // 点击空白区域，mapSelection 从非 nil 变为 nil
+                    // 这种情况通常是用户点击了标注然后又点击了空白区域来取消选择
+                    // 不应该触发 POI 搜索
+                } else if oldValue == nil && newValue == nil {
+                    // 保持为 nil，可能是点击了空白区域但没有之前的选择
+                    // 注意：这种情况无法通过 mapSelection 检测，需要通过手势
                 }
             }
             .gesture(longPressGesture(proxy: proxy))
-            .gesture(
+            .simultaneousGesture(
                 DragGesture(minimumDistance: 0)
                     .onEnded { value in
+                        print("🔍 [地图点击] DragGesture onEnded 触发")
                         // 在旅程页面禁用点击地图的POI搜索
                         if autoShowRouteCards {
+                            print("🔍 [地图点击] 旅程页面，跳过POI搜索")
                             return
                         }
                         
                         // 如果卡片正在显示，不处理地图点击（避免点击穿透）
-                        guard selectedDestination == nil,
-                              !showingPOIPreview,
-                              !showSearchBar else { return }
+                        if selectedDestination != nil {
+                            print("🔍 [地图点击] selectedDestination != nil，跳过")
+                            return
+                        }
+                        if showingPOIPreview {
+                            print("🔍 [地图点击] showingPOIPreview == true，跳过")
+                            return
+                        }
+                        if showSearchBar {
+                            print("🔍 [地图点击] showSearchBar == true，跳过")
+                            return
+                        }
                         
                         let translation = value.translation
                         let dragDistance = hypot(translation.width, translation.height)
-                        guard dragDistance < 8 else { return }
+                        print("🔍 [地图点击] 拖拽距离: \(dragDistance)")
+                        if dragDistance >= 8 {
+                            print("🔍 [地图点击] 拖拽距离过大，跳过")
+                            return
+                        }
                         
                         if let coordinate = proxy.convert(value.location, from: .local) {
+                            print("🔍 [地图点击] 坐标转换成功: (\(coordinate.latitude), \(coordinate.longitude))")
                             handleMapTap(at: coordinate)
+                        } else {
+                            print("🔍 [地图点击] 坐标转换失败")
                         }
                     }
             )
