@@ -258,6 +258,15 @@
 "notes_placeholder_evening" = "夕方、今日の気持ちを記録しましょう 🌆";
 "notes_placeholder_night" = "夜遅く、今日の気持ちを記録しましょう 🌙";
 
+// Weather Condition Descriptions
+"weather_condition_sun" = "晴れ";
+"weather_condition_cloud" = "曇り";
+"weather_condition_rain" = "雨";
+"weather_condition_storm" = "雷";
+"weather_condition_snow" = "雪";
+"weather_condition_haze" = "霧";
+"weather_condition_night" = "夜";
+
 // Notes Section Weather Placeholders
 "notes_placeholder_weather_sun_morning" = "今日は天気が良く（%@）、晴れていて明るいですね。気分はいかがですか？☀️";
 "notes_placeholder_weather_sun_afternoon" = "%@の晴れた午後、何を記録しますか？🌞";

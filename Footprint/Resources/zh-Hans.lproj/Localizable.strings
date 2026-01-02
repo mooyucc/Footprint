@@ -254,6 +254,15 @@
 "notes_placeholder_evening" = "傍晚时分，记录今天的心情吧 🌆";
 "notes_placeholder_night" = "夜深了，记录下今天的心情吧 🌙";
 
+// Weather Condition Descriptions
+"weather_condition_sun" = "晴朗";
+"weather_condition_cloud" = "多云";
+"weather_condition_rain" = "雨";
+"weather_condition_storm" = "雷暴";
+"weather_condition_snow" = "雪";
+"weather_condition_haze" = "雾";
+"weather_condition_night" = "夜晚";
+
 // Notes Section Weather Placeholders
 "notes_placeholder_weather_sun_morning" = "今天天气真好（%@），阳光明媚，心情如何？☀️";
 "notes_placeholder_weather_sun_afternoon" = "%@的晴朗午后，想记录些什么？🌞";

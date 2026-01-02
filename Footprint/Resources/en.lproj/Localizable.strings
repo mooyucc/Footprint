@@ -254,6 +254,15 @@
 "notes_placeholder_evening" = "Evening time, record today's mood 🌆";
 "notes_placeholder_night" = "Late at night, record today's mood 🌙";
 
+// Weather Condition Descriptions
+"weather_condition_sun" = "Sunny";
+"weather_condition_cloud" = "Cloudy";
+"weather_condition_rain" = "Rainy";
+"weather_condition_storm" = "Stormy";
+"weather_condition_snow" = "Snowy";
+"weather_condition_haze" = "Hazy";
+"weather_condition_night" = "Night";
+
 // Notes Section Weather Placeholders
 "notes_placeholder_weather_sun_morning" = "Great weather today (%@), sunny and bright, how are you feeling? ☀️";
 "notes_placeholder_weather_sun_afternoon" = "Sunny afternoon at %@, what would you like to record? 🌞";

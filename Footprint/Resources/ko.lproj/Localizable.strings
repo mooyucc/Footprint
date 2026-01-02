@@ -258,6 +258,15 @@
 "notes_placeholder_evening" = "저녁 시간, 오늘의 기분을 기록해보세요 🌆";
 "notes_placeholder_night" = "밤 늦게, 오늘의 기분을 기록해보세요 🌙";
 
+// Weather Condition Descriptions
+"weather_condition_sun" = "맑음";
+"weather_condition_cloud" = "흐림";
+"weather_condition_rain" = "비";
+"weather_condition_storm" = "천둥번개";
+"weather_condition_snow" = "눈";
+"weather_condition_haze" = "안개";
+"weather_condition_night" = "밤";
+
 // Notes Section Weather Placeholders
 "notes_placeholder_weather_sun_morning" = "오늘 날씨가 좋네요（%@），밝고 화창합니다，기분이 어떠신가요? ☀️";
 "notes_placeholder_weather_sun_afternoon" = "%@의 화창한 오후，무엇을 기록하시겠어요? 🌞";

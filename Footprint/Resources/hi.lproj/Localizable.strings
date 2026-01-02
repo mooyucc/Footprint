@@ -91,6 +91,15 @@
 "notes_placeholder_evening" = "शाम का समय, आज के मूड को रिकॉर्ड करें 🌆";
 "notes_placeholder_night" = "रात देर से, आज के मूड को रिकॉर्ड करें 🌙";
 
+// Weather Condition Descriptions
+"weather_condition_sun" = "धूप";
+"weather_condition_cloud" = "बादल";
+"weather_condition_rain" = "बारिश";
+"weather_condition_storm" = "तूफान";
+"weather_condition_snow" = "बर्फ";
+"weather_condition_haze" = "धुंध";
+"weather_condition_night" = "रात";
+
 // Notes Section Weather Placeholders
 "notes_placeholder_weather_sun_morning" = "आज मौसम कितना अच्छा है (%@), धूप और चमकदार, आप कैसा महसूस कर रहे हैं? ☀️";
 "notes_placeholder_weather_sun_afternoon" = "%@ का धूप वाला दोपहर, आप क्या रिकॉर्ड करना चाहेंगे? 🌞";

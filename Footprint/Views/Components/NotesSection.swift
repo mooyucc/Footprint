@@ -38,10 +38,30 @@ struct NotesSection: View {
         }
     }
     
+    // 根据天气调色板获取本地化的天气条件描述
+    private func localizedWeatherCondition(for palette: WeatherGlyphPalette) -> String {
+        switch palette {
+        case .sun:
+            return "weather_condition_sun".localized
+        case .warmCloud:
+            return "weather_condition_cloud".localized
+        case .rain:
+            return "weather_condition_rain".localized
+        case .storm:
+            return "weather_condition_storm".localized
+        case .snow:
+            return "weather_condition_snow".localized
+        case .haze:
+            return "weather_condition_haze".localized
+        case .night:
+            return "weather_condition_night".localized
+        }
+    }
+    
     // 根据天气情况生成个性化提示
     private func weatherBasedPlaceholder(weather: WeatherSummary, hour: Int) -> String {
         let temp = weather.temperatureText
-        let condition = weather.conditionDescription
+        let condition = localizedWeatherCondition(for: weather.palette)
         
         // 根据天气类型和时间生成不同的提示
         switch weather.palette {

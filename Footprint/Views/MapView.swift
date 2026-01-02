@@ -208,6 +208,7 @@ struct MapView: View {
     @State private var showingPOIPreview = false
     @State private var isSearchingPOI = false
     @State private var poiSearchStartTime: Date?
+    @State private var tapStartTime: Date? // 用于区分轻点和长按
     private let loadingTaskHolder = POILoadingTaskHolder() // 使用类来存储任务引用，避免结构体的不可变问题
     private let showLoadingThreshold: TimeInterval = 0.3 // 超过300ms才显示加载卡片
     
@@ -1022,59 +1023,26 @@ struct MapView: View {
             }
             .onChange(of: mapSelection) { oldValue, newValue in
                 if let newValue = newValue {
+                    // 选中标记：显示目的地预览卡片
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         selectedDestination = newValue
+                        // 同时关闭可能打开的POI预览卡片
+                        showingPOIPreview = false
+                        selectedPOI = nil
                     }
                 } else if oldValue != nil && newValue == nil {
-                    // 点击空白区域，mapSelection 从非 nil 变为 nil
-                    // 这种情况通常是用户点击了标注然后又点击了空白区域来取消选择
-                    // 不应该触发 POI 搜索
-                } else if oldValue == nil && newValue == nil {
-                    // 保持为 nil，可能是点击了空白区域但没有之前的选择
-                    // 注意：这种情况无法通过 mapSelection 检测，需要通过手势
+                    // 从标记变为空：用户点击了空白区域取消选择
+                    // 同时关闭任何打开的预览卡片
+                    withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
+                        showingPOIPreview = false
+                        selectedPOI = nil
+                    }
                 }
+                // oldValue == nil && newValue == nil 的情况不需要处理
+                // （点击空白处但没有之前的选择 = 无操作，符合iPhone地图行为）
             }
             .gesture(longPressGesture(proxy: proxy))
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 0)
-                    .onEnded { value in
-                        print("🔍 [地图点击] DragGesture onEnded 触发")
-                        // 在旅程页面禁用点击地图的POI搜索
-                        if autoShowRouteCards {
-                            print("🔍 [地图点击] 旅程页面，跳过POI搜索")
-                            return
-                        }
-                        
-                        // 如果卡片正在显示，不处理地图点击（避免点击穿透）
-                        if selectedDestination != nil {
-                            print("🔍 [地图点击] selectedDestination != nil，跳过")
-                            return
-                        }
-                        if showingPOIPreview {
-                            print("🔍 [地图点击] showingPOIPreview == true，跳过")
-                            return
-                        }
-                        if showSearchBar {
-                            print("🔍 [地图点击] showSearchBar == true，跳过")
-                            return
-                        }
-                        
-                        let translation = value.translation
-                        let dragDistance = hypot(translation.width, translation.height)
-                        print("🔍 [地图点击] 拖拽距离: \(dragDistance)")
-                        if dragDistance >= 8 {
-                            print("🔍 [地图点击] 拖拽距离过大，跳过")
-                            return
-                        }
-                        
-                        if let coordinate = proxy.convert(value.location, from: .local) {
-                            print("🔍 [地图点击] 坐标转换成功: (\(coordinate.latitude), \(coordinate.longitude))")
-                            handleMapTap(at: coordinate)
-                        } else {
-                            print("🔍 [地图点击] 坐标转换失败")
-                        }
-                    }
-            )
+            .simultaneousGesture(tapGesture(proxy: proxy))
             // 当搜索栏显示时，禁用地图交互
             // 在旅程 tab 中，即使卡片显示，地图也应该可以交互（缩放、平移等），只是点击地图不触发 POI 搜索
             .allowsHitTesting(!showSearchBar)
@@ -1299,6 +1267,63 @@ struct MapView: View {
                     }
                 default:
                     break
+                }
+            }
+    }
+    
+    // 轻点手势 - 用于查询系统POI标记信息
+    private func tapGesture(proxy: MapProxy) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { _ in
+                // 记录按下时间
+                if tapStartTime == nil {
+                    tapStartTime = Date()
+                }
+            }
+            .onEnded { value in
+                // 在旅程页面禁用轻点POI搜索
+                if autoShowRouteCards {
+                    tapStartTime = nil
+                    return
+                }
+                
+                // 如果卡片正在显示，不处理轻点（避免点击穿透）
+                if selectedDestination != nil || showingPOIPreview {
+                    tapStartTime = nil
+                    return
+                }
+                
+                if showSearchBar {
+                    tapStartTime = nil
+                    return
+                }
+                
+                // 检查按下时长，如果超过0.4秒，认为是长按意图，不处理
+                if let startTime = tapStartTime {
+                    let duration = Date().timeIntervalSince(startTime)
+                    tapStartTime = nil
+                    if duration >= 0.4 {
+                        // 可能是长按，不处理轻点
+                        return
+                    }
+                }
+                
+                // 检查拖拽距离，如果过大，认为是拖拽操作
+                let translation = value.translation
+                let dragDistance = hypot(translation.width, translation.height)
+                if dragDistance >= 8 {
+                    return
+                }
+                
+                // 检查点击位置是否接近用户添加的标注或聚合点
+                if let coordinate = proxy.convert(value.location, from: .local) {
+                    if isNearAnnotationOrCluster(coordinate) {
+                        // 点击的是用户添加的标记，由mapSelection处理，不查询POI
+                        return
+                    }
+                    
+                    // 轻点地图空白处或系统POI标记，查询POI信息
+                    handleMapTap(at: coordinate)
                 }
             }
     }
@@ -1632,10 +1657,245 @@ struct MapView: View {
         }
     }
     
-    // 显示错误回退信息（使用坐标兜底）
+    // 显示错误回退信息（使用坐标兜底，显示POI预览卡片）
     private func showErrorFallback(coordinate: CLLocationCoordinate2D) {
-        // 使用坐标兜底方案
-        fallbackWithCoordinateOnly(coordinate: coordinate)
+        // 使用坐标兜底方案，显示POI预览卡片
+        fallbackToCoordinatePOI(coordinate: coordinate)
+    }
+    
+    // 地图点击失败时降级为坐标显示（显示POI预览卡片）
+    private func fallbackToCoordinatePOI(coordinate: CLLocationCoordinate2D) {
+        let mkPlacemark = MKPlacemark(coordinate: coordinate)
+        let mapItem = MKMapItem(placemark: mkPlacemark)
+        
+        // 尝试根据坐标判断国家
+        let countryName = getCountryNameByCoordinate(coordinate)
+        
+        // 使用本地化字符串，提供更友好的显示
+        mapItem.name = "selected_location".localized
+        
+        print("🛟 地图点击查询失败，使用坐标降级显示，判断国家: \(countryName)")
+        
+        // 使用统一函数显示结果（智能处理加载状态）
+        showPOIResult(mapItem, message: "✅ 使用坐标信息")
+    }
+    
+    // 根据坐标判断国家名称（使用边界框方法，覆盖主要国家）
+    private func getCountryNameByCoordinate(_ coordinate: CLLocationCoordinate2D) -> String {
+        let lat = coordinate.latitude
+        let lon = coordinate.longitude
+        
+        // 首先检查是否在中国（使用现有的精确判断）
+        if isInChinaBoundingBox(coordinate) {
+            return "中国"
+        }
+        
+        // 美国（包含阿拉斯加和夏威夷的粗略范围）
+        if lat >= 18.9 && lat <= 71.5 && lon >= -179.8 && lon <= -66.9 {
+            // 排除加拿大和墨西哥的部分重叠区域
+            if !(lat >= 41.7 && lat <= 71.5 && lon >= -179.8 && lon <= -66.9 && lat > 49.0) {
+                // 美国本土：25°N-49°N, 66°W-125°W
+                if lat >= 25.0 && lat <= 49.0 && lon >= -125.0 && lon <= -66.9 {
+                    return "美国"
+                }
+                // 阿拉斯加：51°N-71°N, 130°W-172°W
+                if lat >= 51.0 && lat <= 71.5 && lon >= -179.8 && lon <= -130.0 {
+                    return "美国"
+                }
+                // 夏威夷：18.9°N-22.3°N, 154.8°W-160.3°W
+                if lat >= 18.9 && lat <= 22.3 && lon >= -160.3 && lon <= -154.8 {
+                    return "美国"
+                }
+            }
+        }
+        
+        // 加拿大
+        if lat >= 41.7 && lat <= 83.1 && lon >= -141.0 && lon <= -52.6 {
+            return "加拿大"
+        }
+        
+        // 日本
+        if lat >= 24.2 && lat <= 45.5 && lon >= 122.9 && lon <= 153.9 {
+            return "日本"
+        }
+        
+        // 韩国
+        if lat >= 33.1 && lat <= 38.6 && lon >= 124.6 && lon <= 132.0 {
+            return "韩国"
+        }
+        
+        // 英国
+        if lat >= 49.9 && lat <= 60.8 && lon >= -8.6 && lon <= 1.8 {
+            return "英国"
+        }
+        
+        // 法国
+        if lat >= 41.3 && lat <= 51.1 && lon >= -5.1 && lon <= 9.6 {
+            return "法国"
+        }
+        
+        // 德国
+        if lat >= 47.3 && lat <= 55.1 && lon >= 5.9 && lon <= 15.0 {
+            return "德国"
+        }
+        
+        // 意大利
+        if lat >= 36.6 && lat <= 47.1 && lon >= 6.6 && lon <= 18.5 {
+            return "意大利"
+        }
+        
+        // 西班牙
+        if lat >= 35.2 && lat <= 43.8 && lon >= -9.3 && lon <= 4.3 {
+            return "西班牙"
+        }
+        
+        // 澳大利亚
+        if lat >= -43.6 && lat <= -10.7 && lon >= 113.3 && lon <= 153.6 {
+            return "澳大利亚"
+        }
+        
+        // 新西兰
+        if lat >= -47.3 && lat <= -34.4 && lon >= 166.5 && lon <= 178.6 {
+            return "新西兰"
+        }
+        
+        // 巴西
+        if lat >= -33.7 && lat <= 5.3 && lon >= -73.0 && lon <= -32.0 {
+            return "巴西"
+        }
+        
+        // 印度
+        if lat >= 6.8 && lat <= 35.7 && lon >= 68.1 && lon <= 97.4 {
+            return "印度"
+        }
+        
+        // 俄罗斯（主要部分）
+        if lat >= 41.2 && lat <= 81.2 && lon >= 19.6 && lon <= 180.0 {
+            // 排除欧洲其他国家
+            if !(lat >= 47.3 && lat <= 55.1 && lon >= 5.9 && lon <= 15.0) { // 德国
+                if !(lat >= 41.3 && lat <= 51.1 && lon >= -5.1 && lon <= 9.6) { // 法国
+                    if lon >= 19.6 {
+                        return "俄罗斯"
+                    }
+                }
+            }
+        }
+        
+        // 如果无法判断，返回未知国家
+        return "unknown_country".localized
+    }
+    
+    // 根据坐标判断国家枚举（用于获取本地化名称）
+    private func getCountryByCoordinate(_ coordinate: CLLocationCoordinate2D) -> CountryManager.Country? {
+        let lat = coordinate.latitude
+        let lon = coordinate.longitude
+        
+        // 首先检查是否在中国（使用现有的精确判断）
+        if isInChinaBoundingBox(coordinate) {
+            return .china
+        }
+        
+        // 美国（包含阿拉斯加和夏威夷的粗略范围）
+        if lat >= 18.9 && lat <= 71.5 && lon >= -179.8 && lon <= -66.9 {
+            // 排除加拿大和墨西哥的部分重叠区域
+            if !(lat >= 41.7 && lat <= 71.5 && lon >= -179.8 && lon <= -66.9 && lat > 49.0) {
+                // 美国本土：25°N-49°N, 66°W-125°W
+                if lat >= 25.0 && lat <= 49.0 && lon >= -125.0 && lon <= -66.9 {
+                    return .unitedStates
+                }
+                // 阿拉斯加：51°N-71°N, 130°W-172°W
+                if lat >= 51.0 && lat <= 71.5 && lon >= -179.8 && lon <= -130.0 {
+                    return .unitedStates
+                }
+                // 夏威夷：18.9°N-22.3°N, 154.8°W-160.3°W
+                if lat >= 18.9 && lat <= 22.3 && lon >= -160.3 && lon <= -154.8 {
+                    return .unitedStates
+                }
+            }
+        }
+        
+        // 加拿大
+        if lat >= 41.7 && lat <= 83.1 && lon >= -141.0 && lon <= -52.6 {
+            return .canada
+        }
+        
+        // 日本
+        if lat >= 24.2 && lat <= 45.5 && lon >= 122.9 && lon <= 153.9 {
+            return .japan
+        }
+        
+        // 韩国
+        if lat >= 33.1 && lat <= 38.6 && lon >= 124.6 && lon <= 132.0 {
+            return .southKorea
+        }
+        
+        // 英国
+        if lat >= 49.9 && lat <= 60.8 && lon >= -8.6 && lon <= 1.8 {
+            return .unitedKingdom
+        }
+        
+        // 法国
+        if lat >= 41.3 && lat <= 51.1 && lon >= -5.1 && lon <= 9.6 {
+            return .france
+        }
+        
+        // 德国
+        if lat >= 47.3 && lat <= 55.1 && lon >= 5.9 && lon <= 15.0 {
+            return .germany
+        }
+        
+        // 意大利
+        if lat >= 36.6 && lat <= 47.1 && lon >= 6.6 && lon <= 18.5 {
+            return .italy
+        }
+        
+        // 西班牙
+        if lat >= 35.2 && lat <= 43.8 && lon >= -9.3 && lon <= 4.3 {
+            return .spain
+        }
+        
+        // 澳大利亚
+        if lat >= -43.6 && lat <= -10.7 && lon >= 113.3 && lon <= 153.6 {
+            return .australia
+        }
+        
+        // 新西兰
+        if lat >= -47.3 && lat <= -34.4 && lon >= 166.5 && lon <= 178.6 {
+            return .newZealand
+        }
+        
+        // 巴西
+        if lat >= -33.7 && lat <= 5.3 && lon >= -73.0 && lon <= -32.0 {
+            return .brazil
+        }
+        
+        // 印度
+        if lat >= 6.8 && lat <= 35.7 && lon >= 68.1 && lon <= 97.4 {
+            return .india
+        }
+        
+        // 俄罗斯（主要部分）
+        if lat >= 41.2 && lat <= 81.2 && lon >= 19.6 && lon <= 180.0 {
+            // 排除欧洲其他国家
+            if !(lat >= 47.3 && lat <= 55.1 && lon >= 5.9 && lon <= 15.0) { // 德国
+                if !(lat >= 41.3 && lat <= 51.1 && lon >= -5.1 && lon <= 9.6) { // 法国
+                    if lon >= 19.6 {
+                        return .russia
+                    }
+                }
+            }
+        }
+        
+        // 如果无法判断，返回 nil
+        return nil
+    }
+    
+    // 根据坐标获取本地化的国家名称（根据app语言环境调整）
+    private func getLocalizedCountryNameByCoordinate(_ coordinate: CLLocationCoordinate2D) -> String {
+        if let country = getCountryByCoordinate(coordinate) {
+            return CountryManager.shared.getLocalizedCountryName(for: country)
+        }
+        return "unknown_country".localized
     }
     
     // 优化的反向地理编码方法：在中国优先使用，可以获取areasOfInterest（POI名称）
@@ -1860,8 +2120,8 @@ struct MapView: View {
                 } else {
                     let errorDescription = error?.localizedDescription ?? "未知错误"
                     print("❌ 反向地理编码失败: \(errorDescription)")
-                    // 再次失败时兜底展示已选择地点
-                    self.fallbackWithCoordinateOnly(coordinate: coordinate)
+                    // 再次失败时降级为坐标显示（POI预览卡片）
+                    self.fallbackToCoordinatePOI(coordinate: coordinate)
                 }
             }
         }
@@ -3229,18 +3489,38 @@ struct MapView: View {
                         self.showingPOIPreview = true
                     }
                 } else {
-                    let errorDescription = error?.localizedDescription ?? "未知错误"
-                    print("❌ 长按反向地理编码失败: \(errorDescription)")
-                    // 失败时显示坐标信息
-                    let mkPlacemark = MKPlacemark(coordinate: coordinate)
-                    let mapItem = MKMapItem(placemark: mkPlacemark)
-                    mapItem.name = String(format: "%.6f, %.6f", coordinate.latitude, coordinate.longitude)
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                        self.selectedPOI = mapItem
-                        self.showingPOIPreview = true
-                    }
+                    // 失败时降级为坐标显示
+                    self.fallbackToCoordinateForLongPress(coordinate: coordinate, error: error)
                 }
             }
+        }
+    }
+    
+    // 长按失败时降级为坐标显示
+    private func fallbackToCoordinateForLongPress(coordinate: CLLocationCoordinate2D, error: Error?) {
+        let mkPlacemark = MKPlacemark(coordinate: coordinate)
+        let mapItem = MKMapItem(placemark: mkPlacemark)
+        
+        // 使用本地化字符串，提供更友好的显示
+        mapItem.name = "selected_location".localized
+        
+        // 记录错误信息（但不影响降级显示）
+        if let error = error {
+            let errorDescription = error.localizedDescription
+            print("❌ 长按反向地理编码失败，使用坐标降级: \(errorDescription)")
+            
+            // 检查是否是节流错误
+            if let nsError = error as NSError?,
+               nsError.domain == "GEOErrorDomain" && nsError.code == -3 {
+                print("⚠️ 地理编码服务被节流，已降级为坐标显示")
+            }
+        } else {
+            print("⚠️ 长按反向地理编码返回空结果，使用坐标降级")
+        }
+        
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            self.selectedPOI = mapItem
+            self.showingPOIPreview = true
         }
     }
     
@@ -3267,9 +3547,26 @@ struct MapView: View {
             streetNumber: streetNumber
         )
         
-        let countryName = placemark.country ?? "unknown_country".localized
+        // 如果placemark没有国家信息，尝试根据坐标判断国家（使用本地化名称）
+        var countryName = placemark.country ?? ""
+        if countryName.isEmpty || countryName == "unknown_country".localized {
+            countryName = getLocalizedCountryNameByCoordinate(placemark.coordinate)
+            print("📍 使用坐标判断国家（本地化）: \(countryName)")
+        }
+        if countryName.isEmpty {
+            countryName = "unknown_country".localized
+        }
+        
+        // 根据国家名称判断分类（支持本地化名称）
         let isoCountryCode = placemark.isoCountryCode ?? ""
-        let category = (isoCountryCode == "CN" || countryName == "中国" || countryName == "China") ? "domestic" : "international"
+        let category: String
+        if isoCountryCode == "CN" {
+            category = "domestic"
+        } else if CountryManager.shared.isDomestic(country: countryName) {
+            category = "domestic"
+        } else {
+            category = "international"
+        }
         
         // 设置预填充数据并显示快速打卡界面
         isWaitingForLocation = false
@@ -3726,7 +4023,10 @@ struct MapView: View {
     private func fallbackWithCoordinateOnly(coordinate: CLLocationCoordinate2D) {
         isGeocodingLocation = false
         let category = isInChinaBoundingBox(coordinate) ? "domestic" : "international"
-        let countryName = category == "domestic" ? "中国" : "unknown_country".localized
+        // 使用本地化的国家名称
+        let countryName = category == "domestic" 
+            ? CountryManager.shared.getLocalizedCountryName(for: .china)
+            : getLocalizedCountryNameByCoordinate(coordinate)
         let cityName = "selected_location".localized
         print("🛟 " + "coordinate_fallback".localized(with: cityName, countryName, category))
         let placemark = MKPlacemark(coordinate: coordinate)
