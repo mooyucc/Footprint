@@ -344,7 +344,14 @@ struct TripImageGenerator {
         // - 底部边距: 16（确保副标题完整显示，有足够的底部空间）
         contentHeight += 24 + signatureHeight + 25 + subtitleHeight + 16
         
-        let imageSize = CGSize(width: screenWidth, height: contentHeight)
+        // 计算右侧封面图尺寸（3:2 高宽比）
+        let rightCoverHeight = contentHeight  // 高度 = 左侧内容高度
+        let rightCoverWidth = rightCoverHeight * 2.0 / 3.0  // 宽度 = 高度 * 2/3（3:2比例）
+        let columnSpacing: CGFloat = 12  // 左右分栏之间的间距
+        
+        // 整体图片尺寸 = 左侧宽度 + 右侧宽度 + 间距
+        let totalImageWidth = screenWidth + rightCoverWidth + columnSpacing
+        let imageSize = CGSize(width: totalImageWidth, height: contentHeight)
         
         // 创建图片渲染器
         let rendererFormat = UIGraphicsImageRendererFormat.default()
@@ -474,6 +481,18 @@ struct TripImageGenerator {
             // 绘制底部签名（与旅程分享图片统一）
             currentY += 24 // 与上面照片的间距（与旅程分享统一）
             drawSignature(at: CGPoint(x: screenWidth/2, y: currentY), width: contentWidth, context: cgContext)
+            
+            // 绘制右侧封面图（3:2比例，无圆角）
+            if let coverPhoto = allPhotos.first, let coverImage = UIImage(data: coverPhoto) {
+                let rightCoverX = screenWidth + columnSpacing
+                let rightCoverRect = CGRect(
+                    x: rightCoverX,
+                    y: 0,
+                    width: rightCoverWidth,
+                    height: rightCoverHeight
+                )
+                drawRightCoverImage(coverImage, in: rightCoverRect, context: cgContext)
+            }
         }
     }
     
@@ -1115,6 +1134,43 @@ struct TripImageGenerator {
             drawRect = CGRect(
                 x: rect.minX,
                 y: rect.midY - scaledHeight / 2,
+                width: rect.width,
+                height: scaledHeight
+            )
+        }
+        
+        image.draw(in: drawRect)
+        context.restoreGState()
+    }
+    
+    /// 绘制右侧封面图（无圆角，3:2比例，scaledToFill填充）
+    private static func drawRightCoverImage(_ image: UIImage, in rect: CGRect, context: CGContext) {
+        context.saveGState()
+        // 不使用圆角，直接使用矩形裁剪
+        context.addRect(rect)
+        context.clip()
+        
+        // 计算图片缩放和位置（scaledToFill 方式，居中裁剪）
+        let imageSize = image.size
+        let rectAspectRatio = rect.width / rect.height  // 应该是 2/3
+        let imageAspectRatio = imageSize.width / imageSize.height
+        
+        var drawRect = rect
+        if imageAspectRatio > rectAspectRatio {
+            // 图片更宽，以高度为准，水平居中裁剪
+            let scaledWidth = rect.height * imageAspectRatio
+            drawRect = CGRect(
+                x: rect.midX - scaledWidth/2,
+                y: rect.minY,
+                width: scaledWidth,
+                height: rect.height
+            )
+        } else {
+            // 图片更高，以宽度为准，垂直居中裁剪
+            let scaledHeight = rect.width / imageAspectRatio
+            drawRect = CGRect(
+                x: rect.minX,
+                y: rect.midY - scaledHeight/2,
                 width: rect.width,
                 height: scaledHeight
             )

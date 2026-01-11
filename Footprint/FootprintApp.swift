@@ -21,6 +21,7 @@ struct FootprintApp: App {
     @State private var initializationCompleted = false  // 初始化是否完成
     @State private var showOnboarding = !FirstLaunchManager.shared.hasCompletedOnboarding  // 控制引导流程显示
     #if BETA
+    // 首次启动日期会在访问 isExpired 时自动初始化（通过 expiryDate -> firstLaunchDate）
     @State private var showBetaReminder = !BetaInfo.isExpired
     @State private var showBetaExpiredReminder = BetaInfo.isExpired
     #endif

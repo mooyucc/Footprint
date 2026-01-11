@@ -132,7 +132,7 @@
 
 // Beta Reminder
 "beta_reminder_title" = "测试版提醒";
-"beta_reminder_subtitle" = "当前为测试版，有效期 30 天。";
+"beta_reminder_subtitle" = "当前为测试版，有效期 7 天。";
 "beta_reminder_countdown" = "剩余天数：%d";
 "beta_reminder_days_label" = "剩余天数";
 "beta_reminder_expiry_date" = "到期日：%@";

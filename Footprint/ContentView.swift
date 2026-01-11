@@ -14,6 +14,7 @@ struct ContentView: View {
     @EnvironmentObject var languageManager: LanguageManager
     @EnvironmentObject var brandColorManager: BrandColorManager
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.scenePhase) private var scenePhase
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -82,10 +83,35 @@ struct ContentView: View {
                 }
             }
         }
-        .onChange(of: selectedTab) { _ in
+        .onChange(of: selectedTab) { oldValue, newValue in
             // 当切换 tab 时重新应用配置，确保颜色正确
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 configureTabBarAppearance(for: colorScheme, brandColor: brandColorManager.currentBrandColor)
+            }
+            
+            // 性能优化：根据 tab 切换管理实时定位
+            let locationManager = LocationManager.shared
+            if newValue == 0 {
+                // 切换到 Map tab，启动实时定位
+                locationManager.startUpdatingLocation()
+                print("📍 切换到 Map tab，启动实时定位")
+            } else if oldValue == 0 {
+                // 从 Map tab 切换到其他 tab，停止实时定位以节省电量
+                locationManager.stopUpdatingLocation()
+                print("📍 离开 Map tab，停止实时定位")
+            }
+        }
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            // 当 app 进入后台时，停止实时定位以节省电量
+            let locationManager = LocationManager.shared
+            if newPhase == .background || newPhase == .inactive {
+                // App 进入后台或非活跃状态，停止实时定位
+                locationManager.stopUpdatingLocation()
+                print("📍 App 进入后台/非活跃状态，停止实时定位")
+            } else if newPhase == .active && selectedTab == 0 {
+                // App 回到前台且当前在 Map tab，重新启动实时定位
+                locationManager.startUpdatingLocation()
+                print("📍 App 回到前台且在 Map tab，重新启动实时定位")
             }
         }
     }

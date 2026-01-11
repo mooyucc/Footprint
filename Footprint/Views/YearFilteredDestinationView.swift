@@ -315,10 +315,12 @@ struct DestinationRowCard: View {
                         .clipped()
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .allowsHitTesting(false)  // 背景图片不拦截点击事件
             } else {
                 // 如果没有图片，使用新的背景颜色
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(Color(red: 0x67/255.0, green: 0x93/255.0, blue: 0xC3/255.0)) // #6793C3
+                    .allowsHitTesting(false)  // 背景不拦截点击事件
             }
             
             // 深色渐变遮罩（无论是否有图片都显示）
@@ -332,6 +334,7 @@ struct DestinationRowCard: View {
                 endPoint: .bottom
             )
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .allowsHitTesting(false)  // 渐变遮罩不拦截点击事件
             
             // 内容层
             ZStack(alignment: .topLeading) {
@@ -413,6 +416,7 @@ struct DestinationRowCard: View {
                 .stroke(borderColor.opacity(0.3), lineWidth: 1)
         )
         .shadow(color: shadowColor, radius: 6, x: 0, y: 2)
+        .contentShape(RoundedRectangle(cornerRadius: 12))
     }
     
     private var thumbnail: some View {

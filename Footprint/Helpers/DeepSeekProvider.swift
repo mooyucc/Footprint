@@ -51,6 +51,7 @@ class DeepSeekProvider: AIServiceProtocol {
         province: String,
         country: String,
         date: Date,
+        existingNotes: String?,
         persona: String,
         mbti: String,
         gender: String,
@@ -93,12 +94,16 @@ class DeepSeekProvider: AIServiceProtocol {
         }
         locationInfo += "\n- \(langConfig.countryLabel)\(separator)\(country)"
         
-        // 构建prompt开头（根据语言）
+        // 获取季节信息（用于prompt中，但不写入生成的笔记）
+        let seasonString = getSeasonString(from: date, language: currentLanguage)
+        let seasonLabel = currentLanguage == .english ? "Season" : (currentLanguage == .japanese ? "季節" : (currentLanguage == .korean ? "계절" : (currentLanguage == .french ? "Saison" : (currentLanguage == .spanish ? "Estación" : "季节"))))
+        
+        // 构建prompt开头（根据语言，使用季节而非具体日期）
         var promptText: String
         if currentLanguage == .english {
-            promptText = "You are a \(identity). Generate a travel note based on the following information:\n- \(locationInfo)\n- \(langConfig.visitDateLabel)\(separator)\(dateString)"
+            promptText = "You are a \(identity). Generate a travel note based on the following information:\n- \(locationInfo)\n- \(seasonLabel)\(separator)\(seasonString)"
         } else {
-            promptText = "你是一位\(identity)。根据以下信息生成一段旅行笔记：\n- \(locationInfo)\n- \(langConfig.visitDateLabel)\(separator)\(dateString)"
+            promptText = "你是一位\(identity)。根据以下信息生成一段旅行笔记：\n- \(locationInfo)\n- \(seasonLabel)\(separator)\(seasonString)"
         }
         
         // 构建用户画像信息，用于指导文风（但不写入笔记内容）
@@ -136,6 +141,21 @@ class DeepSeekProvider: AIServiceProtocol {
             promptText += "\n\n\(langConfig.styleGuidanceLabel)\(separator)\(styleGuidance)。"
         }
         
+        // 检查用户是否已输入笔记文字
+        let trimmedExistingNotes = existingNotes?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let hasExistingNotes = !trimmedExistingNotes.isEmpty
+        
+        if hasExistingNotes {
+            // 如果用户已写文字，要求美化用户文字
+            let separator = currentLanguage == .english ? ": " : "："
+            if currentLanguage == .english {
+                promptText += "\n\n**User's existing notes**\(separator)\n\(trimmedExistingNotes)\n\n**Important**: The user has already written some notes above. Your main task is to **polish and beautify** the user's existing text, making it more elegant, fluent, and expressive while preserving the original meaning and key information. Do not generate completely new content. Only enhance and refine what the user has written."
+            } else {
+                promptText += "\n\n**用户已写的笔记**\(separator)\n\(trimmedExistingNotes)\n\n**重要提示**：用户已经写了一段笔记文字（见上方）。你的主要任务是**美化用户已写的文字**，使其更加优美、流畅、有表现力，同时保留原文的意思和关键信息。不要生成全新的内容，只需要对用户已写的文字进行润色和美化。"
+            }
+            print("📝 [DeepSeek] 检测到用户已输入笔记，将进行美化处理")
+        }
+        
         // 如果有照片，使用 Apple Vision API 识别图片内容
         if !images.isEmpty {
             print("📸 [Vision] 开始使用Apple Vision API识别\(images.count)张照片...")
@@ -170,19 +190,35 @@ class DeepSeekProvider: AIServiceProtocol {
             
             // 构建本地化的prompt结尾（有照片的情况）
             if currentLanguage == .english {
-                promptText += "\n\n\(langConfig.importantNoteLabel): Please strictly follow the location information provided above (\(location)\(province.isEmpty ? "" : ", \(province)"), \(country)) to generate the note. Even if the photos may contain information or features of other locations, you must use the provided location information and not infer or guess the location from the photos.\n\nBased on the above information, especially the photo content descriptions, generate a travel note, \(langConfig.wordLimit144). \(langConfig.requirementsLabel):\n1. **Must use the provided location information (\(location)\(province.isEmpty ? "" : ", \(province)"), \(country)), do not use other location names that may appear in the photos**\n2. Combine the scenes and content actually seen in the photos (but the location must be \(location))\n3. Combine the characteristics and cultural background of this location\n4. Reflect local culture or natural features\n5. Natural and fluent language with personal feelings\n6. \(langConfig.outputLanguageInstruction)\n7. **Do not mention identity tags, MBTI, gender, age group, constellation and other user attribute information, only write pure travel note content**\n8. **Important: Word count must be strictly controlled within 144 words, do not exceed**"
+                if hasExistingNotes {
+                    promptText += "\n\n\(langConfig.importantNoteLabel): Please strictly follow the location information provided above (\(location)\(province.isEmpty ? "" : ", \(province)"), \(country)). Even if the photos may contain information or features of other locations, you must use the provided location information and not infer or guess the location from the photos.\n\nBased on the above information, especially the user's existing notes and photo content descriptions, **polish and beautify** the user's existing notes, \(langConfig.wordLimit144). \(langConfig.requirementsLabel):\n1. **Your main task is to polish the user's existing notes, not to generate new content**\n2. **Must use the provided location information (\(location)\(province.isEmpty ? "" : ", \(province)"), \(country)), do not use other location names that may appear in the photos**\n3. Combine the scenes and content actually seen in the photos (but the location must be \(location))\n4. Make the language more elegant, fluent, and expressive while preserving the original meaning\n5. Reflect local culture or natural features if relevant\n6. \(langConfig.outputLanguageInstruction)\n7. **Do not mention identity tags, MBTI, gender, age group, constellation and other user attribute information, only write pure travel note content**\n8. **Do NOT mention specific dates, times, or location names in the generated note. At most, you can mention the season (\(seasonString)) if it's relevant to the content**\n9. **Important: Word count must be strictly controlled within 144 words, do not exceed**"
+                } else {
+                    promptText += "\n\n\(langConfig.importantNoteLabel): Please strictly follow the location information provided above (\(location)\(province.isEmpty ? "" : ", \(province)"), \(country)) to generate the note. Even if the photos may contain information or features of other locations, you must use the provided location information and not infer or guess the location from the photos.\n\nBased on the above information, especially the photo content descriptions, generate a travel note, \(langConfig.wordLimit144). \(langConfig.requirementsLabel):\n1. **Must use the provided location information (\(location)\(province.isEmpty ? "" : ", \(province)"), \(country)), do not use other location names that may appear in the photos**\n2. Combine the scenes and content actually seen in the photos (but the location must be \(location))\n3. Combine the characteristics and cultural background of this location\n4. Reflect local culture or natural features\n5. Natural and fluent language with personal feelings\n6. \(langConfig.outputLanguageInstruction)\n7. **Do not mention identity tags, MBTI, gender, age group, constellation and other user attribute information, only write pure travel note content**\n8. **Do NOT mention specific dates, times, or location names in the generated note. At most, you can mention the season (\(seasonString)) if it's relevant to the content**\n9. **Important: Word count must be strictly controlled within 144 words, do not exceed**"
+                }
             } else {
                 let comma = currentLanguage == .chinese || currentLanguage == .chineseTraditional || currentLanguage == .japanese || currentLanguage == .korean ? "，" : ", "
-                promptText += "\n\n\(langConfig.importantNoteLabel)：请严格按照上面提供的地点信息（\(location)\(province.isEmpty ? "" : "\(comma)\(province)")，\(country)）生成笔记。即使照片中可能包含其他地点的信息或特征，也必须使用提供的地点信息，不要从照片中推断或猜测地点。\n\n请根据以上信息，特别是照片内容描述，生成一段旅行笔记，\(langConfig.wordLimit144)。\(langConfig.requirementsLabel)：\n1. **必须使用提供的地点信息（\(location)\(province.isEmpty ? "" : "\(comma)\(province)")，\(country)），不要使用照片中可能出现的其他地点名称**\n2. 结合照片中实际看到的场景和内容（但地点必须是\(location)）\n3. 结合这个地点的特色和文化背景\n4. 体现当地文化或自然风貌\n5. 语言自然流畅，带有个人感受\n6. \(langConfig.outputLanguageInstruction)\n7. **不要提及身份标签、MBTI、性别、年龄段、星座等用户属性信息，只写纯粹的旅行笔记内容**\n8. **重要：字数必须严格控制在144字以内，不要超过**"
+                if hasExistingNotes {
+                    promptText += "\n\n\(langConfig.importantNoteLabel)：请严格按照上面提供的地点信息（\(location)\(province.isEmpty ? "" : "\(comma)\(province)")，\(country)）。即使照片中可能包含其他地点的信息或特征，也必须使用提供的地点信息，不要从照片中推断或猜测地点。\n\n请根据以上信息，特别是用户已写的笔记和照片内容描述，**美化用户已写的笔记**，\(langConfig.wordLimit144)。\(langConfig.requirementsLabel)：\n1. **你的主要任务是美化用户已写的笔记，而不是生成新内容**\n2. **必须使用提供的地点信息（\(location)\(province.isEmpty ? "" : "\(comma)\(province)")，\(country)），不要使用照片中可能出现的其他地点名称**\n3. 结合照片中实际看到的场景和内容（但地点必须是\(location)）\n4. 使语言更加优美、流畅、有表现力，同时保留原文的意思\n5. 如果相关，体现当地文化或自然风貌\n6. \(langConfig.outputLanguageInstruction)\n7. **不要提及身份标签、MBTI、性别、年龄段、星座等用户属性信息，只写纯粹的旅行笔记内容**\n8. **不要在生成的笔记中提及具体的时间（日期）、地点名称等信息，最多只能提到季节（\(seasonString)）**\n9. **重要：字数必须严格控制在144字以内，不要超过**"
+                } else {
+                    promptText += "\n\n\(langConfig.importantNoteLabel)：请严格按照上面提供的地点信息（\(location)\(province.isEmpty ? "" : "\(comma)\(province)")，\(country)）生成笔记。即使照片中可能包含其他地点的信息或特征，也必须使用提供的地点信息，不要从照片中推断或猜测地点。\n\n请根据以上信息，特别是照片内容描述，生成一段旅行笔记，\(langConfig.wordLimit144)。\(langConfig.requirementsLabel)：\n1. **必须使用提供的地点信息（\(location)\(province.isEmpty ? "" : "\(comma)\(province)")，\(country)），不要使用照片中可能出现的其他地点名称**\n2. 结合照片中实际看到的场景和内容（但地点必须是\(location)）\n3. 结合这个地点的特色和文化背景\n4. 体现当地文化或自然风貌\n5. 语言自然流畅，带有个人感受\n6. \(langConfig.outputLanguageInstruction)\n7. **不要提及身份标签、MBTI、性别、年龄段、星座等用户属性信息，只写纯粹的旅行笔记内容**\n8. **不要在生成的笔记中提及具体的时间（日期）、地点名称等信息，最多只能提到季节（\(seasonString)）**\n9. **重要：字数必须严格控制在144字以内，不要超过**"
+                }
             }
         } else {
             // 构建本地化的prompt结尾（无照片的情况）
             if currentLanguage == .english {
                 let comma = province.isEmpty ? "" : ", \(province)"
-                promptText += "\n\nGenerate a travel note, \(langConfig.wordLimit144). \(langConfig.requirementsLabel):\n1. Describe the characteristics of this location (\(location)\(comma), \(country))\n2. Reflect local culture or natural features\n3. Natural and fluent language with personal feelings\n4. \(langConfig.outputLanguageInstruction)\n5. **Do not mention identity tags, MBTI, gender, age group, constellation and other user attribute information, only write pure travel note content**\n6. **Important: Word count must be strictly controlled within 144 words, do not exceed**"
+                if hasExistingNotes {
+                    promptText += "\n\nBased on the above information, especially the user's existing notes, **polish and beautify** the user's existing notes, \(langConfig.wordLimit144). \(langConfig.requirementsLabel):\n1. **Your main task is to polish the user's existing notes, not to generate new content**\n2. Describe the characteristics of this location (\(location)\(comma), \(country))\n3. Make the language more elegant, fluent, and expressive while preserving the original meaning\n4. Reflect local culture or natural features if relevant\n5. \(langConfig.outputLanguageInstruction)\n6. **Do not mention identity tags, MBTI, gender, age group, constellation and other user attribute information, only write pure travel note content**\n7. **Do NOT mention specific dates, times, or location names in the generated note. At most, you can mention the season (\(seasonString)) if it's relevant to the content**\n8. **Important: Word count must be strictly controlled within 144 words, do not exceed**"
+                } else {
+                    promptText += "\n\nGenerate a travel note, \(langConfig.wordLimit144). \(langConfig.requirementsLabel):\n1. Describe the characteristics of this location (\(location)\(comma), \(country))\n2. Reflect local culture or natural features\n3. Natural and fluent language with personal feelings\n4. \(langConfig.outputLanguageInstruction)\n5. **Do not mention identity tags, MBTI, gender, age group, constellation and other user attribute information, only write pure travel note content**\n6. **Do NOT mention specific dates, times, or location names in the generated note. At most, you can mention the season (\(seasonString)) if it's relevant to the content**\n7. **Important: Word count must be strictly controlled within 144 words, do not exceed**"
+                }
             } else {
                 let comma = currentLanguage == .chinese || currentLanguage == .chineseTraditional || currentLanguage == .japanese || currentLanguage == .korean ? "，" : ", "
-                promptText += "\n\n请生成一段旅行笔记，\(langConfig.wordLimit144)。\(langConfig.requirementsLabel)：\n1. 描述这个地点（\(location)\(province.isEmpty ? "" : "\(comma)\(province)")，\(country)）的特色\n2. 体现当地文化或自然风貌\n3. 语言自然流畅，带有个人感受\n4. \(langConfig.outputLanguageInstruction)\n5. **不要提及身份标签、MBTI、性别、年龄段、星座等用户属性信息，只写纯粹的旅行笔记内容**\n6. **重要：字数必须严格控制在144字以内，不要超过**"
+                if hasExistingNotes {
+                    promptText += "\n\n请根据以上信息，特别是用户已写的笔记，**美化用户已写的笔记**，\(langConfig.wordLimit144)。\(langConfig.requirementsLabel)：\n1. **你的主要任务是美化用户已写的笔记，而不是生成新内容**\n2. 描述这个地点（\(location)\(province.isEmpty ? "" : "\(comma)\(province)")，\(country)）的特色\n3. 使语言更加优美、流畅、有表现力，同时保留原文的意思\n4. 如果相关，体现当地文化或自然风貌\n5. \(langConfig.outputLanguageInstruction)\n6. **不要提及身份标签、MBTI、性别、年龄段、星座等用户属性信息，只写纯粹的旅行笔记内容**\n7. **不要在生成的笔记中提及具体的时间（日期）、地点名称等信息，最多只能提到季节（\(seasonString)）**\n8. **重要：字数必须严格控制在144字以内，不要超过**"
+                } else {
+                    promptText += "\n\n请生成一段旅行笔记，\(langConfig.wordLimit144)。\(langConfig.requirementsLabel)：\n1. 描述这个地点（\(location)\(province.isEmpty ? "" : "\(comma)\(province)")，\(country)）的特色\n2. 体现当地文化或自然风貌\n3. 语言自然流畅，带有个人感受\n4. \(langConfig.outputLanguageInstruction)\n5. **不要提及身份标签、MBTI、性别、年龄段、星座等用户属性信息，只写纯粹的旅行笔记内容**\n6. **不要在生成的笔记中提及具体的时间（日期）、地点名称等信息，最多只能提到季节（\(seasonString)）**\n7. **重要：字数必须严格控制在144字以内，不要超过**"
+                }
             }
         }
         
@@ -198,6 +234,7 @@ class DeepSeekProvider: AIServiceProtocol {
     
     func generateTripDescription(
         for destinations: [TravelDestination],
+        existingDescription: String?,
         persona: String,
         mbti: String,
         gender: String,
@@ -233,9 +270,13 @@ class DeepSeekProvider: AIServiceProtocol {
         dateFormatter.locale = Locale(identifier: localeId)
         
         let separator = currentLanguage == .english ? ": " : "："
+        // 收集所有目的地的季节信息
+        let seasons = destinations.map { getSeasonString(from: $0.visitDate, language: currentLanguage) }
+        let uniqueSeasons = Set(seasons)
+        
         var destinationsInfo = destinations.map { dest in
-            let dateStr = dateFormatter.string(from: dest.visitDate)
-            var info = "- \(dest.name) (\(dest.country)) - \(dateStr)"
+            // 只显示地点和国家，不显示具体日期
+            var info = "- \(dest.name) (\(dest.country))"
             // 如果有笔记，添加到信息中
             if !dest.notes.isEmpty {
                 info += "\n  \(langConfig.noteLabel)\(separator)\(dest.notes)"
@@ -293,6 +334,28 @@ class DeepSeekProvider: AIServiceProtocol {
             promptText += "\n\n\(langConfig.styleGuidanceLabel)\(separator)\(styleGuidance)。"
         }
         
+        // 检查用户是否已输入旅程描述
+        let trimmedExistingDescription = existingDescription?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let hasExistingDescription = !trimmedExistingDescription.isEmpty
+        
+        if hasExistingDescription {
+            // 如果用户已写描述，要求美化用户文字
+            if currentLanguage == .english {
+                promptText += "\n\n**User's existing trip description**\(separator)\n\(trimmedExistingDescription)\n\n**Important**: The user has already written a trip description above. Your main task is to **polish and beautify** the user's existing text, making it more elegant, fluent, and expressive while preserving the original meaning and key information. Do not generate completely new content. Only enhance and refine what the user has written."
+            } else {
+                promptText += "\n\n**用户已写的旅程描述**\(separator)\n\(trimmedExistingDescription)\n\n**重要提示**：用户已经写了一段旅程描述（见上方）。你的主要任务是**美化用户已写的文字**，使其更加优美、流畅、有表现力，同时保留原文的意思和关键信息。不要生成全新的内容，只需要对用户已写的文字进行润色和美化。"
+            }
+            print("📝 [DeepSeek] 检测到用户已输入旅程描述，将进行美化处理")
+        }
+        
+        // 构建季节信息提示（在照片处理之前，因为两个分支都需要使用）
+        let seasonHint: String
+        if uniqueSeasons.count == 1, let season = uniqueSeasons.first {
+            seasonHint = season
+        } else {
+            seasonHint = uniqueSeasons.joined(separator: currentLanguage == .english ? ", " : "、")
+        }
+        
         // 如果有照片，使用 Apple Vision API 识别图片内容
         if !allImages.isEmpty {
             print("📸 [Vision] 开始使用Apple Vision API识别旅程中的照片，共\(allImages.count)个目的地有照片...")
@@ -343,16 +406,32 @@ class DeepSeekProvider: AIServiceProtocol {
             
             // 构建本地化的prompt结尾（有照片的情况）
             if currentLanguage == .english {
-                promptText += "\n\nBased on the above information, especially the photo content descriptions and notes from various locations, generate an overall trip description, \(langConfig.wordLimit300). \(langConfig.requirementsLabel):\n1. Combine the scenes and content actually seen in the photos\n2. Reference the notes from various locations to reflect the coherence and characteristics of the trip\n3. Natural and fluent language with personal feelings\n4. \(langConfig.outputLanguageInstruction)\n5. **Do not mention identity tags, MBTI, gender, age group, constellation and other user attribute information, only write pure trip description content**\n6. **Important: Word count must be strictly controlled within 300 words, do not exceed**"
+                if hasExistingDescription {
+                    promptText += "\n\nBased on the above information, especially the user's existing trip description, photo content descriptions and notes from various locations, **polish and beautify** the user's existing trip description, \(langConfig.wordLimit300). \(langConfig.requirementsLabel):\n1. **Your main task is to polish the user's existing trip description, not to generate new content**\n2. Combine the scenes and content actually seen in the photos\n3. Reference the notes from various locations to reflect the coherence and characteristics of the trip\n4. Make the language more elegant, fluent, and expressive while preserving the original meaning\n5. \(langConfig.outputLanguageInstruction)\n6. **Do not mention identity tags, MBTI, gender, age group, constellation and other user attribute information, only write pure trip description content**\n7. **Do NOT mention specific dates, times, or location names in the generated description. At most, you can mention the season(s) (\(seasonHint)) if it's relevant to the content**\n8. **Important: Word count must be strictly controlled within 300 words, do not exceed**"
+                } else {
+                    promptText += "\n\nBased on the above information, especially the photo content descriptions and notes from various locations, generate an overall trip description, \(langConfig.wordLimit300). \(langConfig.requirementsLabel):\n1. Combine the scenes and content actually seen in the photos\n2. Reference the notes from various locations to reflect the coherence and characteristics of the trip\n3. Natural and fluent language with personal feelings\n4. \(langConfig.outputLanguageInstruction)\n5. **Do not mention identity tags, MBTI, gender, age group, constellation and other user attribute information, only write pure trip description content**\n6. **Do NOT mention specific dates, times, or location names in the generated description. At most, you can mention the season(s) (\(seasonHint)) if it's relevant to the content**\n7. **Important: Word count must be strictly controlled within 300 words, do not exceed**"
+                }
             } else {
-                promptText += "\n\n请根据以上信息，特别是照片内容描述和各个地点的笔记，生成一段旅程整体描述，\(langConfig.wordLimit300)。\(langConfig.requirementsLabel)：\n1. 结合照片中实际看到的场景和内容\n2. 参考各个地点的笔记内容，体现旅程的连贯性和特色\n3. 语言自然流畅，带有个人感受\n4. \(langConfig.outputLanguageInstruction)\n5. **不要提及身份标签、MBTI、性别、年龄段、星座等用户属性信息，只写纯粹的旅程描述内容**\n6. **重要：字数必须严格控制在300字以内，不要超过**"
+                if hasExistingDescription {
+                    promptText += "\n\n请根据以上信息，特别是用户已写的旅程描述、照片内容描述和各个地点的笔记，**美化用户已写的旅程描述**，\(langConfig.wordLimit300)。\(langConfig.requirementsLabel)：\n1. **你的主要任务是美化用户已写的旅程描述，而不是生成新内容**\n2. 结合照片中实际看到的场景和内容\n3. 参考各个地点的笔记内容，体现旅程的连贯性和特色\n4. 使语言更加优美、流畅、有表现力，同时保留原文的意思\n5. \(langConfig.outputLanguageInstruction)\n6. **不要提及身份标签、MBTI、性别、年龄段、星座等用户属性信息，只写纯粹的旅程描述内容**\n7. **不要在生成的描述中提及具体的时间（日期）、地点名称等信息，最多只能提到季节（\(seasonHint)）**\n8. **重要：字数必须严格控制在300字以内，不要超过**"
+                } else {
+                    promptText += "\n\n请根据以上信息，特别是照片内容描述和各个地点的笔记，生成一段旅程整体描述，\(langConfig.wordLimit300)。\(langConfig.requirementsLabel)：\n1. 结合照片中实际看到的场景和内容\n2. 参考各个地点的笔记内容，体现旅程的连贯性和特色\n3. 语言自然流畅，带有个人感受\n4. \(langConfig.outputLanguageInstruction)\n5. **不要提及身份标签、MBTI、性别、年龄段、星座等用户属性信息，只写纯粹的旅程描述内容**\n6. **不要在生成的描述中提及具体的时间（日期）、地点名称等信息，最多只能提到季节（\(seasonHint)）**\n7. **重要：字数必须严格控制在300字以内，不要超过**"
+                }
             }
         } else {
             // 构建本地化的prompt结尾（无照片的情况）
             if currentLanguage == .english {
-                promptText += "\n\nBased on the above information, especially the notes from various locations, generate an overall trip description, \(langConfig.wordLimit300). \(langConfig.requirementsLabel):\n1. Reference the notes from various locations to reflect the coherence and characteristics of the trip\n2. Natural and fluent language with personal feelings\n3. \(langConfig.outputLanguageInstruction)\n4. **Do not mention identity tags, MBTI, gender, age group, constellation and other user attribute information, only write pure trip description content**\n5. **Important: Word count must be strictly controlled within 300 words, do not exceed**"
+                if hasExistingDescription {
+                    promptText += "\n\nBased on the above information, especially the user's existing trip description and notes from various locations, **polish and beautify** the user's existing trip description, \(langConfig.wordLimit300). \(langConfig.requirementsLabel):\n1. **Your main task is to polish the user's existing trip description, not to generate new content**\n2. Reference the notes from various locations to reflect the coherence and characteristics of the trip\n3. Make the language more elegant, fluent, and expressive while preserving the original meaning\n4. \(langConfig.outputLanguageInstruction)\n5. **Do not mention identity tags, MBTI, gender, age group, constellation and other user attribute information, only write pure trip description content**\n6. **Do NOT mention specific dates, times, or location names in the generated description. At most, you can mention the season(s) (\(seasonHint)) if it's relevant to the content**\n7. **Important: Word count must be strictly controlled within 300 words, do not exceed**"
+                } else {
+                    promptText += "\n\nBased on the above information, especially the notes from various locations, generate an overall trip description, \(langConfig.wordLimit300). \(langConfig.requirementsLabel):\n1. Reference the notes from various locations to reflect the coherence and characteristics of the trip\n2. Natural and fluent language with personal feelings\n3. \(langConfig.outputLanguageInstruction)\n4. **Do not mention identity tags, MBTI, gender, age group, constellation and other user attribute information, only write pure trip description content**\n5. **Do NOT mention specific dates, times, or location names in the generated description. At most, you can mention the season(s) (\(seasonHint)) if it's relevant to the content**\n6. **Important: Word count must be strictly controlled within 300 words, do not exceed**"
+                }
             } else {
-                promptText += "\n\n请根据以上信息，特别是各个地点的笔记，生成一段旅程整体描述，\(langConfig.wordLimit300)。\(langConfig.requirementsLabel)：\n1. 参考各个地点的笔记内容，体现旅程的连贯性和特色\n2. 语言自然流畅，带有个人感受\n3. \(langConfig.outputLanguageInstruction)\n4. **不要提及身份标签、MBTI、性别、年龄段、星座等用户属性信息，只写纯粹的旅程描述内容**\n5. **重要：字数必须严格控制在300字以内，不要超过**"
+                if hasExistingDescription {
+                    promptText += "\n\n请根据以上信息，特别是用户已写的旅程描述和各个地点的笔记，**美化用户已写的旅程描述**，\(langConfig.wordLimit300)。\(langConfig.requirementsLabel)：\n1. **你的主要任务是美化用户已写的旅程描述，而不是生成新内容**\n2. 参考各个地点的笔记内容，体现旅程的连贯性和特色\n3. 使语言更加优美、流畅、有表现力，同时保留原文的意思\n4. \(langConfig.outputLanguageInstruction)\n5. **不要提及身份标签、MBTI、性别、年龄段、星座等用户属性信息，只写纯粹的旅程描述内容**\n6. **不要在生成的描述中提及具体的时间（日期）、地点名称等信息，最多只能提到季节（\(seasonHint)）**\n7. **重要：字数必须严格控制在300字以内，不要超过**"
+                } else {
+                    promptText += "\n\n请根据以上信息，特别是各个地点的笔记，生成一段旅程整体描述，\(langConfig.wordLimit300)。\(langConfig.requirementsLabel)：\n1. 参考各个地点的笔记内容，体现旅程的连贯性和特色\n2. 语言自然流畅，带有个人感受\n3. \(langConfig.outputLanguageInstruction)\n4. **不要提及身份标签、MBTI、性别、年龄段、星座等用户属性信息，只写纯粹的旅程描述内容**\n5. **不要在生成的描述中提及具体的时间（日期）、地点名称等信息，最多只能提到季节（\(seasonHint)）**\n6. **重要：字数必须严格控制在300字以内，不要超过**"
+                }
             }
         }
         
@@ -433,6 +512,75 @@ class DeepSeekProvider: AIServiceProtocol {
     /// 获取当前应用语言
     private var currentLanguage: LanguageManager.Language {
         return LanguageManager.shared.currentLanguage
+    }
+    
+    /// 根据日期获取季节字符串（多语言支持）
+    private func getSeasonString(from date: Date, language: LanguageManager.Language) -> String {
+        let calendar = Calendar.current
+        let month = calendar.component(.month, from: date)
+        
+        switch month {
+        case 3, 4, 5:
+            switch language {
+            case .chinese, .chineseTraditional:
+                return "春天"
+            case .english:
+                return "spring"
+            case .japanese:
+                return "春"
+            case .korean:
+                return "봄"
+            case .french:
+                return "printemps"
+            case .spanish:
+                return "primavera"
+            }
+        case 6, 7, 8:
+            switch language {
+            case .chinese, .chineseTraditional:
+                return "夏天"
+            case .english:
+                return "summer"
+            case .japanese:
+                return "夏"
+            case .korean:
+                return "여름"
+            case .french:
+                return "été"
+            case .spanish:
+                return "verano"
+            }
+        case 9, 10, 11:
+            switch language {
+            case .chinese, .chineseTraditional:
+                return "秋天"
+            case .english:
+                return "autumn"
+            case .japanese:
+                return "秋"
+            case .korean:
+                return "가을"
+            case .french:
+                return "automne"
+            case .spanish:
+                return "otoño"
+            }
+        default: // 12, 1, 2
+            switch language {
+            case .chinese, .chineseTraditional:
+                return "冬天"
+            case .english:
+                return "winter"
+            case .japanese:
+                return "冬"
+            case .korean:
+                return "겨울"
+            case .french:
+                return "hiver"
+            case .spanish:
+                return "invierno"
+            }
+        }
     }
     
     /// 获取语言相关的配置信息

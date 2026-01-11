@@ -21,6 +21,7 @@ class CountryManager: ObservableObject {
         case southKorea = "KR"
         case singapore = "SG"
         case thailand = "TH"
+        case myanmar = "MM"
         case malaysia = "MY"
         case indonesia = "ID"
         case philippines = "PH"
@@ -148,6 +149,8 @@ class CountryManager: ObservableObject {
                 return "新加坡"
             case .thailand:
                 return "泰国"
+            case .myanmar:
+                return "缅甸"
             case .malaysia:
                 return "马来西亚"
             case .indonesia:
@@ -389,6 +392,8 @@ class CountryManager: ObservableObject {
                 return "🇸🇬"
             case .thailand:
                 return "🇹🇭"
+            case .myanmar:
+                return "🇲🇲"
             case .malaysia:
                 return "🇲🇾"
             case .indonesia:
@@ -630,6 +635,8 @@ class CountryManager: ObservableObject {
                 return "Singapore"
             case .thailand:
                 return "Thailand"
+            case .myanmar:
+                return "Myanmar"
             case .malaysia:
                 return "Malaysia"
             case .indonesia:
@@ -937,6 +944,30 @@ class CountryManager: ObservableObject {
     // 获取当前国家的本地化显示名称
     var currentCountryLocalizedName: String {
         return getLocalizedCountryName(for: currentCountry)
+    }
+    
+    // 根据国家名称字符串（可能是中文或英文）获取本地化名称
+    func getLocalizedCountryName(from countryName: String) -> String {
+        // 如果为空，返回未知国家
+        if countryName.isEmpty {
+            let currentLanguage = LanguageManager.shared.currentLanguage
+            return currentLanguage == .chinese || currentLanguage == .chineseTraditional ? "未知國家" : "Unknown Country"
+        }
+        
+        // 首先尝试通过 ISO 代码匹配
+        if let country = Country(rawValue: countryName) {
+            return getLocalizedCountryName(for: country)
+        }
+        
+        // 遍历所有国家，匹配中文名称或英文名称
+        for country in Country.allCases {
+            if country.displayName == countryName || country.englishName == countryName {
+                return getLocalizedCountryName(for: country)
+            }
+        }
+        
+        // 如果无法匹配，返回原始名称（可能是其他语言或自定义名称）
+        return countryName
     }
 }
 

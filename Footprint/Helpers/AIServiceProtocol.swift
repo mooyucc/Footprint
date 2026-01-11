@@ -18,6 +18,7 @@ protocol AIServiceProtocol {
     ///   - province: 省份/州（可选）
     ///   - country: 国家/地区
     ///   - date: 访问日期
+    ///   - existingNotes: 用户已输入的笔记文字（如果存在，AI将主要美化这段文字，而不是生成新内容）
     ///   - persona: 用户身份标签（用于个性化文风）
     ///   - mbti: 用户 MBTI 标签（用于个性化文风）
     ///   - gender: 用户性别（用于个性化文风）
@@ -30,6 +31,7 @@ protocol AIServiceProtocol {
         province: String,
         country: String,
         date: Date,
+        existingNotes: String?,
         persona: String,
         mbti: String,
         gender: String,
@@ -40,6 +42,7 @@ protocol AIServiceProtocol {
     /// 生成旅程描述
     /// - Parameters:
     ///   - destinations: 目的地列表
+    ///   - existingDescription: 用户已输入的旅程描述（如果存在，AI将主要美化这段文字，而不是生成新内容）
     ///   - persona: 用户身份标签（用于个性化文风）
     ///   - mbti: 用户 MBTI 标签（用于个性化文风）
     ///   - gender: 用户性别（用于个性化文风）
@@ -48,6 +51,7 @@ protocol AIServiceProtocol {
     /// - Returns: 生成的旅程描述
     func generateTripDescription(
         for destinations: [TravelDestination],
+        existingDescription: String?,
         persona: String,
         mbti: String,
         gender: String,

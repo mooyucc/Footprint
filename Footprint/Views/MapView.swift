@@ -799,6 +799,10 @@ struct MapView: View {
         lastDestinationsSignature = destinationsSignature
         startPeriodicCheck()
         
+        // 重新启动持续定位更新（如果之前在视图消失时被停止）
+        // LocationManager 内部有保护机制，如果已经在更新则不会重复启动
+        locationManager.startUpdatingLocation()
+        
         // 如果应用还未就绪（启动画面还在显示），延迟设置地图相机位置
         if !isAppReady {
             print("⏳ 启动画面显示中，定位服务已在后台启动，等待启动画面结束...")
@@ -5689,6 +5693,7 @@ struct DestinationPreviewCard: View {
     @State private var showingAINotePreview = false
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var entitlementManager: EntitlementManager
+    @StateObject private var countryManager = CountryManager.shared
     
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -5730,7 +5735,7 @@ struct DestinationPreviewCard: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
-                    Text(destination.country)
+                    Text(countryManager.getLocalizedCountryName(from: destination.country))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -6662,6 +6667,23 @@ private struct FloatingAssistiveMenu: View {
         Button {
             toggleMenu()
         } label: {
+            mainButtonContent
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint(menuTitle)
+    }
+    
+    @ViewBuilder
+    private var mainButtonContent: some View {
+        if #available(iOS 26, *) {
+            Image(systemName: isExpanded ? "xmark" : "circle.hexagongrid.fill")
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(isDarkStyle ? Color.white : Color.primary)
+                .frame(width: Self.collapsedDiameter, height: Self.collapsedDiameter)
+                .glassEffect(.regular.interactive(), in: Circle())
+                .contentShape(Circle())
+                .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
+        } else {
             Image(systemName: isExpanded ? "xmark" : "circle.hexagongrid.fill")
                 .font(.system(size: 22, weight: .semibold))
                 .foregroundStyle(isDarkStyle ? Color.white : Color.primary)
@@ -6678,10 +6700,9 @@ private struct FloatingAssistiveMenu: View {
                                 .stroke(Color.white.opacity(isDarkStyle ? 0.25 : 0.35), lineWidth: 1)
                         )
                 )
+                .contentShape(Circle())
                 .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
         }
-        .buttonStyle(.plain)
-        .accessibilityHint(menuTitle)
     }
     
     private func radialButton(for action: AssistiveMenuAction, at index: Int) -> some View {
@@ -6690,7 +6711,23 @@ private struct FloatingAssistiveMenu: View {
         return Button {
             select(action)
         } label: {
-            VStack(spacing: 0) {
+            radialButtonContent(for: action)
+        }
+        .buttonStyle(.plain)
+        .offset(x: isExpanded ? offsets.x : 0, y: isExpanded ? offsets.y : 0)
+    }
+    
+    @ViewBuilder
+    private func radialButtonContent(for action: AssistiveMenuAction) -> some View {
+        VStack(spacing: 0) {
+            if #available(iOS 26, *) {
+                iconProvider(action.icon, action.isActive)
+                    .frame(width: 24, height: 24)
+                    .padding(14)
+                    .glassEffect(.regular.interactive(), in: Circle())
+                    .contentShape(Circle())
+                    .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
+            } else {
                 iconProvider(action.icon, action.isActive)
                     .frame(width: 24, height: 24)
                     .padding(14)
@@ -6702,12 +6739,11 @@ private struct FloatingAssistiveMenu: View {
                                     .stroke(Color.white.opacity(isDarkStyle ? 0.25 : 0.2), lineWidth: action.isActive ? 1.6 : 1)
                             )
                     )
+                    .contentShape(Circle())
             }
-            .opacity(isExpanded ? 1 : 0)
-            .scaleEffect(isExpanded ? 1 : 0.5, anchor: .center)
         }
-        .buttonStyle(.plain)
-        .offset(x: isExpanded ? offsets.x : 0, y: isExpanded ? offsets.y : 0)
+        .opacity(isExpanded ? 1 : 0)
+        .scaleEffect(isExpanded ? 1 : 0.5, anchor: .center)
     }
     
     private func radialOffsets(for index: Int) -> (x: CGFloat, y: CGFloat) {
@@ -7106,7 +7142,7 @@ struct RouteCard: View {
                                         Image(systemName: "mappin.circle.fill")
                                             .font(.caption)
                                             .foregroundColor(.white.opacity(0.9))
-                                        Text("\(destinations.count) 地点")
+                                        Text("\(destinations.count) \("locations".localized)")
                                             .font(.subheadline)
                                             .foregroundColor(.white.opacity(0.9))
                                     }
@@ -7144,7 +7180,7 @@ struct RouteCard: View {
                                     Image(systemName: "mappin.circle.fill")
                                         .font(.caption)
                                         .foregroundColor(.blue)
-                                    Text("\(destinations.count) 地点")
+                                    Text("\(destinations.count) \("locations".localized)")
                                         .font(.subheadline)
                                         .foregroundColor(.primary)
                                 }
@@ -7164,7 +7200,7 @@ struct RouteCard: View {
                                 HStack(spacing: 6) {
                                     ProgressView()
                                         .scaleEffect(0.8)
-                                    Text("计算中...")
+                                    Text("route_card_calculating".localized)
                                         .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
@@ -7236,7 +7272,7 @@ struct RouteCard: View {
                             HStack(spacing: 6) {
                                 ProgressView()
                                     .scaleEffect(0.8)
-                                Text("计算中...")
+                                Text("route_card_calculating".localized)
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -7255,7 +7291,7 @@ struct RouteCard: View {
                                             .foregroundColor(.primary)
                                             .lineLimit(1)
                                     }
-                                    Text("起点")
+                                    Text("route_card_start_point".localized)
                                         .font(.caption2)
                                         .foregroundColor(.secondary)
                                 }
@@ -7275,7 +7311,7 @@ struct RouteCard: View {
                                             .foregroundColor(.primary)
                                             .lineLimit(1)
                                     }
-                                    Text("终点")
+                                    Text("route_card_end_point".localized)
                                         .font(.caption2)
                                         .foregroundColor(.secondary)
                                 }
@@ -7299,7 +7335,7 @@ struct RouteCard: View {
                                         .foregroundColor(.primary)
                                         .lineLimit(1)
                                 }
-                                Text("起点")
+                                Text("route_card_start_point".localized)
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                             }
@@ -7319,7 +7355,7 @@ struct RouteCard: View {
                                         .foregroundColor(.primary)
                                         .lineLimit(1)
                                 }
-                                Text("终点")
+                                Text("route_card_end_point".localized)
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                             }
@@ -8379,7 +8415,7 @@ struct JourneyDrawer: View {
                                 Image(systemName: "mappin.circle.fill")
                                     .font(.caption2)
                                     .foregroundColor(.blue)
-                                Text("\(destinations.count) 地点")
+                                Text("\(destinations.count) \("locations".localized)")
                                     .font(.caption)
                                     .foregroundColor(.primary)
                             }

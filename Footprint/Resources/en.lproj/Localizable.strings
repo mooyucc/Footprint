@@ -132,7 +132,7 @@
 
 // Beta Reminder
 "beta_reminder_title" = "Test Build Reminder";
-"beta_reminder_subtitle" = "This is a beta build. It is valid for 30 days.";
+"beta_reminder_subtitle" = "This is a beta build. It is valid for 7 days.";
 "beta_reminder_countdown" = "Days remaining: %d";
 "beta_reminder_days_label" = "Days Remaining";
 "beta_reminder_expiry_date" = "Expires on %@";

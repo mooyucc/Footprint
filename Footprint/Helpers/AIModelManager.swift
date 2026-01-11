@@ -57,6 +57,15 @@ final class AIModelManager: ObservableObject {
             // 获取照片数据
             let images = destination.photoDatas ?? []
             
+            // 获取用户已输入的笔记（如果存在）
+            let trimmedNotes = destination.notes.trimmingCharacters(in: .whitespacesAndNewlines)
+            let existingNotes: String? = trimmedNotes.isEmpty ? nil : trimmedNotes
+            let hasExistingNotes = !trimmedNotes.isEmpty
+            
+            if hasExistingNotes {
+                print("📝 [AIModelManager] 检测到用户已输入笔记，将进行美化处理")
+            }
+            
             // 调用AI服务生成笔记
             let notes = try await service.generateNotes(
                 from: images,
@@ -64,6 +73,7 @@ final class AIModelManager: ObservableObject {
                 province: destination.province,
                 country: destination.country,
                 date: destination.visitDate,
+                existingNotes: existingNotes,
                 persona: appleSignInManager.personaTag,
                 mbti: appleSignInManager.mbtiType,
                 gender: appleSignInManager.gender,
@@ -101,9 +111,19 @@ final class AIModelManager: ObservableObject {
                 throw AIError.invalidInput("目的地列表为空")
             }
             
+            // 获取用户已输入的旅程描述（如果存在）
+            let trimmedDesc = trip.desc.trimmingCharacters(in: .whitespacesAndNewlines)
+            let existingDescription: String? = trimmedDesc.isEmpty ? nil : trimmedDesc
+            let hasExistingDescription = !trimmedDesc.isEmpty
+            
+            if hasExistingDescription {
+                print("📝 [AIModelManager] 检测到用户已输入旅程描述，将进行美化处理")
+            }
+            
             // 调用AI服务生成描述
             let description = try await service.generateTripDescription(
                 for: destinations,
+                existingDescription: existingDescription,
                 persona: appleSignInManager.personaTag,
                 mbti: appleSignInManager.mbtiType,
                 gender: appleSignInManager.gender,

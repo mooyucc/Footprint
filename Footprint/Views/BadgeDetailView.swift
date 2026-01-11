@@ -268,42 +268,26 @@ struct BadgeDetailView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 ScrollView {
-                    LazyVStack(spacing: 12) {
+                    LazyVStack(alignment: .leading, spacing: 12) {
                         ForEach(destinations.sorted(by: { $0.visitDate > $1.visitDate })) { destination in
                             NavigationLink {
                                 DestinationDetailView(destination: destination)
                             } label: {
-                                DestinationRow(destination: destination, showsDisclosureIndicator: true)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 12)
+                                DestinationRowCard(destination: destination, primaryTextColor: .primary)
                             }
-                            .buttonStyle(.plain)
-                            .background(
-                                Group {
-                                    if colorScheme == .dark {
-                                        // 深色模式：使用半透明深灰色背景（渲染更快）
-                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                            .fill(Color(.systemBackground).opacity(0.85))
-                                    } else {
-                                        // 浅色模式：使用半透明白色背景（渲染更快）
-                                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                            .fill(Color.white.opacity(0.85))
-                                    }
-                                }
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .stroke(AppColorScheme.glassCardBorder, lineWidth: 1)
-                            )
-                            .shadow(
-                                color: AppColorScheme.glassCardShadow.color,
-                                radius: AppColorScheme.glassCardShadow.radius,
-                                x: AppColorScheme.glassCardShadow.x,
-                                y: AppColorScheme.glassCardShadow.y
-                            )
+                            .buttonStyle(PlainButtonStyle())
                         }
                     }
-                    .padding(.horizontal, 20)
+                    .padding(20)
+                    .background(AppColorScheme.whiteCardBackground(for: colorScheme))
+                    .cornerRadius(20)
+                    .shadow(
+                        color: AppColorScheme.largeCardShadow.color,
+                        radius: AppColorScheme.largeCardShadow.radius,
+                        x: AppColorScheme.largeCardShadow.x,
+                        y: AppColorScheme.largeCardShadow.y
+                    )
+                    .padding(.horizontal, 16)
                     .padding(.vertical, 16)
                 }
             }

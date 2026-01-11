@@ -138,7 +138,7 @@
 
 // Beta Reminder
 "beta_reminder_title" = "測試版提醒";
-"beta_reminder_subtitle" = "目前為測試版，有效期 30 天。";
+"beta_reminder_subtitle" = "目前為測試版，有效期 7 天。";
 "beta_reminder_countdown" = "剩餘天數：%d";
 "beta_reminder_expiry_date" = "到期日：%@";
 "beta_reminder_backup_tip" = "請前往「我的 > 設定 > 資料」匯出本機備份，避免測試版到期後資料遺失。";

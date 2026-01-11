@@ -33,10 +33,7 @@ struct DestinationRow: View {
     }
     
     private var countryText: String {
-        if destination.country.isEmpty {
-            return languageManager.currentLanguage == .chinese || languageManager.currentLanguage == .chineseTraditional ? "未知國家" : "Unknown Country"
-        }
-        return destination.country
+        return countryManager.getLocalizedCountryName(from: destination.country)
     }
     
     var body: some View {
