@@ -127,9 +127,11 @@
 "local_import_summary_title" = "インポート結果";
 "local_import_summary_success" = "%d件の旅程をインポートしました";
 "local_import_summary_duplicates" = "%d件の重複旅程をスキップしました";
+"local_import_summary_standalone_destinations" = "%d件の独立地点をインポートしました";
 "local_import_summary_failures" = "%d件のインポートに失敗しました";
 "local_backup_error_title" = "バックアップエラー";
 "local_backup_share_text" = "MooFootprintデータバックアップ";
+"local_backup_no_data" = "エクスポートするデータがありません";
 "local_backup_no_trips" = "エクスポートする旅程がありません";
 "local_backup_empty_package" = "パッケージが空です";
 "local_backup_read_failed" = "読み取り失敗: %@";

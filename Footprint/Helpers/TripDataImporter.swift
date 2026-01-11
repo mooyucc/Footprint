@@ -92,6 +92,7 @@ struct TripDataImporter {
                     let destination = TravelDestination(
                         name: destInfo.name,
                         country: destInfo.country,
+                        province: destInfo.province ?? "",
                         latitude: destInfo.latitude,
                         longitude: destInfo.longitude,
                         visitDate: destInfo.visitDate,
@@ -100,6 +101,7 @@ struct TripDataImporter {
                         photoDatas: destInfo.photoDatas ?? [],
                         photoThumbnailData: destInfo.photoThumbnailData,
                         photoThumbnailDatas: destInfo.photoThumbnailDatas ?? [],
+                        videoData: destInfo.videoData,
                         category: destInfo.category,
                         isFavorite: destInfo.isFavorite
                     )
@@ -129,6 +131,70 @@ struct TripDataImporter {
         }
     }
     
+    /// 导入独立地点（没有关联到任何旅程的地点）
+    static func importStandaloneDestination(from destInfo: TripExportData.DestinationInfo, modelContext: ModelContext) -> ImportDestinationResult {
+        do {
+            // 检查是否已存在相同的目的地（名称、国家、坐标相同）
+            let existingDestination = try modelContext.fetch(
+                FetchDescriptor<TravelDestination>(
+                    predicate: #Predicate { destination in
+                        destination.name == destInfo.name &&
+                        destination.country == destInfo.country &&
+                        destination.latitude >= destInfo.latitude - 0.001 &&
+                        destination.latitude <= destInfo.latitude + 0.001 &&
+                        destination.longitude >= destInfo.longitude - 0.001 &&
+                        destination.longitude <= destInfo.longitude + 0.001
+                    }
+                )
+            ).first
+            
+            if let existingDestination = existingDestination {
+                // 如果目的地已存在，更新其数据（但保持其 trip 关联不变）
+                existingDestination.province = destInfo.province ?? ""
+                existingDestination.visitDate = destInfo.visitDate
+                existingDestination.notes = destInfo.notes
+                existingDestination.photoData = destInfo.photoData
+                existingDestination.photoThumbnailData = destInfo.photoThumbnailData
+                existingDestination.photoDatas = destInfo.photoDatas ?? []
+                existingDestination.photoThumbnailDatas = destInfo.photoThumbnailDatas ?? []
+                existingDestination.videoData = destInfo.videoData
+                existingDestination.category = destInfo.category
+                existingDestination.isFavorite = destInfo.isFavorite
+                
+                try modelContext.save()
+                return .duplicate(existingDestination)
+            } else {
+                // 创建新独立地点
+                let destination = TravelDestination(
+                    name: destInfo.name,
+                    country: destInfo.country,
+                    province: destInfo.province ?? "",
+                    latitude: destInfo.latitude,
+                    longitude: destInfo.longitude,
+                    visitDate: destInfo.visitDate,
+                    notes: destInfo.notes,
+                    photoData: destInfo.photoData,
+                    photoDatas: destInfo.photoDatas ?? [],
+                    photoThumbnailData: destInfo.photoThumbnailData,
+                    photoThumbnailDatas: destInfo.photoThumbnailDatas ?? [],
+                    videoData: destInfo.videoData,
+                    category: destInfo.category,
+                    isFavorite: destInfo.isFavorite
+                )
+                // 独立地点不关联任何旅程
+                destination.trip = nil
+                
+                modelContext.insert(destination)
+                try modelContext.save()
+                
+                return .success(destination)
+            }
+        } catch {
+            print("导入独立地点失败: \(error)")
+            return .error(error.localizedDescription)
+        }
+    }
+    
     /// 验证文件是否为有效的旅程数据
     static func validateTripFile(at url: URL) -> Bool {
         // 获取文件访问权限
@@ -147,6 +213,13 @@ struct TripDataImporter {
             return false
         }
     }
+}
+
+// MARK: - 导入目的地结果枚举
+enum ImportDestinationResult {
+    case success(TravelDestination)
+    case duplicate(TravelDestination)
+    case error(String)
 }
 
 // MARK: - 导入结果枚举

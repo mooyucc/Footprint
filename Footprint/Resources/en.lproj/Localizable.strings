@@ -119,9 +119,11 @@
 "local_import_summary_title" = "Import Summary";
 "local_import_summary_success" = "Successfully imported %d trips";
 "local_import_summary_duplicates" = "Skipped %d duplicate trips";
+"local_import_summary_standalone_destinations" = "Successfully imported %d standalone destinations";
 "local_import_summary_failures" = "Failed to import %d";
 "local_backup_error_title" = "Backup Error";
 "local_backup_share_text" = "MooFootprint Data Backup";
+"local_backup_no_data" = "No data to export";
 "local_backup_no_trips" = "No trips to export";
 "local_backup_empty_package" = "Package is empty";
 "local_backup_read_failed" = "Read failed: %@";

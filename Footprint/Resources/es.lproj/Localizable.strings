@@ -127,9 +127,11 @@
 "local_import_summary_title" = "Resumen de importación";
 "local_import_summary_success" = "Se importaron exitosamente %d viajes";
 "local_import_summary_duplicates" = "Se omitieron %d viajes duplicados";
+"local_import_summary_standalone_destinations" = "Se importaron exitosamente %d destinos independientes";
 "local_import_summary_failures" = "Error al importar %d";
 "local_backup_error_title" = "Error de copia de seguridad";
 "local_backup_share_text" = "Copia de seguridad de datos de MooFootprint";
+"local_backup_no_data" = "No hay datos para exportar";
 "local_backup_no_trips" = "No hay viajes para exportar";
 "local_backup_empty_package" = "El paquete está vacío";
 "local_backup_read_failed" = "Error de lectura: %@";

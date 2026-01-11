@@ -26,6 +26,7 @@ struct TripExportData: Codable {
     struct DestinationInfo: Codable {
         let name: String
         let country: String
+        let province: String?
         let latitude: Double
         let longitude: Double
         let visitDate: Date
@@ -34,8 +35,41 @@ struct TripExportData: Codable {
         let photoThumbnailData: Data?
         let photoDatas: [Data]?
         let photoThumbnailDatas: [Data]?
+        let videoData: Data?
         let category: String
         let isFavorite: Bool
+        
+        init(
+            name: String,
+            country: String,
+            province: String?,
+            latitude: Double,
+            longitude: Double,
+            visitDate: Date,
+            notes: String,
+            photoData: Data?,
+            photoThumbnailData: Data?,
+            photoDatas: [Data]?,
+            photoThumbnailDatas: [Data]?,
+            videoData: Data?,
+            category: String,
+            isFavorite: Bool
+        ) {
+            self.name = name
+            self.country = country
+            self.province = province
+            self.latitude = latitude
+            self.longitude = longitude
+            self.visitDate = visitDate
+            self.notes = notes
+            self.photoData = photoData
+            self.photoThumbnailData = photoThumbnailData
+            self.photoDatas = photoDatas
+            self.photoThumbnailDatas = photoThumbnailDatas
+            self.videoData = videoData
+            self.category = category
+            self.isFavorite = isFavorite
+        }
     }
 }
 
@@ -55,6 +89,7 @@ struct TripDataExporter {
             TripExportData.DestinationInfo(
                 name: destination.name,
                 country: destination.country,
+                province: destination.province.isEmpty ? nil : destination.province,
                 latitude: destination.latitude,
                 longitude: destination.longitude,
                 visitDate: destination.visitDate,
@@ -63,6 +98,7 @@ struct TripDataExporter {
                 photoThumbnailData: destination.photoThumbnailData,
                 photoDatas: destination.photoDatas.isEmpty ? nil : destination.photoDatas,
                 photoThumbnailDatas: destination.photoThumbnailDatas.isEmpty ? nil : destination.photoThumbnailDatas,
+                videoData: destination.videoData,
                 category: destination.category,
                 isFavorite: destination.isFavorite
             )
@@ -73,6 +109,26 @@ struct TripDataExporter {
             destinations: destinations,
             exportDate: Date(),
             appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+        )
+    }
+    
+    /// 导出独立地点（没有关联到任何旅程的地点）
+    static func exportStandaloneDestination(_ destination: TravelDestination) -> TripExportData.DestinationInfo {
+        TripExportData.DestinationInfo(
+            name: destination.name,
+            country: destination.country,
+            province: destination.province.isEmpty ? nil : destination.province,
+            latitude: destination.latitude,
+            longitude: destination.longitude,
+            visitDate: destination.visitDate,
+            notes: destination.notes,
+            photoData: destination.photoData,
+            photoThumbnailData: destination.photoThumbnailData,
+            photoDatas: destination.photoDatas.isEmpty ? nil : destination.photoDatas,
+            photoThumbnailDatas: destination.photoThumbnailDatas.isEmpty ? nil : destination.photoThumbnailDatas,
+            videoData: destination.videoData,
+            category: destination.category,
+            isFavorite: destination.isFavorite
         )
     }
     

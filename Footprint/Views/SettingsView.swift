@@ -610,6 +610,9 @@ struct DataSettingsView: View {
             if summary.duplicateCount > 0 {
                 message += "\n" + "local_import_summary_duplicates".localized(with: summary.duplicateCount)
             }
+            if summary.standaloneDestinationsImported > 0 {
+                message += "\n" + "local_import_summary_standalone_destinations".localized(with: summary.standaloneDestinationsImported)
+            }
             if summary.hasFailures {
                 message += "\n" + "local_import_summary_failures".localized(with: summary.failedMessages.count)
                 let details = summary.failedMessages.map { "• \($0)" }.joined(separator: "\n")

@@ -127,9 +127,11 @@
 "local_import_summary_title" = "가져오기 결과";
 "local_import_summary_success" = "%d개의 여행을 성공적으로 가져왔습니다";
 "local_import_summary_duplicates" = "%d개의 중복 여행을 건너뛰었습니다";
+"local_import_summary_standalone_destinations" = "%d개의 독립 장소를 성공적으로 가져왔습니다";
 "local_import_summary_failures" = "%d개 가져오기 실패";
 "local_backup_error_title" = "백업 오류";
 "local_backup_share_text" = "모어풋프린트 데이터 백업";
+"local_backup_no_data" = "내보낼 데이터가 없습니다";
 "local_backup_no_trips" = "내보낼 여행이 없습니다";
 "local_backup_empty_package" = "패키지가 비어 있습니다";
 "local_backup_read_failed" = "읽기 실패: %@";

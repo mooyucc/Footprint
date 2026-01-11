@@ -11,6 +11,8 @@ import Foundation
 enum BetaInfo {
     /// UserDefaults 键名，用于存储首次启动日期
     private static let firstLaunchDateKey = "BetaFirstLaunchDate"
+    /// UserDefaults 键名，用于存储上次记录的构建号
+    private static let lastBuildNumberKey = "BetaLastBuildNumber"
     
     /// 是否为 Beta 构建（通过编译条件判断）
     static let isBetaBuild: Bool = {
@@ -21,7 +23,12 @@ enum BetaInfo {
         #endif
     }()
     
-    /// 用户首次打开应用的日期（从 UserDefaults 读取，如果不存在则记录当前日期）
+    /// 获取当前构建号
+    private static var currentBuildNumber: String {
+        Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0"
+    }
+    
+    /// 用户首次打开应用的日期（从 UserDefaults 读取，如果不存在或检测到新版本则记录当前日期）
     static var firstLaunchDate: Date {
         // 只在 Beta 版本中记录和读取
         guard isBetaBuild else {
@@ -29,14 +36,30 @@ enum BetaInfo {
             return Date()
         }
         
+        let currentBuild = currentBuildNumber
+        let lastBuild = UserDefaults.standard.string(forKey: lastBuildNumberKey)
+        
+        // 如果构建号变化，说明是新安装或更新，重置首次启动日期
+        let isNewInstall = lastBuild == nil || lastBuild != currentBuild
+        
+        if isNewInstall {
+            // 新安装或更新：重置首次启动日期为当前日期
+            let today = Calendar.current.startOfDay(for: Date())
+            UserDefaults.standard.set(today, forKey: firstLaunchDateKey)
+            UserDefaults.standard.set(currentBuild, forKey: lastBuildNumberKey)
+            print("🔄 检测到新版本（构建号: \(currentBuild)），重置测试版首次启动日期为: \(today)")
+            return today
+        }
+        
         // 尝试从 UserDefaults 读取已保存的首次启动日期
         if let savedDate = UserDefaults.standard.object(forKey: firstLaunchDateKey) as? Date {
             return savedDate
         }
         
-        // 如果没有保存的日期，说明是首次启动，记录当前日期
+        // 如果没有保存的日期（理论上不应该发生），记录当前日期
         let today = Calendar.current.startOfDay(for: Date())
         UserDefaults.standard.set(today, forKey: firstLaunchDateKey)
+        UserDefaults.standard.set(currentBuild, forKey: lastBuildNumberKey)
         return today
     }
     

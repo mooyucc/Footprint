@@ -119,9 +119,11 @@
 "local_import_summary_title" = "导入结果";
 "local_import_summary_success" = "成功导入 %d 个旅程";
 "local_import_summary_duplicates" = "跳过 %d 个重复旅程";
+"local_import_summary_standalone_destinations" = "成功导入 %d 个独立地点";
 "local_import_summary_failures" = "导入失败 %d 个";
 "local_backup_error_title" = "备份错误";
 "local_backup_share_text" = "墨鱼足迹数据备份";
+"local_backup_no_data" = "没有可导出的数据";
 "local_backup_no_trips" = "没有可导出的旅程";
 "local_backup_empty_package" = "数据包为空";
 "local_backup_read_failed" = "读取失败: %@";
