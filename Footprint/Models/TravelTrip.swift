@@ -20,6 +20,10 @@ final class TravelTrip {
     @Relationship(deleteRule: .nullify)
     var destinations: [TravelDestination]?
     
+    /// 此旅程下的所有路线段（用于 CloudKit 同步交通方式与 polyline）
+    @Relationship(deleteRule: .cascade, inverse: \TravelRouteSegment.trip)
+    var routeSegments: [TravelRouteSegment]?
+    
     init(
         name: String,
         desc: String = "",

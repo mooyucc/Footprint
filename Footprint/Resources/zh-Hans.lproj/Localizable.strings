@@ -18,7 +18,7 @@
 "paywall_expires_on" = "到期时间：";
 "paywall_terms_privacy" = "购买即表示同意《服务条款》和《隐私政策》。自动续订，可在系统订阅中随时取消。";
 "paywall_feature_title" = "Pro 功能";
-"paywall_feature_ai" = "AI 助手：智能笔记、旅程描述、照片分析、标签生成";
+"paywall_feature_ai" = "AI 助手：智能笔记、旅程描述、照片分析、旅行目的地推荐";
 "paywall_feature_unlimited" = "无限目的地与旅程卡片";
 "paywall_feature_share_layouts" = "完整版旅程分享图片版面";
 "paywall_feature_import_export" = "本地数据导入/导出";
@@ -116,6 +116,14 @@
 "optimize" = "优化";
 "optimize_images_result_title" = "优化完成";
 "optimize_images_success" = "成功优化 %d 张图片";
+"auto_add_place_type" = "自动添加地点类型";
+"auto_add_place_type_confirm_title" = "自动添加地点类型";
+"auto_add_place_type_confirm_message" = "将对所有有照片且未设置类型的地点，根据首张照片自动识别并填写地点类型。是否继续？";
+"continue" = "继续";
+"auto_add_place_type_result_title" = "完成";
+"auto_add_place_type_success" = "已为 %d 个地点自动添加类型";
+"auto_add_place_type_none" = "没有需要处理的地点（仅对有照片且未设置类型的地点生效）";
+"auto_add_place_type_progress" = "正在处理 %d/%d 个地点";
 "local_import_summary_title" = "导入结果";
 "local_import_summary_success" = "成功导入 %d 个旅程";
 "local_import_summary_duplicates" = "跳过 %d 个重复旅程";
@@ -164,6 +172,7 @@
 "footprint" = "墨鱼足迹";
 "ok" = "确定";
 "map" = "地图";
+"footprint_map" = "足迹地图";
 "trips" = "旅程";
 "profile" = "我的";
 "create_trip" = "添加旅程";
@@ -223,11 +232,23 @@
 "all_destinations" = "所有地点";
 "no_destinations_found" = "未找到地点";
 
+// Discover Map (发现地图)
+"map_mode_my_footprints" = "足迹地图";
+
 // Edit Destination View
 "edit_destination" = "编辑目的地";
 "basic_info" = "基本信息";
 "place_name" = "地点名称";
+"location_tag" = "地点标签";
 "category" = "分类";
+"destination_type" = "地点类型";
+"destination_type_natural_wonder" = "自然奇观";
+"destination_type_urban_landscape" = "城市风貌";
+"destination_type_historical_culture" = "历史人文";
+"destination_type_food_feast" = "美食盛宴";
+"destination_type_leisure_entertainment" = "休闲娱乐";
+"destination_type_outdoor_adventure" = "户外冒险";
+"destination_type_artistic_checkin" = "文艺打卡";
 "province_state" = "省份/州";
 "country_region" = "国家/地区";
 "visit_date" = "访问日期";
@@ -416,6 +437,8 @@
 "duration" = "时长";
 "days" = "天";
 "trip_route" = "行程路线";
+"trip_route_day_title" = "第%d天 · %@";
+"load_more_trips" = "加载更多行程";
 "locations" = "个地点";
 "share_trip" = "分享旅程";
 "share_to_team" = "分享给朋友";
@@ -589,6 +612,7 @@
 "automobile" = "机动车";
 "transit" = "公共交通";
 "airplane" = "飞机";
+"transport_none" = "无";
 
 // Onboarding
 "onboarding_welcome_hello" = "你好";
@@ -628,6 +652,15 @@
 "ai_function_trip_desc_desc" = "基于多个目的地，生成整体旅程描述";
 "ai_function_tags_title" = "生成标签";
 "ai_function_tags_desc" = "根据照片与地点，智能推荐适合的标签";
+"ai_function_recommend_title" = "旅行目的地推荐";
+"ai_function_recommend_desc" = "根据你记录的地点偏好，推荐下一站旅行目的地";
+"ai_generating_recommend" = "正在分析你的出行喜好…";
+"ai_save_recommend" = "保存推荐";
+"ai_save_recommend_success" = "已保存到推荐记录";
+"ai_save_recommend_failed" = "保存失败，请重试";
+"ai_saved_recommend_title" = "推荐记录";
+"ai_saved_recommend_empty_title" = "暂无推荐记录";
+"ai_saved_recommend_empty_desc" = "生成旅行推荐后点击「保存推荐」即可在此查看";
 "ai_function_photo_analysis_title" = "照片智能分析";
 "ai_function_photo_analysis_desc" = "识别照片中的场景、物体和地标";
 "ai_generating_notes" = "正在生成笔记...";
@@ -706,5 +739,20 @@
 "ai_beta_not_available_message" = "AI功能仅在正式版中可用。请前往App Store下载正式版，享受完整的AI助手体验。";
 "ai_download_full_version" = "前往App Store下载正式版";
 "ai_subscription_required_title" = "AI功能需要Pro订阅";
-"ai_subscription_required_message" = "AI助手功能是Pro会员专享功能。升级Pro即可使用智能笔记生成、旅程描述生成等AI功能。";
+"ai_subscription_required_message" = "AI助手功能是Pro会员专享功能。升级Pro即可使用智能笔记生成、旅程描述生成、旅行目的地推荐等AI功能。";
 "ai_upgrade_to_pro" = "升级到Pro";
+
+// AI 调用次数（按次购买）
+"ai_credits_title" = "AI 调用次数";
+"ai_credits_subtitle" = "购买更多调用次数以继续使用 AI 功能。";
+"ai_credits_remaining_label" = "剩余次数";
+"ai_credits_used_label" = "已使用";
+"ai_credits_buy_section_title" = "购买 AI 调用次数";
+"ai_credits_default_product_title" = "AI 调用次数（10 次）";
+"ai_credits_product_subtitle" = "每次购买可获得 %@。";
+"ai_credits_product_unavailable" = "暂时无法获取商品信息，请稍后重试。";
+"ai_credits_usage_title" = "以下操作会消耗 AI 调用次数：";
+"ai_credits_usage_desc" = "每次生成 AI 旅行笔记会消耗 1 次调用；\n每次生成或更新 AI 旅程描述会消耗 1 次调用；\n每次使用 AI 旅行推荐功能会消耗 1 次调用；调用次数长期有效，不会自动过期。";
+"ai_credits_restore_button" = "恢复购买";
+"ai_credits_restore_tip" = "消耗型 AI 调用次数不会通过“恢复购买”找回，请在当前设备上使用完已购买的次数。";
+"ai_buy_per_use_button" = "按次购买 AI 调用";

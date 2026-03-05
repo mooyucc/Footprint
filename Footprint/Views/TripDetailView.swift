@@ -27,6 +27,70 @@ struct TripDetailView: View {
         trip.destinations?.sorted { $0.visitDate < $1.visitDate } ?? []
     }
     
+    /// 按日历「天」分组的目的地，用于多日行程按天展示；单日行程不显示日期标题
+    private var destinationsByDay: [TripDayGroup] {
+        let calendar = Calendar.current
+        let sorted = sortedDestinations
+        guard !sorted.isEmpty else { return [] }
+        var groups: [(dayStart: Date, destinations: [TravelDestination])] = []
+        var currentDayStart: Date?
+        var currentList: [TravelDestination] = []
+        for d in sorted {
+            let dayStart = calendar.startOfDay(for: d.visitDate)
+            if dayStart != currentDayStart {
+                if let prev = currentDayStart { groups.append((prev, currentList)) }
+                currentDayStart = dayStart
+                currentList = [d]
+            } else {
+                currentList.append(d)
+            }
+        }
+        if let last = currentDayStart { groups.append((last, currentList)) }
+        return groups.enumerated().map { index, element in
+            TripDayGroup(dayStart: element.dayStart, dayIndex: index + 1, destinations: element.destinations)
+        }
+    }
+    
+    /// 单日行程不显示「第 N 天」标题，仅多日时显示
+    private var shouldShowDayHeaders: Bool {
+        destinationsByDay.count > 1
+    }
+    
+    /// 计算某天分组之前的总目的地数，用于全局序号
+    private func globalStartIndex(for group: TripDayGroup) -> Int {
+        var count = 0
+        for g in destinationsByDay {
+            if g.id == group.id { return count }
+            count += g.destinations.count
+        }
+        return count
+    }
+    
+    @ViewBuilder
+    private func tripRouteDaySection(group: TripDayGroup, globalStartIndex startIndex: Int) -> some View {
+        let dayTitle = String(format: String(localized: "trip_route_day_title"), group.dayIndex, group.dayStart.localizedFormatted(dateStyle: .medium))
+        VStack(alignment: .leading, spacing: 8) {
+            Text(dayTitle)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(.secondary)
+                .padding(.top, group.id == destinationsByDay.first?.id ? 0 : 16)
+            ForEach(Array(group.destinations.enumerated()), id: \.element.id) { offset, destination in
+                let globalIndex = startIndex + offset + 1
+                let nextInSameDay = offset + 1 < group.destinations.count ? group.destinations[offset + 1] : nil
+                NavigationLink {
+                    DestinationDetailView(destination: destination)
+                } label: {
+                    TripDestinationRow(
+                        destination: destination,
+                        index: globalIndex,
+                        nextDestination: nextInSameDay
+                    )
+                }
+            }
+        }
+    }
+    
     var body: some View {
         GeometryReader { geometry in
             let screenWidth = geometry.size.width
@@ -154,15 +218,21 @@ struct TripDetailView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 30)
                         } else {
-                            ForEach(Array(sortedDestinations.enumerated()), id: \.element.id) { index, destination in
-                                NavigationLink {
-                                    DestinationDetailView(destination: destination)
-                                } label: {
-                                    TripDestinationRow(
-                                        destination: destination,
-                                        index: index + 1,
-                                        nextDestination: index < sortedDestinations.count - 1 ? sortedDestinations[index + 1] : nil
-                                    )
+                            if shouldShowDayHeaders {
+                                ForEach(destinationsByDay) { group in
+                                    tripRouteDaySection(group: group, globalStartIndex: globalStartIndex(for: group))
+                                }
+                            } else {
+                                ForEach(Array(sortedDestinations.enumerated()), id: \.element.id) { index, destination in
+                                    NavigationLink {
+                                        DestinationDetailView(destination: destination)
+                                    } label: {
+                                        TripDestinationRow(
+                                            destination: destination,
+                                            index: index + 1,
+                                            nextDestination: index < sortedDestinations.count - 1 ? sortedDestinations[index + 1] : nil
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -282,6 +352,14 @@ struct TripDetailView: View {
     }
 }
 
+/// 按天分组的一批目的地，用于行程路线按天展示
+private struct TripDayGroup: Identifiable {
+    let dayStart: Date
+    let dayIndex: Int
+    let destinations: [TravelDestination]
+    var id: Date { dayStart }
+}
+
 struct TripDestinationRow: View {
     let destination: TravelDestination
     let index: Int
@@ -317,7 +395,9 @@ struct TripDestinationRow: View {
     
     // 获取交通方式颜色
     private var transportColor: Color {
-        if transportType == RouteManager.airplane {
+        if transportType == RouteManager.none {
+            return Color(.tertiaryLabel)
+        } else if transportType == RouteManager.airplane {
             return .orange
         } else if transportType.contains(.walking) && transportType == .walking {
             return .green

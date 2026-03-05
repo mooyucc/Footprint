@@ -21,7 +21,9 @@ struct AddDestinationPrefill {
     var visitDate: Date?
     var photoDatas: [Data]
     var photoThumbnailDatas: [Data]
-    
+    /// 由照片识别建议的地点类型 key（如 "natural_wonder"）
+    var suggestedPlaceType: String?
+
     init(
         location: MKMapItem? = nil,
         name: String? = nil,
@@ -30,7 +32,8 @@ struct AddDestinationPrefill {
         category: String? = nil,
         visitDate: Date? = nil,
         photoDatas: [Data] = [],
-        photoThumbnailDatas: [Data] = []
+        photoThumbnailDatas: [Data] = [],
+        suggestedPlaceType: String? = nil
     ) {
         self.location = location
         self.name = name
@@ -40,6 +43,7 @@ struct AddDestinationPrefill {
         self.visitDate = visitDate
         self.photoDatas = photoDatas
         self.photoThumbnailDatas = photoThumbnailDatas
+        self.suggestedPlaceType = suggestedPlaceType
     }
 }
 
@@ -66,6 +70,7 @@ struct AddDestinationView: View {
     @State private var visitDate: Date
     @State private var notes = ""
     @State private var category: String
+    @State private var type: String
     @State private var isFavorite = false
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var photoDatas: [Data]
@@ -95,6 +100,7 @@ struct AddDestinationView: View {
         let initialCountry = prefill?.country ?? ""
         let initialProvince = prefill?.province ?? ""
         let initialCategory = prefill?.category ?? "domestic"
+        let initialType = prefill?.suggestedPlaceType ?? ""
         let initialVisitDate = prefill?.visitDate ?? Date()
         let initialLocation = prefill?.location
         let initialPhotoDatas = prefill?.photoDatas ?? []
@@ -111,6 +117,7 @@ struct AddDestinationView: View {
         _province = State(initialValue: initialProvince)
         _visitDate = State(initialValue: initialVisitDate)
         _category = State(initialValue: initialCategory)
+        _type = State(initialValue: initialType)
         _photoDatas = State(initialValue: initialPhotoDatas)
         _photoThumbnailDatas = State(initialValue: initialThumbnailDatas)
         _selectedLocation = State(initialValue: initialLocation)
@@ -128,7 +135,14 @@ struct AddDestinationView: View {
                         }
                     }
                     .pickerStyle(.segmented)
-                    
+
+                    Picker("destination_type".localized, selection: $type) {
+                        Text("none".localized).tag("")
+                        ForEach(TravelDestination.placeTypeFilterOptions, id: \.key) { option in
+                            Text(option.localizedKey.localized).tag(option.key)
+                        }
+                    }
+
                     TextField("province_state".localized, text: $province)
                     
                     TextField("country_region".localized, text: $country)
@@ -682,6 +696,7 @@ struct AddDestinationView: View {
             photoThumbnailDatas: photoThumbnailDatas,
             videoData: videoData,
             category: category,
+            type: type,
             isFavorite: isFavorite
         )
         
@@ -720,6 +735,7 @@ struct AddDestinationView: View {
         existing.photoThumbnailDatas = photoThumbnailDatas
         existing.videoData = videoData
         existing.category = category
+        existing.type = type
         existing.isFavorite = isFavorite
         
         // 更新旅程关联

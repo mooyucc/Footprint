@@ -487,24 +487,71 @@ class DeepSeekProvider: AIServiceProtocol {
         return try parseImageAnalysisResult(from: response)
     }
     
-    func generateTags(
-        for destination: TravelDestination
-    ) async throws -> [String] {
-        print("🤖 [DeepSeek] 开始生成标签，地点: \(destination.name)")
+    func recommendNextDestinations(from destinations: [TravelDestination]) async throws -> String {
+        print("🤖 [DeepSeek] 开始旅行目的地推荐，已记录地点数: \(destinations.count)")
         
-        let messages: [ChatMessage] = [
-            .user([.text("根据以下目的地信息，生成3-5个标签：\n- 地点：\(destination.name)\n- 国家：\(destination.country)\n- 笔记：\(destination.notes ?? "无")\n\n请生成标签，每个标签2-4个字，使用中文，以逗号分隔。例如：文化, 历史, 建筑, 推荐")])
-        ]
+        guard !destinations.isEmpty else {
+            throw AIError.invalidInput("没有已记录的目的地")
+        }
         
+        let lang = currentLanguage
+        let isChinese = (lang == .chinese || lang == .chineseTraditional)
+        
+        // 构建用户去过的地方摘要（最近最多 30 个，按日期倒序）
+        let sorted = destinations.sorted { $0.visitDate > $1.visitDate }
+        let recent = Array(sorted.prefix(30))
+        
+        var summaryLines: [String] = []
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM"
+        for d in recent {
+            let noteSnippet = d.notes.trimmingCharacters(in: .whitespacesAndNewlines)
+            let notePart = noteSnippet.isEmpty ? "" : (isChinese ? "，笔记摘要：\(String(noteSnippet.prefix(80)))" : ", notes: \(String(noteSnippet.prefix(80)))")
+            let typePart = d.type.isEmpty ? "" : (isChinese ? "，类型：\(d.type)" : ", type: \(d.type)")
+            summaryLines.append("- \(d.name)（\(d.country)\(d.province.isEmpty ? "" : ", \(d.province)"))\(typePart)\(notePart))")
+        }
+        
+        let summary = summaryLines.joined(separator: "\n")
+        
+        let prompt: String
+        if isChinese {
+            prompt = """
+            根据用户已记录的旅行地点，分析其出行偏好（如喜欢的国家、类型、风格），并推荐 3～5 个适合作为「下一站」的旅行目的地。
+            
+            已记录的地点（最近部分）：
+            \(summary)
+            
+            请直接输出推荐结果，必须严格按以下格式：
+            1. 先简短总结用户的出行偏好（1～2 句）。
+            2. 再列出 3～5 个推荐目的地，每条单独成段，用数字编号，且每条之间空一行。
+            
+            每条推荐的格式为：
+            数字. **目的地名称，国家/地区** 推荐理由: 描述内容（1～2 句）
+            
+            示例：
+            1. **皇后镇，新西兰** 推荐理由: 南阿尔卑斯与瓦卡蒂普湖，适合自然探索与徒步。
+            
+            2. **北海道，日本** 推荐理由: 自然景观与滑雪、温泉、花田，治愈感强。
+            
+            3. **温哥华，加拿大** 推荐理由: 城市与山海森林结合，可骑行斯坦利公园等。
+            
+            请按上述格式输出，使用中文，语气友好。每条之间必须空一行，不要连成一大段。
+            """
+        } else {
+            prompt = """
+            Based on the user's recorded travel places, analyze their travel preferences and recommend 3-5 destinations as their "next stop".
+            
+            Recorded places (recent):
+            \(summary)
+            
+            Output in this format: 1) A short summary of preferences. 2) List 3-5 destinations, each on its own paragraph with a number, and a blank line between each.
+            Each item: Number. **Destination, Country** Reason: Description (1-2 sentences). Use a friendly tone. Leave one blank line between each recommendation.
+            """
+        }
+        
+        let messages: [ChatMessage] = [.user([.text(prompt)])]
         let response = try await callChatAPI(messages: messages, model: chatModel)
-        
-        // 解析标签（逗号分隔）
-        let tags = response
-            .components(separatedBy: ",")
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-        
-        return Array(tags.prefix(5)) // 最多5个标签
+        return response.trimmingCharacters(in: .whitespacesAndNewlines)
     }
     
     // MARK: - Private Methods

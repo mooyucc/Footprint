@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftData
+import MapKit
 
 // MARK: - 旅程数据导出结构
 struct TripExportData: Codable {
@@ -14,6 +15,8 @@ struct TripExportData: Codable {
     let destinations: [DestinationInfo]
     let exportDate: Date
     let appVersion: String
+    /// 路线段信息（按目的地 visitDate 顺序，每段为 dest[i] -> dest[i+1]）；无或空表示不包含路线数据
+    let routeSegments: [RouteSegmentInfo]?
     
     struct TripInfo: Codable {
         let name: String
@@ -71,6 +74,24 @@ struct TripExportData: Codable {
             self.isFavorite = isFavorite
         }
     }
+    
+    /// 路线段：两点之间的交通方式与可选路线几何，用于导入后免重新计算
+    struct RouteSegmentInfo: Codable {
+        let startLatitude: Double
+        let startLongitude: Double
+        let endLatitude: Double
+        let endLongitude: Double
+        /// 交通方式 rawValue；0 表示导入时使用自动选择
+        let transportTypeRawValue: UInt
+        let distance: Double?
+        let expectedTravelTime: Double?
+        let coordinates: [RouteSegmentCoordinate]?
+        
+        struct RouteSegmentCoordinate: Codable {
+            let latitude: Double
+            let longitude: Double
+        }
+    }
 }
 
 struct TripDataExporter {
@@ -104,12 +125,53 @@ struct TripDataExporter {
             )
         } ?? []
         
+        let routeSegments = buildRouteSegments(for: trip)
+        
         return TripExportData(
             trip: tripInfo,
             destinations: destinations,
             exportDate: Date(),
-            appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+            appVersion: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0",
+            routeSegments: routeSegments
         )
+    }
+    
+    /// 按 visitDate 顺序构建路线段（交通方式 + 可选路线几何），供导入后免重新计算
+    private static func buildRouteSegments(for trip: TravelTrip) -> [TripExportData.RouteSegmentInfo]? {
+        guard let list = trip.destinations, list.count >= 2 else { return nil }
+        let sortedDest = list.sorted { $0.visitDate < $1.visitDate }
+        let routeManager = RouteManager.shared
+        var segments: [TripExportData.RouteSegmentInfo] = []
+        for i in 0..<(sortedDest.count - 1) {
+            let from = sortedDest[i].coordinate
+            let to = sortedDest[i + 1].coordinate
+            let transportType = routeManager.getUserTransportType(from: from, to: to)
+            let transportRaw = transportType?.rawValue ?? 0
+            var distance: Double?
+            var expectedTravelTime: Double?
+            var coordinates: [TripExportData.RouteSegmentInfo.RouteSegmentCoordinate]?
+            if let route = routeManager.getCachedRoute(from: from, to: to, transportType: transportType) {
+                distance = route.footprintDistance
+                expectedTravelTime = route.footprintExpectedTravelTime
+                let count = route.polyline.pointCount
+                if count >= 2 {
+                    var coords = [CLLocationCoordinate2D](repeating: kCLLocationCoordinate2DInvalid, count: count)
+                    route.polyline.getCoordinates(&coords, range: NSRange(location: 0, length: count))
+                    coordinates = coords.map { TripExportData.RouteSegmentInfo.RouteSegmentCoordinate(latitude: $0.latitude, longitude: $0.longitude) }
+                }
+            }
+            segments.append(TripExportData.RouteSegmentInfo(
+                startLatitude: from.latitude,
+                startLongitude: from.longitude,
+                endLatitude: to.latitude,
+                endLongitude: to.longitude,
+                transportTypeRawValue: transportRaw,
+                distance: distance,
+                expectedTravelTime: expectedTravelTime,
+                coordinates: coordinates
+            ))
+        }
+        return segments.isEmpty ? nil : segments
     }
     
     /// 导出独立地点（没有关联到任何旅程的地点）

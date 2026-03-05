@@ -26,7 +26,7 @@
 "paywall_expires_on" = "Expire le : ";
 "paywall_terms_privacy" = "En achetant, vous acceptez les Conditions d'utilisation et la Politique de confidentialité. Renouvellement automatique; annulez à tout moment dans les abonnements système.";
 "paywall_feature_title" = "Fonctionnalités Pro";
-"paywall_feature_ai" = "Assistant IA : notes intelligentes, descriptions de voyage, analyse photo, génération d'étiquettes";
+"paywall_feature_ai" = "Assistant IA : notes intelligentes, descriptions de voyage, analyse photo, recommandations de destinations";
 "paywall_feature_unlimited" = "Destinations et cartes de voyage illimitées";
 "paywall_feature_share_layouts" = "Mises en page de partage complètes";
 "paywall_feature_import_export" = "Importation/exportation de données locales";
@@ -124,6 +124,14 @@
 "optimize" = "Optimiser";
 "optimize_images_result_title" = "Optimisation terminée";
 "optimize_images_success" = "%d photos optimisées avec succès";
+"auto_add_place_type" = "Ajouter le type de lieu automatiquement";
+"auto_add_place_type_confirm_title" = "Ajouter le type de lieu automatiquement";
+"auto_add_place_type_confirm_message" = "Détection et définition automatiques du type de lieu pour tous les lieux ayant une photo mais pas de type, en utilisant la première photo. Continuer ?";
+"continue" = "Continuer";
+"auto_add_place_type_result_title" = "Terminé";
+"auto_add_place_type_success" = "Type de lieu ajouté pour %d destinations";
+"auto_add_place_type_none" = "Aucune destination à traiter (s'applique uniquement aux destinations avec photo et sans type)";
+"auto_add_place_type_progress" = "Traitement %d/%d destinations";
 "local_import_summary_title" = "Résumé de l'importation";
 "local_import_summary_success" = "%d voyages importés avec succès";
 "local_import_summary_duplicates" = "%d voyages en double ignorés";
@@ -171,6 +179,7 @@
 "footprint" = "MooFootprint";
 "ok" = "OK";
 "map" = "Carte";
+"footprint_map" = "Empreintes";
 "trips" = "Voyages";
 "profile" = "Profil";
 "create_trip" = "Ajouter un voyage";
@@ -230,11 +239,23 @@
 "all_destinations" = "Toutes les destinations";
 "no_destinations_found" = "Aucune destination trouvée";
 
+// Discover Map
+"map_mode_my_footprints" = "Ma carte";
+
 // Edit Destination View
 "edit_destination" = "Modifier la destination";
 "basic_info" = "Informations de base";
 "place_name" = "Nom du lieu";
+"location_tag" = "Étiquette du lieu";
 "category" = "Catégorie";
+"destination_type" = "Type de destination";
+"destination_type_natural_wonder" = "Merveille naturelle";
+"destination_type_urban_landscape" = "Paysage urbain";
+"destination_type_historical_culture" = "Historique et culturel";
+"destination_type_food_feast" = "Festin gastronomique";
+"destination_type_leisure_entertainment" = "Loisirs et divertissement";
+"destination_type_outdoor_adventure" = "Aventure en plein air";
+"destination_type_artistic_checkin" = "Check-in artistique";
 "province_state" = "Province/État";
 "country_region" = "Pays/Région";
 "visit_date" = "Date de visite";
@@ -335,6 +356,15 @@
 "ai_function_trip_desc_desc" = "Génère une description globale basée sur plusieurs destinations";
 "ai_function_tags_title" = "Générer des étiquettes";
 "ai_function_tags_desc" = "Recommande des étiquettes pertinentes selon les photos et la localisation";
+"ai_function_recommend_title" = "Recommandation de destination";
+"ai_function_recommend_desc" = "Recommander votre prochaine destination selon vos lieux enregistrés";
+"ai_generating_recommend" = "Analyse de vos préférences…";
+"ai_save_recommend" = "Enregistrer la recommandation";
+"ai_save_recommend_success" = "Enregistré dans les recommandations";
+"ai_save_recommend_failed" = "Échec de l'enregistrement";
+"ai_saved_recommend_title" = "Recommandations enregistrées";
+"ai_saved_recommend_empty_title" = "Aucune recommandation";
+"ai_saved_recommend_empty_desc" = "Après génération, appuyez sur « Enregistrer » pour les voir ici";
 "ai_function_photo_analysis_title" = "Analyse photo";
 "ai_function_photo_analysis_desc" = "Identifie les scènes, objets et points d'intérêt sur les photos";
 "ai_generating_notes" = "Génération des notes...";
@@ -424,6 +454,8 @@
 "duration" = "Durée";
 "days" = "jours";
 "trip_route" = "Itinéraire du voyage";
+"trip_route_day_title" = "Jour %d · %@";
+"load_more_trips" = "Charger plus";
 "locations" = "lieux";
 "share_trip" = "Partager le voyage";
 "share_to_team" = "Partager avec des amis";
@@ -584,6 +616,7 @@
 "automobile" = "Automobile";
 "transit" = "Transit";
 "airplane" = "Avion";
+"transport_none" = "Aucun";
 
 // Onboarding
 "onboarding_welcome_hello" = "Bonjour";

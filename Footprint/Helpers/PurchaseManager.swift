@@ -42,7 +42,9 @@ final class PurchaseManager: ObservableObject {
         defer { isLoading = false }
 
         do {
-            products = try await Product.products(for: SubscriptionProductID.all)
+            // 同时加载订阅产品和 AI 调用次数的消耗型产品
+            let allProductIDs = SubscriptionProductID.all + AICreditProductID.all
+            products = try await Product.products(for: allProductIDs)
                 .sorted { $0.price < $1.price }
         } catch {
             errorMessage = "加载产品失败：\(error.localizedDescription)"
@@ -89,6 +91,14 @@ final class PurchaseManager: ObservableObject {
                 // 注意：在沙箱环境中，如果用户之前购买过该订阅，
                 // StoreKit 2 可能会自动恢复/续订而不显示购买弹窗
                 // 这是正常行为，因为系统认为这是续订而不是新购买
+                
+                // 如果是 AI 调用次数商品，增加本地次数（消耗型，不进入 currentEntitlements）
+                if transaction.productID == AICreditProductID.tenCalls {
+                    print("➕ 为 AI 调用次数增加 10 次（商品：\(transaction.productID)）")
+                    await MainActor.run {
+                        AICreditManager.shared.addCredits(10)
+                    }
+                }
                 
                 await transaction.finish()
                 await updatePurchasedProducts()

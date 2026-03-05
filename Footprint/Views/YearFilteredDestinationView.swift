@@ -14,6 +14,7 @@ struct YearFilteredDestinationView: View {
     @Query private var allDestinations: [TravelDestination]
     @State private var searchText = ""
     @State private var filterCategory: String? = nil
+    @State private var filterPlaceType: String? = nil
     @State private var editingDestination: TravelDestination?
     @EnvironmentObject var languageManager: LanguageManager
     @StateObject private var countryManager = CountryManager.shared
@@ -70,6 +71,10 @@ struct YearFilteredDestinationView: View {
             }
         }
         
+        if let placeType = filterPlaceType {
+            result = result.filter { $0.type == placeType }
+        }
+        
         if !searchText.isEmpty {
             result = result.filter { destination in
                 destination.name.localizedCaseInsensitiveContains(searchText) ||
@@ -119,6 +124,23 @@ struct YearFilteredDestinationView: View {
                                 ("international", "international".localized)
                             ]
                         )
+                        
+                        // 地点类型下拉筛选
+                        HStack {
+                            Text("destination_type".localized)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(.white.opacity(0.9))
+                            Spacer()
+                            Picker("", selection: $filterPlaceType) {
+                                Text("all".localized).tag(nil as String?)
+                                ForEach(TravelDestination.placeTypeFilterOptions, id: \.key) { option in
+                                    Text(option.localizedKey.localized).tag(option.key as String?)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .tint(.white)
+                        }
                     }
                     .padding(20)
                     .redCardStyle(cornerRadius: 20)
@@ -183,6 +205,18 @@ struct YearFilteredDestinationView: View {
             .sheet(item: $shareItem) { item in
                 if let image = item.image {
                     SystemShareSheet(items: [image])
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .destinationDeleted)) { notification in
+                // 当当前正在编辑的地点被删除时，自动关闭编辑弹窗
+                if let userInfo = notification.userInfo,
+                   let deletedDestinationId = userInfo["destinationId"] as? UUID {
+                    if let editing = editingDestination, editing.id == deletedDestinationId {
+                        editingDestination = nil
+                    }
+                } else if editingDestination != nil {
+                    // 批量删除等没有携带 destinationId 的情况，直接关闭编辑弹窗
+                    editingDestination = nil
                 }
             }
             .sheet(isPresented: $showingLayoutSelection) {

@@ -13,6 +13,7 @@ struct FootprintApp: App {
     @StateObject private var appleSignInManager = AppleSignInManager.shared
     @StateObject private var purchaseManager = PurchaseManager.shared
     @StateObject private var entitlementManager = EntitlementManager.shared
+    @StateObject private var aiCreditManager = AICreditManager.shared
     @StateObject private var languageManager = LanguageManager.shared
     @StateObject private var countryManager = CountryManager.shared
     @StateObject private var brandColorManager = BrandColorManager.shared
@@ -27,15 +28,17 @@ struct FootprintApp: App {
     #endif
     
     var sharedModelContainer: ModelContainer = {
-        // 暂时禁用 iCloud CloudKit 同步（功能尚未完善）
         let modelConfiguration = ModelConfiguration(
-            isStoredInMemoryOnly: false
-            // cloudKitDatabase: .automatic  // 暂时禁用 iCloud 同步
+            isStoredInMemoryOnly: false,
+            cloudKitDatabase: .automatic
         )
 
         do {
             return try ModelContainer(
-                for: TravelDestination.self, TravelTrip.self,
+                for: TravelDestination.self,
+                    TravelTrip.self,
+                    TravelRecommendation.self,
+                    TravelRouteSegment.self,
                 configurations: modelConfiguration
             )
         } catch {
@@ -51,6 +54,7 @@ struct FootprintApp: App {
                     .environmentObject(appleSignInManager)
                     .environmentObject(purchaseManager)
                     .environmentObject(entitlementManager)
+                    .environmentObject(aiCreditManager)
                     .environmentObject(languageManager)
                     .environmentObject(countryManager)
                     .environmentObject(brandColorManager)

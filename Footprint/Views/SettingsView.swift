@@ -338,6 +338,14 @@ struct DataSettingsView: View {
     @State private var showingOptimizeConfirm = false
     @State private var optimizeResultMessage: String?
     @State private var showingOptimizeResult = false
+    @State private var showingAutoAddPlaceTypeConfirm = false
+    @State private var isAutoAddingPlaceType = false
+    @State private var autoAddPlaceTypeResultMessage: String?
+    @State private var showingAutoAddPlaceTypeResult = false
+    /// 批量自动添加地点类型时的进度：(已处理数, 总数)，nil 表示未在运行或总数为 0
+    @State private var autoAddPlaceTypeProgress: (current: Int, total: Int)? = nil
+    /// 批量优化图片时的进度：(已处理数, 总数)
+    @State private var optimizeImagesProgress: (current: Int, total: Int)? = nil
     @State private var showingDeleteAccountSuccess = false
     @State private var deleteAccountErrorMessage: String?
     @State private var showingDeleteAccountError = false
@@ -413,6 +421,19 @@ struct DataSettingsView: View {
                         }
                     }
                     .disabled(isImportingLocalData || isExportingLocalData || isOptimizingImages || isDeletingAccount)
+
+                    Button(action: { showingAutoAddPlaceTypeConfirm = true }) {
+                        HStack {
+                            SettingsRowLabel(title: "auto_add_place_type".localized, systemImage: "sparkles", iconColor: brandColorManager.currentBrandColor)
+                            Spacer()
+                            if isAutoAddingPlaceType {
+                                ProgressView()
+                                    .progressViewStyle(.circular)
+                                    .scaleEffect(0.8)
+                            }
+                        }
+                    }
+                    .disabled(isImportingLocalData || isExportingLocalData || isOptimizingImages || isAutoAddingPlaceType || isDeletingAccount)
                 } header: {
                     Text("local_data".localized)
                 } footer: {
@@ -462,6 +483,35 @@ struct DataSettingsView: View {
                     }
                 }
             }
+            .overlay {
+                if let progress = optimizeImagesProgress, progress.total > 0 {
+                    Color.black.opacity(0.4)
+                        .ignoresSafeArea()
+                    VStack(spacing: 16) {
+                        ProgressView(value: Double(progress.current) / Double(progress.total))
+                            .progressViewStyle(.linear)
+                            .frame(width: 220)
+                        Text("optimize_images".localized + " \(progress.current)/\(progress.total)")
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                    }
+                    .padding(24)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                } else if let progress = autoAddPlaceTypeProgress, progress.total > 0 {
+                    Color.black.opacity(0.4)
+                        .ignoresSafeArea()
+                    VStack(spacing: 16) {
+                        ProgressView(value: Double(progress.current) / Double(progress.total))
+                            .progressViewStyle(.linear)
+                            .frame(width: 220)
+                        Text("auto_add_place_type_progress".localized(with: progress.current, progress.total))
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                    }
+                    .padding(24)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                }
+            }
         }
         .sheet(isPresented: $showingLocalImportPicker) {
             DocumentPicker(selectedURL: $localImportURL)
@@ -504,6 +554,21 @@ struct DataSettingsView: View {
             Button("ok".localized) { }
         } message: {
             if let message = optimizeResultMessage {
+                Text(message)
+            }
+        }
+        .alert("auto_add_place_type_confirm_title".localized, isPresented: $showingAutoAddPlaceTypeConfirm) {
+            Button("cancel".localized) { }
+            Button("continue".localized) {
+                autoAddPlaceType()
+            }
+        } message: {
+            Text("auto_add_place_type_confirm_message".localized)
+        }
+        .alert("auto_add_place_type_result_title".localized, isPresented: $showingAutoAddPlaceTypeResult) {
+            Button("ok".localized) { }
+        } message: {
+            if let message = autoAddPlaceTypeResultMessage {
                 Text(message)
             }
         }
@@ -676,52 +741,161 @@ struct DataSettingsView: View {
         Task {
             var optimizedCount = 0
             
-            for destination in allDestinations {
-                if let originalData = destination.photoData {
-                    let processed = ImageProcessor.process(data: originalData)
-                    destination.photoData = processed.0
-                    destination.photoThumbnailData = processed.1
-                    optimizedCount += 1
+            // 在主线程上获取当前的目的地列表快照和需要处理的总图片数量，避免在后台线程直接访问 @Query
+            let (destinations, totalToOptimize) = await MainActor.run { () -> ([TravelDestination], Int) in
+                let destinations = allDestinations
+                let total = destinations.reduce(0) { partial, dest in
+                    let single = dest.photoData != nil ? 1 : 0
+                    return partial + single + dest.photoDatas.count
+                }
+                return (destinations, total)
+            }
+            
+            await MainActor.run {
+                if totalToOptimize > 0 {
+                    optimizeImagesProgress = (0, totalToOptimize)
+                } else {
+                    optimizeImagesProgress = nil
+                }
+            }
+            
+            if totalToOptimize == 0 {
+                await MainActor.run {
+                    isOptimizingImages = false
+                    let message = "optimize_images_success".localized(with: 0)
+                    optimizeResultMessage = message
+                    showingOptimizeResult = true
+                }
+                return
+            }
+            
+            for destination in destinations {
+                // 先在主线程读取需要处理的原始数据副本
+                let singlePhotoData: Data? = await MainActor.run {
+                    destination.photoData
+                }
+                let multiplePhotoDatas: [Data] = await MainActor.run {
+                    Array(destination.photoDatas)
                 }
                 
-                if !destination.photoDatas.isEmpty {
+                // 在后台线程执行耗时的图像处理
+                if let originalData = singlePhotoData {
+                    let processed = ImageProcessor.process(data: originalData)
+                    optimizedCount += 1
+                    
+                    await MainActor.run {
+                        optimizeImagesProgress = (optimizedCount, totalToOptimize)
+                    }
+                    
+                    // 处理完成后回到主线程更新 SwiftData 模型
+                    await MainActor.run {
+                        destination.photoData = processed.0
+                        destination.photoThumbnailData = processed.1
+                    }
+                }
+                
+                if !multiplePhotoDatas.isEmpty {
                     var optimizedPhotoDatas: [Data] = []
                     var optimizedThumbnailDatas: [Data] = []
                     
-                    for photoData in destination.photoDatas {
+                    for photoData in multiplePhotoDatas {
                         let processed = ImageProcessor.process(data: photoData)
                         optimizedPhotoDatas.append(processed.0)
                         optimizedThumbnailDatas.append(processed.1)
                         optimizedCount += 1
+                        
+                         await MainActor.run {
+                             optimizeImagesProgress = (optimizedCount, totalToOptimize)
+                         }
                     }
                     
-                    destination.photoDatas = optimizedPhotoDatas
-                    destination.photoThumbnailDatas = optimizedThumbnailDatas
-                    
-                    if let firstPhoto = optimizedPhotoDatas.first {
-                        destination.photoData = firstPhoto
-                    }
-                    if let firstThumbnail = optimizedThumbnailDatas.first {
-                        destination.photoThumbnailData = firstThumbnail
+                    await MainActor.run {
+                        destination.photoDatas = optimizedPhotoDatas
+                        destination.photoThumbnailDatas = optimizedThumbnailDatas
+                        
+                        if let firstPhoto = optimizedPhotoDatas.first {
+                            destination.photoData = firstPhoto
+                        }
+                        if let firstThumbnail = optimizedThumbnailDatas.first {
+                            destination.photoThumbnailData = firstThumbnail
+                        }
                     }
                 }
             }
             
-            do {
-                try modelContext.save()
-            } catch {
-                print("保存优化后的图片失败: \(error.localizedDescription)")
-            }
-            
             await MainActor.run {
+                do {
+                    try modelContext.save()
+                } catch {
+                    print("保存优化后的图片失败: \(error.localizedDescription)")
+                }
+                
                 isOptimizingImages = false
+                optimizeImagesProgress = nil
                 let message = "optimize_images_success".localized(with: optimizedCount)
                 optimizeResultMessage = message
                 showingOptimizeResult = true
             }
         }
     }
-    
+
+    // MARK: - 自动添加地点类型（仅处理：有照片 且 未设置类型；已有类型或无照片的会跳过）
+    private func autoAddPlaceType() {
+        guard !isAutoAddingPlaceType else { return }
+        isAutoAddingPlaceType = true
+
+        Task {
+            var updatedCount = 0
+            let candidates = allDestinations.filter { dest in
+                let typeEmpty = dest.type.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                let hasPhoto = dest.photoData != nil || !dest.photoDatas.isEmpty
+                return typeEmpty && hasPhoto
+            }
+
+            if candidates.isEmpty {
+                await MainActor.run {
+                    isAutoAddingPlaceType = false
+                    autoAddPlaceTypeProgress = nil
+                    autoAddPlaceTypeResultMessage = "auto_add_place_type_none".localized
+                    showingAutoAddPlaceTypeResult = true
+                }
+                return
+            }
+
+            await MainActor.run {
+                autoAddPlaceTypeProgress = (0, candidates.count)
+            }
+
+            for (index, destination) in candidates.enumerated() {
+                let imageData: Data? = destination.photoData ?? destination.photoDatas.first
+                guard let data = imageData else { continue }
+                if let suggestedType = PlaceTypeImageClassifier.suggestPlaceType(from: data) {
+                    destination.type = suggestedType
+                    updatedCount += 1
+                }
+                await MainActor.run {
+                    autoAddPlaceTypeProgress = (index + 1, candidates.count)
+                }
+            }
+
+            if updatedCount > 0 {
+                try? modelContext.save()
+                NotificationCenter.default.post(name: .destinationUpdated, object: nil)
+            }
+
+            await MainActor.run {
+                isAutoAddingPlaceType = false
+                autoAddPlaceTypeProgress = nil
+                if updatedCount > 0 {
+                    autoAddPlaceTypeResultMessage = "auto_add_place_type_success".localized(with: updatedCount)
+                } else {
+                    autoAddPlaceTypeResultMessage = "auto_add_place_type_none".localized
+                }
+                showingAutoAddPlaceTypeResult = true
+            }
+        }
+    }
+
     // MARK: - 删除账户
     private func deleteAccountAndData() {
         guard !isDeletingAccount else { return }

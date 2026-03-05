@@ -18,13 +18,13 @@ struct ContentView: View {
     
     var body: some View {
         TabView(selection: $selectedTab) {
+            // 足迹地图（个人）
             MapView()
                 .tabItem {
                     Label {
-                        Text("map".localized)
+                        Text("footprint_map".localized)
                     } icon: {
-                        Image("LocationIcon")
-                            .renderingMode(.template)
+                        Image(systemName: "map.fill")
                     }
                 }
                 .tag(0)
@@ -92,13 +92,13 @@ struct ContentView: View {
             // 性能优化：根据 tab 切换管理实时定位
             let locationManager = LocationManager.shared
             if newValue == 0 {
-                // 切换到 Map tab，启动实时定位
+                // 切换到地图 tab（足迹地图），启动实时定位
                 locationManager.startUpdatingLocation()
-                print("📍 切换到 Map tab，启动实时定位")
+                print("📍 切换到地图 tab，启动实时定位")
             } else if oldValue == 0 {
-                // 从 Map tab 切换到其他 tab，停止实时定位以节省电量
+                // 从地图 tab 切换到其他 tab，停止实时定位以节省电量
                 locationManager.stopUpdatingLocation()
-                print("📍 离开 Map tab，停止实时定位")
+                print("📍 离开地图 tab，停止实时定位")
             }
         }
         .onChange(of: scenePhase) { oldPhase, newPhase in
@@ -108,10 +108,10 @@ struct ContentView: View {
                 // App 进入后台或非活跃状态，停止实时定位
                 locationManager.stopUpdatingLocation()
                 print("📍 App 进入后台/非活跃状态，停止实时定位")
-            } else if newPhase == .active && selectedTab == 0 {
-                // App 回到前台且当前在 Map tab，重新启动实时定位
+            } else if newPhase == .active && (selectedTab == 0 || selectedTab == 1) {
+                // App 回到前台且当前在地图 tab，重新启动实时定位
                 locationManager.startUpdatingLocation()
-                print("📍 App 回到前台且在 Map tab，重新启动实时定位")
+                print("📍 App 回到前台且在地图 tab，重新启动实时定位")
             }
         }
     }
@@ -205,11 +205,18 @@ struct ProfileView: View {
     @Query private var trips: [TravelTrip]
     @State private var showSettings = false
     @State private var showPaywall = false
+    @State private var showAICreditPaywall = false
     @State private var showShareSheet = false
     @State private var shareImage: UIImage?
     @State private var pendingShare = false
     @State private var refreshID = UUID()
     @State private var showAllDestinations = false
+    /// 缓存统计结果，避免每次进入「我的」或轻微状态变化时对所有目的地做完整计算
+    @State private var statisticsCache: (total: Int, domestic: Int, international: Int, countries: Int, continents: Int)?
+    /// 缓存收藏目的地列表（按时间排序）
+    @State private var favoriteDestinationsCache: [TravelDestination] = []
+    /// 缓存时间线年份及对应数量，避免每次渲染都重新分组
+    @State private var timelineYearItemsCache: [(year: Int, count: Int)] = []
     @Environment(\.colorScheme) var colorScheme
     
     // MARK: - 配色（使用统一的 AppColorScheme 工具类）
@@ -231,20 +238,11 @@ struct ProfileView: View {
     }
     
     var statistics: (total: Int, domestic: Int, international: Int, countries: Int, continents: Int) {
-        let total = destinations.count
-        // 使用 CountryManager 来判断是否为国内
-        let domestic = destinations.filter { countryManager.isDomestic(country: $0.country) }.count
-        let international = destinations.filter { !countryManager.isDomestic(country: $0.country) }.count
-        let countries = Set(destinations.map { $0.country }).count
-        
-        // 简单的大洲判断逻辑
-        let continents = estimateContinents()
-        
-        return (total, domestic, international, countries, continents)
+        statisticsCache ?? (0, 0, 0, 0, 0)
     }
     
     var favoriteDestinations: [TravelDestination] {
-        destinations.filter { $0.isFavorite }.sorted { $0.visitDate > $1.visitDate }
+        favoriteDestinationsCache
     }
     
     var body: some View {
@@ -305,6 +303,9 @@ struct ProfileView: View {
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
             }
+            .sheet(isPresented: $showAICreditPaywall) {
+                AICreditPaywallView()
+            }
             .sheet(isPresented: $showShareSheet) {
                 if let image = shareImage {
                     SystemShareSheet(items: [image])
@@ -312,6 +313,12 @@ struct ProfileView: View {
             }
             .sheet(isPresented: $showAllDestinations) {
                 AllDestinationsListView()
+            }
+            .onAppear {
+                refreshProfileCaches()
+            }
+            .onChange(of: destinations) { _, _ in
+                refreshProfileCaches()
             }
             .onChange(of: shareImage) { newImage in
                 if newImage != nil && pendingShare {
@@ -438,16 +445,30 @@ struct ProfileView: View {
                 .foregroundColor(.white.opacity(0.9))
                 .padding(.top, 4)
             
-            Button {
-                showPaywall = true
-            } label: {
-                Text("paywall_button_upgrade".localized)
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
+            VStack(spacing: 10) {
+                Button {
+                    showPaywall = true
+                } label: {
+                    Text("paywall_button_upgrade".localized)
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(brandColorManager.currentBrandColor)
+                .controlSize(.large)
+                
+                Button {
+                    showAICreditPaywall = true
+                } label: {
+                    Label("ai_buy_per_use_button".localized, systemImage: "sparkles")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .foregroundColor(brandColorManager.currentBrandColor)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.white)
+                .controlSize(.large)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(brandColorManager.currentBrandColor)
-            .controlSize(.large)
         }
         .padding(16)
         .background(
@@ -686,11 +707,8 @@ struct ProfileView: View {
     }
     
     private var timelineYearList: some View {
-        let years = Dictionary(grouping: destinations) { destination in
-            Calendar.current.component(.year, from: destination.visitDate)
-        }
-        
-        return ForEach(years.keys.sorted(by: >), id: \.self) { year in
+        ForEach(timelineYearItemsCache, id: \.year) { item in
+            let year = item.year
             NavigationLink {
                 YearFilteredDestinationView(year: year)
             } label: {
@@ -708,7 +726,7 @@ struct ProfileView: View {
                             .foregroundColor(.secondary)
                     }
                     
-                    Text("\(years[year]?.count ?? 0) \("destinations_count".localized)")
+                    Text("\(item.count) \("destinations_count".localized)")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
@@ -718,6 +736,30 @@ struct ProfileView: View {
             }
             .buttonStyle(PlainButtonStyle())
         }
+    }
+    
+    /// 重新计算「我的」页相关统计与缓存，集中在一个函数里，避免在多个计算属性中重复遍历所有目的地
+    private func refreshProfileCaches() {
+        let all = destinations
+        let total = all.count
+        // 使用 CountryManager 来判断是否为国内
+        let domestic = all.filter { countryManager.isDomestic(country: $0.country) }.count
+        let international = total - domestic
+        let countries = Set(all.map { $0.country }).count
+        
+        let continents = estimateContinents(from: all)
+        statisticsCache = (total, domestic, international, countries, continents)
+        
+        favoriteDestinationsCache = all
+            .filter { $0.isFavorite }
+            .sorted { $0.visitDate > $1.visitDate }
+        
+        let groups = Dictionary(grouping: all) { destination in
+            Calendar.current.component(.year, from: destination.visitDate)
+        }
+        timelineYearItemsCache = groups
+            .map { (year: $0.key, count: $0.value.count) }
+            .sorted { $0.year > $1.year }
     }
     
     private var aboutSection: some View {
@@ -764,7 +806,7 @@ struct ProfileView: View {
         }
     }
     
-    private func estimateContinents() -> Int {
+    private func estimateContinents(from destinations: [TravelDestination]) -> Int {
         let asianCountries = ["中国", "日本", "韩国", "泰国", "新加坡", "马来西亚", "印度", "越南"]
         let europeanCountries = ["法国", "德国", "英国", "意大利", "西班牙", "瑞士", "荷兰", "冰岛"]
         let americanCountries = ["美国", "加拿大", "墨西哥", "巴西", "阿根廷"]

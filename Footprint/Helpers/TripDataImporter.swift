@@ -9,6 +9,7 @@ import Foundation
 import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
+import CoreLocation
 
 struct TripDataImporter {
     
@@ -112,6 +113,27 @@ struct TripDataImporter {
             
             // 设置关联关系
             newTrip.destinations = destinations
+            
+            // 应用路线段（交通方式 + 路线几何），避免导入后重新计算
+            if let segments = exportData.routeSegments, !segments.isEmpty {
+                let sortedDest = destinations.sorted { $0.visitDate < $1.visitDate }
+                let routeManager = RouteManager.shared
+                for i in 0..<(sortedDest.count - 1) {
+                    guard i < segments.count else { break }
+                    let seg = segments[i]
+                    let from = sortedDest[i].coordinate
+                    let to = sortedDest[i + 1].coordinate
+                    let coords: [CLLocationCoordinate2D]? = seg.coordinates?.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+                    routeManager.importRoute(
+                        from: from,
+                        to: to,
+                        transportTypeRawValue: seg.transportTypeRawValue,
+                        distance: seg.distance ?? 0,
+                        expectedTravelTime: seg.expectedTravelTime ?? 0,
+                        coordinates: coords
+                    )
+                }
+            }
             
             // 保存到数据库
             modelContext.insert(newTrip)
@@ -263,46 +285,5 @@ enum ImportResult {
             return message
         }
         return nil
-    }
-}
-
-// MARK: - 文件选择器
-struct DocumentPicker: UIViewControllerRepresentable {
-    @Binding var selectedURL: URL?
-    @Environment(\.dismiss) private var dismiss
-    
-    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.json])
-        picker.delegate = context.coordinator
-        picker.allowsMultipleSelection = false
-        return picker
-    }
-    
-    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator(self)
-    }
-    
-    class Coordinator: NSObject, UIDocumentPickerDelegate {
-        let parent: DocumentPicker
-        
-        init(_ parent: DocumentPicker) {
-            self.parent = parent
-        }
-        
-        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-            guard let url = urls.first else { return }
-            
-            // 开始访问文件（权限会在 importTrip 方法中管理）
-            _ = url.startAccessingSecurityScopedResource()
-            
-            parent.selectedURL = url
-            parent.dismiss()
-        }
-        
-        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
-            parent.dismiss()
-        }
     }
 }

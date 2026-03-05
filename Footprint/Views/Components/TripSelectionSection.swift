@@ -70,10 +70,9 @@ struct TripSelectionSection: View {
                     }
                 }
             }
-            
-            // 隐藏的 NavigationLink，用于从 Picker 选择"添加新旅程"时触发导航
-            // 使用 NavigationLink 代替 sheet，避免嵌套 presentation 问题
-            // 注意：isActive 在 iOS 16+ 中已废弃，但在 iOS 18 中仍可用
+        }
+        .overlay(
+            // 隐藏的 NavigationLink 放在 overlay 中，不参与 Form 行布局，避免占用一行空白
             NavigationLink(
                 destination: AddTripView().environmentObject(LanguageManager.shared),
                 isActive: $showingCreateTrip
@@ -82,8 +81,8 @@ struct TripSelectionSection: View {
             }
             .hidden()
             .frame(width: 0, height: 0)
-            .disabled(true) // 禁用直接点击，只能通过编程方式触发
-        }
+            .disabled(true)
+        )
         .onChange(of: selectedTrip) { oldValue, newValue in
             // 如果选择了"添加新旅程"标记，通过 NavigationLink 导航到创建旅程视图
             if isMarkerTrip(newValue) {

@@ -11,142 +11,6 @@ import CoreText
 import CoreLocation
 import MapKit
 
-// MARK: - 分享相关
-struct TripShareItem: Identifiable {
-    let id = UUID()
-    let text: String
-    let image: UIImage?
-    let url: URL?
-    
-    init(text: String, image: UIImage? = nil, url: URL? = nil) {
-        self.text = text
-        self.image = image
-        self.url = url
-    }
-}
-
-// 全局状态管理，防止重复触发分享
-private class ShareSheetManager {
-    static let shared = ShareSheetManager()
-    private var isPresenting = false
-    private let queue = DispatchQueue(label: "com.footprint.share")
-    
-    func canPresent() -> Bool {
-        return queue.sync { !isPresenting }
-    }
-    
-    func setPresenting(_ value: Bool) {
-        queue.sync { isPresenting = value }
-    }
-}
-
-struct SystemShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
-    
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        // 检查是否已有分享界面正在显示
-        guard ShareSheetManager.shared.canPresent() else {
-            // 如果已有分享界面，返回一个空的控制器
-            let emptyController = UIActivityViewController(activityItems: [], applicationActivities: nil)
-            return emptyController
-        }
-        
-        ShareSheetManager.shared.setPresenting(true)
-        
-        let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
-        
-        // 设置完成回调，防止重复触发
-        controller.completionWithItemsHandler = { activityType, completed, returnedItems, error in
-            ShareSheetManager.shared.setPresenting(false)
-            
-            if let error = error {
-                print("⚠️ 分享错误: \(error.localizedDescription)")
-            }
-        }
-        
-        return controller
-    }
-    
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}
-
-// MARK: - 版面类型枚举
-enum TripShareLayout: String, CaseIterable, Identifiable {
-    case list = "list"
-    case extendedGrid = "extendedGrid"
-    
-    var id: String { rawValue }
-    
-    var displayName: String {
-        switch self {
-        case .list:
-            return "trip_share_layout_list".localized
-        case .extendedGrid:
-            return "trip_share_layout_extended_grid".localized
-        }
-    }
-    
-    var iconName: String {
-        switch self {
-        case .list:
-            return "list.bullet"
-        case .extendedGrid:
-            return "square.grid.3x3.square.badge.ellipsis"
-        }
-    }
-    
-    var description: String {
-        switch self {
-        case .list:
-            return "trip_share_layout_list_desc".localized
-        case .extendedGrid:
-            return "trip_share_layout_extended_grid_desc".localized
-        }
-    }
-}
-
-// MARK: - 地点分享版面类型枚举
-enum DestinationShareLayout: String, CaseIterable, Identifiable {
-    case classic = "classic"           // 经典版面（原有样式）
-    case posterPromo = "posterPromo"  // 宣传海报样式（大图+小图）
-    case posterCollage = "posterCollage" // 拼贴海报样式（3x3网格）
-    
-    var id: String { rawValue }
-    
-    var displayName: String {
-        switch self {
-        case .classic:
-            return "经典版面"
-        case .posterPromo:
-            return "宣传海报"
-        case .posterCollage:
-            return "拼贴海报"
-        }
-    }
-    
-    var iconName: String {
-        switch self {
-        case .classic:
-            return "rectangle.portrait"
-        case .posterPromo:
-            return "photo.on.rectangle.angled"
-        case .posterCollage:
-            return "square.grid.3x3"
-        }
-    }
-    
-    var description: String {
-        switch self {
-        case .classic:
-            return "传统的垂直布局，适合展示详细信息"
-        case .posterPromo:
-            return "突出主图，底部配小图，适合宣传推广"
-        case .posterCollage:
-            return "3x3网格拼贴，展示多张照片，适合旅行记录"
-        }
-    }
-}
-
 // MARK: - 版面生成器协议
 protocol TripLayoutGenerator {
     func generateImage(from trip: TravelTrip) -> UIImage?
@@ -1476,18 +1340,17 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         // 时间信息卡片
         height += 20 + 100 + 20 // padding + card + margin (增加卡片高度)
         
-        // 行程路线卡片（使用卡片样式）
+        // 行程路线卡片（使用卡片样式，多天时含「第 N 天」分段标题）
         let sortedDestinations = trip.destinations?.sorted { $0.visitDate < $1.visitDate } ?? []
         let destinationCount = sortedDestinations.count
         var routeHeight: CGFloat = 0
         if destinationCount > 0 {
-            // 每个卡片固定高度160pt，卡片间距12pt
             let cardHeight: CGFloat = 160
             let cardSpacing: CGFloat = 12
             let totalCardsHeight = CGFloat(destinationCount) * cardHeight + CGFloat(destinationCount - 1) * cardSpacing
-            // 注意：drawRouteCard返回的高度包含20点底部padding（卡片内部），
-            // 但签名是在卡片外面绘制的，所以这里不包含这个20点padding
-            routeHeight = 50 + totalCardsHeight // header + cards（不包含底部padding，因为签名在卡片外）
+            let dayGroupsCount = dayGroups(for: trip).count
+            let daySectionHeadersHeight: CGFloat = dayGroupsCount > 1 ? CGFloat(dayGroupsCount) * Self.listLayoutDaySectionHeaderHeight : 0
+            routeHeight = 50 + daySectionHeadersHeight + totalCardsHeight
         } else {
             routeHeight = 136 // empty state
         }
@@ -1771,58 +1634,85 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         return formatter.string(fromDistance: distance)
     }
     
+    /// 将旅程目的地按天分组（与 RoutesView / TripDetailView 逻辑一致），用于清单版面按天分段显示
+    private func dayGroups(for trip: TravelTrip) -> [(dayIndex: Int, dayStart: Date, destinations: [TravelDestination])] {
+        let sorted = trip.destinations?.sorted { $0.visitDate < $1.visitDate } ?? []
+        guard !sorted.isEmpty else { return [] }
+        let calendar = Calendar.current
+        var groups: [(dayIndex: Int, dayStart: Date, destinations: [TravelDestination])] = []
+        var currentDayStart: Date?
+        var currentList: [TravelDestination] = []
+        for d in sorted {
+            let dayStart = calendar.startOfDay(for: d.visitDate)
+            if dayStart != currentDayStart {
+                if let prev = currentDayStart {
+                    groups.append((groups.count + 1, prev, currentList))
+                }
+                currentDayStart = dayStart
+                currentList = [d]
+            } else {
+                currentList.append(d)
+            }
+        }
+        if let last = currentDayStart {
+            groups.append((groups.count + 1, last, currentList))
+        }
+        return groups
+    }
+    
+    /// 清单版面「第 N 天」分段标题高度（上边距 + 一行文字 + 下边距）
+    private static let listLayoutDaySectionHeaderHeight: CGFloat = 12 + 22 + 6
+    
     private func drawRouteCard(for trip: TravelTrip, at point: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
         let sortedDestinations = trip.destinations?.sorted { $0.visitDate < $1.visitDate } ?? []
         let destinationCount = sortedDestinations.count
+        let groups = dayGroups(for: trip)
+        let showDaySections = destinationCount > 0 && groups.count > 1
         
         var currentY = point.y
         let headerHeight: CGFloat = 50
         
-        // 计算总高度（卡片样式，固定高度）
+        // 计算总高度：标题 +（多天时）分段标题高度 + 卡片列表 + 底部 padding
+        let cardHeight: CGFloat = 160
+        let cardSpacing: CGFloat = 12
         var totalItemsHeight: CGFloat = 0
         if destinationCount > 0 {
-            let cardHeight: CGFloat = 160
-            let cardSpacing: CGFloat = 12
             totalItemsHeight = CGFloat(destinationCount) * cardHeight + CGFloat(destinationCount - 1) * cardSpacing
         }
+        let daySectionHeadersHeight: CGFloat = showDaySections ? CGFloat(groups.count) * Self.listLayoutDaySectionHeaderHeight : 0
+        let totalHeight = headerHeight + daySectionHeadersHeight + (destinationCount > 0 ? totalItemsHeight : 80) + 20
         
-        // 绘制卡片背景
-        let totalHeight = headerHeight + (destinationCount > 0 ? totalItemsHeight : 80) + 20 // 底部padding
         let cardRect = CGRect(x: point.x, y: point.y, width: width, height: totalHeight)
         
-        let path = UIBezierPath(roundedRect: cardRect, cornerRadius: 20) // 使用20圆角，与"我的"tab一致
+        let path = UIBezierPath(roundedRect: cardRect, cornerRadius: 20)
         context.saveGState()
         context.addPath(path.cgPath)
         context.setFillColor(UIColor.white.cgColor)
-        // 使用与"我的"tab一致的大卡片阴影
         context.setShadow(offset: CGSize(width: 0, height: 4), blur: 12, color: UIColor.black.withAlphaComponent(0.12).cgColor)
         context.fillPath()
         context.restoreGState()
         
-        // 绘制标题
+        // 绘制「行程路线」标题
         currentY += 20
         let titleAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 18, weight: .semibold),
             .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
         ]
         
-        // 绘制行程路线图标
         let iconImage = UIImage(systemName: "location.fill")
         if let iconImage = iconImage {
             let iconSize: CGFloat = 16
             let iconRect = CGRect(x: point.x + 20, y: currentY, width: iconSize, height: iconSize)
-            // 使用深灰色，与"我的"tab一致
             let tintedIcon = iconImage.withTintColor(UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0), renderingMode: .alwaysOriginal)
             tintedIcon.draw(in: iconRect)
         }
         
-        // 绘制行程路线文字
         let titleString = NSAttributedString(string: "trip_share_route".localized, attributes: titleAttributes)
         titleString.draw(at: CGPoint(x: point.x + 50, y: currentY))
         
         let countString = NSAttributedString(string: "\(destinationCount) " + "trip_share_locations_count".localized, attributes: [
             .font: UIFont.systemFont(ofSize: 14),
-            .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // 次要文本 #666666
+            .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // #666666
         ])
         let countSize = countString.size()
         countString.draw(at: CGPoint(x: point.x + width - countSize.width - 20, y: currentY))
@@ -1830,22 +1720,38 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         currentY += 30
         
         if destinationCount > 0 {
-            // 绘制目的地卡片列表
-            let cardSpacing: CGFloat = 12
-            let cardHeight: CGFloat = 160
-            for (index, destination) in sortedDestinations.enumerated() {
-                drawDestinationCard(destination, at: CGPoint(x: point.x + 20, y: currentY), width: width - 40, context: context)
-                currentY += cardHeight
-                // 最后一个卡片不添加间距
-                if index < sortedDestinations.count - 1 {
-                    currentY += cardSpacing
+            let dateFormatter = LanguageManager.shared.localizedDateFormatter(dateStyle: .medium)
+            var globalIndex = 1 // 方案 B：全局序号 1,2,3...
+            
+            if showDaySections {
+                for group in groups {
+                    // 绘制「第 N 天 · 日期」分段标题
+                    let dateString = dateFormatter.string(from: group.dayStart)
+                    let sectionTitle = String(format: "trip_route_day_title".localized, group.dayIndex, dateString)
+                    currentY += drawDaySectionHeader(sectionTitle, at: CGPoint(x: point.x + 20, y: currentY), width: width - 40, context: context)
+                    // 绘制该天内的目的地卡片（保持全局序号）
+                    for destination in group.destinations {
+                        drawDestinationCard(destination, at: CGPoint(x: point.x + 20, y: currentY), width: width - 40, context: context)
+                        currentY += cardHeight
+                        globalIndex += 1
+                        if globalIndex < destinationCount {
+                            currentY += cardSpacing
+                        }
+                    }
+                }
+            } else {
+                for (index, destination) in sortedDestinations.enumerated() {
+                    drawDestinationCard(destination, at: CGPoint(x: point.x + 20, y: currentY), width: width - 40, context: context)
+                    currentY += cardHeight
+                    if index < sortedDestinations.count - 1 {
+                        currentY += cardSpacing
+                    }
                 }
             }
         } else {
-            // 绘制空状态
             let emptyAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 16),
-                .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // 次要文本 #666666
+                .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // #666666
             ]
             let emptyString = NSAttributedString(string: "trip_share_no_destinations".localized, attributes: emptyAttributes)
             let emptySize = emptyString.size()
@@ -1853,6 +1759,18 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         }
         
         return totalHeight
+    }
+    
+    /// 绘制「第 N 天 · 日期」分段标题，返回占用高度（与 listLayoutDaySectionHeaderHeight 一致）
+    private func drawDaySectionHeader(_ title: String, at point: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
+        let topMargin: CGFloat = 12
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 18, weight: .semibold),
+            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
+        ]
+        let attributed = NSAttributedString(string: title, attributes: attributes)
+        attributed.draw(at: CGPoint(x: point.x, y: point.y + topMargin))
+        return Self.listLayoutDaySectionHeaderHeight
     }
     
     /// 绘制地点卡片（卡片样式，类似 DestinationRowCard）
@@ -2599,14 +2517,25 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
             let timeCardHeight = drawTimeCard(for: trip, at: CGPoint(x: 20, y: currentY), width: screenWidth - 40, context: cgContext)
             currentY += timeCardHeight + 20 // 与地点卡片间距20
             
-            // 绘制扩展网格拼图（支持超过9个地点）
-            if !sortedDestinations.isEmpty {
-                let gridHeight = drawExtendedGrid(destinations: sortedDestinations, at: CGPoint(x: 20, y: currentY), width: screenWidth - 40, context: cgContext)
-                currentY += gridHeight
-            } else {
-                // 空状态
+            // 绘制扩展网格拼图（按天分段，某天超过 9 个地点时多行九宫格）
+            if sortedDestinations.isEmpty {
                 drawEmptyState(at: CGPoint(x: 20, y: currentY), width: screenWidth - 40, context: cgContext)
                 currentY += 200
+            } else {
+                let groups = dayGroups(for: trip)
+                if groups.count <= 1 {
+                    let result = drawExtendedGrid(destinations: sortedDestinations, at: CGPoint(x: 20, y: currentY), width: screenWidth - 40, context: cgContext, startIndex: 1)
+                    currentY += result.height
+                } else {
+                    var globalIndex = 1
+                    for group in groups {
+                        let headerHeight = drawDaySectionHeader(dayIndex: group.dayIndex, dayStart: group.dayStart, at: CGPoint(x: 20, y: currentY), width: screenWidth - 40, context: cgContext)
+                        currentY += headerHeight
+                        let result = drawExtendedGrid(destinations: group.destinations, at: CGPoint(x: 20, y: currentY), width: screenWidth - 40, context: cgContext, startIndex: globalIndex)
+                        currentY += result.height
+                        globalIndex = result.nextIndex
+                    }
+                }
             }
             
             // 绘制底部签名（优化间距以减少空白，与清单版面统一）
@@ -2653,24 +2582,28 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
         // 时间信息卡片
         height += 100 + 20 // 与地点卡片间距20
         
-        // 扩展网格区域（每9张图片重复九宫格布局）
+        // 扩展网格区域（按天分段，每天内每 9 个一组多行九宫格）
         if !destinations.isEmpty {
-            let groupSpacing: CGFloat = 6 // 每组九宫格之间的间距（与其他网格间距一致）
+            let groupSpacing: CGFloat = 6
             let chunkSize = 9
-            let chunks = destinations.chunked(into: chunkSize)
+            let groups = dayGroups(for: trip)
             
-            for (chunkIndex, chunk) in chunks.enumerated() {
-                // 如果不是第一组，添加组间距
-                if chunkIndex > 0 {
-                    height += groupSpacing
+            if groups.count <= 1 {
+                let chunks = destinations.chunked(into: chunkSize)
+                for (chunkIndex, chunk) in chunks.enumerated() {
+                    if chunkIndex > 0 { height += groupSpacing }
+                    height += GridLayoutHelper.calculateGridHeight(photoCount: min(chunk.count, 9), width: contentWidth)
                 }
-                
-                // 计算该组的高度（最多9张图片）
-                let groupCount = min(chunk.count, 9)
-                height += GridLayoutHelper.calculateGridHeight(photoCount: groupCount, width: contentWidth)
+            } else {
+                for group in groups {
+                    height += Self.gridLayoutDaySectionHeaderHeight
+                    let dayChunks = group.destinations.chunked(into: chunkSize)
+                    for (chunkIndex, chunk) in dayChunks.enumerated() {
+                        if chunkIndex > 0 { height += groupSpacing }
+                        height += GridLayoutHelper.calculateGridHeight(photoCount: min(chunk.count, 9), width: contentWidth)
+                    }
+                }
             }
-            
-            // 注意：不在这里添加padding，因为绘制时网格后直接是签名间距24，没有额外的20点padding
         } else {
             height += 200 // 空状态高度
         }
@@ -2819,24 +2752,65 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
         valueString.draw(in: valueRect)
     }
     
-    private func drawExtendedGrid(destinations: [TravelDestination], at point: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
-        guard !destinations.isEmpty else { return 0 }
+    /// 将旅程目的地按天分组（与清单版面 / RoutesView 逻辑一致），用于网格版面按天分段
+    private func dayGroups(for trip: TravelTrip) -> [(dayIndex: Int, dayStart: Date, destinations: [TravelDestination])] {
+        let sorted = trip.destinations?.sorted { $0.visitDate < $1.visitDate } ?? []
+        guard !sorted.isEmpty else { return [] }
+        let calendar = Calendar.current
+        var groups: [(dayIndex: Int, dayStart: Date, destinations: [TravelDestination])] = []
+        var currentDayStart: Date?
+        var currentList: [TravelDestination] = []
+        for d in sorted {
+            let dayStart = calendar.startOfDay(for: d.visitDate)
+            if dayStart != currentDayStart {
+                if let prev = currentDayStart {
+                    groups.append((groups.count + 1, prev, currentList))
+                }
+                currentDayStart = dayStart
+                currentList = [d]
+            } else {
+                currentList.append(d)
+            }
+        }
+        if let last = currentDayStart {
+            groups.append((groups.count + 1, last, currentList))
+        }
+        return groups
+    }
+    
+    /// 网格版面「第 N 天」分段标题高度（与清单版面一致）
+    private static let gridLayoutDaySectionHeaderHeight: CGFloat = 12 + 22 + 6
+    
+    /// 绘制「第 N 天 · 日期」分段标题，返回占用高度
+    private func drawDaySectionHeader(dayIndex: Int, dayStart: Date, at point: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
+        let dateFormatter = LanguageManager.shared.localizedDateFormatter(dateStyle: .medium)
+        let dateString = dateFormatter.string(from: dayStart)
+        let title = String(format: "trip_route_day_title".localized, dayIndex, dateString)
+        let topMargin: CGFloat = 12
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 18, weight: .semibold),
+            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0)
+        ]
+        let attributed = NSAttributedString(string: title, attributes: attributes)
+        attributed.draw(at: CGPoint(x: point.x, y: point.y + topMargin))
+        return Self.gridLayoutDaySectionHeaderHeight
+    }
+    
+    private func drawExtendedGrid(destinations: [TravelDestination], at point: CGPoint, width: CGFloat, context: CGContext, startIndex: Int = 1) -> (height: CGFloat, nextIndex: Int) {
+        guard !destinations.isEmpty else { return (0, startIndex) }
         
-        let groupSpacing: CGFloat = 6 // 每组九宫格之间的间距（与其他网格间距一致）
+        let groupSpacing: CGFloat = 6
         var currentY = point.y
-        var globalIndex = 1 // 全局序号，用于显示序号标签
+        var globalIndex = startIndex
         
-        // 将目的地分成每9个一组
         let chunkSize = 9
         let chunks = destinations.chunked(into: chunkSize)
         
         for (chunkIndex, chunk) in chunks.enumerated() {
-            // 如果不是第一组，添加组间距
             if chunkIndex > 0 {
                 currentY += groupSpacing
             }
             
-            // 获取该组的地点照片数据
             let destinationImages: [UIImage] = chunk.compactMap { destination in
                 if let photoData = destination.photoData,
                    let photoImage = UIImage(data: photoData) {
@@ -2849,7 +2823,6 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
             
             guard !destinationImages.isEmpty else { continue }
             
-            // 使用共享的九宫格布局工具绘制该组
             let groupHeight = GridLayoutHelper.drawGridLayout(
                 images: destinationImages,
                 destinations: chunk,
@@ -2869,7 +2842,7 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
             globalIndex += chunk.count
         }
         
-        return currentY - point.y
+        return (currentY - point.y, globalIndex)
     }
     
     // 绘制主图（用于旅程分享图片的地点主图）

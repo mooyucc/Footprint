@@ -20,13 +20,17 @@ struct TripRouteMapView: View {
     @State private var routes: [MKRoute] = []
     @State private var isLoadingRoutes = false
     @State private var cameraPosition: MapCameraPosition = .automatic
+    @Environment(\.modelContext) private var modelContext
     
     // MARK: - Route Color Helper
     /// 根据交通方式返回路线颜色
     /// - Parameter transportType: 交通方式
     /// - Returns: 路线颜色（徒步：绿色，机动车：蓝色，其他：灰色）
     private func routeColor(for transportType: MKDirectionsTransportType) -> Color {
-        if transportType == RouteManager.airplane {
+        if transportType == RouteManager.none {
+            // 无：浅灰色（跨天连接线）
+            return Color(.tertiaryLabel)
+        } else if transportType == RouteManager.airplane {
             // 飞机模式：使用橙色
             return .orange
         } else if transportType.contains(.walking) && transportType == .walking {
@@ -104,6 +108,11 @@ struct TripRouteMapView: View {
                             to: destination.coordinate,
                             transportType: newType
                         )
+                        persistRouteSegmentIfNeeded(
+                            from: source,
+                            to: destination,
+                            transportType: newType
+                        )
                         // 清除当前路线，强制重新计算
                         routes = []
                         // 重新计算路线
@@ -120,28 +129,41 @@ struct TripRouteMapView: View {
     private func routePolylineContent(for route: MKRoute, at index: Int) -> some MapContent {
         // 根据交通方式选择颜色
         let routeColorValue = routeColor(for: route.footprintTransportType)
+        let isNoneTransport = route.footprintTransportType == RouteManager.none
         
-        // 路线 - 使用 Apple 设计标准的样式（白色描边 + 主体颜色）
-        // 先绘制白色背景（更粗），创建描边效果
-        MapPolyline(route.polyline)
-            .stroke(
-                Color.white,
-                style: StrokeStyle(
-                    lineWidth: 7,
-                    lineCap: .round,
-                    lineJoin: .round
+        if isNoneTransport {
+            // "无"模式：浅灰虚线，用于跨天两地
+            MapPolyline(route.polyline)
+                .stroke(
+                    routeColorValue,
+                    style: StrokeStyle(
+                        lineWidth: 4,
+                        lineCap: .round,
+                        lineJoin: .round,
+                        dash: [6, 4]
+                    )
                 )
-            )
-        // 再绘制主体颜色（较细），叠加在白色背景上
-        MapPolyline(route.polyline)
-            .stroke(
-                routeColorValue,
-                style: StrokeStyle(
-                    lineWidth: 5,
-                    lineCap: .round,
-                    lineJoin: .round
+        } else {
+            // 其他交通方式：白色描边 + 主体颜色
+            MapPolyline(route.polyline)
+                .stroke(
+                    Color.white,
+                    style: StrokeStyle(
+                        lineWidth: 7,
+                        lineCap: .round,
+                        lineJoin: .round
+                    )
                 )
-            )
+            MapPolyline(route.polyline)
+                .stroke(
+                    routeColorValue,
+                    style: StrokeStyle(
+                        lineWidth: 5,
+                        lineCap: .round,
+                        lineJoin: .round
+                    )
+                )
+        }
         
         // 距离标注（带交通方式选择）
         if let midpoint = midpointOfPolyline(route.polyline),
@@ -159,6 +181,11 @@ struct TripRouteMapView: View {
                         routeManager.setUserTransportType(
                             from: source.coordinate,
                             to: destination.coordinate,
+                            transportType: newType
+                        )
+                        persistRouteSegmentIfNeeded(
+                            from: source,
+                            to: destination,
                             transportType: newType
                         )
                         // 清除当前路线，强制重新计算
@@ -282,8 +309,101 @@ struct TripRouteMapView: View {
             await MainActor.run {
                 routes = calculatedRoutes
                 isLoadingRoutes = false
+                persistAllRouteSegmentsIfNeeded(with: calculatedRoutes)
             }
         }
+    }
+    
+    /// 将某一段路线及交通方式写入 SwiftData（便于 iCloud 同步）
+    /// - Parameter saveAfter: 是否在本段写入后立即 save；批量调用时传 false，最后统一 save 以减轻主线程压力
+    private func persistRouteSegmentIfNeeded(
+        from source: TravelDestination,
+        to destination: TravelDestination,
+        transportType: MKDirectionsTransportType?,
+        saveAfter: Bool = true
+    ) {
+        let typeRaw = (transportType ?? .automobile).rawValue
+        let startLat = source.latitude
+        let startLon = source.longitude
+        let endLat = destination.latitude
+        let endLon = destination.longitude
+        
+        // 查找是否已有对应段落
+        let fetch = FetchDescriptor<TravelRouteSegment>(
+            predicate: #Predicate { seg in
+                seg.startLatitude == startLat &&
+                seg.startLongitude == startLon &&
+                seg.endLatitude == endLat &&
+                seg.endLongitude == endLon
+            }
+        )
+        
+        let existing = (try? modelContext.fetch(fetch))?.first
+        
+        // 尝试从缓存中拿到最新 MKRoute
+        let cachedRoute = routeManager.getCachedRoute(
+            from: source.coordinate,
+            to: destination.coordinate,
+            transportType: transportType
+        )
+        
+        let distance = cachedRoute?.footprintDistance ?? source.coordinate.distance(to: destination.coordinate)
+        let travelTime = cachedRoute?.footprintExpectedTravelTime ?? 0
+        let coordinatesData: Data?
+        if let polyline = cachedRoute?.polyline, polyline.pointCount >= 2 {
+            var coords = [CLLocationCoordinate2D](
+                repeating: kCLLocationCoordinate2DInvalid,
+                count: polyline.pointCount
+            )
+            polyline.getCoordinates(&coords, range: NSRange(location: 0, length: polyline.pointCount))
+            let pairs = coords.map { [$0.latitude, $0.longitude] }
+            coordinatesData = try? JSONSerialization.data(withJSONObject: pairs, options: [])
+        } else {
+            coordinatesData = nil
+        }
+        
+        let now = Date()
+        if let seg = existing {
+            seg.transportTypeRawValue = typeRaw
+            seg.distance = distance
+            seg.expectedTravelTime = travelTime
+            seg.coordinatesData = coordinatesData
+            seg.updatedAt = now
+        } else {
+            let seg = TravelRouteSegment(
+                trip: source.trip,
+                startLatitude: startLat,
+                startLongitude: startLon,
+                endLatitude: endLat,
+                endLongitude: endLon,
+                transportTypeRawValue: typeRaw,
+                distance: distance,
+                expectedTravelTime: travelTime,
+                coordinatesData: coordinatesData,
+                updatedAt: now
+            )
+            modelContext.insert(seg)
+        }
+        
+        if saveAfter {
+            try? modelContext.save()
+        }
+    }
+    
+    /// 批量持久化本视图中所有路线（在计算完成后调用一次）；只写 context，最后统一 save 一次，减少主线程卡顿
+    private func persistAllRouteSegmentsIfNeeded(with calculatedRoutes: [MKRoute]) {
+        guard sortedDestinations.count >= 2 else { return }
+        let dests = sortedDestinations
+        for i in 0..<(dests.count - 1) where i < calculatedRoutes.count {
+            let route = calculatedRoutes[i]
+            persistRouteSegmentIfNeeded(
+                from: dests[i],
+                to: dests[i + 1],
+                transportType: route.footprintTransportType,
+                saveAfter: false
+            )
+        }
+        try? modelContext.save()
     }
     
     /// 调整地图相机位置，使其包含所有地点

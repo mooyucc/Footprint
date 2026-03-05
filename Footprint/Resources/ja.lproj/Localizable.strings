@@ -26,7 +26,7 @@
 "paywall_expires_on" = "有効期限: ";
 "paywall_terms_privacy" = "購入することで、利用規約とプライバシーポリシーに同意したことになります。自動更新。システムの購読設定でいつでもキャンセルできます。";
 "paywall_feature_title" = "Pro機能";
-"paywall_feature_ai" = "AIアシスタント：スマートノート、旅の説明、写真分析、タグ生成";
+"paywall_feature_ai" = "AIアシスタント：スマートノート、旅の説明、写真分析、旅行先おすすめ";
 "paywall_feature_unlimited" = "無制限の目的地と旅行カード";
 "paywall_feature_share_layouts" = "完全な共有レイアウト";
 "paywall_feature_import_export" = "ローカルデータのインポート/エクスポート";
@@ -124,6 +124,14 @@
 "optimize" = "最適化";
 "optimize_images_result_title" = "最適化完了";
 "optimize_images_success" = "%d枚の写真を最適化しました";
+"auto_add_place_type" = "地点タイプを自動追加";
+"auto_add_place_type_confirm_title" = "地点タイプを自動追加";
+"auto_add_place_type_confirm_message" = "写真があり、タイプが未設定の地点について、1枚目の写真から自動でタイプを設定します。続行しますか？";
+"continue" = "続ける";
+"auto_add_place_type_result_title" = "完了";
+"auto_add_place_type_success" = "%d件の地点にタイプを自動追加しました";
+"auto_add_place_type_none" = "処理対象の地点はありません（写真がありタイプ未設定の地点のみ対象）";
+"auto_add_place_type_progress" = "処理中 %d/%d 件";
 "local_import_summary_title" = "インポート結果";
 "local_import_summary_success" = "%d件の旅程をインポートしました";
 "local_import_summary_duplicates" = "%d件の重複旅程をスキップしました";
@@ -171,6 +179,7 @@
 "footprint" = "MooFootprint";
 "ok" = "OK";
 "map" = "地図";
+"footprint_map" = "足跡";
 "trips" = "旅程";
 "profile" = "マイページ";
 "create_trip" = "旅程を追加";
@@ -230,11 +239,23 @@
 "all_destinations" = "すべての場所";
 "no_destinations_found" = "場所が見つかりません";
 
+// Discover Map
+"map_mode_my_footprints" = "マイマップ";
+
 // Edit Destination View
 "edit_destination" = "目的地を編集";
 "basic_info" = "基本情報";
 "place_name" = "場所名";
+"location_tag" = "場所タグ";
 "category" = "カテゴリー";
+"destination_type" = "目的地タイプ";
+"destination_type_natural_wonder" = "自然の奇観";
+"destination_type_urban_landscape" = "都市の風景";
+"destination_type_historical_culture" = "歴史・文化";
+"destination_type_food_feast" = "美食の饗宴";
+"destination_type_leisure_entertainment" = "レジャー・娯楽";
+"destination_type_outdoor_adventure" = "アウトドア冒険";
+"destination_type_artistic_checkin" = "アートチェックイン";
 "province_state" = "都道府県/州";
 "country_region" = "国/地域";
 "visit_date" = "訪問日";
@@ -324,6 +345,15 @@
 "ai_function_trip_desc_desc" = "複数の目的地に基づいて全体的な旅行説明を生成";
 "ai_function_tags_title" = "タグ生成";
 "ai_function_tags_desc" = "写真と場所に基づいて適切なタグをおすすめ";
+"ai_function_recommend_title" = "次の旅行先おすすめ";
+"ai_function_recommend_desc" = "記録した場所の傾向から、次の旅行先をおすすめ";
+"ai_generating_recommend" = "旅行の傾向を分析中…";
+"ai_save_recommend" = "おすすめを保存";
+"ai_save_recommend_success" = "おすすめを保存しました";
+"ai_save_recommend_failed" = "保存に失敗しました";
+"ai_saved_recommend_title" = "保存したおすすめ";
+"ai_saved_recommend_empty_title" = "おすすめはまだありません";
+"ai_saved_recommend_empty_desc" = "生成後「おすすめを保存」をタップするとここに表示されます";
 "ai_function_photo_analysis_title" = "写真分析";
 "ai_function_photo_analysis_desc" = "写真内のシーン、オブジェクト、ランドマークを識別";
 "ai_generating_notes" = "ノートを生成中...";
@@ -438,6 +468,8 @@
 "duration" = "期間";
 "days" = "日";
 "trip_route" = "旅程ルート";
+"trip_route_day_title" = "第%d日 · %@";
+"load_more_trips" = "さらに読み込む";
 "locations" = "場所";
 "share_trip" = "旅程を共有";
 "share_to_team" = "友達に共有";
@@ -598,6 +630,7 @@
 "automobile" = "自動車";
 "transit" = "公共交通";
 "airplane" = "飛行機";
+"transport_none" = "なし";
 
 // Onboarding
 "onboarding_welcome_hello" = "こんにちは";

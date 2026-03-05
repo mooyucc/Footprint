@@ -64,12 +64,10 @@ protocol AIServiceProtocol {
     /// - Returns: 照片分析结果
     func analyzeImages(_ images: [Data]) async throws -> ImageAnalysisResult
     
-    /// 生成标签
-    /// - Parameter destination: 目的地
-    /// - Returns: 生成的标签数组
-    func generateTags(
-        for destination: TravelDestination
-    ) async throws -> [String]
+    /// 根据已记录的目的地推荐下一站旅行目的地
+    /// - Parameter destinations: 用户已记录的目的地列表
+    /// - Returns: 推荐结果文本（包含推荐目的地及理由）
+    func recommendNextDestinations(from destinations: [TravelDestination]) async throws -> String
 }
 
 /// 照片分析结果

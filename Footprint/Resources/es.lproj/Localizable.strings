@@ -26,7 +26,7 @@
 "paywall_expires_on" = "Expira: ";
 "paywall_terms_privacy" = "Al comprar, aceptas los Términos de uso y la Política de privacidad. Renovación automática; cancela en cualquier momento en las suscripciones del sistema.";
 "paywall_feature_title" = "Funciones Pro";
-"paywall_feature_ai" = "Asistente AI: notas inteligentes, descripciones de viaje, análisis de fotos, generación de etiquetas";
+"paywall_feature_ai" = "Asistente AI: notas inteligentes, descripciones de viaje, análisis de fotos, recomendaciones de destinos";
 "paywall_feature_unlimited" = "Destinos y tarjetas de viaje ilimitados";
 "paywall_feature_share_layouts" = "Diseños de compartir completos";
 "paywall_feature_import_export" = "Importación/exportación de datos locales";
@@ -124,6 +124,14 @@
 "optimize" = "Optimizar";
 "optimize_images_result_title" = "Optimización completada";
 "optimize_images_success" = "Se optimizaron exitosamente %d fotos";
+"auto_add_place_type" = "Añadir tipo de lugar automáticamente";
+"auto_add_place_type_confirm_title" = "Añadir tipo de lugar automáticamente";
+"auto_add_place_type_confirm_message" = "Se detectará y establecerá automáticamente el tipo de lugar para todos los destinos con fotos pero sin tipo, usando la primera foto. ¿Continuar?";
+"continue" = "Continuar";
+"auto_add_place_type_result_title" = "Hecho";
+"auto_add_place_type_success" = "Tipo de lugar añadido a %d destinos";
+"auto_add_place_type_none" = "No hay destinos para procesar (solo aplica a destinos con fotos y sin tipo)";
+"auto_add_place_type_progress" = "Procesando %d/%d destinos";
 "local_import_summary_title" = "Resumen de importación";
 "local_import_summary_success" = "Se importaron exitosamente %d viajes";
 "local_import_summary_duplicates" = "Se omitieron %d viajes duplicados";
@@ -171,6 +179,7 @@
 "footprint" = "MooFootprint";
 "ok" = "Aceptar";
 "map" = "Mapa";
+"footprint_map" = "Huellas";
 "trips" = "Viajes";
 "profile" = "Perfil";
 "create_trip" = "Agregar viaje";
@@ -230,11 +239,23 @@
 "all_destinations" = "Todos los destinos";
 "no_destinations_found" = "No se encontraron destinos";
 
+// Discover Map
+"map_mode_my_footprints" = "Mi mapa";
+
 // Edit Destination View
 "edit_destination" = "Editar destino";
 "basic_info" = "Información básica";
 "place_name" = "Nombre del lugar";
+"location_tag" = "Etiqueta del lugar";
 "category" = "Categoría";
+"destination_type" = "Tipo de destino";
+"destination_type_natural_wonder" = "Maravilla natural";
+"destination_type_urban_landscape" = "Paisaje urbano";
+"destination_type_historical_culture" = "Histórico y cultural";
+"destination_type_food_feast" = "Festín gastronómico";
+"destination_type_leisure_entertainment" = "Ocio y entretenimiento";
+"destination_type_outdoor_adventure" = "Aventura al aire libre";
+"destination_type_artistic_checkin" = "Check-in artístico";
 "province_state" = "Provincia/Estado";
 "country_region" = "País/Región";
 "visit_date" = "Fecha de visita";
@@ -335,6 +356,15 @@
 "ai_function_trip_desc_desc" = "Genera una descripción global basada en varios destinos";
 "ai_function_tags_title" = "Generar etiquetas";
 "ai_function_tags_desc" = "Recomienda etiquetas adecuadas según fotos y ubicación";
+"ai_function_recommend_title" = "Recomendación de próximo destino";
+"ai_function_recommend_desc" = "Recomendar tu próximo viaje según tus lugares registrados";
+"ai_generating_recommend" = "Analizando tus preferencias…";
+"ai_save_recommend" = "Guardar recomendación";
+"ai_save_recommend_success" = "Guardado en recomendaciones";
+"ai_save_recommend_failed" = "Error al guardar";
+"ai_saved_recommend_title" = "Recomendaciones guardadas";
+"ai_saved_recommend_empty_title" = "Sin recomendaciones aún";
+"ai_saved_recommend_empty_desc" = "Tras generar, pulsa «Guardar» para verlas aquí";
 "ai_function_photo_analysis_title" = "Análisis de fotos";
 "ai_function_photo_analysis_desc" = "Identifica escenas, objetos y lugares emblemáticos en las fotos";
 "ai_generating_notes" = "Generando notas...";
@@ -424,6 +454,8 @@
 "duration" = "Duración";
 "days" = "días";
 "trip_route" = "Ruta del viaje";
+"trip_route_day_title" = "Día %d · %@";
+"load_more_trips" = "Cargar más";
 "locations" = "lugares";
 "share_trip" = "Compartir viaje";
 "share_to_team" = "Compartir con amigos";
@@ -584,6 +616,7 @@
 "automobile" = "Automóvil";
 "transit" = "Tránsito";
 "airplane" = "Avión";
+"transport_none" = "Ninguno";
 
 // Onboarding
 "onboarding_welcome_hello" = "Hola";

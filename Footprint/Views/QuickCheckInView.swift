@@ -21,6 +21,7 @@ struct QuickCheckInView: View {
     @Query private var allDestinations: [TravelDestination]
     @StateObject private var languageManager = LanguageManager.shared
     @EnvironmentObject private var entitlementManager: EntitlementManager
+    @EnvironmentObject private var aiCreditManager: AICreditManager
     
     // 从外部传入的预填充数据（位置信息）
     private let prefill: AddDestinationPrefill?
@@ -32,6 +33,7 @@ struct QuickCheckInView: View {
     @State private var visitDate: Date
     @State private var selectedLocation: MKMapItem?
     @State private var category: String
+    @State private var type: String
     
     // 可选功能 - 简化界面中隐藏，可通过"更多选项"访问
     @State private var selectedPhotos: [PhotosPickerItem] = []
@@ -50,6 +52,7 @@ struct QuickCheckInView: View {
     @State private var isSaving = false
     @State private var showingAINotePreview = false
     @State private var tempDestinationForAI: TravelDestination?
+    @State private var showCreditPaywall = false
     
     // 天气信息
     @State private var currentWeatherSummary: WeatherSummary?
@@ -61,6 +64,7 @@ struct QuickCheckInView: View {
         let initialCountry = prefill?.country ?? ""
         let initialProvince = prefill?.province ?? ""
         let initialCategory = prefill?.category ?? "domestic"
+        let initialType = prefill?.suggestedPlaceType ?? ""
         let initialVisitDate = prefill?.visitDate ?? Date()
         let initialLocation = prefill?.location
         
@@ -69,6 +73,7 @@ struct QuickCheckInView: View {
         _province = State(initialValue: initialProvince)
         _visitDate = State(initialValue: initialVisitDate)
         _category = State(initialValue: initialCategory)
+        _type = State(initialValue: initialType)
         _selectedLocation = State(initialValue: initialLocation)
         
         // 如果有照片预填充，也加载
@@ -179,6 +184,9 @@ struct QuickCheckInView: View {
                         dismiss()
                     }
                 )
+            }
+            .sheet(isPresented: $showCreditPaywall) {
+                AICreditPaywallView()
             }
             .sheet(isPresented: $showingAINotePreview) {
                 if let tempDestination = tempDestinationForAI {
@@ -310,6 +318,7 @@ struct QuickCheckInView: View {
             photoThumbnailDatas: photoThumbnailDatas,
             videoData: videoData,
             category: category,
+            type: type,
             isFavorite: isFavorite
         )
         
@@ -348,6 +357,7 @@ struct QuickCheckInView: View {
         existing.photoThumbnailDatas = photoThumbnailDatas
         existing.videoData = videoData
         existing.category = category
+        existing.type = type
         existing.isFavorite = isFavorite
         
         // 更新旅程关联
@@ -373,7 +383,8 @@ struct QuickCheckInView: View {
             category: category,
             visitDate: visitDate,
             photoDatas: photoDatas,
-            photoThumbnailDatas: photoThumbnailDatas
+            photoThumbnailDatas: photoThumbnailDatas,
+            suggestedPlaceType: type.isEmpty ? nil : type
         )
     }
     
@@ -381,13 +392,16 @@ struct QuickCheckInView: View {
     
     /// 检查是否有权限使用AI功能
     private var canUseAI: Bool {
-        !BetaInfo.isBetaBuild && entitlementManager.canUseAIFeatures
+        if BetaInfo.isBetaBuild { return true }
+        if entitlementManager.canUseAIFeatures { return true }
+        return aiCreditManager.remaining > 0
     }
     
     /// 处理AI按钮点击
     private func handleAITap() {
         guard canUseAI else {
-            // 如果没有权限，可以在这里显示提示
+            // 没有权限时弹出 AI 调用次数购买页
+            showCreditPaywall = true
             return
         }
         
@@ -416,6 +430,7 @@ struct QuickCheckInView: View {
             photoThumbnailDatas: photoThumbnailDatas,
             videoData: videoData,
             category: category,
+            type: type,
             isFavorite: isFavorite
         )
         

@@ -27,6 +27,7 @@ final class TravelDestination {
     // 新增：支持视频（限制1段，10秒以内）
     var videoData: Data?
     var category: String = "international" // domestic or international
+    var type: String = "" // 地点类型：自然奇观、城市风貌、历史人文、美食盛宴、休闲娱乐、户外冒险、文艺打卡
     var isFavorite: Bool = false
     var trip: TravelTrip? // 所属的旅行组
     
@@ -44,6 +45,7 @@ final class TravelDestination {
         photoThumbnailDatas: [Data] = [],
         videoData: Data? = nil,
         category: String = "international",
+        type: String = "",
         isFavorite: Bool = false
     ) {
         self.name = name
@@ -59,6 +61,7 @@ final class TravelDestination {
         self.photoThumbnailDatas = photoThumbnailDatas
         self.videoData = videoData
         self.category = category
+        self.type = type
         self.isFavorite = isFavorite
     }
     
@@ -101,6 +104,37 @@ final class TravelDestination {
         } else if category == "国外" {
             category = "international"
         }
+    }
+    
+    // 获取本地化的类型显示名称
+    var localizedType: String {
+        guard !type.isEmpty else { return "" }
+        let typeKeyMap: [String: String] = [
+            "natural_wonder": "destination_type_natural_wonder",
+            "urban_landscape": "destination_type_urban_landscape",
+            "historical_culture": "destination_type_historical_culture",
+            "food_feast": "destination_type_food_feast",
+            "leisure_entertainment": "destination_type_leisure_entertainment",
+            "outdoor_adventure": "destination_type_outdoor_adventure",
+            "artistic_checkin": "destination_type_artistic_checkin"
+        ]
+        if let localizedKey = typeKeyMap[type] {
+            return localizedKey.localized
+        }
+        return type
+    }
+    
+    /// 地点类型筛选选项（与编辑页一致，用于统计/列表筛选）
+    static var placeTypeFilterOptions: [(key: String, localizedKey: String)] {
+        [
+            ("natural_wonder", "destination_type_natural_wonder"),
+            ("urban_landscape", "destination_type_urban_landscape"),
+            ("historical_culture", "destination_type_historical_culture"),
+            ("food_feast", "destination_type_food_feast"),
+            ("leisure_entertainment", "destination_type_leisure_entertainment"),
+            ("outdoor_adventure", "destination_type_outdoor_adventure"),
+            ("artistic_checkin", "destination_type_artistic_checkin")
+        ]
     }
 }
 

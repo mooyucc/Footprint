@@ -27,6 +27,7 @@ struct AddDestinationToTripView: View {
     @State private var visitDate = Date()
     @State private var notes = ""
     @State private var category = "domestic"
+    @State private var type = ""
     @State private var isFavorite = false
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var photoData: Data?
@@ -88,6 +89,9 @@ struct AddDestinationToTripView: View {
                         let processed = ImageProcessor.process(data: data)
                         photoData = processed.0
                         photoThumbnailData = processed.1
+                        PlaceTypeImageClassifier.suggestPlaceType(from: processed.0) { suggested in
+                            type = suggested ?? ""
+                        }
                     }
                 }
             }
@@ -110,7 +114,14 @@ struct AddDestinationToTripView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                
+
+                Picker(NSLocalizedString("destination_type", comment: ""), selection: $type) {
+                    Text(NSLocalizedString("none", comment: "")).tag("")
+                    ForEach(TravelDestination.placeTypeFilterOptions, id: \.key) { option in
+                        Text(NSLocalizedString(option.localizedKey, comment: "")).tag(option.key)
+                    }
+                }
+
                 TextField(NSLocalizedString("country_region", comment: ""), text: $country)
                 
                 DatePicker(NSLocalizedString("visit_date", comment: ""), selection: $visitDate, displayedComponents: [.date, .hourAndMinute])
@@ -328,6 +339,7 @@ struct AddDestinationToTripView: View {
                 photoThumbnailData: photoThumbnailData,
                 photoThumbnailDatas: photoThumbnailData.map { [$0] } ?? [],
                 category: category,
+                type: type,
                 isFavorite: isFavorite
             )
             

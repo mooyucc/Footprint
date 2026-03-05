@@ -374,9 +374,12 @@ struct PaywallView: View {
     }
 
     private func sortedProducts() -> [Product] {
-        purchaseManager.products.sorted { lhs, rhs in
-            lhs.price < rhs.price
-        }
+        // 订阅付费墙仅展示订阅类产品（不包含 AI 调用次数等消耗型商品）
+        purchaseManager.products
+            .filter { SubscriptionProductID.all.contains($0.id) }
+            .sorted { lhs, rhs in
+                lhs.price < rhs.price
+            }
     }
 
     private func subtitle(for product: Product) -> String {

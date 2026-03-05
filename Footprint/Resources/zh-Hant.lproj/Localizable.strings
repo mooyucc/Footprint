@@ -18,7 +18,7 @@
 "paywall_expires_on" = "到期時間：";
 "paywall_terms_privacy" = "購買即表示同意《服務條款》和《隱私政策》。自動續訂，可在系統訂閱中隨時取消。";
 "paywall_feature_title" = "Pro 功能";
-"paywall_feature_ai" = "AI 助手：智慧筆記、旅程描述、照片分析、標籤生成";
+"paywall_feature_ai" = "AI 助手：智慧筆記、旅程描述、照片分析、旅行目的地推薦";
 "paywall_feature_unlimited" = "無限目的地與旅程卡片";
 "paywall_feature_share_layouts" = "完整版旅程分享圖片版面";
 "paywall_feature_import_export" = "本地數據導入/導出";
@@ -122,6 +122,14 @@
 "optimize" = "優化";
 "optimize_images_result_title" = "優化完成";
 "optimize_images_success" = "成功優化 %d 張圖片";
+"auto_add_place_type" = "自動添加地點類型";
+"auto_add_place_type_confirm_title" = "自動添加地點類型";
+"auto_add_place_type_confirm_message" = "將對所有有照片且未設置類型的地點，根據首張照片自動識別並填寫地點類型。是否繼續？";
+"continue" = "繼續";
+"auto_add_place_type_result_title" = "完成";
+"auto_add_place_type_success" = "已為 %d 個地點自動添加類型";
+"auto_add_place_type_none" = "沒有需要處理的地點（僅對有照片且未設置類型的地點生效）";
+"auto_add_place_type_progress" = "正在處理 %d/%d 個地點";
 "local_import_summary_title" = "導入結果";
 "local_import_summary_success" = "成功導入 %d 個旅程";
 "local_import_summary_duplicates" = "跳過 %d 個重複旅程";
@@ -169,6 +177,7 @@
 "footprint" = "墨魚足跡";
 "ok" = "確定";
 "map" = "地圖";
+"footprint_map" = "足跡地圖";
 "trips" = "旅程";
 "profile" = "我的";
 "create_trip" = "添加旅程";
@@ -228,11 +237,23 @@
 "all_destinations" = "所有地點";
 "no_destinations_found" = "未找到地點";
 
+// Discover Map
+"map_mode_my_footprints" = "足跡地圖";
+
 // Edit Destination View
 "edit_destination" = "編輯目的地";
 "basic_info" = "基本信息";
 "place_name" = "地點名稱";
+"location_tag" = "地點標籤";
 "category" = "分類";
+"destination_type" = "地點類型";
+"destination_type_natural_wonder" = "自然奇觀";
+"destination_type_urban_landscape" = "城市風貌";
+"destination_type_historical_culture" = "歷史人文";
+"destination_type_food_feast" = "美食盛宴";
+"destination_type_leisure_entertainment" = "休閒娛樂";
+"destination_type_outdoor_adventure" = "戶外冒險";
+"destination_type_artistic_checkin" = "文藝打卡";
 "province_state" = "省份/州";
 "country_region" = "國家/地區";
 "visit_date" = "訪問日期";
@@ -328,6 +349,15 @@
 "ai_function_trip_desc_desc" = "基於多個目的地，生成整體旅程描述";
 "ai_function_tags_title" = "生成標籤";
 "ai_function_tags_desc" = "根據照片與地點，智慧推薦適合的標籤";
+"ai_function_recommend_title" = "旅行目的地推薦";
+"ai_function_recommend_desc" = "根據你記錄的地點偏好，推薦下一站旅行目的地";
+"ai_generating_recommend" = "正在分析你的出行喜好…";
+"ai_save_recommend" = "保存推薦";
+"ai_save_recommend_success" = "已保存到推薦記錄";
+"ai_save_recommend_failed" = "保存失敗，請重試";
+"ai_saved_recommend_title" = "推薦記錄";
+"ai_saved_recommend_empty_title" = "暫無推薦記錄";
+"ai_saved_recommend_empty_desc" = "生成旅行推薦後點擊「保存推薦」即可在此查看";
 "ai_function_photo_analysis_title" = "照片智能分析";
 "ai_function_photo_analysis_desc" = "識別照片中的場景、物體和地標";
 "ai_generating_notes" = "正在生成筆記...";
@@ -345,8 +375,23 @@
 "ai_note_placeholder" = "在此編輯你的筆記...";
 "ai_note_edit_button" = "編輯筆記";
 "ai_subscription_required_title" = "AI 功能需 Pro 訂閱";
-"ai_subscription_required_message" = "AI 助手為 Pro 會員專享。升級 Pro 以使用智慧筆記生成、旅程描述生成等 AI 功能。";
+"ai_subscription_required_message" = "AI 助手為 Pro 會員專享。升級 Pro 以使用智慧筆記生成、旅程描述生成、旅行目的地推薦等 AI 功能。";
 "ai_upgrade_to_pro" = "升級到 Pro";
+
+// AI 調用次數（按次購買）
+"ai_credits_title" = "AI 調用次數";
+"ai_credits_subtitle" = "購買更多調用次數以繼續使用 AI 功能。";
+"ai_credits_remaining_label" = "剩餘次數";
+"ai_credits_used_label" = "已使用";
+"ai_credits_buy_section_title" = "購買 AI 調用次數";
+"ai_credits_default_product_title" = "AI 調用次數（10 次）";
+"ai_credits_product_subtitle" = "每次購買可獲得 %@。";
+"ai_credits_product_unavailable" = "暫時無法獲取商品信息，請稍後重試。";
+"ai_credits_usage_title" = "以下操作會消耗 AI 調用次數：";
+"ai_credits_usage_desc" = "每次生成 AI 旅行筆記會消耗 1 次調用；\n每次生成或更新 AI 旅程描述會消耗 1 次調用；\n每次使用 AI 旅行推薦功能會消耗 1 次調用；調用次數長期有效，不會自動過期。";
+"ai_credits_restore_button" = "恢復購買";
+"ai_credits_restore_tip" = "消耗型 AI 調用次數不會通過「恢復購買」找回，請在當前設備上使用完已購買的次數。";
+"ai_buy_per_use_button" = "按次購買 AI 調用";
 "map_button_menu" = "快捷操作";
 "map_button_import_photo" = "導入照片";
 "footprints_action_menu" = "快捷操作";
@@ -451,6 +496,8 @@
 "duration" = "時長";
 "days" = "天";
 "trip_route" = "行程路線";
+"trip_route_day_title" = "第%d天 · %@";
+"load_more_trips" = "載入更多行程";
 "locations" = "個地點";
 "share_trip" = "分享旅程";
 "share_to_team" = "分享給朋友";
@@ -611,6 +658,7 @@
 "automobile" = "機動車";
 "transit" = "公共交通";
 "airplane" = "飛機";
+"transport_none" = "無";
 
 // Onboarding
 "onboarding_welcome_hello" = "你好";

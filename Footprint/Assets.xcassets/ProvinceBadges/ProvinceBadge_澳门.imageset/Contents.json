@@ -1,17 +1,9 @@
 {
   "images" : [
     {
-      "filename" : "澳门.png",
+      "filename" : "澳门.jpg",
       "idiom" : "universal",
       "scale" : "1x"
-    },
-    {
-      "idiom" : "universal",
-      "scale" : "2x"
-    },
-    {
-      "idiom" : "universal",
-      "scale" : "3x"
     }
   ],
   "info" : {

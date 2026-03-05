@@ -18,7 +18,7 @@
 "paywall_expires_on" = "Expires: ";
 "paywall_terms_privacy" = "By purchasing you agree to the Terms of Use and Privacy Policy. Auto-renewable; cancel anytime in system subscriptions.";
 "paywall_feature_title" = "Pro features";
-"paywall_feature_ai" = "AI Assistant: smart notes, trip descriptions, photo analysis, tag generation";
+"paywall_feature_ai" = "AI Assistant: smart notes, trip descriptions, photo analysis, destination recommendations";
 "paywall_feature_unlimited" = "Unlimited destinations and trip cards";
 "paywall_feature_share_layouts" = "Full share layouts";
 "paywall_feature_import_export" = "Local data import/export";
@@ -116,6 +116,14 @@
 "optimize" = "Optimize";
 "optimize_images_result_title" = "Optimization Complete";
 "optimize_images_success" = "Successfully optimized %d photos";
+"auto_add_place_type" = "Auto-Add Place Type";
+"auto_add_place_type_confirm_title" = "Auto-Add Place Type";
+"auto_add_place_type_confirm_message" = "Automatically detect and set place type for all destinations that have photos but no type set, using the first photo. Continue?";
+"continue" = "Continue";
+"auto_add_place_type_result_title" = "Done";
+"auto_add_place_type_success" = "Auto-added place type for %d destinations";
+"auto_add_place_type_none" = "No destinations to process (only applies to destinations with photos and no type set)";
+"auto_add_place_type_progress" = "Processing %d/%d destinations";
 "local_import_summary_title" = "Import Summary";
 "local_import_summary_success" = "Successfully imported %d trips";
 "local_import_summary_duplicates" = "Skipped %d duplicate trips";
@@ -164,6 +172,7 @@
 "footprint" = "MooFootprint";
 "ok" = "OK";
 "map" = "Map";
+"footprint_map" = "Footprints";
 "trips" = "Trips";
 "profile" = "Profile";
 "create_trip" = "Add Trip";
@@ -223,11 +232,23 @@
 "all_destinations" = "All Destinations";
 "no_destinations_found" = "No destinations found";
 
+// Discover Map
+"map_mode_my_footprints" = "My map";
+
 // Edit Destination View
 "edit_destination" = "Edit Destination";
 "basic_info" = "Basic Information";
 "place_name" = "Place Name";
+"location_tag" = "Location Tag";
 "category" = "Category";
+"destination_type" = "Destination Type";
+"destination_type_natural_wonder" = "Natural Wonder";
+"destination_type_urban_landscape" = "Urban Landscape";
+"destination_type_historical_culture" = "Historical & Cultural";
+"destination_type_food_feast" = "Food Feast";
+"destination_type_leisure_entertainment" = "Leisure & Entertainment";
+"destination_type_outdoor_adventure" = "Outdoor Adventure";
+"destination_type_artistic_checkin" = "Artistic Check-in";
 "province_state" = "Province/State";
 "country_region" = "Country/Region";
 "visit_date" = "Visit Date";
@@ -325,6 +346,15 @@
 "ai_function_trip_desc_desc" = "Generate overall trip descriptions based on multiple destinations";
 "ai_function_tags_title" = "Generate Tags";
 "ai_function_tags_desc" = "Recommend relevant tags based on photos and locations";
+"ai_function_recommend_title" = "Next Destination Recommendation";
+"ai_function_recommend_desc" = "Recommend your next trip based on your recorded places and preferences";
+"ai_generating_recommend" = "Analyzing your travel preferences…";
+"ai_save_recommend" = "Save Recommendation";
+"ai_save_recommend_success" = "Saved to recommendations";
+"ai_save_recommend_failed" = "Save failed, please try again";
+"ai_saved_recommend_title" = "Saved Recommendations";
+"ai_saved_recommend_empty_title" = "No recommendations yet";
+"ai_saved_recommend_empty_desc" = "After generating, tap \"Save Recommendation\" to view them here";
 "ai_function_photo_analysis_title" = "Photo Analysis";
 "ai_function_photo_analysis_desc" = "Identify scenes, objects, and landmarks in photos";
 "ai_generating_notes" = "Generating notes...";
@@ -341,6 +371,21 @@
 "ai_note_edit_hint" = "Tap the area below to start editing your note";
 "ai_note_placeholder" = "Edit your note here...";
 "ai_note_edit_button" = "Edit Note";
+
+// AI Credits (per-use AI calls)
+"ai_credits_title" = "AI Call Credits";
+"ai_credits_subtitle" = "Buy more credits to keep using AI features.";
+"ai_credits_remaining_label" = "Remaining";
+"ai_credits_used_label" = "Used";
+"ai_credits_buy_section_title" = "Buy AI Call Credits";
+"ai_credits_default_product_title" = "AI Call Credits (10 calls)";
+"ai_credits_product_subtitle" = "Each purchase grants %@.";
+"ai_credits_product_unavailable" = "Unable to load product information. Please try again later.";
+"ai_credits_usage_title" = "The following actions will consume AI calls:";
+"ai_credits_usage_desc" = "Each AI travel note generation consumes 1 call;\nEach trip description generation or update consumes 1 call;\nEach use of AI travel recommendation consumes 1 call.\nYour credits do not expire and can be used at any time.";
+"ai_credits_restore_button" = "Restore Purchases";
+"ai_credits_restore_tip" = "Consumed AI call credits cannot be restored via “Restore Purchases”. Please use all purchased credits on the current device.";
+"ai_buy_per_use_button" = "Buy AI Calls Per Use";
 "ai_select_destination" = "Select Destination";
 "ai_select_trip" = "Select Trip";
 "ai_no_destinations" = "No Destinations";
@@ -349,7 +394,7 @@
 "ai_beta_not_available_message" = "AI features are only available in the full version. Please download the full version from the App Store to enjoy the complete AI assistant experience.";
 "ai_download_full_version" = "Download Full Version from App Store";
 "ai_subscription_required_title" = "AI Features Require Pro Subscription";
-"ai_subscription_required_message" = "AI Assistant is a Pro-exclusive feature. Upgrade to Pro to access smart note generation, trip description generation, and other AI features.";
+"ai_subscription_required_message" = "AI Assistant is a Pro-exclusive feature. Upgrade to Pro to access smart notes, trip descriptions, destination recommendations, and other AI features.";
 "ai_upgrade_to_pro" = "Upgrade to Pro";
 "footprints_action_menu" = "Quick Actions";
 "search_places" = "Search places";
@@ -453,6 +498,8 @@
 "duration" = "Duration";
 "days" = "days";
 "trip_route" = "Trip Route";
+"trip_route_day_title" = "Day %d · %@";
+"load_more_trips" = "Load more";
 "locations" = "locations";
 "share_trip" = "Share Trip";
 "share_to_team" = "Share with Friends";
@@ -627,6 +674,7 @@
 "automobile" = "Automobile";
 "transit" = "Transit";
 "airplane" = "Airplane";
+"transport_none" = "None";
 
 // Onboarding
 "onboarding_welcome_hello" = "Hello";

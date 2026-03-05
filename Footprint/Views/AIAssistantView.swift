@@ -17,6 +17,7 @@ struct AIAssistantView: View {
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var brandColorManager: BrandColorManager
     @EnvironmentObject private var entitlementManager: EntitlementManager
+    @EnvironmentObject private var aiCreditManager: AICreditManager
     
     @Query private var destinations: [TravelDestination]
     @Query private var trips: [TravelTrip]
@@ -28,15 +29,18 @@ struct AIAssistantView: View {
     @State private var showingTripPicker = false
     @State private var pendingAction: AIAction?
     @State private var showPaywall = false
+    @State private var showCreditPaywall = false
     
     // 检查是否为Beta版本
     private var isBetaBuild: Bool {
         BetaInfo.isBetaBuild
     }
     
-    // 检查是否有权限使用AI功能
+    // 检查是否有权限使用AI功能（测试版开放以便测试，正式版需订阅或拥有次数）
     private var canUseAI: Bool {
-        !isBetaBuild && entitlementManager.canUseAIFeatures
+        if isBetaBuild { return true }
+        if entitlementManager.canUseAIFeatures { return true }
+        return aiCreditManager.remaining > 0
     }
     
     var body: some View {
@@ -47,14 +51,11 @@ struct AIAssistantView: View {
                     headerSection
                     
                     // 权限检查
-                    if isBetaBuild {
-                        // Beta版本：显示引导下载正式版
-                        betaRestrictionView
-                    } else if !canUseAI {
+                    if !canUseAI {
                         // 正式版但未订阅：显示订阅提示
                         subscriptionRequiredView
                     } else {
-                        // 已订阅：显示AI功能列表
+                        // 已订阅或测试版：显示AI功能列表
                         VStack(spacing: 16) {
                             // 智能笔记生成
                             aiFunctionCard(
@@ -78,15 +79,15 @@ struct AIAssistantView: View {
                                 showTripSelector(for: .generateDescription)
                             }
                             
-                            // 标签生成
+                            // 旅行目的地推荐
                             aiFunctionCard(
-                                icon: "tag.fill",
-                                title: "ai_function_tags_title".localized,
-                                description: "ai_function_tags_desc".localized,
-                                color: .orange,
+                                icon: "airplane.departure",
+                                title: "ai_function_recommend_title".localized,
+                                description: "ai_function_recommend_desc".localized,
+                                color: .green,
                                 isAvailable: !destinations.isEmpty
                             ) {
-                                showDestinationSelector(for: .generateTags)
+                                showRecommendDestination()
                             }
                         }
                         .padding(.horizontal, 16)
@@ -131,15 +132,21 @@ struct AIAssistantView: View {
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
             }
+            .sheet(isPresented: $showCreditPaywall) {
+                AICreditPaywallView()
+            }
+            .sheet(isPresented: $showingRecommendSheet) {
+                AIRecommendDestinationSheet(destinations: destinations)
+            }
         }
     }
     
     @State private var currentAction: AIAction = .generateNotes
+    @State private var showingRecommendSheet = false
     
     enum AIAction {
         case generateNotes
         case generateDescription
-        case generateTags
     }
     
     // MARK: - Views
@@ -250,6 +257,16 @@ struct AIAssistantView: View {
         showingTripPicker = true
     }
     
+    private func showRecommendDestination() {
+        guard canUseAI else {
+            if !isBetaBuild {
+                showPaywall = true
+            }
+            return
+        }
+        showingRecommendSheet = true
+    }
+    
     // MARK: - Beta限制视图
     
     private var betaRestrictionView: some View {
@@ -314,19 +331,359 @@ struct AIAssistantView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
             
-            Button {
-                showPaywall = true
-            } label: {
-                Label("ai_upgrade_to_pro".localized, systemImage: "star.fill")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(brandColorManager.currentBrandColor)
-                    .foregroundColor(.white)
-                    .cornerRadius(12)
+            VStack(spacing: 12) {
+                Button {
+                    showPaywall = true
+                } label: {
+                    Label("ai_upgrade_to_pro".localized, systemImage: "star.fill")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(brandColorManager.currentBrandColor)
+                        .foregroundColor(.white)
+                        .cornerRadius(12)
+                }
+                
+                Button {
+                    showCreditPaywall = true
+                } label: {
+                    Label("ai_buy_per_use_button".localized, systemImage: "sparkles")
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color(.secondarySystemBackground))
+                        .foregroundColor(.primary)
+                        .cornerRadius(12)
+                }
             }
             .padding(.horizontal, 32)
         }
         .padding(.vertical, 40)
+    }
+}
+
+/// 旅行目的地推荐结果 Sheet（根据已记录地点推荐下一站）
+struct AIRecommendDestinationSheet: View {
+    let destinations: [TravelDestination]
+    
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject private var brandColorManager: BrandColorManager
+    @EnvironmentObject private var entitlementManager: EntitlementManager
+    @EnvironmentObject private var aiCreditManager: AICreditManager
+    @StateObject private var aiManager = AIModelManager.shared
+    @State private var result: String = ""
+    @State private var isLoading = false
+    @State private var errorMessage: String?
+    @State private var saveSuccessMessage: String?
+    @State private var showingHistory = false
+    @State private var selectedSavedItem: TravelRecommendationItem?
+    @State private var showCreditPaywall = false
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                AppColorScheme.pageBackgroundGradient(for: colorScheme)
+                    .ignoresSafeArea()
+                
+                if isLoading {
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.5)
+                        Text("ai_generating_recommend".localized)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                } else if let error = errorMessage {
+                    recommendErrorView(error)
+                } else if !result.isEmpty {
+                    recommendResultView
+                } else {
+                    Color.clear
+                        .onAppear { performRecommend() }
+                }
+            }
+            .navigationTitle("ai_function_recommend_title".localized)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        showingHistory = true
+                    } label: {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .sheet(isPresented: $showingHistory) {
+                SavedRecommendationsListView(selectedItem: $selectedSavedItem)
+            }
+            .sheet(item: $selectedSavedItem, onDismiss: { selectedSavedItem = nil }) { item in
+                SavedRecommendationDetailSheet(recommendation: item.recommendation)
+            }
+            .sheet(isPresented: $showCreditPaywall) {
+                AICreditPaywallView()
+            }
+        }
+    }
+    
+    private var recommendResultView: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                // 分段展示，增强层次与可读性
+                RecommendationContentCardView(content: result)
+                
+                if let msg = saveSuccessMessage {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.green)
+                        Text(msg)
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 4)
+                }
+                
+                HStack(spacing: 12) {
+                    Button {
+                        saveRecommendation()
+                    } label: {
+                        Label("ai_save_recommend".localized, systemImage: "square.and.arrow.down")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color(.secondarySystemBackground))
+                            .foregroundColor(.primary)
+                            .cornerRadius(12)
+                    }
+                    
+                    Button {
+                        copyToClipboard(result)
+                    } label: {
+                        Label("ai_copy_result".localized, systemImage: "doc.on.doc")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(brandColorManager.currentBrandColor)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                    }
+                }
+            }
+            .padding()
+        }
+    }
+    
+    private func saveRecommendation() {
+        let record = TravelRecommendation(generatedAt: Date(), content: result)
+        modelContext.insert(record)
+        do {
+            try modelContext.save()
+            saveSuccessMessage = "ai_save_recommend_success".localized
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                saveSuccessMessage = nil
+            }
+        } catch {
+            saveSuccessMessage = "ai_save_recommend_failed".localized
+        }
+    }
+    
+    private func recommendErrorView(_ error: String) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 48))
+                .foregroundColor(.orange)
+            
+            Text("ai_error_occurred".localized)
+                .font(.headline)
+            
+            Text(error)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+            
+            Button {
+                performRecommend()
+            } label: {
+                Text("ai_retry".localized)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(brandColorManager.currentBrandColor)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
+            }
+        }
+    }
+    
+    private func performRecommend() {
+        isLoading = true
+        errorMessage = nil
+        result = ""
+        
+        let isProUser = entitlementManager.canUseAIFeatures
+        if !isProUser {
+            if !aiCreditManager.consumeOne() {
+                isLoading = false
+                errorMessage = nil
+                showCreditPaywall = true
+                return
+            }
+        }
+        
+        Task {
+            let text = await aiManager.recommendNextDestinations(from: destinations)
+            await MainActor.run {
+                isLoading = false
+                if let text = text {
+                    result = text
+                } else {
+                    errorMessage = aiManager.errorMessage ?? "ai_error_unknown".localized
+                }
+            }
+        }
+    }
+    
+    private func copyToClipboard(_ text: String) {
+        #if os(iOS)
+        UIPasteboard.general.string = text
+        #endif
+    }
+}
+
+struct SavedRecommendationsListView: View {
+    @Binding var selectedItem: TravelRecommendationItem?
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) private var colorScheme
+    @Query(sort: \TravelRecommendation.generatedAt, order: .reverse) private var list: [TravelRecommendation]
+    
+    var body: some View {
+        NavigationStack {
+            Group {
+                if list.isEmpty {
+                    ContentUnavailableView("ai_saved_recommend_empty_title".localized, systemImage: "doc.text.magnifyingglass", description: Text("ai_saved_recommend_empty_desc".localized))
+                } else {
+                    List {
+                        ForEach(list, id: \.id) { item in
+                            Button {
+                                selectedItem = TravelRecommendationItem(item)
+                                dismiss()
+                            } label: {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(formatGeneratedDate(item.generatedAt))
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.primary)
+                                    Text(item.previewText)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .lineLimit(2)
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                        .onDelete(perform: deleteItems)
+                    }
+                }
+            }
+            .appPageBackgroundGradient(for: colorScheme)
+            .navigationTitle("ai_saved_recommend_title".localized)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func deleteItems(at offsets: IndexSet) {
+        for index in offsets {
+            guard index < list.count else { continue }
+            modelContext.delete(list[index])
+        }
+        try? modelContext.save()
+    }
+    
+    /// 使用当前应用语言环境格式化生成日期，避免始终跟随系统语言
+    private func formatGeneratedDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        if let languageCode = Locale.preferredLanguages.first {
+            formatter.locale = Locale(identifier: languageCode)
+        } else {
+            formatter.locale = Locale.current
+        }
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+}
+
+struct SavedRecommendationDetailSheet: View {
+    let recommendation: TravelRecommendation
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
+    @EnvironmentObject private var brandColorManager: BrandColorManager
+    
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    RecommendationContentCardView(content: recommendation.content)
+                    Button {
+                        #if os(iOS)
+                        UIPasteboard.general.string = recommendation.content
+                        #endif
+                        dismiss()
+                    } label: {
+                        Label("ai_copy_result".localized, systemImage: "doc.on.doc")
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(brandColorManager.currentBrandColor)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
+                    }
+                }
+                .padding()
+            }
+            .appPageBackgroundGradient(for: colorScheme)
+            .navigationTitle(formatGeneratedDate(recommendation.generatedAt))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+    }
+
+    /// 使用当前应用语言环境格式化生成日期，避免始终跟随系统语言
+    private func formatGeneratedDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        if let languageCode = Locale.preferredLanguages.first {
+            formatter.locale = Locale(identifier: languageCode)
+        } else {
+            formatter.locale = Locale.current
+        }
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
     }
 }
 
@@ -340,6 +697,8 @@ struct AIActionSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var brandColorManager: BrandColorManager
+    @EnvironmentObject private var entitlementManager: EntitlementManager
+    @EnvironmentObject private var aiCreditManager: AICreditManager
     @StateObject private var aiManager = AIModelManager.shared
     @State private var result: String = ""
     @State private var editedResult: String = ""
@@ -429,8 +788,6 @@ struct AIActionSheet: View {
             return "ai_generating_notes".localized
         case .generateDescription:
             return "ai_generating_description".localized
-        case .generateTags:
-            return "ai_generating_tags".localized
         }
     }
     
@@ -570,6 +927,16 @@ struct AIActionSheet: View {
         errorMessage = nil
         result = ""
         
+        let isProUser = entitlementManager.canUseAIFeatures
+        if !isProUser {
+            if !aiCreditManager.consumeOne() {
+                isLoading = false
+                errorMessage = nil
+                // 这里不直接显示购买界面，由上层决定入口；目前仅提示不足
+                return
+            }
+        }
+        
         Task {
             switch action {
             case .generateNotes:
@@ -595,20 +962,6 @@ struct AIActionSheet: View {
                             editedResult = description
                         } else {
                             errorMessage = aiManager.errorMessage ?? "ai_error_unknown".localized
-                        }
-                    }
-                }
-                
-            case .generateTags:
-                if let destination = destination {
-                    let tags = await aiManager.generateTagsFor(destination: destination)
-                    await MainActor.run {
-                        isLoading = false
-                        if !tags.isEmpty {
-                            let prefix = "ai_tags_result_prefix".localized
-                            result = "\(prefix)\n\(tags.joined(separator: "、"))"
-                        } else {
-                            result = "ai_tags_empty".localized
                         }
                     }
                 }
@@ -782,6 +1135,8 @@ struct AINotePreviewSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var brandColorManager: BrandColorManager
+    @EnvironmentObject private var entitlementManager: EntitlementManager
+    @EnvironmentObject private var aiCreditManager: AICreditManager
     
     @StateObject private var aiManager = AIModelManager.shared
     @State private var generatedNotes: String = ""
@@ -939,6 +1294,15 @@ struct AINotePreviewSheet: View {
         isLoading = true
         errorMessage = nil
         generatedNotes = ""
+        
+        let isProUser = entitlementManager.canUseAIFeatures
+        if !isProUser {
+            if !aiCreditManager.consumeOne() {
+                isLoading = false
+                errorMessage = nil
+                return
+            }
+        }
         
         Task {
             let notes = await aiManager.generateNotesFor(destination: destination)
@@ -971,7 +1335,7 @@ struct AINotePreviewSheet: View {
 
 #Preview {
     AIAssistantView()
-        .modelContainer(for: [TravelDestination.self, TravelTrip.self], inMemory: true)
+        .modelContainer(for: [TravelDestination.self, TravelTrip.self, TravelRecommendation.self], inMemory: true)
 }
 
 /// AI笔记预览和编辑Sheet - 用于快速添加页面（不保存到数据库，通过回调返回）
@@ -982,6 +1346,8 @@ struct AINotePreviewSheetForQuickAdd: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var brandColorManager: BrandColorManager
+    @EnvironmentObject private var entitlementManager: EntitlementManager
+    @EnvironmentObject private var aiCreditManager: AICreditManager
     
     @StateObject private var aiManager = AIModelManager.shared
     @State private var generatedNotes: String = ""
@@ -1139,6 +1505,15 @@ struct AINotePreviewSheetForQuickAdd: View {
         isLoading = true
         errorMessage = nil
         generatedNotes = ""
+        
+        let isProUser = entitlementManager.canUseAIFeatures
+        if !isProUser {
+            if !aiCreditManager.consumeOne() {
+                isLoading = false
+                errorMessage = nil
+                return
+            }
+        }
         
         Task {
             let notes = await aiManager.generateNotesFor(destination: tempDestination)

@@ -26,7 +26,7 @@
 "paywall_expires_on" = "만료 시간: ";
 "paywall_terms_privacy" = "구매하면 이용 약관 및 개인정보 보호정책에 동의하는 것입니다. 자동 갱신; 시스템 구독 설정에서 언제든지 취소할 수 있습니다.";
 "paywall_feature_title" = "Pro 기능";
-"paywall_feature_ai" = "AI 어시스턴트: 스마트 노트, 여행 설명, 사진 분석, 태그 생성";
+"paywall_feature_ai" = "AI 어시스턴트: 스마트 노트, 여행 설명, 사진 분석, 여행지 추천";
 "paywall_feature_unlimited" = "무제한 목적지 및 여행 카드";
 "paywall_feature_share_layouts" = "전체 공유 레이아웃";
 "paywall_feature_import_export" = "로컬 데이터 가져오기/내보내기";
@@ -124,6 +124,14 @@
 "optimize" = "최적화";
 "optimize_images_result_title" = "최적화 완료";
 "optimize_images_success" = "%d장의 사진을 최적화했습니다";
+"auto_add_place_type" = "장소 유형 자동 추가";
+"auto_add_place_type_confirm_title" = "장소 유형 자동 추가";
+"auto_add_place_type_confirm_message" = "사진이 있지만 유형이 설정되지 않은 모든 장소에 대해 첫 번째 사진을 기반으로 유형을 자동으로 설정합니다. 계속하시겠습니까?";
+"continue" = "계속";
+"auto_add_place_type_result_title" = "완료";
+"auto_add_place_type_success" = "%d개 장소에 유형을 자동 추가했습니다";
+"auto_add_place_type_none" = "처리할 장소가 없습니다(사진이 있고 유형이 설정되지 않은 장소만 해당)";
+"auto_add_place_type_progress" = "처리 중 %d/%d개";
 "local_import_summary_title" = "가져오기 결과";
 "local_import_summary_success" = "%d개의 여행을 성공적으로 가져왔습니다";
 "local_import_summary_duplicates" = "%d개의 중복 여행을 건너뛰었습니다";
@@ -171,6 +179,7 @@
 "footprint" = "모어풋프린트";
 "ok" = "확인";
 "map" = "지도";
+"footprint_map" = "발자국";
 "trips" = "여행";
 "profile" = "프로필";
 "create_trip" = "여행 추가";
@@ -230,11 +239,23 @@
 "all_destinations" = "모든 장소";
 "no_destinations_found" = "장소를 찾을 수 없습니다";
 
+// Discover Map
+"map_mode_my_footprints" = "나의 지도";
+
 // Edit Destination View
 "edit_destination" = "목적지 편집";
 "basic_info" = "기본 정보";
 "place_name" = "장소 이름";
+"location_tag" = "장소 태그";
 "category" = "카테고리";
+"destination_type" = "목적지 유형";
+"destination_type_natural_wonder" = "자연의 경이";
+"destination_type_urban_landscape" = "도시 풍경";
+"destination_type_historical_culture" = "역사 문화";
+"destination_type_food_feast" = "미식 축제";
+"destination_type_leisure_entertainment" = "여가 오락";
+"destination_type_outdoor_adventure" = "야외 모험";
+"destination_type_artistic_checkin" = "예술 체크인";
 "province_state" = "도/주";
 "country_region" = "국가/지역";
 "visit_date" = "방문 날짜";
@@ -345,6 +366,15 @@
 "ai_function_trip_desc_desc" = "여러 목적지를 기반으로 전체 여정 설명을 생성";
 "ai_function_tags_title" = "태그 생성";
 "ai_function_tags_desc" = "사진과 위치를 기반으로 알맞은 태그를 추천";
+"ai_function_recommend_title" = "다음 여행지 추천";
+"ai_function_recommend_desc" = "기록한 장소 성향을 바탕으로 다음 여행지를 추천";
+"ai_generating_recommend" = "여행 성향 분석 중…";
+"ai_save_recommend" = "추천 저장";
+"ai_save_recommend_success" = "추천 기록에 저장됨";
+"ai_save_recommend_failed" = "저장 실패, 다시 시도해 주세요";
+"ai_saved_recommend_title" = "저장된 추천";
+"ai_saved_recommend_empty_title" = "아직 추천이 없습니다";
+"ai_saved_recommend_empty_desc" = "생성 후 \"추천 저장\"을 누르면 여기서 볼 수 있습니다";
 "ai_function_photo_analysis_title" = "사진 분석";
 "ai_function_photo_analysis_desc" = "사진 속 장면, 물체, 랜드마크를 식별";
 "ai_generating_notes" = "노트 생성 중...";
@@ -434,6 +464,8 @@
 "duration" = "기간";
 "days" = "일";
 "trip_route" = "여행 경로";
+"trip_route_day_title" = "제%d일 · %@";
+"load_more_trips" = "더 불러오기";
 "locations" = "개 장소";
 "share_trip" = "여행 공유";
 "share_to_team" = "친구와 공유";
@@ -594,6 +626,7 @@
 "automobile" = "자동차";
 "transit" = "대중교통";
 "airplane" = "비행기";
+"transport_none" = "없음";
 
 // Onboarding
 "onboarding_welcome_hello" = "안녕하세요";

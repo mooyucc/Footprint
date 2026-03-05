@@ -20,6 +20,8 @@ struct SplashScreenView: View {
     private let minDisplayTime: TimeInterval = 2.5  // 最小显示时间（保证动画流畅）
     private let maxDisplayTime: TimeInterval = 5.0  // 最大等待时间（避免等待太久）
     @State private var animationStartTime: Date?
+    /// 本会话是否已触发关闭（静态，避免「通知」与「5s 定时器」重复执行导致二次打印）
+    private static var hasTriggeredDismissThisSession = false
     
     var body: some View {
         GeometryReader { geometry in
@@ -132,6 +134,9 @@ struct SplashScreenView: View {
     
     // 处理初始化完成
     private func handleInitializationComplete() {
+        guard !Self.hasTriggeredDismissThisSession else { return }
+        Self.hasTriggeredDismissThisSession = true
+        
         guard let startTime = animationStartTime else { return }
         
         let elapsedTime = Date().timeIntervalSince(startTime)

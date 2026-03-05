@@ -163,8 +163,8 @@ final class AIModelManager: ObservableObject {
         }
     }
     
-    /// 为目的地生成标签
-    func generateTagsFor(destination: TravelDestination) async -> [String] {
+    /// 根据已记录的目的地推荐下一站旅行目的地
+    func recommendNextDestinations(from destinations: [TravelDestination]) async -> String? {
         isLoading = true
         errorMessage = nil
         
@@ -173,14 +173,18 @@ final class AIModelManager: ObservableObject {
         }
         
         do {
-            let tags = try await service.generateTags(for: destination)
-            print("✅ [AIModelManager] 标签生成成功，数量: \(tags.count)")
-            return tags
+            guard !destinations.isEmpty else {
+                errorMessage = "没有已记录的目的地"
+                return nil
+            }
+            let text = try await service.recommendNextDestinations(from: destinations)
+            print("✅ [AIModelManager] 旅行目的地推荐成功，长度: \(text.count)")
+            return text
         } catch {
             let errorMsg = error.localizedDescription
             errorMessage = errorMsg
-            print("❌ [AIModelManager] 标签生成失败: \(errorMsg)")
-            return []
+            print("❌ [AIModelManager] 旅行目的地推荐失败: \(errorMsg)")
+            return nil
         }
     }
 }

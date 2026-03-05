@@ -27,6 +27,7 @@ struct EditDestinationView: View {
     @State private var visitDate = Date()
     @State private var notes = ""
     @State private var category = "international"
+    @State private var type = ""
     @State private var isFavorite = false
     @State private var selectedPhotos: [PhotosPickerItem] = []
     // 为每张图片分配唯一 ID，避免 ForEach 标识冲突
@@ -48,6 +49,15 @@ struct EditDestinationView: View {
     @State private var showDeleteConfirmation = false
     
     let categories = ["domestic", "international"]
+    let destinationTypes = [
+        "natural_wonder": "destination_type_natural_wonder",
+        "urban_landscape": "destination_type_urban_landscape",
+        "historical_culture": "destination_type_historical_culture",
+        "food_feast": "destination_type_food_feast",
+        "leisure_entertainment": "destination_type_leisure_entertainment",
+        "outdoor_adventure": "destination_type_outdoor_adventure",
+        "artistic_checkin": "destination_type_artistic_checkin"
+    ]
     private let maxPhotos = 9
     
     // 城市数据管理器实例
@@ -61,7 +71,7 @@ struct EditDestinationView: View {
         NavigationStack {
             Form {
                 Section("basic_info".localized) {
-                    TextField("place_name".localized, text: $name)
+                    TextField("location_tag".localized, text: $name)
                     
                     Picker("category".localized, selection: $category) {
                         ForEach(categories, id: \.self) { categoryKey in
@@ -69,6 +79,13 @@ struct EditDestinationView: View {
                         }
                     }
                     .pickerStyle(.segmented)
+                    
+                    Picker("destination_type".localized, selection: $type) {
+                        Text("none".localized).tag("")
+                        ForEach(Array(destinationTypes.keys.sorted()), id: \.self) { typeKey in
+                            Text(destinationTypes[typeKey]!.localized).tag(typeKey)
+                        }
+                    }
                     
                     TextField("province_state".localized, text: $province)
                     
@@ -332,6 +349,7 @@ struct EditDestinationView: View {
         visitDate = destination.visitDate
         notes = destination.notes
         category = destination.category
+        type = destination.type
         isFavorite = destination.isFavorite
         // 兼容旧数据：若数组为空但有单张照片，则填充为数组
         var datas = destination.photoDatas
@@ -578,6 +596,7 @@ struct EditDestinationView: View {
         destination.visitDate = visitDate
         destination.notes = notes
         destination.category = category
+        destination.type = type
         destination.isFavorite = isFavorite
         let datasToSave = photoItems.map { $0.data }
         let thumbnailsToSave = photoItems.map { $0.thumbnailData }
@@ -611,9 +630,8 @@ struct EditDestinationView: View {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             modelContext.delete(destination)
             try? modelContext.save()
-            // 发送删除通知，通知详情页关闭
+            // 发送删除通知，由上层视图根据需要关闭详情页 / 编辑页
             NotificationCenter.default.post(name: .destinationDeleted, object: nil, userInfo: ["destinationId": destinationId])
-            dismiss()
         }
     }
     

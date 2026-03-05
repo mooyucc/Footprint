@@ -1,17 +1,9 @@
 {
   "images" : [
     {
-      "filename" : "湖南.png",
+      "filename" : "湖南.jpg",
       "idiom" : "universal",
       "scale" : "1x"
-    },
-    {
-      "idiom" : "universal",
-      "scale" : "2x"
-    },
-    {
-      "idiom" : "universal",
-      "scale" : "3x"
     }
   ],
   "info" : {
