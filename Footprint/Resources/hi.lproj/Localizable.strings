@@ -140,3 +140,9 @@
 "use_this_location" = "इस स्थान का उपयोग करें";
 "select_location" = "स्थान चुनें";
 "reverse_geocoding_failed" = "रिवर्स जियोकोडिंग विफल: %@";
+
+"journey_cards_tab" = "यात्रा कार्ड";
+"journey_cards_empty_hint" = "यहाँ देखने के लिए यात्रा टैब से एक यात्रा बनाएँ।";
+"journey_cards_focused_a11y" = "चयनित";
+"journey_cards_destinations_count" = "%d गंतव्य";
+"journey_cards_total_mileage" = "कुल दूरी";

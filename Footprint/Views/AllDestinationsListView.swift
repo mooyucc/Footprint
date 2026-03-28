@@ -135,7 +135,7 @@ struct AllDestinationsListView: View {
                                 NavigationLink {
                                     DestinationDetailView(destination: destination)
                                 } label: {
-                                    DestinationRowCard(destination: destination, primaryTextColor: primaryTextColor)
+                                    DestinationRowCard(destination: destination)
                                 }
                                 .buttonStyle(PlainButtonStyle())
                                 .contextMenu {

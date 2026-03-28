@@ -368,6 +368,192 @@ struct TripImageGenerator {
         AppColorScheme.drawGradientBackground(in: rect, context: context)
     }
     
+    // MARK: - 旅程分享（现代 UI：渐变上直接排版，与 StatsImageGenerator / 风格指南一致）
+    
+    /// 与分享图一致的旅程品牌色
+    static var tripShareBrandUIColor: UIColor {
+        UIColor(BrandColorManager.shared.currentBrandColor)
+    }
+    
+    /// 用于高度预估：日期三列 + 间距 + 「旅行统计」标题下仅两格（点亮的地方、去过的国家）
+    static func tripShareModernStatsBlockHeight(contentWidth: CGFloat) -> CGFloat {
+        let dateStripHeight: CGFloat = 124
+        let midGap: CGFloat = 16
+        return dateStripHeight + midGap + tripShareTravelStatisticsGridHeight(contentWidth: contentWidth)
+    }
+    
+    private static func tripShareTravelStatisticsGridHeight(contentWidth: CGFloat) -> CGFloat {
+        let headerRow: CGFloat = 56
+        let colGap: CGFloat = 12
+        let cellW = (contentWidth - colGap) / 2
+        let cellH = max(128, min(172, cellW * 0.40 + 80))
+        return headerRow + cellH + 4
+    }
+    
+    /// 绘制：三列「开始 / 结束 / 时长」+ 仅「点亮的地方」「去过的国家」两格，无白底大卡片
+    static func drawTripShareModernStatsBlock(trip: TravelTrip, at origin: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
+        var y = origin.y
+        y += drawTripShareDateStrip(trip: trip, at: CGPoint(x: origin.x, y: y), width: width, context: context)
+        y += 16
+        y += drawTripShareTravelStatisticsGrid(trip: trip, at: CGPoint(x: origin.x, y: y), width: width, context: context)
+        return y - origin.y
+    }
+    
+    private static func drawTripShareDateStrip(trip: TravelTrip, at origin: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
+        let brand = tripShareBrandUIColor
+        let colGap: CGFloat = 12
+        let colW = (width - 2 * colGap) / 3
+        let df = LanguageManager.shared.localizedDateFormatter(dateStyle: .medium)
+        let startStr = df.string(from: trip.startDate)
+        let endStr = df.string(from: trip.endDate)
+        let days = trip.durationDays
+        
+        let iconSide: CGFloat = 28
+        var bottoms: [CGFloat] = [origin.y, origin.y, origin.y]
+        
+        for col in 0..<3 {
+            let x = origin.x + CGFloat(col) * (colW + colGap)
+            var y = origin.y
+            
+            let iconName: String
+            let labelKey: String
+            let isDuration: Bool
+            switch col {
+            case 0:
+                iconName = "calendar.badge.plus"
+                labelKey = "trip_share_start"
+                isDuration = false
+            case 1:
+                iconName = "calendar"
+                labelKey = "trip_share_end"
+                isDuration = false
+            default:
+                iconName = "clock"
+                labelKey = "trip_share_duration"
+                isDuration = true
+            }
+            
+            if let img = UIImage(systemName: iconName) {
+                img.withTintColor(brand, renderingMode: .alwaysOriginal)
+                    .draw(in: CGRect(x: x, y: y, width: iconSide, height: iconSide))
+            }
+            y += iconSide + 10
+            
+            if isDuration {
+                let valueAttrs: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.monospacedDigitSystemFont(ofSize: 40, weight: .black),
+                    .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0),
+                    .kern: -0.9 as CGFloat
+                ]
+                let vs = NSAttributedString(string: "\(days)", attributes: valueAttrs)
+                vs.draw(at: CGPoint(x: x, y: y))
+                y += vs.size().height + 8
+            } else {
+                let dateStr = col == 0 ? startStr : endStr
+                let valueAttrs: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 15, weight: .semibold),
+                    .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0)
+                ]
+                let vs = NSAttributedString(string: dateStr, attributes: valueAttrs)
+                let b = vs.boundingRect(
+                    with: CGSize(width: colW, height: CGFloat.greatestFiniteMagnitude),
+                    options: [.usesLineFragmentOrigin, .usesFontLeading],
+                    context: nil
+                )
+                vs.draw(in: CGRect(x: x, y: y, width: colW, height: ceil(b.height)))
+                y += ceil(b.height) + 8
+            }
+            
+            let labelAttrs: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 13, weight: .regular),
+                .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0)
+            ]
+            let ls = NSAttributedString(string: labelKey.localized, attributes: labelAttrs)
+            let lb = ls.boundingRect(
+                with: CGSize(width: colW, height: CGFloat.greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                context: nil
+            )
+            ls.draw(in: CGRect(x: x, y: y, width: colW, height: ceil(lb.height)))
+            y += ceil(lb.height)
+            bottoms[col] = y
+        }
+        
+        return max(bottoms[0], bottoms[1], bottoms[2]) - origin.y
+    }
+    
+    private static func drawTripShareTravelStatisticsGrid(trip: TravelTrip, at origin: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
+        let sorted = trip.destinations?.sorted { $0.visitDate < $1.visitDate } ?? []
+        let total = sorted.count
+        let countries = Set(sorted.map { $0.country }.filter { !$0.isEmpty }).count
+        
+        let brand = tripShareBrandUIColor
+        var y = origin.y
+        
+        if let icon = UIImage(systemName: "chart.bar.fill") {
+            let iconSide: CGFloat = 30
+            let iconRect = CGRect(x: origin.x, y: y, width: iconSide, height: iconSide)
+            icon.withTintColor(brand, renderingMode: .alwaysOriginal).draw(in: iconRect)
+        }
+        let titleAttrs: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 20, weight: .semibold),
+            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0)
+        ]
+        let title = NSAttributedString(string: "travel_statistics".localized, attributes: titleAttrs)
+        title.draw(at: CGPoint(x: origin.x + 40, y: y + 6))
+        y += 56
+        
+        let colGap: CGFloat = 12
+        let cellW = (width - colGap) / 2
+        let cellH = max(128, min(172, cellW * 0.40 + 80))
+        
+        /// 与 App 一致：`total_destinations` / `countries_visited`（简中即「点亮的地方」「去过的国家」）
+        let items: [(String, Int, String)] = [
+            ("flag.fill", total, "total_destinations"),
+            ("globe.asia.australia.fill", countries, "countries_visited")
+        ]
+        
+        for (col, item) in items.enumerated() {
+            let cellX = origin.x + CGFloat(col) * (cellW + colGap)
+            let rect = CGRect(x: cellX, y: y, width: cellW, height: cellH)
+            drawTripShareStatCell(iconName: item.0, value: item.1, label: item.2.localized, brandColor: brand, in: rect)
+        }
+        
+        return 56 + cellH + 4
+    }
+    
+    private static func drawTripShareStatCell(iconName: String, value: Int, label: String, brandColor: UIColor, in rect: CGRect) {
+        var y = rect.minY
+        let iconSide: CGFloat = 30
+        if let iconImage = UIImage(systemName: iconName) {
+            let iconRect = CGRect(x: rect.minX, y: y, width: iconSide, height: iconSide)
+            iconImage.withTintColor(brandColor, renderingMode: .alwaysOriginal).draw(in: iconRect)
+        }
+        y += iconSide + 12
+        
+        let valueFontSize = min(50, max(34, rect.width * 0.20))
+        let valueAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.monospacedDigitSystemFont(ofSize: valueFontSize, weight: .black),
+            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0),
+            .kern: -1.0 as CGFloat
+        ]
+        let valueString = NSAttributedString(string: "\(value)", attributes: valueAttributes)
+        valueString.draw(at: CGPoint(x: rect.minX, y: y))
+        y += valueString.size().height + 8
+        
+        let labelAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 14, weight: .regular),
+            .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0)
+        ]
+        let labelString = NSAttributedString(string: label, attributes: labelAttributes)
+        let bounding = labelString.boundingRect(
+            with: CGSize(width: rect.width, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        labelString.draw(in: CGRect(x: rect.minX, y: y, width: rect.width, height: ceil(bounding.height)))
+    }
+    
     /// 绘制用户头像和用户名
     static func drawUserInfo(at point: CGPoint, avatarSize: CGFloat, context: CGContext) -> CGFloat {
         let signInManager = AppleSignInManager.shared
@@ -1270,12 +1456,17 @@ struct ListLayoutGenerator: TripLayoutGenerator {
             
             currentY = coverHeight
             
-            // 绘制时间信息卡片
+            // 行程概要 + 旅行统计（渐变上直接绘制，无白底卡片，与 StatsImageGenerator 一致）
             currentY += 20
-            let timeCardHeight = drawTimeCard(for: trip, at: CGPoint(x: 20, y: currentY), width: screenWidth - 40, context: cgContext)
-            currentY += timeCardHeight + 20
+            let statsBlockHeight = TripImageGenerator.drawTripShareModernStatsBlock(
+                trip: trip,
+                at: CGPoint(x: 20, y: currentY),
+                width: screenWidth - 40,
+                context: cgContext
+            )
+            currentY += statsBlockHeight + 4
             
-            // 绘制行程路线
+            // 绘制行程路线（无外层大白卡）
             let routeCardHeight = drawRouteCard(for: trip, at: CGPoint(x: 20, y: currentY), width: screenWidth - 40, context: cgContext)
             currentY += routeCardHeight
             
@@ -1334,25 +1525,26 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         let coverHeight = calculateCoverHeight(for: trip, width: width)
         height += coverHeight
         
-        // 内容区域padding（封面到时间卡片的间距）
+        // 封面到统计区
         height += 20
         
-        // 时间信息卡片
-        height += 20 + 100 + 20 // padding + card + margin (增加卡片高度)
+        // 日期三列 + 旅行统计 2×2（无白底卡片）
+        let contentW = width - 40
+        height += TripImageGenerator.tripShareModernStatsBlockHeight(contentWidth: contentW) + 4
         
-        // 行程路线卡片（使用卡片样式，多天时含「第 N 天」分段标题）
+        // 行程路线（无外层卡片；单卡高度与 DestinationRowCard 一致）
         let sortedDestinations = trip.destinations?.sorted { $0.visitDate < $1.visitDate } ?? []
         let destinationCount = sortedDestinations.count
         var routeHeight: CGFloat = 0
         if destinationCount > 0 {
-            let cardHeight: CGFloat = 160
+            let cardHeight: CGFloat = 168
             let cardSpacing: CGFloat = 12
             let totalCardsHeight = CGFloat(destinationCount) * cardHeight + CGFloat(destinationCount - 1) * cardSpacing
             let dayGroupsCount = dayGroups(for: trip).count
             let daySectionHeadersHeight: CGFloat = dayGroupsCount > 1 ? CGFloat(dayGroupsCount) * Self.listLayoutDaySectionHeaderHeight : 0
-            routeHeight = 50 + daySectionHeadersHeight + totalCardsHeight
+            routeHeight = 40 + daySectionHeadersHeight + totalCardsHeight + 20
         } else {
-            routeHeight = 136 // empty state
+            routeHeight = 40 + 80 + 20
         }
         height += routeHeight
         
@@ -1392,9 +1584,14 @@ struct ListLayoutGenerator: TripLayoutGenerator {
     }
     
     private func drawDefaultCover(for trip: TravelTrip, in context: CGContext, rect: CGRect) {
-        // 绘制渐变背景
+        // 绘制品牌色渐变（与 App 旅程占位封面一致）
+        let brand = UIColor(BrandColorManager.shared.currentBrandColor)
         let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let gradient = CGGradient(colorsSpace: colorSpace, colors: [UIColor.systemBlue.cgColor, UIColor.systemPurple.cgColor] as CFArray, locations: nil)!
+        let gradient = CGGradient(
+            colorsSpace: colorSpace,
+            colors: [brand.cgColor, brand.withAlphaComponent(0.55).cgColor] as CFArray,
+            locations: [0, 1]
+        )!
         
         context.saveGState()
         context.addRect(rect)
@@ -1527,96 +1724,9 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         return drawRect.height
     }
     
-    private func drawTimeCard(for trip: TravelTrip, at point: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
-        let cardHeight: CGFloat = 100 // 增加卡片高度
-        let cardRect = CGRect(x: point.x, y: point.y, width: width, height: cardHeight)
-        
-        // 绘制圆角卡片背景 - 使用白色背景，与"我的"tab一致
-        let path = UIBezierPath(roundedRect: cardRect, cornerRadius: 20) // 使用20圆角
-        context.saveGState()
-        context.addPath(path.cgPath)
-        context.setFillColor(UIColor.white.cgColor)
-        // 使用与"我的"tab一致的大卡片阴影
-        context.setShadow(offset: CGSize(width: 0, height: 4), blur: 12, color: UIColor.black.withAlphaComponent(0.12).cgColor)
-        context.fillPath()
-        context.restoreGState()
-        
-        // 绘制时间信息
-        let dateFormatter = LanguageManager.shared.localizedDateFormatter(dateStyle: .medium)
-        
-        let startDate = dateFormatter.string(from: trip.startDate)
-        let endDate = dateFormatter.string(from: trip.endDate)
-        let duration = "\(trip.durationDays) " + "trip_share_days".localized
-        
-        let centerY = cardRect.midY
-        let itemWidth = width / 3
-        
-        // 绘制分割线
-        let lineY1 = cardRect.minY + 25
-        let lineY2 = cardRect.maxY - 25
-        let lineX1 = cardRect.minX + itemWidth
-        let lineX2 = cardRect.minX + itemWidth * 2
-        
-        context.setStrokeColor(UIColor.black.withAlphaComponent(0.06).cgColor) // 更柔和的边框
-        context.setLineWidth(1)
-        context.move(to: CGPoint(x: lineX1, y: lineY1))
-        context.addLine(to: CGPoint(x: lineX1, y: lineY2))
-        context.move(to: CGPoint(x: lineX2, y: lineY1))
-        context.addLine(to: CGPoint(x: lineX2, y: lineY2))
-        context.strokePath()
-        
-        // 开始日期
-        drawTimeItem("trip_share_start".localized, value: startDate, icon: "calendar.badge.plus", at: CGPoint(x: cardRect.minX + itemWidth/2, y: centerY), context: context)
-        
-        // 结束日期
-        drawTimeItem("trip_share_end".localized, value: endDate, icon: "calendar.badge.minus", at: CGPoint(x: cardRect.minX + itemWidth + itemWidth/2, y: centerY), context: context)
-        
-        // 时长
-        drawTimeItem("trip_share_duration".localized, value: duration, icon: "clock", at: CGPoint(x: cardRect.minX + itemWidth*2 + itemWidth/2, y: centerY), context: context)
-        
-        return cardHeight
-    }
-    
-    private func drawTimeItem(_ label: String, value: String, icon: String, at point: CGPoint, context: CGContext) {
-        // 绘制图标
-        let iconImage = UIImage(systemName: icon)
-        if let iconImage = iconImage {
-            let iconSize: CGFloat = 16
-            let iconRect = CGRect(x: point.x - iconSize/2, y: point.y - 30, width: iconSize, height: iconSize)
-            // 使用深灰色，与"我的"tab一致
-            let tintedIcon = iconImage.withTintColor(UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0), renderingMode: .alwaysOriginal)
-            tintedIcon.draw(in: iconRect)
-        }
-        
-        // 绘制标签 - 使用次要文本颜色
-        let labelAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 12),
-            .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // 次要文本 #666666
-        ]
-        let labelString = NSAttributedString(string: label, attributes: labelAttributes)
-        let labelSize = labelString.size()
-        let labelRect = CGRect(x: point.x - labelSize.width/2, y: point.y - 10, width: labelSize.width, height: labelSize.height)
-        labelString.draw(in: labelRect)
-        
-        // 绘制值，单行显示 - 使用深灰色
-        // 时长使用16pt加粗，日期使用13pt
-        let isDuration = icon == "clock"
-        let valueFontSize: CGFloat = isDuration ? 16 : 13
-        let valueFontWeight: UIFont.Weight = isDuration ? .bold : .medium
-        let valueAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: valueFontSize, weight: valueFontWeight),
-            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
-        ]
-        let valueString = NSAttributedString(string: value, attributes: valueAttributes)
-        let maxWidth: CGFloat = 150 // 增加宽度以确保单行显示
-        let valueSize = valueString.boundingRect(with: CGSize(width: maxWidth, height: CGFloat.greatestFiniteMagnitude), options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).size
-        let valueRect = CGRect(x: point.x - valueSize.width/2, y: point.y + 10, width: min(valueSize.width, maxWidth), height: valueSize.height)
-        valueString.draw(in: valueRect)
-    }
-    
     /// 计算单个地点卡片的高度（卡片样式，固定高度）
     private func calculateDestinationItemHeight(_ destination: TravelDestination, nextDestination: TravelDestination?, width: CGFloat) -> CGFloat {
-        let cardHeight: CGFloat = 160 // 固定卡片高度
+        let cardHeight: CGFloat = 168 // 固定卡片高度（与 DestinationRowCard 一致）
         let cardSpacing: CGFloat = 12 // 卡片之间的间距
         return cardHeight + cardSpacing
     }
@@ -1634,7 +1744,7 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         return formatter.string(fromDistance: distance)
     }
     
-    /// 将旅程目的地按天分组（与 RoutesView / TripDetailView 逻辑一致），用于清单版面按天分段显示
+    /// 将旅程目的地按天分组（与 MapView / TripDetailView 逻辑一致），用于清单版面按天分段显示
     private func dayGroups(for trip: TravelTrip) -> [(dayIndex: Int, dayStart: Date, destinations: [TravelDestination])] {
         let sorted = trip.destinations?.sorted { $0.visitDate < $1.visitDate } ?? []
         guard !sorted.isEmpty else { return [] }
@@ -1669,96 +1779,69 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         let groups = dayGroups(for: trip)
         let showDaySections = destinationCount > 0 && groups.count > 1
         
-        var currentY = point.y
-        let headerHeight: CGFloat = 50
-        
-        // 计算总高度：标题 +（多天时）分段标题高度 + 卡片列表 + 底部 padding
-        let cardHeight: CGFloat = 160
+        let cardHeight: CGFloat = 168
         let cardSpacing: CGFloat = 12
-        var totalItemsHeight: CGFloat = 0
-        if destinationCount > 0 {
-            totalItemsHeight = CGFloat(destinationCount) * cardHeight + CGFloat(destinationCount - 1) * cardSpacing
+        let brand = TripImageGenerator.tripShareBrandUIColor
+        
+        var currentY = point.y
+        
+        if let iconImage = UIImage(systemName: "location.fill") {
+            let iconSize: CGFloat = 22
+            let iconRect = CGRect(x: point.x, y: currentY, width: iconSize, height: iconSize)
+            iconImage.withTintColor(brand, renderingMode: .alwaysOriginal).draw(in: iconRect)
         }
-        let daySectionHeadersHeight: CGFloat = showDaySections ? CGFloat(groups.count) * Self.listLayoutDaySectionHeaderHeight : 0
-        let totalHeight = headerHeight + daySectionHeadersHeight + (destinationCount > 0 ? totalItemsHeight : 80) + 20
         
-        let cardRect = CGRect(x: point.x, y: point.y, width: width, height: totalHeight)
-        
-        let path = UIBezierPath(roundedRect: cardRect, cornerRadius: 20)
-        context.saveGState()
-        context.addPath(path.cgPath)
-        context.setFillColor(UIColor.white.cgColor)
-        context.setShadow(offset: CGSize(width: 0, height: 4), blur: 12, color: UIColor.black.withAlphaComponent(0.12).cgColor)
-        context.fillPath()
-        context.restoreGState()
-        
-        // 绘制「行程路线」标题
-        currentY += 20
         let titleAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 18, weight: .semibold),
-            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
+            .font: UIFont.systemFont(ofSize: 20, weight: .semibold),
+            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0)
         ]
-        
-        let iconImage = UIImage(systemName: "location.fill")
-        if let iconImage = iconImage {
-            let iconSize: CGFloat = 16
-            let iconRect = CGRect(x: point.x + 20, y: currentY, width: iconSize, height: iconSize)
-            let tintedIcon = iconImage.withTintColor(UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0), renderingMode: .alwaysOriginal)
-            tintedIcon.draw(in: iconRect)
-        }
-        
         let titleString = NSAttributedString(string: "trip_share_route".localized, attributes: titleAttributes)
-        titleString.draw(at: CGPoint(x: point.x + 50, y: currentY))
+        titleString.draw(at: CGPoint(x: point.x + 34, y: currentY + 2))
         
         let countString = NSAttributedString(string: "\(destinationCount) " + "trip_share_locations_count".localized, attributes: [
             .font: UIFont.systemFont(ofSize: 14),
-            .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // #666666
+            .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0)
         ])
         let countSize = countString.size()
-        countString.draw(at: CGPoint(x: point.x + width - countSize.width - 20, y: currentY))
+        countString.draw(at: CGPoint(x: point.x + width - countSize.width, y: currentY + 4))
         
-        currentY += 30
+        currentY += 36
         
         if destinationCount > 0 {
             let dateFormatter = LanguageManager.shared.localizedDateFormatter(dateStyle: .medium)
-            var globalIndex = 1 // 方案 B：全局序号 1,2,3...
+            var cardIndex = 0
             
             if showDaySections {
                 for group in groups {
-                    // 绘制「第 N 天 · 日期」分段标题
                     let dateString = dateFormatter.string(from: group.dayStart)
                     let sectionTitle = String(format: "trip_route_day_title".localized, group.dayIndex, dateString)
-                    currentY += drawDaySectionHeader(sectionTitle, at: CGPoint(x: point.x + 20, y: currentY), width: width - 40, context: context)
-                    // 绘制该天内的目的地卡片（保持全局序号）
+                    currentY += drawDaySectionHeader(sectionTitle, at: CGPoint(x: point.x, y: currentY), width: width, context: context)
                     for destination in group.destinations {
-                        drawDestinationCard(destination, at: CGPoint(x: point.x + 20, y: currentY), width: width - 40, context: context)
+                        drawDestinationCard(destination, at: CGPoint(x: point.x, y: currentY), width: width, context: context)
                         currentY += cardHeight
-                        globalIndex += 1
-                        if globalIndex < destinationCount {
-                            currentY += cardSpacing
-                        }
+                        cardIndex += 1
+                        if cardIndex < destinationCount { currentY += cardSpacing }
                     }
                 }
             } else {
                 for (index, destination) in sortedDestinations.enumerated() {
-                    drawDestinationCard(destination, at: CGPoint(x: point.x + 20, y: currentY), width: width - 40, context: context)
+                    drawDestinationCard(destination, at: CGPoint(x: point.x, y: currentY), width: width, context: context)
                     currentY += cardHeight
-                    if index < sortedDestinations.count - 1 {
-                        currentY += cardSpacing
-                    }
+                    if index < sortedDestinations.count - 1 { currentY += cardSpacing }
                 }
             }
         } else {
             let emptyAttributes: [NSAttributedString.Key: Any] = [
                 .font: UIFont.systemFont(ofSize: 16),
-                .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // #666666
+                .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0)
             ]
             let emptyString = NSAttributedString(string: "trip_share_no_destinations".localized, attributes: emptyAttributes)
             let emptySize = emptyString.size()
-            emptyString.draw(at: CGPoint(x: point.x + width/2 - emptySize.width/2, y: currentY + 20))
+            emptyString.draw(at: CGPoint(x: point.x + width / 2 - emptySize.width / 2, y: currentY + 20))
+            currentY += 80
         }
         
-        return totalHeight
+        return currentY - point.y + 12
     }
     
     /// 绘制「第 N 天 · 日期」分段标题，返回占用高度（与 listLayoutDaySectionHeaderHeight 一致）
@@ -1775,9 +1858,9 @@ struct ListLayoutGenerator: TripLayoutGenerator {
     
     /// 绘制地点卡片（卡片样式，类似 DestinationRowCard）
     private func drawDestinationCard(_ destination: TravelDestination, at point: CGPoint, width: CGFloat, context: CGContext) {
-        let cardHeight: CGFloat = 160
+        let cardHeight: CGFloat = 168
         let cardRect = CGRect(x: point.x, y: point.y, width: width, height: cardHeight)
-        let cornerRadius: CGFloat = 12
+        let cornerRadius: CGFloat = 18
         
         // 1. 绘制卡片背景（照片或蓝色背景）
         let backgroundPath = UIBezierPath(roundedRect: cardRect, cornerRadius: cornerRadius)
@@ -1878,11 +1961,17 @@ struct ListLayoutGenerator: TripLayoutGenerator {
         subtitleString.draw(at: CGPoint(x: cardRect.minX + bottomPadding, y: textY - subtitleSize.height))
         textY -= subtitleSize.height + 2
         
-        // 绘制标题（24pt粗体，带收藏图标）
+        // 绘制标题（与 DestinationRowCard：22pt black + 轻阴影）
         let titleText = destination.name.isEmpty ? "-" : destination.name
+        let titleShadow = NSShadow()
+        titleShadow.shadowColor = UIColor.black.withAlphaComponent(0.35)
+        titleShadow.shadowOffset = CGSize(width: 0, height: 1)
+        titleShadow.shadowBlurRadius = 2
         let titleAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 24, weight: .bold),
-            .foregroundColor: UIColor.white
+            .font: UIFont.systemFont(ofSize: 22, weight: .black),
+            .kern: -0.3 as CGFloat,
+            .foregroundColor: UIColor.white,
+            .shadow: titleShadow
         ]
         let titleString = NSAttributedString(string: titleText, attributes: titleAttributes)
         let titleX = cardRect.minX + bottomPadding
@@ -1915,12 +2004,10 @@ struct ListLayoutGenerator: TripLayoutGenerator {
             titleString.draw(at: CGPoint(x: titleX, y: textY - titleSize.height))
         }
         
-        // 5. 绘制卡片边框和阴影
+        // 5. 卡片描边 + 阴影（与年度列表卡片语义一致）
         context.saveGState()
-        // 绘制阴影
-        context.setShadow(offset: CGSize(width: 0, height: 2), blur: 6, color: UIColor.black.withAlphaComponent(0.08).cgColor)
-        // 绘制边框（浅色半透明边框）
-        context.setStrokeColor(UIColor.white.withAlphaComponent(0.3).cgColor)
+        context.setShadow(offset: CGSize(width: 0, height: 6), blur: 14, color: UIColor.black.withAlphaComponent(0.10).cgColor)
+        context.setStrokeColor(UIColor.black.withAlphaComponent(0.08).cgColor)
         context.setLineWidth(1)
         context.addPath(backgroundPath.cgPath)
         context.strokePath()
@@ -2513,9 +2600,14 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
             // 标题区域高度（drawHeader 已包含到时间卡片的间距20pt）
             currentY += headerHeight
             
-            // 绘制时间信息卡片
-            let timeCardHeight = drawTimeCard(for: trip, at: CGPoint(x: 20, y: currentY), width: screenWidth - 40, context: cgContext)
-            currentY += timeCardHeight + 20 // 与地点卡片间距20
+            // 行程概要 + 旅行统计（与清单版面、StatsImageGenerator 一致）
+            let statsH = TripImageGenerator.drawTripShareModernStatsBlock(
+                trip: trip,
+                at: CGPoint(x: 20, y: currentY),
+                width: screenWidth - 40,
+                context: cgContext
+            )
+            currentY += statsH + 4
             
             // 绘制扩展网格拼图（按天分段，某天超过 9 个地点时多行九宫格）
             if sortedDestinations.isEmpty {
@@ -2577,10 +2669,10 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
         let titleSize = ceil(titleRect.height)
         // 扩展网格版面不显示描述文字，只显示标题
         var headerHeight: CGFloat = titleSize + 20 // 标题高度 + 到时间卡片的间距（20pt）
-        height += headerHeight // 标题区域高度（已包含到时间卡片的间距）
+        height += headerHeight // 标题区域高度（已包含到统计区的间距）
         
-        // 时间信息卡片
-        height += 100 + 20 // 与地点卡片间距20
+        // 日期三列 + 旅行统计 2×2
+        height += TripImageGenerator.tripShareModernStatsBlockHeight(contentWidth: contentWidth) + 4
         
         // 扩展网格区域（按天分段，每天内每 9 个一组多行九宫格）
         if !destinations.isEmpty {
@@ -2668,91 +2760,7 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
         return currentY - point.y // 返回实际占用的高度
     }
     
-    private func drawTimeCard(for trip: TravelTrip, at point: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
-        let cardHeight: CGFloat = 100
-        let cardRect = CGRect(x: point.x, y: point.y, width: width, height: cardHeight)
-        
-        // 绘制圆角卡片背景
-        let path = UIBezierPath(roundedRect: cardRect, cornerRadius: 20)
-        context.saveGState()
-        context.addPath(path.cgPath)
-        context.setFillColor(UIColor.white.cgColor)
-        context.setShadow(offset: CGSize(width: 0, height: 4), blur: 12, color: UIColor.black.withAlphaComponent(0.12).cgColor)
-        context.fillPath()
-        context.restoreGState()
-        
-        // 绘制时间信息
-        let dateFormatter = LanguageManager.shared.localizedDateFormatter(dateStyle: .medium)
-        let startDate = dateFormatter.string(from: trip.startDate)
-        let endDate = dateFormatter.string(from: trip.endDate)
-        let duration = "\(trip.durationDays) " + "trip_share_days".localized
-        
-        let centerY = cardRect.midY
-        let itemWidth = width / 3
-        
-        // 绘制分割线
-        let lineY1 = cardRect.minY + 25
-        let lineY2 = cardRect.maxY - 25
-        let lineX1 = cardRect.minX + itemWidth
-        let lineX2 = cardRect.minX + itemWidth * 2
-        
-        context.setStrokeColor(UIColor.black.withAlphaComponent(0.06).cgColor)
-        context.setLineWidth(1)
-        context.move(to: CGPoint(x: lineX1, y: lineY1))
-        context.addLine(to: CGPoint(x: lineX1, y: lineY2))
-        context.move(to: CGPoint(x: lineX2, y: lineY1))
-        context.addLine(to: CGPoint(x: lineX2, y: lineY2))
-        context.strokePath()
-        
-        // 开始日期
-        drawTimeItem("trip_share_start".localized, value: startDate, icon: "calendar.badge.plus", at: CGPoint(x: cardRect.minX + itemWidth/2, y: centerY), context: context)
-        
-        // 结束日期
-        drawTimeItem("trip_share_end".localized, value: endDate, icon: "calendar.badge.minus", at: CGPoint(x: cardRect.minX + itemWidth + itemWidth/2, y: centerY), context: context)
-        
-        // 时长
-        drawTimeItem("trip_share_duration".localized, value: duration, icon: "clock", at: CGPoint(x: cardRect.minX + itemWidth*2 + itemWidth/2, y: centerY), context: context)
-        
-        return cardHeight
-    }
-    
-    private func drawTimeItem(_ label: String, value: String, icon: String, at point: CGPoint, context: CGContext) {
-        // 绘制图标
-        let iconImage = UIImage(systemName: icon)
-        if let iconImage = iconImage {
-            let iconSize: CGFloat = 16
-            let iconRect = CGRect(x: point.x - iconSize/2, y: point.y - 30, width: iconSize, height: iconSize)
-            let tintedIcon = iconImage.withTintColor(UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0), renderingMode: .alwaysOriginal)
-            tintedIcon.draw(in: iconRect)
-        }
-        
-        // 绘制标签
-        let labelAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 12),
-            .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // #666666
-        ]
-        let labelString = NSAttributedString(string: label, attributes: labelAttributes)
-        let labelSize = labelString.size()
-        let labelRect = CGRect(x: point.x - labelSize.width/2, y: point.y - 10, width: labelSize.width, height: labelSize.height)
-        labelString.draw(in: labelRect)
-        
-        // 绘制值，单行显示
-        // 时长使用16pt加粗，日期使用13pt
-        let isDuration = icon == "clock"
-        let valueFontSize: CGFloat = isDuration ? 16 : 13
-        let valueFontWeight: UIFont.Weight = isDuration ? .bold : .medium
-        let valueAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: valueFontSize, weight: valueFontWeight),
-            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
-        ]
-        let valueString = NSAttributedString(string: value, attributes: valueAttributes)
-        let maxWidth: CGFloat = 150 // 增加宽度以确保单行显示
-        let valueSize = valueString.boundingRect(with: CGSize(width: maxWidth, height: CGFloat.greatestFiniteMagnitude), options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).size
-        let valueRect = CGRect(x: point.x - valueSize.width/2, y: point.y + 10, width: min(valueSize.width, maxWidth), height: valueSize.height)
-        valueString.draw(in: valueRect)
-    }
-    
-    /// 将旅程目的地按天分组（与清单版面 / RoutesView 逻辑一致），用于网格版面按天分段
+    /// 将旅程目的地按天分组（与清单版面 / MapView 逻辑一致），用于网格版面按天分段
     private func dayGroups(for trip: TravelTrip) -> [(dayIndex: Int, dayStart: Date, destinations: [TravelDestination])] {
         let sorted = trip.destinations?.sorted { $0.visitDate < $1.visitDate } ?? []
         guard !sorted.isEmpty else { return [] }

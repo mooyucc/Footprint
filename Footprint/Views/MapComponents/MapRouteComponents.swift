@@ -875,12 +875,9 @@ struct RouteCard: View {
         return "\(startString) - \(endString)"
     }
     
-    // 格式化距离
+    // 格式化距离（与 `RouteManager.formatDistanceForRouteCard` 一致）
     private func formatDistance(_ distance: CLLocationDistance) -> String {
-        let formatter = MKDistanceFormatter()
-        formatter.unitStyle = .abbreviated
-        formatter.locale = languageManager.currentLanguage == .chinese ? Locale(identifier: "zh_CN") : Locale(identifier: "en_US")
-        return formatter.string(fromDistance: distance)
+        RouteManager.formatDistanceForRouteCard(distance, languageManager: languageManager)
     }
     
     // 在Apple Maps中打开旅程（路线规划模式）
@@ -1168,17 +1165,14 @@ struct RoutePreviewCard: View {
         return "\(startString) - \(endString)"
     }
     
-    // 格式化距离
+    // 格式化距离（与 `RouteManager.formatDistanceForRouteCard` 一致）
     private func formatDistance(_ distance: CLLocationDistance) -> String {
-        let formatter = MKDistanceFormatter()
-        formatter.unitStyle = .abbreviated
-        formatter.locale = languageManager.currentLanguage == .chinese ? Locale(identifier: "zh_CN") : Locale(identifier: "en_US")
-        return formatter.string(fromDistance: distance)
+        RouteManager.formatDistanceForRouteCard(distance, languageManager: languageManager)
     }
 }
 
 // MARK: - 路线距离标签视图
-/// 路线距离标签视图（带交通方式选择），用于旅程tab显示路线距离
+/// 路线距离标签视图（带交通方式选择），用于线路卡片模式显示路线距离
 struct RouteDistanceLabel: View {
     let distance: CLLocationDistance
     let transportType: MKDirectionsTransportType
@@ -1334,10 +1328,7 @@ struct RouteDistanceLabel: View {
     }
     
     private func formatDistance(_ distance: CLLocationDistance) -> String {
-        let formatter = MKDistanceFormatter()
-        formatter.unitStyle = .abbreviated
-        formatter.locale = languageManager.currentLanguage == .chinese ? Locale(identifier: "zh_CN") : Locale(identifier: "en_US")
-        return formatter.string(fromDistance: distance)
+        RouteManager.formatDistanceForRouteCard(distance, languageManager: languageManager)
     }
     
     private func transportColor(for type: MKDirectionsTransportType) -> Color {

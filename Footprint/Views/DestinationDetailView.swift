@@ -18,6 +18,7 @@ struct DestinationDetailView: View {
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var entitlementManager: EntitlementManager
     @EnvironmentObject private var aiCreditManager: AICreditManager
+    @EnvironmentObject private var brandColorManager: BrandColorManager
     @State private var showingEditSheet = false
     @State private var shareItem: TripShareItem?
     @State private var cameraPosition: MapCameraPosition
@@ -158,6 +159,18 @@ struct DestinationDetailView: View {
                 }
             }
         }
+        .appPageBackgroundGradient(for: colorScheme)
+    }
+    
+    /// 与 `DestinationRowCard` / 现代列表规范一致：continuous 18、细线描边、轻阴影，材质底替代实心灰卡。
+    private var detailCardBackground: some View {
+        RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .fill(.ultraThinMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.08), lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.25 : 0.08), radius: 10, x: 0, y: 4)
     }
     
     @ViewBuilder
@@ -183,8 +196,9 @@ struct DestinationDetailView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
                     Text(destination.name)
-                        .font(.title)
-                        .fontWeight(.bold)
+                        .font(.system(size: 26, weight: .bold, design: .default))
+                        .tracking(-0.4)
+                        .foregroundStyle(AppColorScheme.primaryText(for: colorScheme))
                     
                     if destination.isFavorite {
                         Image(systemName: "heart.fill")
@@ -218,8 +232,8 @@ struct DestinationDetailView: View {
     private var dateSection: some View {
         HStack(alignment: .center, spacing: 12) {
             Image(systemName: "calendar")
-                .font(.body)
-                .foregroundColor(.blue)
+                .font(.headline)
+                .foregroundColor(brandColorManager.currentBrandColor)
                 .frame(width: 24, alignment: .center)
             VStack(alignment: .leading, spacing: 2) {
                 Text(destination.visitDate.localizedFormatted(dateStyle: .full))
@@ -270,7 +284,12 @@ struct DestinationDetailView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.08), lineWidth: 1)
+                )
+                .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.25 : 0.1), radius: 12, x: 0, y: 5)
             }
         }
         .padding(.top, 8)
@@ -316,11 +335,16 @@ struct DestinationDetailView: View {
                         }
                     }
                 }
-                .cornerRadius(12)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             }
         }
         .frame(width: contentWidth, height: imageHeight)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.08), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.25 : 0.1), radius: 14, x: 0, y: 6)
     }
     
     @ViewBuilder
@@ -331,16 +355,17 @@ struct DestinationDetailView: View {
             } label: {
                 HStack(alignment: .center, spacing: 12) {
                     Image(systemName: "suitcase.fill")
-                        .font(.body)
-                        .foregroundColor(.purple)
+                        .font(.headline)
+                        .foregroundColor(brandColorManager.currentBrandColor)
                         .frame(width: 24, alignment: .center)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("belongs_to_trip".localized)
                             .font(.caption)
                             .foregroundColor(.secondary)
                         Text(trip.name)
-                            .font(.headline)
-                            .foregroundColor(.primary)
+                            .font(.body)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(AppColorScheme.primaryText(for: colorScheme))
                     }
                     Spacer(minLength: 0)
                     Image(systemName: "chevron.right")
@@ -349,8 +374,7 @@ struct DestinationDetailView: View {
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color(.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .background { detailCardBackground }
             }
             .buttonStyle(.plain)
         }
@@ -360,25 +384,25 @@ struct DestinationDetailView: View {
     private var notesCard: some View {
         if !destination.notes.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .center, spacing: 12) {
+                HStack(alignment: .center, spacing: 8) {
                     Image(systemName: "note.text")
-                        .font(.body)
-                        .foregroundColor(.orange)
+                        .font(.headline)
+                        .foregroundColor(brandColorManager.currentBrandColor)
                         .frame(width: 24, alignment: .center)
                     Text("travel_notes".localized)
                         .font(.headline)
-                        .foregroundColor(.primary)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(AppColorScheme.primaryText(for: colorScheme))
                     Spacer(minLength: 0)
                 }
                 Text(destination.notes)
                     .font(.body)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(AppColorScheme.primaryText(for: colorScheme))
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(.secondarySystemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background { detailCardBackground }
         }
     }
     
@@ -547,5 +571,8 @@ struct DestinationDetailView: View {
             isFavorite: true
         ))
     }
+    .environmentObject(BrandColorManager.shared)
+    .environmentObject(EntitlementManager.shared)
+    .environmentObject(AICreditManager.shared)
 }
 

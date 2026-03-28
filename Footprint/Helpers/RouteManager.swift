@@ -1050,3 +1050,46 @@ extension RouteManager {
     }
 }
 
+// MARK: - 与 `RouteCard` 一致的总里程（旅程卡片等复用）
+extension RouteManager {
+    /// 与 `MapRouteComponents.RouteCard` / `calculateRoutesSelf` 一致：每段均有 `getCachedRoute` 时累加 `footprintDistance`；任一段未命中缓存则退回整条折线的直线距离之和。
+    func totalDistanceMetersMatchingRouteCard(destinations: [TravelDestination]) -> CLLocationDistance {
+        totalDistanceMetersMatchingRouteCard(destinations: destinations, precomputedRoutes: nil)
+    }
+    
+    /// 与 `JourneyDrawer` → `RouteCard` 一致：优先使用 MapView 同步来的 `precomputedRoutes`（与地图同源）；否则同 `totalDistanceMetersMatchingRouteCard(destinations:)`。
+    func totalDistanceMetersMatchingRouteCard(destinations: [TravelDestination], precomputedRoutes: [MKRoute]?) -> CLLocationDistance {
+        if let pre = precomputedRoutes, !pre.isEmpty {
+            return pre.reduce(0) { $0 + $1.footprintDistance }
+        }
+        let sorted = destinations.sorted { $0.visitDate < $1.visitDate }
+        guard sorted.count >= 2 else { return 0 }
+        let coordinates = sorted.map { $0.coordinate }
+        var roadSum: CLLocationDistance = 0
+        for i in 0..<coordinates.count - 1 {
+            guard let route = getCachedRoute(from: coordinates[i], to: coordinates[i + 1]) else {
+                return Self.straightLineChainDistance(coordinates: coordinates)
+            }
+            roadSum += route.footprintDistance
+        }
+        return roadSum
+    }
+    
+    private static func straightLineChainDistance(coordinates: [CLLocationCoordinate2D]) -> CLLocationDistance {
+        guard coordinates.count >= 2 else { return 0 }
+        var sum: CLLocationDistance = 0
+        for i in 0..<coordinates.count - 1 {
+            sum += calculateDistance(from: coordinates[i], to: coordinates[i + 1])
+        }
+        return sum
+    }
+    
+    /// 与 `RouteCard` 内 `MKDistanceFormatter` 设置一致
+    static func formatDistanceForRouteCard(_ distance: CLLocationDistance, languageManager: LanguageManager) -> String {
+        let formatter = MKDistanceFormatter()
+        formatter.unitStyle = .abbreviated
+        formatter.locale = languageManager.currentLanguage == .chinese ? Locale(identifier: "zh_CN") : Locale(identifier: "en_US")
+        return formatter.string(fromDistance: distance)
+    }
+}
+

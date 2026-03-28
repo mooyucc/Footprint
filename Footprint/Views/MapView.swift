@@ -28,17 +28,18 @@ struct MapView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme // 检测颜色模式
     @Environment(\.isAppReady) private var isAppReady // 应用是否已就绪（启动画面是否结束）
-    @Environment(\.mapViewInNavigationStack) private var mapViewInNavigationStack // 是否嵌入在 NavigationStack 中（如旅程 tab），用于统一顶部工具栏位置
+    @Environment(\.mapViewInNavigationStack) private var mapViewInNavigationStack // 是否嵌入在 NavigationStack 中（如旅程卡片全屏地图 sheet），用于统一顶部工具栏位置
     @EnvironmentObject private var brandColorManager: BrandColorManager
     @StateObject private var languageManager = LanguageManager.shared
     @StateObject private var countryManager = CountryManager.shared
     
     // MapView 专注于"我的足迹"模式
-    /// 当嵌入 RoutesView（旅程 tab）时可传入绑定，用于在导航栏标题位显示「第几天」筛选
-    /// tripsOverride: 由 RoutesView 传入时用于分页展示，仅展示该列表中的行程；nil 时使用 @Query 全量
+    /// 嵌入 NavigationStack 时可传入绑定，用于在导航栏标题位显示「第几天」筛选
+    /// tripsOverride: 父视图传入时用于限制展示的行程列表（如分页）；nil 时使用 @Query 全量
     init(
         autoShowRouteCards: Bool = false,
         showBottomCheckInButton: Bool = true,
+        showJourneyDrawer: Bool = true,
         selectedTripIdBinding: Binding<UUID?>? = nil,
         selectedDayFilterBinding: Binding<Int?>? = nil,
         tripsOverride: [TravelTrip]? = nil,
@@ -47,6 +48,7 @@ struct MapView: View {
     ) {
         self.autoShowRouteCards = autoShowRouteCards
         self.showBottomCheckInButton = showBottomCheckInButton
+        self.showJourneyDrawer = showJourneyDrawer
         self.selectedTripIdBinding = selectedTripIdBinding
         self.selectedDayFilterBinding = selectedDayFilterBinding
         self.tripsOverride = tripsOverride
@@ -54,11 +56,11 @@ struct MapView: View {
         self.onLoadMoreTrips = onLoadMoreTrips
     }
     
-    /// 父视图传入的行程列表（如 RoutesView 分页结果）；nil 时使用 @Query 的 trips
+    /// 父视图传入的行程列表；nil 时使用 @Query 的 trips
     private var tripsOverride: [TravelTrip]?
     /// 是否还有更多行程可加载（用于分页「加载更多」）
     var hasMoreTrips: Bool = false
-    /// 加载更多行程的回调（由 RoutesView 传入时使用）
+    /// 加载更多行程的回调（与 `tripsOverride` 配合分页时使用）
     var onLoadMoreTrips: (() -> Void)? = nil
     
     /// 实际使用的行程列表：有 override 时用 override（分页），否则用 @Query 全量
@@ -66,7 +68,7 @@ struct MapView: View {
         tripsOverride ?? trips
     }
     
-    /// 由 RoutesView 传入时用于导航栏标题位筛选；未传入时使用内部 state
+    /// 由父视图传入时用于导航栏标题位筛选；未传入时使用内部 state
     private var selectedTripIdBinding: Binding<UUID?>?
     private var selectedDayFilterBinding: Binding<Int?>?
     
@@ -220,6 +222,8 @@ struct MapView: View {
     @State private var assistiveMenuPosition: CGPoint = .zero
     var autoShowRouteCards: Bool = false // 是否自动显示线路卡片
     var showBottomCheckInButton: Bool = true // 是否展示底部打卡按钮
+    /// 是否显示底部旅程抽屉（`JourneyDrawer`）；为 `false` 时仍保留线路 tab 的缩放/连线/按天筛选逻辑，仅隐藏底部卡片
+    var showJourneyDrawer: Bool = true
     
     /// 当前选中的旅程ID（来自 Binding 或内部 holder）
     private var selectedTripId: UUID? {
@@ -1125,7 +1129,7 @@ struct MapView: View {
             .gesture(longPressGesture(proxy: proxy))
             .simultaneousGesture(tapGesture(proxy: proxy))
             // 当搜索栏显示时，禁用地图交互
-            // 在旅程 tab 中，即使卡片显示，地图也应该可以交互（缩放、平移等），只是点击地图不触发 POI 搜索
+            // 在线路卡片模式下，即使卡片显示，地图也应该可以交互（缩放、平移等），只是点击地图不触发 POI 搜索
             .allowsHitTesting(!showSearchBar)
         }
     }
@@ -1223,6 +1227,7 @@ struct MapView: View {
                                                             )
                                                             // 清除该旅程的路线缓存，强制重新计算
                                                             tripRoutes.removeValue(forKey: trip.id)
+                                                            syncTripRoutesToSharedStore()
                                                             // 重新计算该旅程的路线
                                                             // 重新计算时使用整趟行程的坐标，避免覆盖其他天的路线
                                                             let coordinates = sortedDestinations(for: trip.id).map { $0.coordinate }
@@ -1290,9 +1295,9 @@ struct MapView: View {
                     mapMode: .myFootprints
                 )
                 .equatable()
-                // 性能优化：在旅程 tab 中不请求天气数据，减少计算和网络请求
+                // 性能优化：在线路卡片模式下不请求天气数据，减少计算和网络请求
                 .task(id: weatherTaskIdentifier(for: cluster)) {
-                    // 只在非旅程 tab 时请求天气数据
+                    // 主地图模式才请求天气
                     guard !autoShowRouteCards else { return }
                     await requestWeatherIfNeeded(for: cluster)
                 }
@@ -1319,7 +1324,7 @@ struct MapView: View {
     }
     
     private func weatherSummary(for cluster: ClusterAnnotation) -> WeatherSummary? {
-        // 性能优化：在旅程 tab 中不显示天气 tag，减少数据更新计算
+        // 性能优化：在线路卡片模式下不显示天气 tag，减少数据更新计算
         guard !autoShowRouteCards else { return nil }
         
         guard cluster.destinations.count == 1,
@@ -1329,7 +1334,7 @@ struct MapView: View {
     }
     
     private func shouldDisplayWeather(for cluster: ClusterAnnotation) -> Bool {
-        // 性能优化：在旅程 tab 中不显示天气
+        // 性能优化：在线路卡片模式下不显示天气
         guard !autoShowRouteCards else { return false }
         return currentZoomLevel >= 10 && cluster.destinations.count == 1
     }
@@ -1339,7 +1344,7 @@ struct MapView: View {
     }
     
     private func requestWeatherIfNeeded(for cluster: ClusterAnnotation) async {
-        // 性能优化：在旅程 tab 中不请求天气数据
+        // 性能优化：在线路卡片模式下不请求天气数据
         guard !autoShowRouteCards else { return }
         
         guard shouldDisplayWeather(for: cluster),
@@ -1363,7 +1368,7 @@ struct MapView: View {
         LongPressGesture(minimumDuration: 0.5)
             .sequenced(before: DragGesture(minimumDistance: 0))
             .onEnded { value in
-                // 在旅程页面禁用长按手势
+                // 在线路卡片模式下禁用长按手势
                 if autoShowRouteCards {
                     return
                 }
@@ -1390,7 +1395,7 @@ struct MapView: View {
                 }
             }
             .onEnded { value in
-                // 在旅程页面禁用轻点POI搜索
+                // 在线路卡片模式下禁用轻点 POI 搜索
                 if autoShowRouteCards {
                     tapStartTime = nil
                     return
@@ -1457,9 +1462,9 @@ struct MapView: View {
     
     // 处理地图点击 - 检测POI或地址信息
     private func handleMapTap(at coordinate: CLLocationCoordinate2D) {
-        // 在旅程页面禁用反向地理编码和POI搜索
+        // 在线路卡片模式下禁用反向地理编码和 POI 搜索
         if autoShowRouteCards {
-            print("⏭️ 旅程页面：已禁用点击地图的POI搜索")
+            print("⏭️ 线路卡片模式：已禁用点击地图的 POI 搜索")
             return
         }
         
@@ -2334,35 +2339,40 @@ struct MapView: View {
     private var routeCardsOverlay: some View {
         Group {
             if showRouteCards {
-                VStack(spacing: 0) {
-                    Spacer()
-                    // 「第几天」筛选：多日行程时显示；在导航栈内（RoutesView）时改由导航栏标题位显示，此处不重复
-                    if selectedTripId != nil, selectedTripDayGroups.count > 1, !mapViewInNavigationStack {
-                        journeyDayFilterBar
+                let showDayBar = selectedTripId != nil && selectedTripDayGroups.count > 1 && !mapViewInNavigationStack
+                if showDayBar || showJourneyDrawer {
+                    VStack(spacing: 0) {
+                        Spacer()
+                        // 「第几天」筛选：多日行程时显示；在导航栈内时改由导航栏标题位显示，此处不重复
+                        if showDayBar {
+                            journeyDayFilterBar
+                        }
+                        if showJourneyDrawer {
+                            JourneyDrawer(
+                                trips: effectiveTrips,
+                                tripRoutes: tripRoutes,
+                                sortedDestinations: { tripId in
+                                    sortedDestinations(for: tripId)
+                                },
+                                selectedTripId: selectedTripIdBindingForSubviews,
+                                scrollPosition: $scrollPosition,
+                                onTripSelected: { trip, destinations in
+                                    handleCardAppear(trip: trip, destinations: destinations)
+                                },
+                                onCardTap: { trip in
+                                    // 点击路线卡片，直接打开详情页
+                                    detailTripForSheet = trip
+                                    showingTripDetail = true
+                                },
+                                hasMoreTrips: hasMoreTrips,
+                                onLoadMoreTrips: onLoadMoreTrips
+                            )
+                        }
                     }
-                    JourneyDrawer(
-                    trips: effectiveTrips,
-                    tripRoutes: tripRoutes,
-                    sortedDestinations: { tripId in
-                        sortedDestinations(for: tripId)
-                    },
-                    selectedTripId: selectedTripIdBindingForSubviews,
-                    scrollPosition: $scrollPosition,
-                    onTripSelected: { trip, destinations in
-                        handleCardAppear(trip: trip, destinations: destinations)
-                    },
-                    onCardTap: { trip in
-                        // 点击路线卡片，直接打开详情页
-                        detailTripForSheet = trip
-                        showingTripDetail = true
-                    },
-                    hasMoreTrips: hasMoreTrips,
-                    onLoadMoreTrips: onLoadMoreTrips
-                )
+                    .opacity(shouldHideRouteCards ? 0 : 1)
+                    .allowsHitTesting(!shouldHideRouteCards)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
-                .opacity(shouldHideRouteCards ? 0 : 1)
-                .allowsHitTesting(!shouldHideRouteCards)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .zIndex(3)
@@ -2563,7 +2573,7 @@ struct MapView: View {
     // 清除聚合缓存（用于旅程切换等）
     private var floatingButtons: some View {
         ZStack {
-            // 顶部地图样式切换按钮（与“发现”tab保持一致）；旅程 tab 中改由 RoutesView 导航栏 leading 放置，此处不显示
+            // 顶部地图样式切换按钮（与“发现”tab保持一致）；嵌入 NavigationStack 时由父视图导航栏 leading 放置，此处不显示
             if !showSearchBar, !mapViewInNavigationStack {
                 VStack {
                     topToolbar
@@ -2622,7 +2632,7 @@ struct MapView: View {
         }
     }
     
-    // 顶部工具栏：地图样式切换按钮（与旅程 tab 导航栏中按钮一致：LinearGradient 图标 + 与导航栏相同的 .bar 背景）
+    // 顶部工具栏：地图样式切换按钮（与嵌入导航栏中的按钮一致：LinearGradient 图标 + 与导航栏相同的 .bar 背景）
     private var topToolbar: some View {
         HStack {
             Button {
@@ -3421,6 +3431,11 @@ struct MapView: View {
         print("🧹 已清除聚合缓存")
     }
     
+    /// 与 `JourneyDrawer` / `TripRoutePrecomputationStore` 同步，使「旅程卡片」总里程与地图 `tripRoutes` 一致
+    private func syncTripRoutesToSharedStore() {
+        TripRoutePrecomputationStore.shared.sync(from: tripRoutes)
+    }
+    
     // 处理地点变化（立即更新路线）
     private func handleDestinationsChange() {
         print("🔄 处理地点变化，重新计算路线...")
@@ -3430,6 +3445,7 @@ struct MapView: View {
         clearSortedDestinationsCache()
         // 清除路线缓存，强制重新计算
         tripRoutes.removeAll()
+        syncTripRoutesToSharedStore()
         
         // 如果在线路tab，只计算当前选中旅程的路线
         if autoShowRouteCards {
@@ -3445,6 +3461,7 @@ struct MapView: View {
             } else if let selectedTripId = selectedTripId {
                 // 如果选中线路的地点数量不足2个，清除该线路的路线
                 tripRoutes.removeValue(forKey: selectedTripId)
+                syncTripRoutesToSharedStore()
             }
         } else {
             // 如果显示连线，重新计算所有路线（地图 tab）
@@ -3592,6 +3609,7 @@ struct MapView: View {
                 await MainActor.run {
                     // 保持 [MKRoute?] 格式，不进行 compactMap，以保持索引对应关系
                     tripRoutes[tripId] = calculatedRoutes
+                    syncTripRoutesToSharedStore()
                     print("✅ 旅程 \(tripId.uuidString.prefix(8)) 的路线全部来自缓存，共 \(calculatedRoutes.count) 段路线")
                 }
                 return
@@ -3635,6 +3653,7 @@ struct MapView: View {
                     let currentCount = tripRoutes[tripId]?.count ?? 0
                     if routesToShow.count > currentCount {
                         tripRoutes[tripId] = routesToShow
+                        syncTripRoutesToSharedStore()
                     }
                 }
             }
@@ -3644,6 +3663,7 @@ struct MapView: View {
         await MainActor.run {
             // 保持 [MKRoute?] 格式，不进行 compactMap，以保持索引对应关系
             tripRoutes[tripId] = calculatedRoutes
+            syncTripRoutesToSharedStore()
             let successCount = calculatedRoutes.compactMap { $0 }.count
             print("✅ 旅程 \(tripId.uuidString.prefix(8)) 的路线计算完成，共 \(successCount)/\(coordinates.count - 1) 段路线")
         }
@@ -3699,6 +3719,7 @@ struct MapView: View {
                     // 更新对应索引的路线
                     if tripRoutes[tripId] != nil && index < tripRoutes[tripId]!.count {
                         tripRoutes[tripId]![index] = route
+                        syncTripRoutesToSharedStore()
                     }
                 }
             }
@@ -3706,15 +3727,16 @@ struct MapView: View {
         
         await MainActor.run {
             let successCount = tripRoutes[tripId]?.compactMap { $0 }.count ?? 0
+            syncTripRoutesToSharedStore()
             print("✅ 重试完成，共 \(successCount)/\(coordinates.count - 1) 段路线")
         }
     }
     
     // 处理长按手势 - 显示地址信息（路名和门牌号）
     private func handleLongPress(at coordinate: CLLocationCoordinate2D) {
-        // 在旅程页面禁用反向地理编码
+        // 在线路卡片模式下禁用反向地理编码
         if autoShowRouteCards {
-            print("⏭️ 旅程页面：已禁用长按反向地理编码")
+            print("⏭️ 线路卡片模式：已禁用长按反向地理编码")
             return
         }
         
@@ -5555,6 +5577,7 @@ extension MapView {
                         )
                         // 清除该旅程的路线缓存，强制重新计算（使用整趟行程坐标，避免按天筛选时只更新部分路线）
                         tripRoutes.removeValue(forKey: tripId)
+                        syncTripRoutesToSharedStore()
                         let coordinates = sortedDestinations(for: tripId).map { $0.coordinate }
                         Task {
                             await calculateRoutesForTrip(tripId: tripId, coordinates: coordinates, incremental: false)
@@ -5951,7 +5974,7 @@ private struct FloatingAssistiveMenu: View {
     }
 }
 
-// MARK: - MapView 嵌入 NavigationStack 环境键（旅程 tab 由 RoutesView 设置，用于隐藏浮动地图样式按钮）
+// MARK: - MapView 嵌入 NavigationStack 环境键（由嵌入父视图设置，用于隐藏浮动地图样式按钮）
 private struct MapViewInNavigationStackKey: EnvironmentKey {
     static let defaultValue = false
 }

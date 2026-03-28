@@ -82,6 +82,7 @@ final class EntitlementManager: ObservableObject {
                 isSubscriptionActive = hasPro
                 subscriptionExpiryDate = expiry
                 currentSubscriptionProductID = productID
+                AppAlternateIconSync.applyHomeScreenIcon(isProActive: hasPro)
             }
         }
     }
@@ -149,7 +150,8 @@ final class EntitlementManager: ObservableObject {
                 isSubscriptionActive = hasPro
                 subscriptionExpiryDate = expiry
                 currentSubscriptionProductID = productID
-                
+                AppAlternateIconSync.applyHomeScreenIcon(isProActive: hasPro)
+
                 print("🔄 权益更新完成: entitlement=\(currentEntitlement), isActive=\(isSubscriptionActive), productID=\(currentSubscriptionProductID ?? "nil")")
             }
         }

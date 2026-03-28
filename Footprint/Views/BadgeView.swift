@@ -30,6 +30,9 @@ struct BadgeView: View {
     @State private var selectedBadge: BadgeDetail?
     @State private var showingBadgeDetail = false
     
+    // 大数字百分比动画值
+    @State private var animatedProgressPercentage: Double = 0
+    
     // 徽章详情数据模型
     struct BadgeDetail: Identifiable {
         let id: String
@@ -379,7 +382,7 @@ struct BadgeView: View {
                 // 进度条统计信息（黑色卡片样式）
                 // 只有在国家勋章模式，或者省份勋章模式且当前国家是中国时才显示
                 if selectedType == .country || (selectedType == .province && isCurrentCountryChina) {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 10) {
                         HStack {
                             // 标题：品牌红色
                             Text("badges_progress".localized)
@@ -388,39 +391,41 @@ struct BadgeView: View {
                                 .foregroundColor(AppColorScheme.iconColor)
                             
                             Spacer()
-                            
-                            // 百分比：浅灰色
-                            Text("\(Int(progressPercentage))%")
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundColor(Color(red: 153/255, green: 153/255, blue: 153/255))
                         }
                         
-                        // 描述文字：白色
-                        Text("\(statistics.unlocked)/\(statistics.total) \(selectedType == .country ? "country_badges".localized : "province_badges".localized)")
-                            .font(.caption)
-                            .foregroundColor(.white)
-                        
-                        // 进度条
-                        GeometryReader { geometry in
-                            ZStack(alignment: .leading) {
-                                // 背景：深灰色
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(AppColorScheme.progressBarBackground)
+                        HStack(alignment: .center, spacing: 16) {
+                            // 左侧：大数字主视觉（适配深浅模式）
+                            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                                Text("\(Int(animatedProgressPercentage.rounded()))")
+                                    .font(.system(size: 56, weight: .black, design: .default))
+                                    .tracking(-1)
+                                    .foregroundStyle(.primary)
+                                    .monospacedDigit()
+                                    .contentTransition(.numericText(value: animatedProgressPercentage))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.65)
                                 
-                                // 进度：品牌红色
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(AppColorScheme.progressBarFill)
-                                    .frame(width: geometry.size.width * progressPercentage / 100)
-                                    .animation(.spring(response: 0.5, dampingFraction: 0.8), value: progressPercentage)
+                                Text("%")
+                                    .font(.system(size: 36, weight: .black, design: .default))
+                                    .tracking(-0.5)
+                                    .foregroundStyle(.primary)
+                                    .baselineOffset(2)
                             }
+                            
+                            Spacer(minLength: 0)
+                            
+                            // 右侧：环形表达 14/119（参考附图2）
+                            BadgeProgressRingView(
+                                unlocked: statistics.unlocked,
+                                total: statistics.total,
+                                badgeLabel: selectedType == .country ? "country_badges".localized : "province_badges".localized
+                            )
                         }
-                        .frame(height: 6)
                     }
-                    .padding(12)
-                    .darkCardStyle(for: colorScheme, cornerRadius: 12)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 14)
                     .padding(.horizontal, 16)
-                    .padding(.bottom, 12)
+                    .padding(.bottom, 8)
                 }
                 
                 // 勋章网格
@@ -544,6 +549,7 @@ struct BadgeView: View {
                     updateSortedBadges()
                     lastDestinationsSignature = destinationsSignature
                 }
+                animateProgressNumber(resetToZero: true)
             }
             .onChange(of: destinations.count) { oldCount, newCount in
                 // 当目的地数量变化时（新增或删除），更新缓存
@@ -562,6 +568,11 @@ struct BadgeView: View {
             }
             .onChange(of: selectedType) { _ in
                 // 切换类型时不需要重新计算，因为两个列表都已缓存
+                animateProgressNumber(resetToZero: true)
+            }
+            .onChange(of: progressPercentage) { _, _ in
+                // 数据变化时同步刷新数字动画
+                animateProgressNumber(resetToZero: false)
             }
             .onReceive(NotificationCenter.default.publisher(for: .destinationDeleted)) { _ in
                 // 当目的地被删除时，延迟更新以确保数据已同步
@@ -597,6 +608,102 @@ struct BadgeView: View {
                         set: { if !$0 { selectedBadge = nil } }
                     )
                 )
+            }
+        }
+    }
+    
+    // MARK: - 数字动画
+    
+    private func animateProgressNumber(resetToZero: Bool) {
+        if resetToZero {
+            animatedProgressPercentage = 0
+            // 必须在延迟闭包内读取 progressPercentage：首次进入时缓存尚未写入，
+            // 若在此处捕获 target，后续异步填充数据后仍会用 0 覆盖正确动画结果。
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+                let target = Double(progressPercentage)
+                withAnimation(.easeOut(duration: 0.9)) {
+                    animatedProgressPercentage = target
+                }
+            }
+        } else {
+            let target = Double(progressPercentage)
+            withAnimation(.easeOut(duration: 0.55)) {
+                animatedProgressPercentage = target
+            }
+        }
+    }
+}
+
+private struct BadgeProgressRingView: View {
+    let unlocked: Int
+    let total: Int
+    let badgeLabel: String
+    
+    @State private var animatedRingProgress: CGFloat = 0
+    
+    private var progress: CGFloat {
+        guard total > 0 else { return 0 }
+        return CGFloat(unlocked) / CGFloat(total)
+    }
+    
+    var body: some View {
+        ZStack {
+            // 单环底轨
+            Circle()
+                .stroke(
+                    Color.primary.opacity(0.14),
+                    style: StrokeStyle(lineWidth: 7, lineCap: .round)
+                )
+                .frame(width: 74, height: 74)
+            
+            // 单环进度弧：纯色描边 + .round，线帽与线段同色；accentColor 跟随 TabView/.tint 主题色
+            Circle()
+                .trim(from: 0, to: animatedRingProgress)
+                .stroke(
+                    Color.accentColor,
+                    style: StrokeStyle(lineWidth: 7, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .frame(width: 74, height: 74)
+                .animation(.spring(response: 0.45, dampingFraction: 0.82), value: animatedRingProgress)
+            
+            VStack(spacing: 1) {
+                Text("\(unlocked)/\(total)")
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .monospacedDigit()
+                
+                Text(badgeLabel)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 6)
+        }
+        .frame(width: 74, height: 74)
+        .onAppear {
+            animateRingProgress(restart: true)
+        }
+        .onChange(of: unlocked) { _, _ in
+            animateRingProgress(restart: true)
+        }
+        .onChange(of: total) { _, _ in
+            animateRingProgress(restart: true)
+        }
+    }
+    
+    private func animateRingProgress(restart: Bool) {
+        if restart {
+            animatedRingProgress = 0
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                let target = progress
+                withAnimation(.spring(response: 0.65, dampingFraction: 0.85)) {
+                    animatedRingProgress = target
+                }
+            }
+        } else {
+            withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
+                animatedRingProgress = progress
             }
         }
     }

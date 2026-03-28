@@ -179,6 +179,11 @@
 "map" = "地圖";
 "footprint_map" = "足跡地圖";
 "trips" = "旅程";
+"journey_cards_tab" = "旅程卡片";
+"journey_cards_empty_hint" = "在「旅程」中建立行程後，將顯示在這裡。";
+"journey_cards_focused_a11y" = "已選取";
+"journey_cards_destinations_count" = "%d 個地點";
+"journey_cards_total_mileage" = "總里程";
 "profile" = "我的";
 "create_trip" = "添加旅程";
 "import_trip" = "導入旅程";

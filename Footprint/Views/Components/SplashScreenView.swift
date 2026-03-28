@@ -22,6 +22,8 @@ struct SplashScreenView: View {
     @State private var animationStartTime: Date?
     /// 本会话是否已触发关闭（静态，避免「通知」与「5s 定时器」重复执行导致二次打印）
     private static var hasTriggeredDismissThisSession = false
+    /// 收到「初始化完成」后至少再保留的展示时间，确保动画已完整播放再关闭
+    private let minRemainingAfterNotification: TimeInterval = 1.0
     
     var body: some View {
         GeometryReader { geometry in
@@ -96,7 +98,9 @@ struct SplashScreenView: View {
                 .frame(maxWidth: .infinity)
             }
         }
+        .drawingGroup()  // 动画内容交给 GPU 合成，减轻主线程负担，提升流畅度
         .onAppear {
+            Self.hasTriggeredDismissThisSession = false  // 每次展示时重置，便于再次显示（如 Beta 提醒后）
             animationStartTime = Date()
             performAnimation()
         }
@@ -140,7 +144,8 @@ struct SplashScreenView: View {
         guard let startTime = animationStartTime else { return }
         
         let elapsedTime = Date().timeIntervalSince(startTime)
-        let remainingTime = max(0, minDisplayTime - elapsedTime)
+        // 至少再保留 minDisplayTime，且收到通知后至少再保留 minRemainingAfterNotification，避免动画未播完就关闭
+        let remainingTime = max(minRemainingAfterNotification, max(0, minDisplayTime - elapsedTime))
         
         // 确保至少显示最小时间
         DispatchQueue.main.asyncAfter(deadline: .now() + remainingTime) {

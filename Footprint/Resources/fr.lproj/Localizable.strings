@@ -181,6 +181,11 @@
 "map" = "Carte";
 "footprint_map" = "Empreintes";
 "trips" = "Voyages";
+"journey_cards_tab" = "Cartes de voyage";
+"journey_cards_empty_hint" = "Créez un voyage dans l’onglet Voyages pour le voir ici.";
+"journey_cards_focused_a11y" = "Sélectionné";
+"journey_cards_destinations_count" = "%d lieux";
+"journey_cards_total_mileage" = "Kilométrage total";
 "profile" = "Profil";
 "create_trip" = "Ajouter un voyage";
 "import_trip" = "Importer un voyage";

@@ -14,14 +14,14 @@ import Combine
 
 extension Color {
     // MARK: - 品牌色
-    /// 默认品牌红色（强调色）
-    /// - 颜色值：`#F75C62` (RGB: 247, 92, 98)
+    /// 默认品牌主题色（强调色）
+    /// - 颜色值：`#00A1D8` (RGB: 0, 161, 216)
     /// - 用途：强调色、重要操作、品牌标识、图标颜色等
-    static let footprintRedDefault = Color(red: 247/255, green: 92/255, blue: 98/255)
+    static let footprintRedDefault = Color(red: 0/255, green: 161/255, blue: 216/255)
     
-    /// 品牌红色（强调色）- 支持自定义
+    /// 品牌主题色（强调色）- 支持自定义
     /// - 如果用户设置了自定义品牌颜色，则返回自定义颜色；否则返回默认颜色
-    /// - 颜色值：默认 `#F75C62` (RGB: 247, 92, 98)
+    /// - 颜色值：默认 `#00A1D8` (RGB: 0, 161, 216)
     /// - 用途：强调色、重要操作、品牌标识、图标颜色等
     /// - 注意：此属性会从 BrandColorManager 获取当前颜色，确保颜色变化时视图能自动更新
     static var footprintRed: Color {
@@ -47,9 +47,9 @@ extension Color {
     static let footprintButtonBackground = Color(red: 0.2, green: 0.2, blue: 0.2)
     
     // MARK: - 图标色
-    /// 通用图标颜色（品牌红色）
+    /// 通用图标颜色（品牌主题色）
     /// - 用途：统计图标、功能图标、状态图标、列表项图标等（按钮图标除外）
-    /// - 颜色：品牌红色 `#F75C62` (RGB: 247, 92, 98)
+    /// - 颜色：品牌主题色 `#00A1D8` (RGB: 0, 161, 216)
     /// - 使用方式：Image(systemName: "icon").foregroundColor(.footprintIconColor)
     static let footprintIconColor = Color.footprintRed
 }
@@ -63,8 +63,8 @@ class BrandColorManager: ObservableObject {
     /// UserDefaults 键名，用于存储自定义品牌颜色
     private let customBrandColorKey = "CustomBrandColor"
     
-    /// 默认品牌颜色（RGB: 247, 92, 98）
-    let defaultBrandColor = Color(red: 247/255, green: 92/255, blue: 98/255)
+    /// 默认品牌颜色 `#00A1D8`（RGB: 0, 161, 216）
+    let defaultBrandColor = Color(red: 0/255, green: 161/255, blue: 216/255)
     
     /// 当前品牌颜色（可观察属性，变化时自动通知所有视图）
     @Published var currentBrandColor: Color
@@ -151,8 +151,8 @@ struct AppColorScheme {
     
     // MARK: - 自定义品牌颜色（兼容旧代码）
     
-    /// 默认品牌颜色（RGB: 247, 92, 98）
-    static let defaultBrandColor = Color(red: 247/255, green: 92/255, blue: 98/255)
+    /// 默认品牌颜色 `#00A1D8`（RGB: 0, 161, 216）
+    static let defaultBrandColor = Color(red: 0/255, green: 161/255, blue: 216/255)
     
     /// 获取自定义品牌颜色（如果已设置）
     /// - Returns: 自定义颜色，如果未设置则返回 nil
@@ -313,7 +313,7 @@ struct AppColorScheme {
     
     /// 红卡片背景色（Red Card）
     /// - 用途：重要功能入口、设置面板、品牌强调卡片等需要突出显示的内容
-    /// - 颜色: #F75C62 (品牌红色，不区分浅色/深色模式)
+    /// - 颜色: #00A1D8 (品牌主题色，不区分浅色/深色模式)
     static var redCardBackground: Color {
         Color.footprintRed
     }
@@ -343,7 +343,7 @@ struct AppColorScheme {
     /// 白卡片文字颜色
     /// - 标签文字: .secondary (灰色)
     /// - 主要文字: .primary (深灰色/黑色)
-    /// - 强调元素: 品牌红色
+    /// - 强调元素: 品牌主题色
     static func whiteCardTextColors() -> (label: Color, primary: Color, accent: Color) {
         (
             label: .secondary,
@@ -354,7 +354,7 @@ struct AppColorScheme {
     
     /// 红卡片文字颜色
     /// - 标题/描述: 白色
-    /// - 按钮文字: 品牌红色
+    /// - 按钮文字: 品牌主题色
     static func redCardTextColors() -> (title: Color, description: Color, buttonText: Color) {
         (
             title: .white,
@@ -364,7 +364,7 @@ struct AppColorScheme {
     }
     
     /// 黑卡片文字颜色
-    /// - 标题: 品牌红色
+    /// - 标题: 品牌主题色
     /// - 数值: .secondary (浅灰色)
     /// - 描述: 白色
     static func darkCardTextColors() -> (title: Color, value: Color, description: Color) {
@@ -400,9 +400,9 @@ struct AppColorScheme {
     
     // MARK: - 图标颜色
     
-    /// 通用图标颜色（品牌红色）
+    /// 通用图标颜色（品牌主题色）
     /// - 用途：统计图标、功能图标、状态图标、列表项图标等（按钮图标除外）
-    /// - 颜色：品牌红色 `#F75C62` (RGB: 247, 92, 98)
+    /// - 颜色：品牌主题色 `#00A1D8` (RGB: 0, 161, 216)
     /// - 使用示例:
     ///   ```swift
     ///   Image(systemName: "map.fill")
@@ -461,7 +461,7 @@ struct AppColorScheme {
     // MARK: - 进度条颜色
     
     /// 进度条填充色
-    /// - 颜色: 品牌红色 `#F75C62` (RGB: 247, 92, 98)
+    /// - 颜色: 品牌主题色 `#00A1D8` (RGB: 0, 161, 216)
     /// - 用途: 表示已完成/进行中的部分
     static var progressBarFill: Color {
         Color.footprintRed
@@ -666,7 +666,7 @@ extension View {
     
     /// 应用红卡片样式（Red Card）
     /// - 用途：重要功能入口、设置面板、品牌强调卡片等需要突出显示的内容
-    /// - 背景色：品牌红色 #F75C62
+    /// - 背景色：品牌主题色 #00A1D8
     /// - 阴影：中等强度阴影
     func redCardStyle(cornerRadius: CGFloat = 20) -> some View {
         let shadow = AppColorScheme.floatingShadow

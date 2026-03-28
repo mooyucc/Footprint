@@ -17,6 +17,7 @@ struct YearFilteredDestinationView: View {
     @State private var filterPlaceType: String? = nil
     @State private var editingDestination: TravelDestination?
     @EnvironmentObject var languageManager: LanguageManager
+    @EnvironmentObject var brandColorManager: BrandColorManager
     @StateObject private var countryManager = CountryManager.shared
     @State private var refreshID = UUID()
     @Environment(\.colorScheme) var colorScheme
@@ -26,24 +27,8 @@ struct YearFilteredDestinationView: View {
     
     // MARK: - 配色（使用统一的 AppColorScheme 工具类）
     
-    private var cardBackgroundColor: Color {
-        AppColorScheme.whiteCardBackground(for: colorScheme)
-    }
-    
     private var primaryTextColor: Color {
         AppColorScheme.primaryText(for: colorScheme)
-    }
-    
-    private var borderColor: Color {
-        AppColorScheme.border(for: colorScheme)
-    }
-    
-    private var largeCardShadow: (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) {
-        AppColorScheme.largeCardShadow
-    }
-    
-    private var smallCardShadow: (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) {
-        AppColorScheme.smallCardShadow
     }
     
     init(year: Int) {
@@ -100,14 +85,7 @@ struct YearFilteredDestinationView: View {
             ScrollView {
                 LazyVStack(spacing: 20) {
                     // 年份统计信息卡片
-                    YearStatisticsCard(
-                        year: year,
-                        statistics: statistics,
-                        cardBackgroundColor: cardBackgroundColor,
-                        primaryTextColor: primaryTextColor,
-                        borderColor: borderColor,
-                        shadow: largeCardShadow
-                    )
+                    YearStatisticsCard(year: year, statistics: statistics)
                     
                     // 筛选器卡片
                     VStack(alignment: .leading, spacing: 12) {
@@ -147,18 +125,17 @@ struct YearFilteredDestinationView: View {
                     
                     // 目的地列表
                     if !filteredDestinations.isEmpty {
-                        LazyVStack(alignment: .leading, spacing: 12) {
+                        LazyVStack(alignment: .leading, spacing: 16) {
                             Text("travel_destinations".localized)
                                 .font(.headline)
                                 .fontWeight(.semibold)
                                 .foregroundColor(primaryTextColor)
-                                .padding(.horizontal, 4)
                             
                             ForEach(filteredDestinations) { destination in
                                 NavigationLink {
                                     DestinationDetailView(destination: destination)
                                 } label: {
-                                    DestinationRowCard(destination: destination, primaryTextColor: primaryTextColor)
+                                    DestinationRowCard(destination: destination)
                                 }
                                 .buttonStyle(PlainButtonStyle())
                                 .contextMenu {
@@ -176,10 +153,7 @@ struct YearFilteredDestinationView: View {
                                 }
                             }
                         }
-                        .padding(20)
-                        .background(AppColorScheme.whiteCardBackground(for: colorScheme))
-                        .cornerRadius(20)
-                        .shadow(color: largeCardShadow.color, radius: largeCardShadow.radius, x: largeCardShadow.x, y: largeCardShadow.y)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
                 .padding(.horizontal, 16)
@@ -267,58 +241,114 @@ struct YearFilteredDestinationView: View {
 struct YearStatisticsCard: View {
     let year: Int
     let statistics: (total: Int, domestic: Int, international: Int, countries: Int)
-    let cardBackgroundColor: Color
-    let primaryTextColor: Color
-    let borderColor: Color
-    let shadow: (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat)
     @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject var brandColorManager: BrandColorManager
+    
+    private var primaryTextColor: Color {
+        AppColorScheme.primaryText(for: colorScheme)
+    }
     
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 8) {
-                Image(systemName: "calendar")
-                    .foregroundColor(AppColorScheme.iconColor)
-                    .font(.title2)
+                Image(systemName: "chart.bar.fill")
+                    .foregroundColor(brandColorManager.currentBrandColor)
+                    .font(.headline)
                 Text("year_travel_statistics".localized(with: year))
                     .font(.headline)
                     .fontWeight(.semibold)
                     .foregroundColor(primaryTextColor)
             }
             
-            HStack(spacing: 12) {
-                StatItem(title: "total".localized, value: "\(statistics.total)", icon: "map.fill", color: AppColorScheme.iconColor)
-                StatItem(title: "domestic".localized, value: "\(statistics.domestic)", icon: "house.fill", color: AppColorScheme.iconColor)
-                StatItem(title: "international".localized, value: "\(statistics.international)", icon: "airplane", color: AppColorScheme.iconColor)
-                StatItem(title: "countries".localized, value: "\(statistics.countries)", icon: "globe.asia.australia.fill", color: AppColorScheme.iconColor)
+            LazyVGrid(columns: [
+                GridItem(.flexible(), spacing: 12),
+                GridItem(.flexible(), spacing: 12)
+            ], spacing: 12) {
+                YearAnimatedStatCell(
+                    icon: "flag.fill",
+                    targetValue: statistics.total,
+                    label: "total_destinations".localized
+                )
+                YearAnimatedStatCell(
+                    icon: "globe.asia.australia.fill",
+                    targetValue: statistics.countries,
+                    label: "countries_visited".localized
+                )
+                YearAnimatedStatCell(
+                    icon: "house.fill",
+                    targetValue: statistics.domestic,
+                    label: "domestic_travel".localized
+                )
+                YearAnimatedStatCell(
+                    icon: "airplane",
+                    targetValue: statistics.international,
+                    label: "international_travel".localized
+                )
             }
         }
-        .padding(20)
-        .background(cardBackgroundColor)
-        .cornerRadius(20)
-        .shadow(color: shadow.color, radius: shadow.radius, x: shadow.x, y: shadow.y)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+// MARK: - 与「我的」旅行统计一致的数字栅格（无卡片底板 + 递增动效）
+private struct YearAnimatedStatCell: View {
+    let icon: String
+    let targetValue: Int
+    let label: String
+    @EnvironmentObject var brandColorManager: BrandColorManager
+    @State private var animatedValue: Double = 0
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Image(systemName: icon)
+                .font(.headline)
+                .foregroundColor(brandColorManager.currentBrandColor)
+            
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                Text("\(Int(animatedValue.rounded()))")
+                    .font(.system(size: 34, weight: .black, design: .default))
+                    .tracking(-0.8)
+                    .foregroundStyle(.primary)
+                    .monospacedDigit()
+                    .contentTransition(.numericText(value: animatedValue))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
+                Spacer(minLength: 0)
+            }
+            
+            Text(label)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 6)
+        .onAppear { animateStatNumber(resetToZero: true) }
+        .onChange(of: targetValue) { _, _ in animateStatNumber(resetToZero: false) }
+    }
+    
+    private func animateStatNumber(resetToZero: Bool) {
+        let target = Double(targetValue)
+        if resetToZero {
+            animatedValue = 0
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+                withAnimation(.easeOut(duration: 0.9)) {
+                    animatedValue = target
+                }
+            }
+        } else {
+            withAnimation(.easeOut(duration: 0.55)) {
+                animatedValue = target
+            }
+        }
     }
 }
 
 struct DestinationRowCard: View {
     let destination: TravelDestination
-    let primaryTextColor: Color
     @StateObject private var countryManager = CountryManager.shared
     @Environment(\.colorScheme) var colorScheme
-    
-    // 小卡片背景：使用浅米色卡片背景色
-    private var cardBackgroundColor: Color {
-        AppColorScheme.beigeCardBackground(for: colorScheme)
-    }
-    
-    // 边框颜色：使用浅米色卡片边框颜色
-    private var borderColor: Color {
-        AppColorScheme.beigeCardBorder
-    }
-    
-    // 小卡片阴影：中等强度的阴影效果
-    private var shadowColor: Color {
-        Color.black.opacity(0.08)
-    }
     
     private var visitDateText: String {
         DestinationRowCard.dateFormatter.string(from: destination.visitDate)
@@ -348,11 +378,11 @@ struct DestinationRowCard: View {
                         .frame(width: geometry.size.width, height: geometry.size.height)
                         .clipped()
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .allowsHitTesting(false)  // 背景图片不拦截点击事件
             } else {
                 // 如果没有图片，使用新的背景颜色
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
                     .fill(Color(red: 0x67/255.0, green: 0x93/255.0, blue: 0xC3/255.0)) // #6793C3
                     .allowsHitTesting(false)  // 背景不拦截点击事件
             }
@@ -361,13 +391,13 @@ struct DestinationRowCard: View {
             LinearGradient(
                 gradient: Gradient(colors: [
                     Color.clear,
-                    Color.black.opacity(0.2),
-                    Color.black.opacity(0.6)
+                    Color.black.opacity(0.18),
+                    Color.black.opacity(0.58)
                 ]),
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             .allowsHitTesting(false)  // 渐变遮罩不拦截点击事件
             
             // 内容层
@@ -380,7 +410,8 @@ struct DestinationRowCard: View {
                         // 标题行：标题和收藏图标
                         HStack(spacing: 6) {
                             Text(destination.name.isEmpty ? "-" : destination.name)
-                                .font(.system(size: 24, weight: .bold))
+                                .font(.system(size: 22, weight: .black, design: .default))
+                                .tracking(-0.3)
                                 .foregroundColor(.white) // 统一使用白色文字
                                 .lineLimit(1)
                                 .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
@@ -443,14 +474,14 @@ struct DestinationRowCard: View {
                 }
             }
         }
-        .frame(height: 160)
-        .cornerRadius(12)
+        .frame(height: 168)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(borderColor.opacity(0.3), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.08), lineWidth: 1)
         )
-        .shadow(color: shadowColor, radius: 6, x: 0, y: 2)
-        .contentShape(RoundedRectangle(cornerRadius: 12))
+        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.35 : 0.1), radius: 14, x: 0, y: 6)
+        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
     
     private var thumbnail: some View {
@@ -600,4 +631,5 @@ struct SegmentedPickerWithGrayUnselected: UIViewRepresentable {
     YearFilteredDestinationView(year: 2024)
         .modelContainer(for: TravelDestination.self, inMemory: true)
         .environmentObject(LanguageManager.shared)
+        .environmentObject(BrandColorManager.shared)
 }

@@ -273,7 +273,7 @@ struct BadgeDetailView: View {
                             NavigationLink {
                                 DestinationDetailView(destination: destination)
                             } label: {
-                                DestinationRowCard(destination: destination, primaryTextColor: .primary)
+                                DestinationRowCard(destination: destination)
                             }
                             .buttonStyle(PlainButtonStyle())
                         }

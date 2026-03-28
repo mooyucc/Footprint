@@ -29,12 +29,12 @@ struct ContentView: View {
                 }
                 .tag(0)
             
-            RoutesView()
+            JourneyCardsStackView()
                 .tabItem {
                     Label {
-                        Text("trips".localized)
+                        Text("journey_cards_tab".localized)
                     } icon: {
-                        Image(systemName: "point.topright.arrow.triangle.backward.to.point.bottomleft.scurvepath")
+                        Image(systemName: "square.stack.3d.up.fill")
                     }
                 }
                 .tag(1)
@@ -59,7 +59,7 @@ struct ContentView: View {
                 }
                 .tag(3)
         }
-        .tint(brandColorManager.currentBrandColor) // 使用品牌红色，确保所有 tab 一致，并响应颜色变化
+        .tint(brandColorManager.currentBrandColor) // 使用品牌主题色，确保所有 tab 一致，并响应颜色变化
         .onAppear {
             configureTabBarAppearance(for: colorScheme, brandColor: brandColorManager.currentBrandColor)
         }
@@ -108,8 +108,8 @@ struct ContentView: View {
                 // App 进入后台或非活跃状态，停止实时定位
                 locationManager.stopUpdatingLocation()
                 print("📍 App 进入后台/非活跃状态，停止实时定位")
-            } else if newPhase == .active && (selectedTab == 0 || selectedTab == 1) {
-                // App 回到前台且当前在地图 tab，重新启动实时定位
+            } else if newPhase == .active && selectedTab == 0 {
+                // App 回到前台且当前在足迹地图 tab，重新启动实时定位
                 locationManager.startUpdatingLocation()
                 print("📍 App 回到前台且在地图 tab，重新启动实时定位")
             }
@@ -630,31 +630,30 @@ struct ProfileView: View {
             ], spacing: 12) {
                 ProfileStatCard(
                     icon: "flag.fill",
-                    value: "\(statistics.total)",
+                    targetValue: statistics.total,
                     label: "total_destinations".localized
                 )
                 
                 ProfileStatCard(
                     icon: "globe.asia.australia.fill",
-                    value: "\(statistics.countries)",
+                    targetValue: statistics.countries,
                     label: "countries_visited".localized
                 )
                 
                 ProfileStatCard(
                     icon: "house.fill",
-                    value: "\(statistics.domestic)",
+                    targetValue: statistics.domestic,
                     label: "domestic_travel".localized
                 )
                 
                 ProfileStatCard(
                     icon: "airplane",
-                    value: "\(statistics.international)",
+                    targetValue: statistics.international,
                     label: "international_travel".localized
                 )
             }
         }
         .padding(20)
-        .whiteCardStyle(for: colorScheme, cornerRadius: 20)
     }
     
     private var favoritesCard: some View {
@@ -712,23 +711,33 @@ struct ProfileView: View {
             NavigationLink {
                 YearFilteredDestinationView(year: year)
             } label: {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
+                HStack(alignment: .center, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 8) {
                         Text(languageManager.currentLanguage == .chinese ? "\(year)年" : "\(year)")
                             .font(.headline)
                             .fontWeight(.semibold)
                             .foregroundColor(primaryTextColor)
-                        
-                        Spacer()
-                        
+
+                        Text("destinations_count".localized)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    Spacer()
+
+                    HStack(spacing: 8) {
+                        Text("\(item.count)")
+                            .font(.system(size: 32, weight: .black, design: .default))
+                            .tracking(-0.8)
+                            .foregroundStyle(.primary)
+                            .monospacedDigit()
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.65)
+
                         Image(systemName: "chevron.right")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    
-                    Text("\(item.count) \("destinations_count".localized)")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
@@ -835,31 +844,63 @@ struct ProfileView: View {
 
 struct ProfileStatCard: View {
     let icon: String
-    let value: String
+    let targetValue: Int
     let label: String
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var brandColorManager: BrandColorManager
+    @State private var animatedValue: Double = 0
     
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: 10) {
             Image(systemName: icon)
-                .font(.title2)
+                .font(.headline)
                 .foregroundColor(brandColorManager.currentBrandColor)
-            
-            Text(value)
-                .font(.title)
-                .fontWeight(.bold)
-                .foregroundColor(.primary)
-            
+
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                Text("\(Int(animatedValue.rounded()))")
+                    .font(.system(size: 36, weight: .black, design: .default))
+                    .tracking(-0.8)
+                    .foregroundStyle(.primary)
+                    .monospacedDigit()
+                    .contentTransition(.numericText(value: animatedValue))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
+
+                Spacer(minLength: 0)
+            }
+
             Text(label)
                 .font(.caption)
                 .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
         .padding(.horizontal, 12)
-        .beigeCardStyle(for: colorScheme, cornerRadius: 15)
+        .onAppear {
+            animateStatNumber(resetToZero: true)
+        }
+        .onChange(of: targetValue) { _, _ in
+            animateStatNumber(resetToZero: false)
+        }
+    }
+    
+    /// 与「点亮进度」一致的数字递增动效
+    private func animateStatNumber(resetToZero: Bool) {
+        let target = Double(targetValue)
+        if resetToZero {
+            animatedValue = 0
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+                withAnimation(.easeOut(duration: 0.9)) {
+                    animatedValue = target
+                }
+            }
+        } else {
+            withAnimation(.easeOut(duration: 0.55)) {
+                animatedValue = target
+            }
+        }
     }
 }
 

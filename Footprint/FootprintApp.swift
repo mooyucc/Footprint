@@ -49,18 +49,23 @@ struct FootprintApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                // 主内容视图
-                ContentView()
-                    .environmentObject(appleSignInManager)
-                    .environmentObject(purchaseManager)
-                    .environmentObject(entitlementManager)
-                    .environmentObject(aiCreditManager)
-                    .environmentObject(languageManager)
-                    .environmentObject(countryManager)
-                    .environmentObject(brandColorManager)
-                    .environmentObject(appearanceManager)
-                    .preferredColorScheme(appearanceManager.preferredColorScheme)
-                    .environment(\.isAppReady, isAppReady)  // 传递应用就绪状态
+                // 主内容视图：仅在开机画面结束后构建，避免启动时 @Query 在主线程加载大量地点/行程导致动画卡顿
+                if showSplash {
+                    Color.white
+                        .ignoresSafeArea()
+                } else {
+                    ContentView()
+                        .environmentObject(appleSignInManager)
+                        .environmentObject(purchaseManager)
+                        .environmentObject(entitlementManager)
+                        .environmentObject(aiCreditManager)
+                        .environmentObject(languageManager)
+                        .environmentObject(countryManager)
+                        .environmentObject(brandColorManager)
+                        .environmentObject(appearanceManager)
+                        .preferredColorScheme(appearanceManager.preferredColorScheme)
+                        .environment(\.isAppReady, isAppReady)  // 传递应用就绪状态
+                }
                 
                 // 启动画面（覆盖在主内容之上）
                 if showSplash {
@@ -176,8 +181,9 @@ extension FootprintApp {
             // 如果后续需要添加其他初始化工作，可以在这里添加
             
             // 给定位服务一些时间进行初始化（定位获取需要时间）
-            // 我们不需要等待定位完成，可以在后台继续其他工作
-            Thread.sleep(forTimeInterval: 0.2)
+            // 同时确保开机动画有足够时间完整播放（色块→墨鱼→文字约 1s），
+            // 再发送「初始化完成」，避免动画未播完就被关闭导致卡顿、直接进 app 的体验问题
+            Thread.sleep(forTimeInterval: 1.2)
             
             print("✅ 后台初始化工作完成（定位服务已启动）")
             

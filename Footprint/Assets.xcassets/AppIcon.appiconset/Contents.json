@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "Frame 3.jpg",
+      "filename" : "墨鱼足迹Logo.jpg",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -13,7 +13,7 @@
           "value" : "dark"
         }
       ],
-      "filename" : "Frame 4.jpg",
+      "filename" : "墨鱼足迹Logo 1.jpg",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -25,7 +25,7 @@
           "value" : "tinted"
         }
       ],
-      "filename" : "Frame 5.jpg",
+      "filename" : "墨鱼足迹Logo 2.jpg",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

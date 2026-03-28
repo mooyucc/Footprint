@@ -181,6 +181,11 @@
 "map" = "지도";
 "footprint_map" = "발자국";
 "trips" = "여행";
+"journey_cards_tab" = "여행 카드";
+"journey_cards_empty_hint" = "「여행」에서 여행을 만들면 여기에 표시됩니다.";
+"journey_cards_focused_a11y" = "선택됨";
+"journey_cards_destinations_count" = "%d곳";
+"journey_cards_total_mileage" = "총 주행거리";
 "profile" = "프로필";
 "create_trip" = "여행 추가";
 "import_trip" = "여행 가져오기";

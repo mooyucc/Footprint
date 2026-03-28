@@ -8,10 +8,12 @@
 import SwiftUI
 import SwiftData
 import MapKit
+import UIKit
 
 struct TripDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @Bindable var trip: TravelTrip
     
     @State private var showingEditSheet = false
@@ -21,7 +23,15 @@ struct TripDetailView: View {
     @State private var shareFileItem: TripShareItem?
     @State private var showingLayoutSelection = false // 控制版面选择视图显示
     @State private var selectedLayout: TripShareLayout = .list // 默认选择清单版面
+    @State private var showingAIDescription = false
     @EnvironmentObject var languageManager: LanguageManager
+    @EnvironmentObject var brandColorManager: BrandColorManager
+    @EnvironmentObject private var entitlementManager: EntitlementManager
+    @EnvironmentObject private var aiCreditManager: AICreditManager
+    
+    private var primaryTextColor: Color {
+        AppColorScheme.primaryText(for: colorScheme)
+    }
     
     var sortedDestinations: [TravelDestination] {
         trip.destinations?.sorted { $0.visitDate < $1.visitDate } ?? []
@@ -56,37 +66,28 @@ struct TripDetailView: View {
         destinationsByDay.count > 1
     }
     
-    /// 计算某天分组之前的总目的地数，用于全局序号
-    private func globalStartIndex(for group: TripDayGroup) -> Int {
-        var count = 0
-        for g in destinationsByDay {
-            if g.id == group.id { return count }
-            count += g.destinations.count
-        }
-        return count
+    private var canUseAI: Bool {
+        if BetaInfo.isBetaBuild { return true }
+        if entitlementManager.canUseAIFeatures { return true }
+        return aiCreditManager.remaining > 0
     }
     
     @ViewBuilder
-    private func tripRouteDaySection(group: TripDayGroup, globalStartIndex startIndex: Int) -> some View {
-        let dayTitle = String(format: String(localized: "trip_route_day_title"), group.dayIndex, group.dayStart.localizedFormatted(dateStyle: .medium))
+    private func tripRouteDaySection(group: TripDayGroup) -> some View {
+        let dayTitle = String(format: "trip_route_day_title".localized, group.dayIndex, group.dayStart.localizedFormatted(dateStyle: .medium))
         VStack(alignment: .leading, spacing: 8) {
             Text(dayTitle)
                 .font(.subheadline)
                 .fontWeight(.semibold)
                 .foregroundColor(.secondary)
                 .padding(.top, group.id == destinationsByDay.first?.id ? 0 : 16)
-            ForEach(Array(group.destinations.enumerated()), id: \.element.id) { offset, destination in
-                let globalIndex = startIndex + offset + 1
-                let nextInSameDay = offset + 1 < group.destinations.count ? group.destinations[offset + 1] : nil
+            ForEach(group.destinations) { destination in
                 NavigationLink {
                     DestinationDetailView(destination: destination)
                 } label: {
-                    TripDestinationRow(
-                        destination: destination,
-                        index: globalIndex,
-                        nextDestination: nextInSameDay
-                    )
+                    DestinationRowCard(destination: destination)
                 }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -98,44 +99,48 @@ struct TripDetailView: View {
             
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
-                    // 封面图片
-                    if let photoData = trip.coverPhotoData,
-                       let uiImage = UIImage(data: photoData) {
-                        Image(uiImage: uiImage)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: screenWidth, height: coverHeight)
-                            .clipShape(RoundedRectangle(cornerRadius: 0))
-                    } else {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 0)
-                                .fill(LinearGradient(
-                                    colors: [.blue, .purple],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ))
+                    // 封面（分享 / AI 与 ⋯ 菜单；「在地图中打开」在 ⋯ 内）
+                    Group {
+                        if let photoData = trip.coverPhotoData,
+                           let uiImage = UIImage(data: photoData) {
+                            Image(uiImage: uiImage)
+                                .resizable()
+                                .scaledToFill()
                                 .frame(width: screenWidth, height: coverHeight)
-                            
-                            VStack(spacing: 12) {
-                                Image(systemName: "map.fill")
-                                    .font(.system(size: 60))
-                                    .foregroundColor(.white.opacity(0.8))
+                                .clipped()
+                        } else {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 0)
+                                    .fill(LinearGradient(
+                                        colors: [brandColorManager.currentBrandColor, brandColorManager.currentBrandColor.opacity(0.55)],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ))
+                                    .frame(width: screenWidth, height: coverHeight)
                                 
-                                Text(trip.name)
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.white)
-                                    .multilineTextAlignment(.center)
+                                VStack(spacing: 12) {
+                                    Image(systemName: "map.fill")
+                                        .font(.system(size: 60))
+                                        .foregroundColor(.white.opacity(0.8))
+                                    
+                                    Text(trip.name)
+                                        .font(.title2)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                        .multilineTextAlignment(.center)
+                                }
+                                .padding()
                             }
-                            .padding()
                         }
                     }
+                    .clipShape(RoundedRectangle(cornerRadius: 0))
                 
                 VStack(alignment: .leading, spacing: 16) {
                     // 旅程标题
                     Text(trip.name)
-                        .font(.title)
+                        .font(.title2)
                         .fontWeight(.bold)
+                        .foregroundStyle(primaryTextColor)
                     
                     // 描述
                     if !trip.desc.isEmpty {
@@ -144,51 +149,38 @@ struct TripDetailView: View {
                             .foregroundColor(.secondary)
                     }
                     
-                    // 时间信息卡片
-                    HStack(spacing: 20) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Label("start".localized, systemImage: "calendar.badge.plus")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text(trip.startDate.localizedFormatted(dateStyle: .medium))
-                                .font(.headline)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        
-                        Divider()
-                        
-                        VStack(alignment: .leading, spacing: 8) {
-                            Label("end".localized, systemImage: "calendar.badge.minus")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text(trip.endDate.localizedFormatted(dateStyle: .medium))
-                                .font(.headline)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        
-                        Divider()
-                        
-                        VStack(alignment: .leading, spacing: 8) {
-                            Label("duration".localized, systemImage: "clock")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                            Text("\(trip.durationDays) \("days".localized)")
-                                .font(.headline)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    // 时间信息：与「旅行统计」栅格一致，无大块灰底卡片
+                    LazyVGrid(columns: [
+                        GridItem(.flexible(), spacing: 12),
+                        GridItem(.flexible(), spacing: 12),
+                        GridItem(.flexible(), spacing: 12)
+                    ], spacing: 12) {
+                        TripDetailDateStatCell(
+                            icon: "calendar.badge.plus",
+                            title: "start".localized,
+                            date: trip.startDate
+                        )
+                        TripDetailDateStatCell(
+                            icon: "calendar",
+                            title: "end".localized,
+                            date: trip.endDate
+                        )
+                        TripDetailDurationStatCell(days: trip.durationDays)
                     }
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color(.secondarySystemBackground))
-                    .cornerRadius(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                     
-                    // 目的地列表
+                    // 目的地列表（无外层灰卡）
                     VStack(alignment: .leading, spacing: 12) {
-                        HStack {
-                            Label("trip_route".localized, systemImage: "location.fill")
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Image(systemName: "location.fill")
                                 .font(.headline)
+                                .foregroundColor(brandColorManager.currentBrandColor)
+                            Text("trip_route".localized)
+                                .font(.headline)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(primaryTextColor)
                             
-                            Spacer()
+                            Spacer(minLength: 8)
                             
                             Text("\(sortedDestinations.count) \("locations".localized)")
                                 .font(.caption)
@@ -196,100 +188,130 @@ struct TripDetailView: View {
                         }
                         
                         if sortedDestinations.isEmpty {
-                            VStack(spacing: 12) {
+                            VStack(spacing: 16) {
                                 Image(systemName: "map")
-                                    .font(.system(size: 50))
-                                    .foregroundColor(.gray.opacity(0.5))
+                                    .font(.system(size: 44))
+                                    .foregroundStyle(.secondary)
                                 
                                 Text("no_destinations_added".localized)
-                                    .foregroundColor(.secondary)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.center)
                                 
                                 Button {
                                     showingAddDestination = true
                                 } label: {
                                     Label("add_destination".localized, systemImage: "plus.circle.fill")
-                                        .font(.headline)
-                                        .foregroundColor(.white)
-                                        .padding()
-                                        .background(Color.blue)
-                                        .cornerRadius(10)
                                 }
+                                .buttonStyle(.borderedProminent)
                             }
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 30)
+                            .padding(.vertical, 24)
                         } else {
-                            if shouldShowDayHeaders {
-                                ForEach(destinationsByDay) { group in
-                                    tripRouteDaySection(group: group, globalStartIndex: globalStartIndex(for: group))
-                                }
-                            } else {
-                                ForEach(Array(sortedDestinations.enumerated()), id: \.element.id) { index, destination in
-                                    NavigationLink {
-                                        DestinationDetailView(destination: destination)
-                                    } label: {
-                                        TripDestinationRow(
-                                            destination: destination,
-                                            index: index + 1,
-                                            nextDestination: index < sortedDestinations.count - 1 ? sortedDestinations[index + 1] : nil
-                                        )
+                            VStack(alignment: .leading, spacing: 16) {
+                                if shouldShowDayHeaders {
+                                    ForEach(destinationsByDay) { group in
+                                        tripRouteDaySection(group: group)
+                                    }
+                                } else {
+                                    ForEach(sortedDestinations) { destination in
+                                        NavigationLink {
+                                            DestinationDetailView(destination: destination)
+                                        } label: {
+                                            DestinationRowCard(destination: destination)
+                                        }
+                                        .buttonStyle(.plain)
                                     }
                                 }
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
-                    .padding()
-                    .background(Color(.secondarySystemBackground))
-                    .cornerRadius(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding()
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 24)
             }
         }
         }
+        .appPageBackgroundGradient(for: colorScheme)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Menu {
-                    // 分享线路
+                HStack(spacing: 16) {
                     Button {
-                        shareTrip()
+                        showingLayoutSelection = true
                     } label: {
-                        Label("share_trip".localized, systemImage: "square.and.arrow.up")
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundStyle(Color(uiColor: .label))
+                            .symbolRenderingMode(.monochrome)
+                            .offset(x: 2)
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("share".localized))
                     
-                    // 分享给朋友
                     Button {
-                        shareTripToTeam()
+                        showingAIDescription = true
                     } label: {
-                        Label("share_to_team".localized, systemImage: "person.2.fill")
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 17, weight: .medium))
+                            .foregroundStyle(Color(uiColor: canUseAI ? .label : .tertiaryLabel))
+                            .symbolRenderingMode(.monochrome)
                     }
+                    .disabled(!canUseAI)
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("ai_function_trip_desc_title".localized))
                     
-                    Divider()
-                    
-                    // 编辑线路
-                    Button {
-                        showingEditSheet = true
+                    Menu {
+                        Button {
+                            openTripInMaps()
+                        } label: {
+                            tripDetailMenuRow(title: "open_in_maps".localized, systemImage: "map", style: .neutral)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(sortedDestinations.isEmpty)
+                        
+                        Button {
+                            shareTripToTeam()
+                        } label: {
+                            tripDetailMenuRow(title: "share_to_team".localized, systemImage: "person.2.fill", style: .neutral)
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Divider()
+                        
+                        Button {
+                            showingEditSheet = true
+                        } label: {
+                            tripDetailMenuRow(title: "edit_trip".localized, systemImage: "pencil", style: .neutral)
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Button {
+                            showingAddDestination = true
+                        } label: {
+                            tripDetailMenuRow(title: "add_destination".localized, systemImage: "plus", style: .neutral)
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Divider()
+                        
+                        Button(role: .destructive) {
+                            showingDeleteAlert = true
+                        } label: {
+                            tripDetailMenuRow(title: "delete_trip".localized, systemImage: "trash", style: .destructive)
+                        }
+                        .buttonStyle(.plain)
                     } label: {
-                        Label("edit_trip".localized, systemImage: "pencil")
+                        Image(systemName: "ellipsis.circle")
+                            .font(.system(size: 20, weight: .medium))
+                            .foregroundStyle(Color(uiColor: .label))
+                            .symbolRenderingMode(.monochrome)
                     }
-                    
-                    // 添加目的地
-                    Button {
-                        showingAddDestination = true
-                    } label: {
-                        Label("add_destination".localized, systemImage: "plus")
-                    }
-                    
-                    Divider()
-                    
-                    // 删除线路
-                    Button(role: .destructive) {
-                        showingDeleteAlert = true
-                    } label: {
-                        Label("delete_trip".localized, systemImage: "trash")
-                    }
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .foregroundColor(.primary)
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("more_options".localized))
                 }
             }
         }
@@ -317,6 +339,9 @@ struct TripDetailView: View {
         .sheet(isPresented: $showingLayoutSelection) {
             TripShareLayoutSelectionView(trip: trip, selectedLayout: $selectedLayout)
         }
+        .sheet(isPresented: $showingAIDescription) {
+            AIActionSheet(trip: trip, action: .generateDescription)
+        }
         .alert("delete_trip".localized, isPresented: $showingDeleteAlert) {
             Button("cancel".localized, role: .cancel) { }
             Button("delete".localized, role: .destructive) {
@@ -332,11 +357,6 @@ struct TripDetailView: View {
         dismiss()
     }
     
-    private func shareTrip() {
-        // 显示版面选择视图
-        showingLayoutSelection = true
-    }
-    
     private func shareTripToTeam() {
         // 导出旅程数据为JSON文件
         guard let fileURL = TripDataExporter.exportTrip(trip) else {
@@ -350,6 +370,151 @@ struct TripDetailView: View {
         // 创建分享项
         shareFileItem = TripShareItem(text: shareText, image: nil, url: fileURL)
     }
+    
+    /// 在「地图」App 中打开本旅程路线（与 `RouteCard` 一致）
+    private func openTripInMaps() {
+        let destinations = sortedDestinations
+        guard !destinations.isEmpty else { return }
+        
+        var mapItems: [MKMapItem] = []
+        for destination in destinations {
+            let placemark = MKPlacemark(coordinate: destination.coordinate)
+            let mapItem = MKMapItem(placemark: placemark)
+            mapItem.name = destination.name
+            mapItems.append(mapItem)
+        }
+        guard !mapItems.isEmpty else { return }
+        
+        let options: [String: Any] = [
+            MKLaunchOptionsDirectionsModeKey: "d",
+            MKLaunchOptionsMapTypeKey: MKMapType.standard.rawValue
+        ]
+        
+        if mapItems.count == 1 {
+            mapItems[0].openInMaps(launchOptions: options)
+        } else {
+            MKMapItem.openMaps(with: mapItems, launchOptions: options)
+        }
+    }
+    
+    private enum TripDetailMenuRowStyle {
+        case neutral
+        case destructive
+    }
+    
+    /// 使用 `HStack` 而非 `Label`，避免菜单项图标被当作模板而染上 accent/主题色。
+    private func tripDetailMenuRow(title: String, systemImage: String, style: TripDetailMenuRowStyle) -> some View {
+        let iconAndText: Color = {
+            switch style {
+            case .neutral: return Color(UIColor.label)
+            case .destructive: return Color(UIColor.systemRed)
+            }
+        }()
+        return HStack(alignment: .center, spacing: 10) {
+            Image(systemName: systemImage)
+                .font(.body)
+                .imageScale(.medium)
+                .foregroundStyle(iconAndText)
+                .symbolRenderingMode(.monochrome)
+                .frame(width: 22, height: 22, alignment: .center)
+            Text(title)
+                .font(.body)
+                .foregroundStyle(iconAndText)
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+    }
+}
+
+// MARK: - 旅程详情统计（与 YearAnimatedStatCell / ProfileStatCard 节奏一致）
+
+private struct TripDetailDateStatCell: View {
+    let icon: String
+    let title: String
+    let date: Date
+    @EnvironmentObject var brandColorManager: BrandColorManager
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Image(systemName: icon)
+                .font(.headline)
+                .foregroundColor(brandColorManager.currentBrandColor)
+            
+            Text(date.localizedFormatted(dateStyle: .medium))
+                .font(.system(size: 16, weight: .semibold, design: .default))
+                .foregroundStyle(.primary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.75)
+                .fixedSize(horizontal: false, vertical: true)
+            
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 6)
+    }
+}
+
+private struct TripDetailDurationStatCell: View {
+    let days: Int
+    @EnvironmentObject var brandColorManager: BrandColorManager
+    @State private var animatedValue: Double = 0
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Image(systemName: "clock")
+                .font(.headline)
+                .foregroundColor(brandColorManager.currentBrandColor)
+            
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                Text("\(Int(animatedValue.rounded()))")
+                    .font(.system(size: 34, weight: .black, design: .default))
+                    .tracking(-0.8)
+                    .foregroundStyle(.primary)
+                    .monospacedDigit()
+                    .contentTransition(.numericText(value: animatedValue))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
+                Spacer(minLength: 0)
+            }
+            
+            Text("duration".localized)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 6)
+        .onAppear {
+            animateStatNumber(resetToZero: true)
+        }
+        .onChange(of: days) { _, _ in
+            animateStatNumber(resetToZero: false)
+        }
+        .accessibilityLabel(Text("duration".localized))
+        .accessibilityValue(Text("\(days) \("days".localized)"))
+    }
+    
+    private func animateStatNumber(resetToZero: Bool) {
+        let target = Double(max(days, 0))
+        if resetToZero {
+            animatedValue = 0
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+                withAnimation(.easeOut(duration: 0.9)) {
+                    animatedValue = target
+                }
+            }
+        } else {
+            withAnimation(.easeOut(duration: 0.55)) {
+                animatedValue = target
+            }
+        }
+    }
 }
 
 /// 按天分组的一批目的地，用于行程路线按天展示
@@ -358,137 +523,6 @@ private struct TripDayGroup: Identifiable {
     let dayIndex: Int
     let destinations: [TravelDestination]
     var id: Date { dayStart }
-}
-
-struct TripDestinationRow: View {
-    let destination: TravelDestination
-    let index: Int
-    let nextDestination: TravelDestination?
-    
-    @StateObject private var routeManager = RouteManager.shared
-    @StateObject private var languageManager = LanguageManager.shared
-    
-    // 计算到下一个地点的距离
-    private var distanceToNext: CLLocationDistance? {
-        guard let next = nextDestination else { return nil }
-        return RouteManager.calculateDistance(from: destination.coordinate, to: next.coordinate)
-    }
-    
-    // 获取交通方式
-    private var transportType: MKDirectionsTransportType {
-        guard let next = nextDestination else { return .automobile }
-        return routeManager.getUserTransportType(from: destination.coordinate, to: next.coordinate) ?? .automobile
-    }
-    
-    // 格式化距离
-    private func formatDistance(_ distance: CLLocationDistance) -> String {
-        let formatter = MKDistanceFormatter()
-        formatter.unitStyle = .abbreviated
-        formatter.locale = languageManager.currentLanguage == .chinese ? Locale(identifier: "zh_CN") : Locale(identifier: "en_US")
-        return formatter.string(fromDistance: distance)
-    }
-    
-    // 获取交通方式图标名称
-    private var transportIconName: String {
-        transportType.iconName
-    }
-    
-    // 获取交通方式颜色
-    private var transportColor: Color {
-        if transportType == RouteManager.none {
-            return Color(.tertiaryLabel)
-        } else if transportType == RouteManager.airplane {
-            return .orange
-        } else if transportType.contains(.walking) && transportType == .walking {
-            return .green
-        } else if transportType.contains(.automobile) && transportType == .automobile {
-            return .blue
-        } else if transportType.contains(.transit) && transportType == .transit {
-            return .purple
-        } else {
-            return .gray
-        }
-    }
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            // 序号
-            ZStack {
-                Circle()
-                    .fill(Color.blue)
-                    .frame(width: 32, height: 32)
-                
-                Text("\(index)")
-                    .font(.headline)
-                    .foregroundColor(.white)
-            }
-            
-            // 照片或图标
-            if let photoData = destination.photoThumbnailData ?? destination.photoData,
-               let uiImage = UIImage(data: photoData) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 50, height: 50)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-            } else {
-                Image("ImageMooyu")
-                    .renderingMode(.original)
-                    .resizable()
-                    .interpolation(.high)  // 高质量插值，确保边缘光滑
-                    .antialiased(true)     // 启用抗锯齿
-                    .scaledToFill()
-                    .frame(width: 50, height: 50)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-            }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(destination.name)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                
-                HStack {
-                    Text(destination.country)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    
-                    Text("•")
-                        .foregroundColor(.secondary)
-                    
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(destination.visitDate.localizedFormatted(dateStyle: .medium))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        Text(destination.visitDate.localizedFormatted(dateStyle: .none, timeStyle: .short))
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                
-                // 显示到下一个地点的距离和交通方式
-                if let distance = distanceToNext {
-                    HStack(spacing: 4) {
-                        Image(systemName: transportIconName)
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(transportColor)
-                            .frame(width: 14, height: 14)
-                        
-                        Text(formatDistance(distance))
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.top, 2)
-                }
-            }
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .foregroundColor(.secondary)
-                .font(.caption)
-        }
-        .padding(.vertical, 8)
-    }
 }
 
 #Preview {
@@ -509,6 +543,10 @@ struct TripDestinationRow: View {
         
         return TripDetailView(trip: trip)
             .modelContainer(container)
+            .environmentObject(LanguageManager.shared)
+            .environmentObject(BrandColorManager.shared)
+            .environmentObject(EntitlementManager.shared)
+            .environmentObject(AICreditManager.shared)
     }
 }
 

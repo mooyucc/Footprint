@@ -18,6 +18,11 @@ struct TravelStats {
 }
 
 struct StatsImageGenerator {
+    /// 与「旅行统计」卡片一致：品牌色（分享图无 ColorScheme，取当前品牌色）
+    private static var shareBrandUIColor: UIColor {
+        UIColor(BrandColorManager.shared.currentBrandColor)
+    }
+    
     /// 计算图片动态高度
     private static func calculateImageHeight(stats: TravelStats, width: CGFloat) -> CGFloat {
         var totalHeight: CGFloat = 0
@@ -31,23 +36,22 @@ struct StatsImageGenerator {
         totalHeight += 24 // 副标题高度
         totalHeight += 40 // 顶部区域底部边距
         
-        // 主统计卡片
-        totalHeight += 200 // 主统计卡片高度
-        totalHeight += 40 // 卡片间距
+        // 旅行统计：区块标题 + 2×2 栅格（无卡片背景，与 App 一致）
+        totalHeight += 56 // 区块标题行
+        let cellH: CGFloat = 168
+        let rowGap: CGFloat = 28
+        totalHeight += cellH * 2 + rowGap // 两行栅格
+        totalHeight += 32 // 区块底部间距（与 drawTravelStatisticsSection 一致）
         
-        // 分类统计卡片
-        totalHeight += 160 // 分类统计卡片高度
-        totalHeight += 40 // 卡片间距
-        
-        // 时间线卡片
+        // 足迹时光 / 时间线（无大卡片背景）
         if !stats.yearlyData.isEmpty {
-            let timelineHeaderHeight: CGFloat = 60 // 标题区域
-            let timelineItemHeight: CGFloat = 70 // 每行高度
-            let timelinePadding: CGFloat = 50 // 上下内边距
-            let maxYears = min(stats.yearlyData.count, 10) // 最多显示10年
-            let timelineContentHeight = timelineHeaderHeight + CGFloat(maxYears) * timelineItemHeight + timelinePadding
+            let timelineHeaderHeight: CGFloat = 56
+            let timelineItemHeight: CGFloat = 78
+            let timelineTopBottomPadding: CGFloat = 36 // 与 drawTimeline 顶部/底部留白相当
+            let maxYears = min(stats.yearlyData.count, 10)
+            let timelineContentHeight = timelineHeaderHeight + CGFloat(maxYears) * timelineItemHeight + timelineTopBottomPadding
             totalHeight += timelineContentHeight
-            totalHeight += 40 // 卡片间距
+            totalHeight += 24
         }
         
         // 底部品牌区域
@@ -88,22 +92,17 @@ struct StatsImageGenerator {
             
             currentY += 40
             
-            // 3. 绘制主要统计卡片
-            currentY = drawMainStatsCard(stats: stats, at: currentY, width: imageSize.width, context: cgContext)
+            // 3. 旅行统计（标题 + 2×2，与「我的」页现代风格一致）
+            currentY = drawTravelStatisticsSection(stats: stats, at: currentY, width: imageSize.width)
             
-            currentY += 40
+            currentY += 32
             
-            // 4. 绘制分类统计
-            currentY = drawCategoryStats(stats: stats, at: currentY, width: imageSize.width, context: cgContext)
-            
-            currentY += 40
-            
-            // 5. 绘制时间线
+            // 4. 绘制时间线
             if !stats.yearlyData.isEmpty {
                 currentY = drawTimeline(yearlyData: stats.yearlyData, at: currentY, width: imageSize.width, context: cgContext)
             }
             
-            // 6. 绘制底部品牌标识
+            // 5. 绘制底部品牌标识
             drawFooter(at: imageSize.height - 80, width: imageSize.width, context: cgContext)
         }
     }
@@ -160,223 +159,195 @@ struct StatsImageGenerator {
         return currentY
     }
     
-    // MARK: - 主要统计卡片
-    private static func drawMainStatsCard(stats: TravelStats, at y: CGFloat, width: CGFloat, context: CGContext) -> CGFloat {
-        let cardWidth: CGFloat = width - 120
-        let cardHeight: CGFloat = 200
-        let cardX: CGFloat = (width - cardWidth) / 2
+    // MARK: - 旅行统计（与 App 内 ProfileStatCard 栅格一致）
+    private static func drawTravelStatisticsSection(stats: TravelStats, at y: CGFloat, width: CGFloat) -> CGFloat {
+        let pad: CGFloat = 60
+        let brand = shareBrandUIColor
+        var currentY = y
         
-        // 绘制卡片背景 - 使用米色背景 #f0e7da
-        let cardRect = CGRect(x: cardX, y: y, width: cardWidth, height: cardHeight)
-        let cardPath = UIBezierPath(roundedRect: cardRect, cornerRadius: 20) // 使用20圆角，与"我的"tab一致
-        
-        context.saveGState()
-        context.addPath(cardPath.cgPath)
-        context.setFillColor(UIColor(red: 0.941, green: 0.906, blue: 0.855, alpha: 1.0).cgColor) // #f0e7da
-        // 使用与"我的"tab一致的大卡片阴影
-        context.setShadow(offset: CGSize(width: 0, height: 4), blur: 12, color: UIColor.black.withAlphaComponent(0.12).cgColor)
-        context.fillPath()
-        context.restoreGState()
-        
-        // 绘制大数字 - 使用深灰色 #333333
-        let numberAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 80, weight: .black),
-            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
-        ]
-        let numberString = NSAttributedString(string: "\(stats.totalDestinations)", attributes: numberAttributes)
-        let numberSize = numberString.size()
-        numberString.draw(at: CGPoint(x: cardRect.midX - numberSize.width / 2, y: cardRect.minY + 40))
-        
-        // 绘制标签 - 使用次要文本颜色
-        let labelAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 28, weight: .medium),
-            .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // 次要文本
-        ]
-        let labelString = NSAttributedString(string: "stats_share_destinations_count".localized, attributes: labelAttributes)
-        let labelSize = labelString.size()
-        labelString.draw(at: CGPoint(x: cardRect.midX - labelSize.width / 2, y: cardRect.minY + 135))
-        
-        return y + cardHeight
-    }
-    
-    // MARK: - 分类统计
-    private static func drawCategoryStats(stats: TravelStats, at y: CGFloat, width: CGFloat, context: CGContext) -> CGFloat {
-        let cardWidth: CGFloat = width - 120
-        let cardHeight: CGFloat = 160
-        let cardX: CGFloat = (width - cardWidth) / 2
-        
-        // 绘制白色卡片背景
-        let cardRect = CGRect(x: cardX, y: y, width: cardWidth, height: cardHeight)
-        let cardPath = UIBezierPath(roundedRect: cardRect, cornerRadius: 20) // 使用20圆角，与"我的"tab一致
-        
-        context.saveGState()
-        context.addPath(cardPath.cgPath)
-        context.setFillColor(UIColor.white.cgColor)
-        // 使用与"我的"tab一致的大卡片阴影
-        context.setShadow(offset: CGSize(width: 0, height: 4), blur: 12, color: UIColor.black.withAlphaComponent(0.12).cgColor)
-        context.fillPath()
-        context.restoreGState()
-        
-        // 计算每个统计项的宽度
-        let itemWidth = cardWidth / 3
-        
-        // 绘制三个统计项
-        let items: [(icon: String, value: Int, label: String, color: UIColor)] = [
-            ("globe.asia.australia.fill", stats.countries, "stats_share_countries_count".localized, UIColor.systemGreen),
-            ("house.fill", stats.domesticDestinations, "domestic".localized, UIColor.systemRed),
-            ("airplane", stats.internationalDestinations, "international".localized, UIColor.systemBlue)
-        ]
-        
-        for (index, item) in items.enumerated() {
-            let centerX = cardRect.minX + itemWidth * CGFloat(index) + itemWidth / 2
-            let centerY = cardRect.midY
-            
-            // 绘制图标
-            if let iconImage = UIImage(systemName: item.icon) {
-                let iconSize: CGFloat = 35
-                let iconRect = CGRect(
-                    x: centerX - iconSize / 2,
-                    y: centerY - 60,
-                    width: iconSize,
-                    height: iconSize
-                )
-                let tintedIcon = iconImage.withTintColor(item.color, renderingMode: .alwaysOriginal)
-                tintedIcon.draw(in: iconRect)
-            }
-            
-            // 绘制数值
-            let valueAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 40, weight: .bold),
-                .foregroundColor: item.color
-            ]
-            let valueString = NSAttributedString(string: "\(item.value)", attributes: valueAttributes)
-            let valueSize = valueString.size()
-            valueString.draw(at: CGPoint(x: centerX - valueSize.width / 2, y: centerY - 10))
-            
-            // 绘制标签 - 使用次要文本颜色
-            let labelAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 18, weight: .medium),
-                .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // 次要文本
-            ]
-            let labelString = NSAttributedString(string: item.label, attributes: labelAttributes)
-            let labelSize = labelString.size()
-            labelString.draw(at: CGPoint(x: centerX - labelSize.width / 2, y: centerY + 35))
+        if let icon = UIImage(systemName: "chart.bar.fill") {
+            let iconSide: CGFloat = 32
+            let iconRect = CGRect(x: pad, y: currentY, width: iconSide, height: iconSide)
+            icon.withTintColor(brand, renderingMode: .alwaysOriginal).draw(in: iconRect)
         }
         
-        return y + cardHeight
-    }
-    
-    // MARK: - 时间线
-    private static func drawTimeline(yearlyData: [(year: Int, count: Int)], at y: CGFloat, width: CGFloat, context: CGContext) -> CGFloat {
-        let cardWidth: CGFloat = width - 120
-        let itemHeight: CGFloat = 70
-        let maxYears = min(yearlyData.count, 10) // 最多显示10年
-        let cardHeight: CGFloat = 60 + CGFloat(maxYears) * itemHeight + 50 // 增加底部padding
-        let cardX: CGFloat = (width - cardWidth) / 2
-        
-        // 绘制白色卡片背景
-        let cardRect = CGRect(x: cardX, y: y, width: cardWidth, height: cardHeight)
-        let cardPath = UIBezierPath(roundedRect: cardRect, cornerRadius: 20) // 使用20圆角，与"我的"tab一致
-        
-        context.saveGState()
-        context.addPath(cardPath.cgPath)
-        context.setFillColor(UIColor.white.cgColor)
-        // 使用与"我的"tab一致的大卡片阴影
-        context.setShadow(offset: CGSize(width: 0, height: 4), blur: 12, color: UIColor.black.withAlphaComponent(0.12).cgColor)
-        context.fillPath()
-        context.restoreGState()
-        
-        var currentY = cardRect.minY + 25
-        
-        // 绘制标题 - 使用深灰色 #333333
         let titleAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 26, weight: .bold),
-            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
+            .font: UIFont.systemFont(ofSize: 32, weight: .semibold),
+            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0)
+        ]
+        let titleString = NSAttributedString(string: "travel_statistics".localized, attributes: titleAttributes)
+        titleString.draw(at: CGPoint(x: pad + 42, y: currentY + 4))
+        currentY += 56
+        
+        let colGap: CGFloat = 24
+        let rowGap: CGFloat = 28
+        let cellW = (width - pad * 2 - colGap) / 2
+        let cellH: CGFloat = 168
+        
+        let gridItems: [(icon: String, value: Int, labelKey: String)] = [
+            ("flag.fill", stats.totalDestinations, "total_destinations"),
+            ("globe.asia.australia.fill", stats.countries, "countries_visited"),
+            ("house.fill", stats.domesticDestinations, "domestic_travel"),
+            ("airplane", stats.internationalDestinations, "international_travel")
         ]
         
-        // 绘制时钟图标
-        if let iconImage = UIImage(systemName: "clock.fill") {
-            let iconSize: CGFloat = 24
-            let iconRect = CGRect(x: cardRect.minX + 30, y: currentY, width: iconSize, height: iconSize)
-            let tintedIcon = iconImage.withTintColor(UIColor.systemOrange, renderingMode: .alwaysOriginal)
-            tintedIcon.draw(in: iconRect)
+        for (index, item) in gridItems.enumerated() {
+            let col = index % 2
+            let row = index / 2
+            let cellX = pad + CGFloat(col) * (cellW + colGap)
+            let cellY = currentY + CGFloat(row) * (cellH + rowGap)
+            let cellRect = CGRect(x: cellX, y: cellY, width: cellW, height: cellH)
+            drawProfileStyleStatCell(
+                iconName: item.icon,
+                value: item.value,
+                label: item.labelKey.localized,
+                brandColor: brand,
+                in: cellRect
+            )
         }
         
-        let titleString = NSAttributedString(string: "stats_share_travel_timeline".localized, attributes: titleAttributes)
-        titleString.draw(at: CGPoint(x: cardRect.minX + 65, y: currentY))
+        currentY += cellH * 2 + rowGap + 32
+        return currentY
+    }
+    
+    private static func drawProfileStyleStatCell(
+        iconName: String,
+        value: Int,
+        label: String,
+        brandColor: UIColor,
+        in rect: CGRect
+    ) {
+        var y = rect.minY
+        let iconSide: CGFloat = 36
+        if let iconImage = UIImage(systemName: iconName) {
+            let iconRect = CGRect(x: rect.minX, y: y, width: iconSide, height: iconSide)
+            iconImage.withTintColor(brandColor, renderingMode: .alwaysOriginal).draw(in: iconRect)
+        }
+        y += iconSide + 14
         
-        currentY += 50
+        let valueAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.monospacedDigitSystemFont(ofSize: 58, weight: .black),
+            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0),
+            .kern: -1.2 as CGFloat
+        ]
+        let valueString = NSAttributedString(string: "\(value)", attributes: valueAttributes)
+        valueString.draw(at: CGPoint(x: rect.minX, y: y))
+        y += valueString.size().height + 10
         
-        // 绘制年份数据（最多10年）
-        let sortedYearlyData = yearlyData.sorted { $0.year > $1.year }.prefix(10)
+        let labelAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 22, weight: .regular),
+            .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0)
+        ]
+        let labelString = NSAttributedString(string: label, attributes: labelAttributes)
+        let maxLabelWidth = rect.width
+        let bounding = labelString.boundingRect(
+            with: CGSize(width: maxLabelWidth, height: CGFloat.greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        labelString.draw(in: CGRect(x: rect.minX, y: y, width: maxLabelWidth, height: ceil(bounding.height)))
+    }
+    
+    // MARK: - 足迹时光 / 时间线（无卡片底板，与 App 列表风格一致）
+    private static func drawTimeline(yearlyData: [(year: Int, count: Int)], at y: CGFloat, width: CGFloat, context: CGContext) -> CGFloat {
+        let pad: CGFloat = 60
+        let itemHeight: CGFloat = 78
+        let maxYears = min(yearlyData.count, 10)
+        let brand = shareBrandUIColor
         
-        for (index, data) in sortedYearlyData.enumerated() {
-            // 绘制年份 - 使用深灰色 #333333
+        var currentY = y + 8
+        
+        if let iconImage = UIImage(systemName: "clock.fill") {
+            let iconSize: CGFloat = 30
+            let iconRect = CGRect(x: pad, y: currentY, width: iconSize, height: iconSize)
+            iconImage.withTintColor(brand, renderingMode: .alwaysOriginal).draw(in: iconRect)
+        }
+        
+        let titleAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 32, weight: .semibold),
+            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0)
+        ]
+        let titleString = NSAttributedString(string: "travel_timeline".localized, attributes: titleAttributes)
+        titleString.draw(at: CGPoint(x: pad + 42, y: currentY + 4))
+        
+        currentY += 56
+        
+        let sortedYearlyData = Array(yearlyData.sorted { $0.year > $1.year }.prefix(10))
+        let maxCount = max(sortedYearlyData.map { $0.count }.max() ?? 1, 1)
+        
+        let leftColumnWidth: CGFloat = 120
+        let rightNumberReserve: CGFloat = 100
+        let barX = pad + leftColumnWidth
+        let barRight = width - pad - rightNumberReserve
+        let barWidth = max(barRight - barX, 80)
+        let barHeight: CGFloat = 10
+        
+        for data in sortedYearlyData {
             let yearAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 24, weight: .semibold),
-                .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
+                .font: UIFont.systemFont(ofSize: 28, weight: .semibold),
+                .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0)
             ]
             let yearString = NSAttributedString(string: "\(data.year)", attributes: yearAttributes)
-            yearString.draw(at: CGPoint(x: cardRect.minX + 40, y: currentY))
+            yearString.draw(at: CGPoint(x: pad, y: currentY))
             
-            // 绘制进度条
-            let barWidth: CGFloat = cardWidth - 280
-            let barHeight: CGFloat = 12
-            let barX = cardRect.minX + 160
-            let barY = currentY + 8
+            let captionAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 20, weight: .regular),
+                .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0)
+            ]
+            let captionString = NSAttributedString(string: "destinations_count".localized, attributes: captionAttributes)
+            captionString.draw(at: CGPoint(x: pad, y: currentY + 32))
             
-            // 背景条 - 使用米白色背景 #f7f2ea
+            let barY = currentY + 26
             let bgBarRect = CGRect(x: barX, y: barY, width: barWidth, height: barHeight)
             let bgBarPath = UIBezierPath(roundedRect: bgBarRect, cornerRadius: barHeight / 2)
             context.saveGState()
             context.addPath(bgBarPath.cgPath)
-            context.setFillColor(UIColor(red: 0.969, green: 0.949, blue: 0.918, alpha: 1.0).cgColor) // #f7f2ea
+            context.setFillColor(UIColor(white: 0, alpha: 0.08).cgColor)
             context.fillPath()
             context.restoreGState()
             
-            // 进度条（基于最大值计算比例）
-            let maxCount = sortedYearlyData.map { $0.count }.max() ?? 1
             let progress = CGFloat(data.count) / CGFloat(maxCount)
-            let progressWidth = max(barWidth * progress, 20) // 至少显示一点
+            let progressWidth = max(barWidth * progress, barHeight)
             
             let progressBarRect = CGRect(x: barX, y: barY, width: progressWidth, height: barHeight)
             let progressBarPath = UIBezierPath(roundedRect: progressBarRect, cornerRadius: barHeight / 2)
             
-            // 使用渐变色
             let colorSpace = CGColorSpaceCreateDeviceRGB()
-            let colors = [
-                UIColor.systemBlue.cgColor,
-                UIColor.systemPurple.cgColor
-            ] as CFArray
+            let colors = [brand.cgColor, UIColor.systemPurple.cgColor] as CFArray
             
-            guard let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: [0.0, 1.0]) else {
-                return currentY
+            if let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: [0.0, 1.0]) {
+                context.saveGState()
+                context.addPath(progressBarPath.cgPath)
+                context.clip()
+                context.drawLinearGradient(
+                    gradient,
+                    start: CGPoint(x: barX, y: barY),
+                    end: CGPoint(x: barX + progressWidth, y: barY + barHeight),
+                    options: []
+                )
+                context.restoreGState()
+            } else {
+                context.saveGState()
+                context.addPath(progressBarPath.cgPath)
+                context.setFillColor(brand.cgColor)
+                context.fillPath()
+                context.restoreGState()
             }
             
-            context.saveGState()
-            context.addPath(progressBarPath.cgPath)
-            context.clip()
-            context.drawLinearGradient(
-                gradient,
-                start: CGPoint(x: barX, y: barY),
-                end: CGPoint(x: barX + progressWidth, y: barY),
-                options: []
-            )
-            context.restoreGState()
-            
-            // 绘制数量 - 使用深灰色 #333333
             let countAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 22, weight: .bold),
-                .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
+                .font: UIFont.monospacedDigitSystemFont(ofSize: 36, weight: .black),
+                .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0),
+                .kern: -0.8 as CGFloat
             ]
             let countString = NSAttributedString(string: "\(data.count)", attributes: countAttributes)
             let countSize = countString.size()
-            countString.draw(at: CGPoint(x: cardRect.maxX - countSize.width - 40, y: currentY))
+            countString.draw(at: CGPoint(x: width - pad - countSize.width, y: currentY + 18))
             
             currentY += itemHeight
         }
         
-        return y + cardHeight
+        currentY += 28
+        return currentY
     }
     
     // MARK: - 底部标识

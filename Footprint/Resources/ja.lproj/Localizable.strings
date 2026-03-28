@@ -181,6 +181,11 @@
 "map" = "地図";
 "footprint_map" = "足跡";
 "trips" = "旅程";
+"journey_cards_tab" = "旅程カード";
+"journey_cards_empty_hint" = "「旅程」で旅程を作成すると、ここに表示されます。";
+"journey_cards_focused_a11y" = "選択中";
+"journey_cards_destinations_count" = "%d か所";
+"journey_cards_total_mileage" = "総走行距離";
 "profile" = "マイページ";
 "create_trip" = "旅程を追加";
 "import_trip" = "旅程をインポート";
