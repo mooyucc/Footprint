@@ -467,6 +467,7 @@
 "edit_trip" = "Modifier le voyage";
 "delete_trip" = "Supprimer le voyage";
 "confirm_delete_trip" = "Êtes-vous sûr de vouloir supprimer ce voyage ? Cette action ne peut pas être annulée.";
+"no_destinations_added" = "Aucune destination ajoutée pour le moment";
 
 // Trip Share Image
 "select_layout" = "Sélectionner la mise en page de partage";

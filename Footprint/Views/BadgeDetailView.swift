@@ -18,7 +18,9 @@ struct BadgeDetailView: View {
     
     @Binding var isPresented: Bool
     @State private var isFlipped = false
+    @State private var animatedLocationCount: Double = 0
     @Environment(\.colorScheme) var colorScheme
+    @EnvironmentObject private var brandColorManager: BrandColorManager
     
     // 3D翻转动画
     @State private var rotationAngle: Double = 0
@@ -107,6 +109,16 @@ struct BadgeDetailView: View {
             }
             .navigationBarHidden(true)
             .statusBarHidden()
+            .onChange(of: isFlipped) { _, newValue in
+                if newValue && !destinations.isEmpty {
+                    animateLocationCount(resetToZero: true)
+                }
+            }
+            .onChange(of: destinations.count) { _, _ in
+                if isFlipped && !destinations.isEmpty {
+                    animateLocationCount(resetToZero: false)
+                }
+            }
         }
     }
     
@@ -233,43 +245,30 @@ struct BadgeDetailView: View {
     
     // MARK: - 背面视图（地点列表）
     
+    /// 与《现代 UI 风格指南》一致：渐变底上直接铺列表，无外层大白卡；区块标题为品牌色图标 + 主色标题。
     private var destinationsBackView: some View {
-        VStack(spacing: 0) {
-            // 标题栏
-            VStack(spacing: 8) {
-                Text(title)
-                    .font(.system(size: 32, weight: .bold))
-                    .foregroundColor(.primary)
-                    .padding(.top, 60)
+        let primaryText = AppColorScheme.primaryText(for: colorScheme)
+        let sorted = destinations.sorted(by: { $0.visitDate > $1.visitDate })
+        
+        return ScrollView {
+            LazyVStack(alignment: .leading, spacing: 20) {
+                badgeDestinationsHeader(primaryText: primaryText)
                 
-                if !destinations.isEmpty {
-                    HStack(spacing: 6) {
-                        Image(systemName: "mappin.circle.fill")
-                            .font(.system(size: 16))
-                            .foregroundColor(AppColorScheme.iconColor)
-                        Text("\(destinations.count) " + "locations".localized)
-                            .font(.system(size: 18))
+                if destinations.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "mappin.slash")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.tertiary)
+                        Text("no_destinations".localized)
+                            .font(.subheadline)
                             .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
                     }
-                }
-            }
-            .padding(.bottom, 20)
-            
-            // 地点列表
-            if destinations.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "mappin.slash")
-                        .font(.system(size: 48))
-                        .foregroundStyle(.tertiary)
-                    Text("no_destinations".localized)
-                        .font(.system(size: 18))
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                ScrollView {
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 32)
+                } else {
                     LazyVStack(alignment: .leading, spacing: 12) {
-                        ForEach(destinations.sorted(by: { $0.visitDate > $1.visitDate })) { destination in
+                        ForEach(sorted) { destination in
                             NavigationLink {
                                 DestinationDetailView(destination: destination)
                             } label: {
@@ -278,21 +277,64 @@ struct BadgeDetailView: View {
                             .buttonStyle(PlainButtonStyle())
                         }
                     }
-                    .padding(20)
-                    .background(AppColorScheme.whiteCardBackground(for: colorScheme))
-                    .cornerRadius(20)
-                    .shadow(
-                        color: AppColorScheme.largeCardShadow.color,
-                        radius: AppColorScheme.largeCardShadow.radius,
-                        x: AppColorScheme.largeCardShadow.x,
-                        y: AppColorScheme.largeCardShadow.y
-                    )
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 16)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 56)
+            .padding(.bottom, 100)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+    
+    @ViewBuilder
+    private func badgeDestinationsHeader(primaryText: Color) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "mappin.and.ellipse")
+                    .font(.headline)
+                    .foregroundColor(brandColorManager.currentBrandColor)
+                
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(title)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(primaryText)
+                        .fixedSize(horizontal: false, vertical: true)
+                    
+                    if !destinations.isEmpty {
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Text("\(Int(animatedLocationCount.rounded()))")
+                                .font(.system(size: 34, weight: .black, design: .default))
+                                .tracking(-0.8)
+                                .foregroundStyle(.primary)
+                                .monospacedDigit()
+                                .contentTransition(.numericText(value: animatedLocationCount))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.65)
+                            Text("locations".localized)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .padding(.bottom, 2)
+                        }
+                    }
+                    
+                    if let yearRange = yearRange, !yearRange.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "calendar")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                            Text(yearRange)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                
+                Spacer(minLength: 0)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
     
     // MARK: - 辅助方法
@@ -307,6 +349,22 @@ struct BadgeDetailView: View {
             isFlipped.toggle()
         }
     }
+    
+    private func animateLocationCount(resetToZero: Bool) {
+        let target = Double(destinations.count)
+        if resetToZero {
+            animatedLocationCount = 0
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+                withAnimation(.easeOut(duration: 0.9)) {
+                    animatedLocationCount = target
+                }
+            }
+        } else {
+            withAnimation(.easeOut(duration: 0.55)) {
+                animatedLocationCount = target
+            }
+        }
+    }
 }
 
 #Preview {
@@ -319,5 +377,6 @@ struct BadgeDetailView: View {
         badgeType: .country,
         isPresented: .constant(true)
     )
+    .environmentObject(BrandColorManager.shared)
 }
 

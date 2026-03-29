@@ -62,6 +62,10 @@ struct ContentView: View {
         .tint(brandColorManager.currentBrandColor) // 使用品牌主题色，确保所有 tab 一致，并响应颜色变化
         .onAppear {
             configureTabBarAppearance(for: colorScheme, brandColor: brandColorManager.currentBrandColor)
+            // 默认选中足迹地图 tab 时不会触发 onChange(selectedTab)，定位改由此处与 scenePhase 统一启动（原 MapView.onAppear 已仅用于嵌入全屏地图）
+            if selectedTab == 0 {
+                LocationManager.shared.startUpdatingLocation()
+            }
         }
         .onChange(of: colorScheme) { newScheme in
             configureTabBarAppearance(for: newScheme, brandColor: brandColorManager.currentBrandColor)
@@ -84,12 +88,8 @@ struct ContentView: View {
             }
         }
         .onChange(of: selectedTab) { oldValue, newValue in
-            // 当切换 tab 时重新应用配置，确保颜色正确
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                configureTabBarAppearance(for: colorScheme, brandColor: brandColorManager.currentBrandColor)
-            }
-            
-            // 性能优化：根据 tab 切换管理实时定位
+            // Tab 切换不再重复 configureTabBarAppearance：全局 appearance 已在 onAppear / 主题与深浅色变化时设置；
+            // 此前每次切换递归整窗 UIView + layoutIfNeeded 会加重首切 Tab 时的主线程卡顿。
             let locationManager = LocationManager.shared
             if newValue == 0 {
                 // 切换到地图 tab（足迹地图），启动实时定位
@@ -166,26 +166,43 @@ struct ContentView: View {
             for: .normal
         )
         
-        // 强制刷新所有现有的 TabBar 实例
+        // 仅沿 UIViewController 树查找 UITabBarController，避免遍历 Map 等深层 UIView 子树
         DispatchQueue.main.async {
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-                windowScene.windows.forEach { window in
-                    // 递归查找并更新所有 TabBar
-                    func updateTabBar(_ view: UIView) {
-                        if let tabBar = view as? UITabBar {
-                            tabBar.tintColor = selectedColor
-                            tabBar.unselectedItemTintColor = unselectedColor
-                            tabBar.standardAppearance = appearance
-                            tabBar.scrollEdgeAppearance = appearance
-                            // 强制刷新 TabBar 的布局
-                            tabBar.setNeedsLayout()
-                            tabBar.layoutIfNeeded()
-                        }
-                        view.subviews.forEach { updateTabBar($0) }
+            Self.refreshTabBarsInKeyWindows(
+                appearance: appearance,
+                selectedColor: selectedColor,
+                unselectedColor: unselectedColor
+            )
+        }
+    }
+    
+    /// 在窗口的根/子/模态 VC 链上查找 `UITabBarController`，更新其 `tabBar`（不做整树 `layoutIfNeeded`）。
+    private static func refreshTabBarsInKeyWindows(
+        appearance: UITabBarAppearance,
+        selectedColor: UIColor,
+        unselectedColor: UIColor
+    ) {
+        for scene in UIApplication.shared.connectedScenes {
+            guard let windowScene = scene as? UIWindowScene else { continue }
+            for window in windowScene.windows {
+                guard let root = window.rootViewController else { continue }
+                var stack: [UIViewController] = [root]
+                var i = 0
+                while i < stack.count {
+                    let vc = stack[i]
+                    i += 1
+                    if let tab = vc as? UITabBarController {
+                        let bar = tab.tabBar
+                        bar.tintColor = selectedColor
+                        bar.unselectedItemTintColor = unselectedColor
+                        bar.standardAppearance = appearance
+                        bar.scrollEdgeAppearance = appearance
+                        bar.setNeedsLayout()
                     }
-                    if let rootView = window.rootViewController?.view {
-                        updateTabBar(rootView)
+                    if let presented = vc.presentedViewController {
+                        stack.append(presented)
                     }
+                    stack.append(contentsOf: vc.children)
                 }
             }
         }

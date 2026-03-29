@@ -13,6 +13,10 @@ struct EditTripView: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var trip: TravelTrip
     
+    /// 文本编辑使用本地状态，避免每个按键都写入 SwiftData 模型导致输入卡顿（与 `EditDestinationView` 一致）。
+    @State private var editedName: String = ""
+    @State private var editedDesc: String = ""
+    
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var showingImagePicker = false
     @EnvironmentObject var languageManager: LanguageManager
@@ -21,10 +25,10 @@ struct EditTripView: View {
         NavigationStack {
             Form {
                 Section(header: Text("trip_info".localized)) {
-                    TextField("trip_name".localized, text: $trip.name)
+                    TextField("trip_name".localized, text: $editedName)
                         .textInputAutocapitalization(.words)
                     
-                    TextField("description_optional".localized, text: $trip.desc, axis: .vertical)
+                    TextField("description_optional".localized, text: $editedDesc, axis: .vertical)
                         .lineLimit(3...6)
                 }
                 
@@ -94,6 +98,7 @@ struct EditTripView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("done".localized) {
+                        applyEditedTextToTrip()
                         dismiss()
                     }
                     .fontWeight(.semibold)
@@ -111,7 +116,19 @@ struct EditTripView: View {
                     }
                 }
             }
+            .onAppear {
+                editedName = trip.name
+                editedDesc = trip.desc
+            }
+            .onDisappear {
+                applyEditedTextToTrip()
+            }
         }
+    }
+    
+    private func applyEditedTextToTrip() {
+        trip.name = editedName
+        trip.desc = editedDesc
     }
 }
 

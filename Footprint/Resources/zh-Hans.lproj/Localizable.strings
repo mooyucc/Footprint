@@ -450,6 +450,7 @@
 "edit_trip" = "编辑旅程";
 "delete_trip" = "删除旅程";
 "confirm_delete_trip" = "确定要删除此旅程吗？此操作无法撤销。";
+"no_destinations_added" = "还没有添加目的地";
 
 // Trip Share Image
 "select_layout" = "选择分享版面";

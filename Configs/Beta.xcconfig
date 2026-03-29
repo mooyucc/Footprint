@@ -1,5 +1,5 @@
 // Beta/Test configuration for Footprint
-CURRENT_PROJECT_VERSION = 2010
+CURRENT_PROJECT_VERSION = 2011
 MARKETING_VERSION = 2.20
 PRODUCT_BUNDLE_IDENTIFIER = Mooyu.Footprint.beta
 PRODUCT_NAME = "Footprint Test"

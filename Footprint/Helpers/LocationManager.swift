@@ -106,7 +106,8 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
     
     /// 停止持续定位更新（节省电量）
-    func stopUpdatingLocation() {
+    /// - Parameter resetDeliveryState: 为 `true` 时重置「首次 fix」相关状态（如权限被拒）；为 `false` 时保留，避免仅因进后台/切 tab 再次前台时重复走冷启动定位逻辑、加重主线程突发负载。
+    func stopUpdatingLocation(resetDeliveryState: Bool = false) {
         guard isUpdatingLocation else {
             return
         }
@@ -114,14 +115,15 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         locationManager.stopUpdatingLocation()
         isUpdatingLocation = false
         
-        // 清理状态
         lastProcessedLocation = nil
         lastUpdateTime = nil
         consecutiveLowAccuracyCount = 0
         lastSpeed = 0.0
         lastLocationAccuracy = nil
-        hasDeliveredInitialFix = false
-        lastDeliveredAccuracy = .greatestFiniteMagnitude
+        if resetDeliveryState {
+            hasDeliveredInitialFix = false
+            lastDeliveredAccuracy = .greatestFiniteMagnitude
+        }
         
         print("📍 停止持续定位更新")
     }
@@ -241,7 +243,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         case CLError.denied.rawValue:
             // 用户拒绝授权
             print("❌ 位置权限被拒绝")
-            stopUpdatingLocation()
+            stopUpdatingLocation(resetDeliveryState: true)
             
         case CLError.network.rawValue:
             // 网络错误

@@ -875,9 +875,11 @@ struct MapView: View {
         lastDestinationsSignature = destinationsSignature
         startPeriodicCheck()
         
-        // 重新启动持续定位更新（如果之前在视图消失时被停止）
-        // LocationManager 内部有保护机制，如果已经在更新则不会重复启动
-        locationManager.startUpdatingLocation()
+        // 主 Tab 地图的定位启停由 ContentView（scenePhase + 选中 tab）统一管理，避免与 onDisappear 重复 stop/start。
+        // 仅嵌入全屏旅程地图（sheet）时需在此自行启动（此时通常不在「足迹地图」tab）。
+        if mapViewInNavigationStack {
+            locationManager.startUpdatingLocation()
+        }
         
         // 如果应用还未就绪（启动画面还在显示），延迟设置地图相机位置
         if !isAppReady {
@@ -949,7 +951,9 @@ struct MapView: View {
         updateTimer?.invalidate()
         updateTimer = nil
         stopPeriodicCheck()
-        locationManager.stopUpdatingLocation()
+        if mapViewInNavigationStack {
+            locationManager.stopUpdatingLocation()
+        }
         geocodeTimeoutTimer?.invalidate()
         geocodeTimeoutTimer = nil
         pendingGeocodeCoordinate = nil

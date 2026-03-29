@@ -92,6 +92,7 @@
 "show_all_destinations" = "सभी स्थान";
 "all_destinations" = "सभी गंतव्य";
 "no_destinations_found" = "कोई गंतव्य नहीं मिला";
+"no_destinations_added" = "अभी कोई गंतव्य नहीं जोड़ा गया";
 
 // Discover Map
 "map_mode_my_footprints" = "मेरा मानचित्र";

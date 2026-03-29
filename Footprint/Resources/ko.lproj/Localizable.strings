@@ -477,6 +477,7 @@
 "edit_trip" = "여행 편집";
 "delete_trip" = "여행 삭제";
 "confirm_delete_trip" = "이 여행을 삭제하시겠습니까? 이 작업은 실행 취소할 수 없습니다.";
+"no_destinations_added" = "아직 목적지가 추가되지 않았습니다";
 
 // Trip Share Image
 "select_layout" = "공유 레이아웃 선택";
