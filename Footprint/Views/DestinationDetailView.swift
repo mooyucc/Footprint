@@ -31,6 +31,8 @@ struct DestinationDetailView: View {
     @State private var videoURL: URL?
     @State private var showingSelectTrip = false
     @State private var showingAINotePreview = false
+    @State private var showingShareLayoutSelection = false
+    @State private var selectedDestinationLayout: DestinationShareLayout = .classic
     
     // 媒体项类型：照片或视频
     enum MediaItem: Identifiable {
@@ -74,7 +76,7 @@ struct DestinationDetailView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: 12) {
                         Button {
-                            shareDestination()
+                            showingShareLayoutSelection = true
                         } label: {
                             Image(systemName: "square.and.arrow.up")
                                 .foregroundColor(.primary)
@@ -122,6 +124,12 @@ struct DestinationDetailView: View {
                 } else {
                     SystemShareSheet(items: [item.text])
                 }
+            }
+            .sheet(isPresented: $showingShareLayoutSelection) {
+                DestinationShareLayoutSelectionView(
+                    destination: destination,
+                    selectedLayout: $selectedDestinationLayout
+                )
             }
             .sheet(isPresented: $showingSelectTrip) {
                 SelectOrCreateTripView(destination: destination)

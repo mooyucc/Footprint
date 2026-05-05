@@ -55,7 +55,7 @@ struct YearShareLayoutSelectionView: View {
                             } else {
                                 Image(systemName: "square.and.arrow.up")
                             }
-                            Text(isGenerating ? "正在生成..." : "share".localized)
+                            Text(isGenerating ? "share_generating".localized : "share".localized)
                         }
                         .font(.headline)
                         .foregroundColor(.white)

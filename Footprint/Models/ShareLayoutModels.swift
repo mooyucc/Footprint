@@ -62,19 +62,19 @@ enum TripShareLayout: String, CaseIterable, Identifiable {
 // MARK: - 地点分享版面类型枚举
 enum DestinationShareLayout: String, CaseIterable, Identifiable {
     case classic = "classic"           // 经典版面（原有样式）
-    case posterPromo = "posterPromo"  // 宣传海报样式（大图+小图）
-    case posterCollage = "posterCollage" // 拼贴海报样式（3x3网格）
+    case modernPoster = "modernPoster"   // 现代海报风格版面
+    case circlePoster = "circlePoster"   // 极简海报版面（圆形构图实现）
     
     var id: String { rawValue }
     
     var displayName: String {
         switch self {
         case .classic:
-            return "经典版面"
-        case .posterPromo:
-            return "宣传海报"
-        case .posterCollage:
-            return "拼贴海报"
+            return "destination_share_layout_classic".localized
+        case .modernPoster:
+            return "destination_share_layout_modern_poster".localized
+        case .circlePoster:
+            return "destination_share_layout_circle_poster".localized
         }
     }
     
@@ -82,21 +82,21 @@ enum DestinationShareLayout: String, CaseIterable, Identifiable {
         switch self {
         case .classic:
             return "rectangle.portrait"
-        case .posterPromo:
-            return "photo.on.rectangle.angled"
-        case .posterCollage:
-            return "square.grid.3x3"
+        case .modernPoster:
+            return "chart.bar.fill"
+        case .circlePoster:
+            return "circle.lefthalf.filled"
         }
     }
     
     var description: String {
         switch self {
         case .classic:
-            return "传统的垂直布局，适合展示详细信息"
-        case .posterPromo:
-            return "突出主图，底部配小图，适合宣传推广"
-        case .posterCollage:
-            return "3x3网格拼贴，展示多张照片，适合旅行记录"
+            return "destination_share_layout_classic_desc".localized
+        case .modernPoster:
+            return "destination_share_layout_modern_poster_desc".localized
+        case .circlePoster:
+            return "destination_share_layout_circle_poster_desc".localized
         }
     }
 }

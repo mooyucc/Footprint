@@ -5,10 +5,15 @@
 
 PROJECT_DIR="/Users/kevinx/Documents/Ai Project/Footprint"
 PROJECT_FILE="$PROJECT_DIR/Footprint.xcodeproj/project.pbxproj"
+VERSION_CONFIG="$PROJECT_DIR/Configs/Version.xcconfig"
 VERSION_LOG="$PROJECT_DIR/版本记录.md"
 
 # 提取版本信息
-MARKETING_VERSION=$(grep -o 'MARKETING_VERSION = [^;]*' "$PROJECT_FILE" | head -1 | sed 's/MARKETING_VERSION = //')
+if [ -f "$VERSION_CONFIG" ]; then
+    MARKETING_VERSION=$(grep -m1 '^MARKETING_VERSION' "$VERSION_CONFIG" | sed 's/MARKETING_VERSION = //' | tr -d ' ')
+else
+    MARKETING_VERSION=$(grep -o 'MARKETING_VERSION = [^;]*' "$PROJECT_FILE" | head -1 | sed 's/MARKETING_VERSION = //')
+fi
 CURRENT_PROJECT_VERSION=$(grep -o 'CURRENT_PROJECT_VERSION = [^;]*' "$PROJECT_FILE" | head -1 | sed 's/CURRENT_PROJECT_VERSION = //')
 CURRENT_DATE=$(date '+%Y-%m-%d')
 CURRENT_TIME=$(date '+%H:%M:%S')

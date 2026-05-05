@@ -153,14 +153,8 @@
 "beta_reminder_subtitle" = "This is a beta build. It is valid for 7 days.";
 "beta_reminder_countdown" = "Days remaining: %d";
 "beta_reminder_expiry_date" = "Expires on %@";
-"beta_reminder_backup_tip" = "Please export a local backup via Me > Settings > Data to avoid data loss after the test build expires.";
-"beta_reminder_backup_button" = "How to back up";
+"beta_reminder_backup_tip" = "데이터 보안을 위해 정식 버전을 다운로드하여 사용하세요.";
 "beta_reminder_continue_button" = "Open MooFootprint Beta";
-"beta_reminder_backup_guide_title" = "Backup guide";
-"beta_reminder_backup_guide_message" = "Open Me > Settings > Data > Export Local Data to generate a backup package. Save it to iCloud Drive or locally so you can re-import after updating to a new build.";
-"beta_reminder_backup_step1" = "Me → Settings → Data";
-"beta_reminder_backup_step2" = "Tap “Export Local Data” to create a backup package";
-"beta_reminder_backup_step3" = "Save the backup to iCloud Drive or local storage";
 
 // Beta Expired
 "beta_expired_title" = "Test build expired";
@@ -503,6 +497,15 @@
 "trip_share_layout_list_desc" = "커버, 시간 카드 및 전체 여행 경로를 포함한 상세한 여행 정보";
 "trip_share_layout_extended_grid" = "그리드 보기";
 "trip_share_layout_extended_grid_desc" = "그리드 레이아웃으로 모든 목적지 사진 표시, 9개 이상의 장소 지원";
+
+// Destination share image layouts
+"destination_share_layout_classic" = "클래식";
+"destination_share_layout_classic_desc" = "전통적인 세로 레이아웃으로 상세 정보 표시에 적합합니다";
+"destination_share_layout_modern_poster" = "모던 포스터";
+"destination_share_layout_modern_poster_desc" = "미니멀 포스터 스타일로 장소 이야기와 분위기 표현에 적합합니다";
+"destination_share_layout_circle_poster" = "미니멀 스타일 포스터";
+"destination_share_layout_circle_poster_desc" = "미니멀 스타일 레이아웃으로 원과 사각형을 겹친 타이포그래피, 제목과 여백·공간의 균형을 강조합니다";
+"share_generating" = "생성 중…";
 
 // Travel Stats Share Image
 "stats_share_my_travel_footprint" = "내 여행 발자국";

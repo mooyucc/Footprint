@@ -147,3 +147,12 @@
 "journey_cards_focused_a11y" = "चयनित";
 "journey_cards_destinations_count" = "%d गंतव्य";
 "journey_cards_total_mileage" = "कुल दूरी";
+
+// Destination share image layouts
+"destination_share_layout_classic" = "क्लासिक लेआउट";
+"destination_share_layout_classic_desc" = "पारंपरिक लंबवत लेआउट, विस्तृत जानकारी के लिए उपयुक्त";
+"destination_share_layout_modern_poster" = "आधुनिक पोस्टर";
+"destination_share_layout_modern_poster_desc" = "न्यूनतम पोस्टर शैली, स्थान की कहानियों और माहौल के लिए उपयुक्त";
+"destination_share_layout_circle_poster" = "मिनिमलिस्ट शैली पोस्टर";
+"destination_share_layout_circle_poster_desc" = "मिनिमलिस्ट शैली का लेआउट — ओवरलैपिंग वृत्त और आयत के साथ टाइपोग्राफी; शीर्षक, खाली जगह और दृश्य संतुलन पर जोर";
+"share_generating" = "बना रहे हैं…";

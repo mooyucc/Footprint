@@ -18,6 +18,8 @@ struct DestinationPreviewCard: View {
     @State private var shareItem: TripShareItem?
     @State private var showingSelectTrip = false
     @State private var showingAINotePreview = false
+    @State private var showingShareLayoutSelection = false
+    @State private var selectedDestinationLayout: DestinationShareLayout = .classic
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var entitlementManager: EntitlementManager
     @EnvironmentObject private var aiCreditManager: AICreditManager
@@ -90,7 +92,7 @@ struct DestinationPreviewCard: View {
                 HStack(spacing: 5) {
                     // 分享按钮
                     Button {
-                        shareDestination()
+                        showingShareLayoutSelection = true
                     } label: {
                         Image(systemName: "square.and.arrow.up")
                             .font(.system(size: 16, weight: .semibold))
@@ -202,6 +204,12 @@ struct DestinationPreviewCard: View {
                 .stroke(Color.white.opacity(0.9), lineWidth: 2)
         )
         .shadow(color: .black.opacity(0.15), radius: 6, x: 0, y: 3)
+        .sheet(isPresented: $showingShareLayoutSelection) {
+            DestinationShareLayoutSelectionView(
+                destination: destination,
+                selectedLayout: $selectedDestinationLayout
+            )
+        }
     }
     
     // 切换喜爱状态的方法
@@ -212,13 +220,8 @@ struct DestinationPreviewCard: View {
         }
     }
     
-    // 分享地点图片
-    private func shareDestination() {
-        // 生成地点分享图片
-        let destinationImage = TripImageGenerator.generateDestinationImage(from: destination)
-        // 只分享图片，不分享文字（因为所有信息都已经包含在图片中）
-        shareItem = TripShareItem(text: "", image: destinationImage)
-    }
+    // 分享地点图片（由版面选择视图处理，保留方法占位）
+    private func shareDestination() { }
 }
 
 // MARK: - POI预览卡片

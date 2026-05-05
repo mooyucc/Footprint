@@ -106,6 +106,11 @@ struct BadgeView: View {
         guard statistics.total > 0 else { return 0 }
         return CGFloat(statistics.unlocked) / CGFloat(statistics.total) * 100
     }
+
+    /// 是否显示进度卡片
+    private var shouldShowProgressCard: Bool {
+        selectedType == .country || (selectedType == .province && isCurrentCountryChina)
+    }
     
     /// 获取已激活的国家勋章列表（只显示已解锁的）
     private var unlockedCountryBadges: [CountryBadge] {
@@ -379,67 +384,19 @@ struct BadgeView: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 
-                // 进度条统计信息（黑色卡片样式）
-                // 只有在国家勋章模式，或者省份勋章模式且当前国家是中国时才显示
-                if selectedType == .country || (selectedType == .province && isCurrentCountryChina) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        HStack {
-                            // 标题：品牌红色
-                            Text("badges_progress".localized)
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(AppColorScheme.iconColor)
-                            
-                            Spacer()
-                        }
-                        
-                        HStack(alignment: .center, spacing: 16) {
-                            // 左侧：大数字主视觉（适配深浅模式）
-                            HStack(alignment: .firstTextBaseline, spacing: 3) {
-                                Text("\(Int(animatedProgressPercentage.rounded()))")
-                                    .font(.system(size: 56, weight: .black, design: .default))
-                                    .tracking(-1)
-                                    .foregroundStyle(.primary)
-                                    .monospacedDigit()
-                                    .contentTransition(.numericText(value: animatedProgressPercentage))
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.65)
-                                
-                                Text("%")
-                                    .font(.system(size: 36, weight: .black, design: .default))
-                                    .tracking(-0.5)
-                                    .foregroundStyle(.primary)
-                                    .baselineOffset(2)
-                            }
-                            
-                            Spacer(minLength: 0)
-                            
-                            // 右侧：环形表达 14/119（参考附图2）
-                            BadgeProgressRingView(
-                                unlocked: statistics.unlocked,
-                                total: statistics.total,
-                                badgeLabel: selectedType == .country ? "country_badges".localized : "province_badges".localized
-                            )
-                        }
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 14)
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
-                }
-                
                 // 勋章网格
                 GeometryReader { geometry in
                     let screenWidth = geometry.size.width
                     let horizontalPadding: CGFloat = 16
                     let columnSpacing: CGFloat = 16
                     let numberOfColumns: CGFloat = 3
+                    let progressCardHeight: CGFloat = shouldShowProgressCard ? 150 : 0
                     
                     // 计算每个卡片的宽度：可用宽度 = 屏幕宽度 - 左右padding - 列间距
                     let availableWidth = screenWidth - (horizontalPadding * 2) - (columnSpacing * (numberOfColumns - 1))
                     let cardWidth = availableWidth / numberOfColumns
                     
-                    ZStack {
+                    ZStack(alignment: .top) {
                         ScrollView {
                             LazyVGrid(
                                 columns: [
@@ -528,9 +485,59 @@ struct BadgeView: View {
                                 }
                             }
                             .padding(.horizontal, horizontalPadding)
-                            .padding(.vertical, 16)
+                            .padding(.top, shouldShowProgressCard ? progressCardHeight : 16)
+                            .padding(.bottom, 16)
                         }
                         
+                        if shouldShowProgressCard {
+                            VStack(alignment: .leading, spacing: 10) {
+                                HStack {
+                                    // 标题：品牌红色
+                                    Text("badges_progress".localized)
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(AppColorScheme.iconColor)
+                                    
+                                    Spacer()
+                                }
+                                
+                                HStack(alignment: .center, spacing: 16) {
+                                    // 左侧：大数字主视觉（适配深浅模式）
+                                    HStack(alignment: .firstTextBaseline, spacing: 3) {
+                                        Text("\(Int(animatedProgressPercentage.rounded()))")
+                                            .font(.system(size: 56, weight: .black, design: .default))
+                                            .tracking(-1)
+                                            .foregroundStyle(.primary)
+                                            .monospacedDigit()
+                                            .contentTransition(.numericText(value: animatedProgressPercentage))
+                                            .lineLimit(1)
+                                            .minimumScaleFactor(0.65)
+                                        
+                                        Text("%")
+                                            .font(.system(size: 36, weight: .black, design: .default))
+                                            .tracking(-0.5)
+                                            .foregroundStyle(.primary)
+                                            .baselineOffset(2)
+                                    }
+                                    
+                                    Spacer(minLength: 0)
+                                    
+                                    // 右侧：环形表达 14/119（参考附图2）
+                                    BadgeProgressRingView(
+                                        unlocked: statistics.unlocked,
+                                        total: statistics.total,
+                                        badgeLabel: selectedType == .country ? "country_badges".localized : "province_badges".localized
+                                    )
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 14)
+                            .badgeProgressGlassCard()
+                            .padding(.horizontal, 16)
+                            .padding(.top, 4)
+                            .zIndex(1)
+                        }
+
                         // 加载指示器
                         if isLoading && cachedSortedCountryBadges.isEmpty {
                             ProgressView()
@@ -630,6 +637,28 @@ struct BadgeView: View {
             withAnimation(.easeOut(duration: 0.55)) {
                 animatedProgressPercentage = target
             }
+        }
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func badgeProgressGlassCard() -> some View {
+        if #available(iOS 26, *) {
+            self
+                .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 18, style: .continuous))
+                .contentShape(.rect(cornerRadius: 18, style: .continuous))
+                .shadow(color: .black.opacity(0.18), radius: 10, x: 0, y: 6)
+        } else {
+            self
+                .background(.regularMaterial)
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 6)
         }
     }
 }

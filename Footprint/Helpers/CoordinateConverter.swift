@@ -73,15 +73,34 @@ struct CoordinateConverter {
     
     // MARK: - 辅助方法
     
-    /// 判断坐标是否在中国境外
-    /// - Parameter coord: 要判断的坐标
-    /// - Returns: 如果坐标在中国境外返回 true，否则返回 false
+    /// 判断坐标是否在中国境外（用于决定是否对 WGS84 做 GCJ-02 偏移）
+    ///
+    /// **说明**：网上常见的「粗经纬矩形」会把马来西亚、菲律宾大部、泰国南部等划进矩形内，
+    /// 若不做额外排除会对这些地区误套 GCJ，产生数百米级偏移（例如沙巴亚庇）。
+    /// - 中国大陆（含海南陆地）、港澳等地区：矩形内且未被下方规则排除 → 需 GCJ 与内地地图对齐。
+    /// - 台湾岛：国际版 Apple 地图等为 WGS84，不应叠加 GCJ。
+    /// - 北纬 18° 以南且在粗矩形内：多为东南亚等，使用 WGS84。
     static func isOutOfChina(_ coord: CLLocationCoordinate2D) -> Bool {
         let lat = coord.latitude
         let lon = coord.longitude
         
-        // 中国大致经纬度范围（含港澳台）
-        return lat < 0.8293 || lat > 55.8271 || lon < 72.004 || lon > 137.8347
+        // 快速排除：完全落在常见「中国周边」包络盒之外
+        if lat < 0.8293 || lat > 55.8271 || lon < 72.004 || lon > 137.8347 {
+            return true
+        }
+        
+        // 粗矩形南侧包含了东南亚多国 —— 一律视为境外（WGS84）
+        // 海南陆地最南端约北纬 18°10′ 一线；此阈值以下旅行场景按境外处理即可。
+        if lat < 18.0 {
+            return true
+        }
+        
+        // 台湾岛周边（国际底图普遍为 WGS84；叠加 GCJ 会整体偏移）
+        if lat >= 21.2 && lat <= 25.9 && lon >= 119.0 && lon <= 122.2 {
+            return true
+        }
+        
+        return false
     }
     
     /// 判断坐标是否在中国境内

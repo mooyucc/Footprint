@@ -153,14 +153,8 @@
 "beta_reminder_subtitle" = "This is a beta build. It is valid for 7 days.";
 "beta_reminder_countdown" = "Days remaining: %d";
 "beta_reminder_expiry_date" = "Expires on %@";
-"beta_reminder_backup_tip" = "Please export a local backup via Me > Settings > Data to avoid data loss after the test build expires.";
-"beta_reminder_backup_button" = "How to back up";
+"beta_reminder_backup_tip" = "データの安全のため、正式版をダウンロードしてご利用ください。";
 "beta_reminder_continue_button" = "Open MooFootprint Beta";
-"beta_reminder_backup_guide_title" = "Backup guide";
-"beta_reminder_backup_guide_message" = "Open Me > Settings > Data > Export Local Data to generate a backup package. Save it to iCloud Drive or locally so you can re-import after updating to a new build.";
-"beta_reminder_backup_step1" = "Me → Settings → Data";
-"beta_reminder_backup_step2" = "Tap “Export Local Data” to create a backup package";
-"beta_reminder_backup_step3" = "Save the backup to iCloud Drive or local storage";
 
 // Beta Expired
 "beta_expired_title" = "Test build expired";
@@ -507,6 +501,15 @@
 "trip_share_layout_list_desc" = "カバー、時間カード、完全な旅程ルートを含む詳細な旅程情報";
 "trip_share_layout_extended_grid" = "グリッドビュー";
 "trip_share_layout_extended_grid_desc" = "グリッドレイアウトですべての目的地の写真を表示、9つ以上の場所をサポート";
+
+// Destination share image layouts
+"destination_share_layout_classic" = "クラシック";
+"destination_share_layout_classic_desc" = "伝統的な縦型レイアウトで、詳しい情報の表示に適しています";
+"destination_share_layout_modern_poster" = "モダンポスター";
+"destination_share_layout_modern_poster_desc" = "ミニマルなポスター調で、場所のストーリーと雰囲気の表現に適しています";
+"destination_share_layout_circle_poster" = "ミニマリストポスター";
+"destination_share_layout_circle_poster_desc" = "ミニマリストスタイルのレイアウトで、円と長方形を重ねたタイポグラフィ。タイトルと余白・空間のバランスを引き立てます";
+"share_generating" = "生成中…";
 
 // Travel Stats Share Image
 "stats_share_my_travel_footprint" = "私の旅行足跡";

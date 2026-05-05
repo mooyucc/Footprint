@@ -15,6 +15,7 @@ NC='\033[0m' # No Color
 # 项目路径
 PROJECT_DIR="/Users/kevinx/Documents/Ai Project/Footprint"
 PROJECT_FILE="$PROJECT_DIR/Footprint.xcodeproj/project.pbxproj"
+VERSION_CONFIG="$PROJECT_DIR/Configs/Version.xcconfig"
 VERSION_LOG="$PROJECT_DIR/版本记录.md"
 TEMP_FILE="/tmp/footprint_version_temp.md"
 
@@ -73,8 +74,12 @@ extract_version_info() {
     # 自动递增Build数字
     auto_increment_build
     
-    # 提取营销版本号
-    MARKETING_VERSION=$(grep -o 'MARKETING_VERSION = [^;]*' "$PROJECT_FILE" | head -1 | sed 's/MARKETING_VERSION = //')
+    # 提取营销版本号（优先从 Configs/Version.xcconfig）
+    if [ -f "$VERSION_CONFIG" ]; then
+        MARKETING_VERSION=$(grep -m1 '^MARKETING_VERSION' "$VERSION_CONFIG" | sed 's/MARKETING_VERSION = //' | tr -d ' ')
+    else
+        MARKETING_VERSION=$(grep -o 'MARKETING_VERSION = [^;]*' "$PROJECT_FILE" | head -1 | sed 's/MARKETING_VERSION = //')
+    fi
     
     # 提取构建版本号（使用递增后的数字）
     CURRENT_PROJECT_VERSION=$(grep -o 'CURRENT_PROJECT_VERSION = [^;]*' "$PROJECT_FILE" | head -1 | sed 's/CURRENT_PROJECT_VERSION = //')

@@ -7,15 +7,12 @@
 
 import SwiftUI
 
-/// 测试版提醒：显示剩余有效期并提示数据备份，确认后再进入启动动画
+/// 测试版提醒：显示剩余有效期并提示下载正式版，确认后再进入启动动画
 struct BetaReminderView: View {
     let daysRemaining: Int
     let expiryDate: Date?
     let onContinue: () -> Void
     let onGoToStore: () -> Void
-    
-    @State private var showBackupGuide = false
-    @Environment(\.colorScheme) private var colorScheme
     
     // 动画状态
     @State private var showBars = false
@@ -200,41 +197,22 @@ struct BetaReminderView: View {
                             .opacity(showContent ? 1 : 0)
                             .offset(y: showContent ? 0 : 10)
                             
-                            // 备份提示卡片
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "externaldrive.fill.badge.icloud")
-                                        .font(.body)
-                                        .foregroundStyle(
-                                            LinearGradient(
-                                                colors: [.blue, .cyan],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            )
+                            // 正式版提示卡片
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "externaldrive.fill.badge.icloud")
+                                    .font(.body)
+                                    .foregroundStyle(
+                                        LinearGradient(
+                                            colors: [.blue, .cyan],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
                                         )
-                                    
-                                    Text("beta_reminder_backup_tip".localized)
-                                        .font(.caption)
-                                        .foregroundStyle(.primary)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
+                                    )
                                 
-                                Button(action: { showBackupGuide = true }) {
-                                    HStack {
-                                        Text("beta_reminder_backup_button".localized)
-                                            .fontWeight(.medium)
-                                            .font(.caption)
-                                            .foregroundStyle(.blue)
-                                        Spacer()
-                                        Image(systemName: "chevron.right")
-                                            .font(.caption2)
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .background(Color.blue.opacity(0.08))
-                                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                                }
+                                Text("beta_reminder_backup_tip".localized)
+                                    .font(.caption)
+                                    .foregroundStyle(.primary)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(12)
@@ -309,10 +287,6 @@ struct BetaReminderView: View {
         .onAppear {
             performAnimation()
         }
-        .sheet(isPresented: $showBackupGuide) {
-            backupGuideSheet
-                .presentationDetents([.medium])
-        }
     }
     
     // 执行动画序列
@@ -333,38 +307,6 @@ struct BetaReminderView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
             withAnimation(.spring(response: 0.7, dampingFraction: 0.75)) {
                 showContent = true
-            }
-        }
-    }
-    
-    private var backupGuideSheet: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
-                    Text("beta_reminder_backup_guide_message".localized)
-                        .font(.body)
-                        .foregroundStyle(.primary)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                    
-                    VStack(alignment: .leading, spacing: 10) {
-                        Label("beta_reminder_backup_step1".localized, systemImage: "1.circle.fill")
-                        Label("beta_reminder_backup_step2".localized, systemImage: "2.circle.fill")
-                        Label("beta_reminder_backup_step3".localized, systemImage: "3.circle.fill")
-                    }
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                }
-                .padding()
-            }
-            .navigationTitle("beta_reminder_backup_guide_title".localized)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("done".localized) {
-                        showBackupGuide = false
-                    }
-                }
             }
         }
     }

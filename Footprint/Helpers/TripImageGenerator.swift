@@ -58,10 +58,10 @@ struct TripImageGenerator {
         switch layout {
         case .classic:
             return ClassicDestinationLayoutGenerator().generateImage(from: destination)
-        case .posterPromo:
-            return PosterPromoLayoutGenerator().generateImage(from: destination)
-        case .posterCollage:
-            return PosterCollageLayoutGenerator().generateImage(from: destination)
+        case .modernPoster:
+            return ModernStatsDestinationLayoutGenerator().generateImage(from: destination)
+        case .circlePoster:
+            return CirclePosterDestinationLayoutGenerator().generateImage(from: destination)
         }
     }
     
@@ -74,6 +74,7 @@ struct TripImageGenerator {
         let topPadding: CGFloat = 40 // 顶部边距
         let bottomPadding: CGFloat = 20 // 底部边距（与布局简图说明一致）
         let contentWidth = screenWidth - horizontalPadding * 2
+        let titleWidth = contentWidth * 0.8
         
         // 获取所有照片（优先使用 photoDatas，如果没有则使用 photoData）
         let allPhotos: [Data] = {
@@ -1270,8 +1271,11 @@ struct TripImageGenerator {
     }
     
     fileprivate static func drawSignature(at point: CGPoint, width: CGFloat, context: CGContext) {
-        // 获取 AppIcon
+        // 获取品牌图标：优先使用 assets 中的 AppIconLine，其次回退到 AppIcon
         let appIcon: UIImage? = {
+            if let lineIcon = UIImage(named: "AppIconLine") {
+                return lineIcon
+            }
             if let icons = Bundle.main.infoDictionary?["CFBundleIcons"] as? [String: Any],
                let primaryIcon = icons["CFBundlePrimaryIcon"] as? [String: Any],
                let iconFiles = primaryIcon["CFBundleIconFiles"] as? [String],
@@ -1285,7 +1289,7 @@ struct TripImageGenerator {
         let signatureText = "trip_share_signature".localized.replacingOccurrences(of: "✨", with: "").replacingOccurrences(of: "✨ ", with: "").trimmingCharacters(in: .whitespaces)
         
         let signatureAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 14),
+            .font: UIFont.systemFont(ofSize: 12),
             .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0) // #333333
         ]
         let signatureString = NSAttributedString(string: signatureText, attributes: signatureAttributes)
@@ -1320,12 +1324,72 @@ struct TripImageGenerator {
         signatureString.draw(at: CGPoint(x: textX, y: point.y))
         
         let subtitleAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 12),
+            .font: UIFont.systemFont(ofSize: 10),
             .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0) // 次要文本 #666666
         ]
         let subtitleString = NSAttributedString(string: "trip_share_subtitle".localized, attributes: subtitleAttributes)
         let subtitleSize = subtitleString.size()
         subtitleString.draw(at: CGPoint(x: point.x - subtitleSize.width/2, y: point.y + 25))
+    }
+    
+    /// 地点分享：极简海报同款底栏（左品牌两行 + 居中 AppIconLine + 右英文两行）
+    fileprivate static func drawDestinationShareCircleStyleBrandRow(
+        topY: CGFloat,
+        canvasWidth: CGFloat,
+        horizontalPadding: CGFloat,
+        context: CGContext
+    ) -> CGFloat {
+        let brandMainAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 6, weight: .regular),
+            .foregroundColor: UIColor(white: 0.25, alpha: 1.0)
+        ]
+        let brandSubAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 6, weight: .regular),
+            .foregroundColor: UIColor(white: 0.45, alpha: 1.0)
+        ]
+        
+        let leftLine1 = "MooFootprint"
+        let leftLine2 = "Record Every Journey"
+        let rightLine1 = "Record wonderful journeys"
+        let rightLine2 = "Share beautiful moments"
+        
+        let brandMainLine1 = NSAttributedString(string: leftLine1, attributes: brandMainAttributes)
+        let brandMainLine2 = NSAttributedString(string: leftLine2, attributes: brandSubAttributes)
+        let brandSubLine1 = NSAttributedString(string: rightLine1, attributes: brandMainAttributes)
+        let brandSubLine2 = NSAttributedString(string: rightLine2, attributes: brandSubAttributes)
+        
+        let brandMainLine1Size = brandMainLine1.size()
+        let brandMainLine2Size = brandMainLine2.size()
+        let brandSubLine1Size = brandSubLine1.size()
+        let brandSubLine2Size = brandSubLine2.size()
+        
+        let leftBlockHeight = brandMainLine1Size.height + 2 + brandMainLine2Size.height
+        let rightBlockHeight = brandSubLine1Size.height + 2 + brandSubLine2Size.height
+        let rowVisualHeight = max(leftBlockHeight, rightBlockHeight)
+        
+        let iconSize: CGFloat = 14
+        if let icon = UIImage(named: "AppIconLine") {
+            let iconX = canvasWidth / 2.0 - iconSize / 2.0
+            let iconY = topY + (rowVisualHeight - iconSize) / 2.0
+            let iconRect = CGRect(x: iconX, y: iconY, width: iconSize, height: iconSize)
+            context.saveGState()
+            let path = UIBezierPath(ovalIn: iconRect)
+            context.addPath(path.cgPath)
+            context.clip()
+            icon.draw(in: iconRect)
+            context.restoreGState()
+        }
+        
+        let brandMainX = horizontalPadding
+        brandMainLine1.draw(at: CGPoint(x: brandMainX, y: topY))
+        brandMainLine2.draw(at: CGPoint(x: brandMainX, y: topY + brandMainLine1Size.height + 2))
+        
+        // 右侧两行各自右对齐到内容右缘
+        let rightEdgeX = canvasWidth - horizontalPadding
+        brandSubLine1.draw(at: CGPoint(x: rightEdgeX - brandSubLine1Size.width, y: topY))
+        brandSubLine2.draw(at: CGPoint(x: rightEdgeX - brandSubLine2Size.width, y: topY + brandSubLine1Size.height + 2))
+        
+        return rowVisualHeight
     }
 }
 
@@ -3265,16 +3329,16 @@ struct ClassicDestinationLayoutGenerator: DestinationLayoutGenerator {
     }
 }
 
-/// 宣传海报版面生成器（大图+小图布局）
-struct PosterPromoLayoutGenerator: DestinationLayoutGenerator {
+/// 现代统计风格地点分享版面（原野哉感：大留白 + 强轴线）
+struct ModernStatsDestinationLayoutGenerator: DestinationLayoutGenerator {
     func generateImage(from destination: TravelDestination) -> UIImage? {
         let screenWidth = UIScreen.main.bounds.width
-        let horizontalPadding: CGFloat = 24
-        let topPadding: CGFloat = 32
-        let bottomPadding: CGFloat = 24
+        let horizontalPadding: CGFloat = 28
+        let topPadding: CGFloat = 44
+        let bottomPadding: CGFloat = 40
         let contentWidth = screenWidth - horizontalPadding * 2
         
-        // 获取所有照片
+        // 照片（主图优先用第一张）
         let allPhotos: [Data] = {
             if !destination.photoDatas.isEmpty {
                 return destination.photoDatas
@@ -3284,17 +3348,27 @@ struct PosterPromoLayoutGenerator: DestinationLayoutGenerator {
                 return []
             }
         }()
+        let mainImage = allPhotos.first.flatMap { UIImage(data: $0) }
+        let hasPhoto = mainImage != nil
         
-        let photoCount = min(allPhotos.count, 4) // 最多4张：1张大图 + 3张小图
+        // 正文：完整备注（仅极端长文截断，与极简海报一致）
+        let bodyNotesText: String = {
+            if destination.notes.isEmpty { return "" }
+            let maxChars = 4000
+            if destination.notes.count <= maxChars { return destination.notes }
+            return String(destination.notes.prefix(maxChars))
+        }()
         
-        // 计算内容高度
+        // 计算高度：标题 + 副标题 + 分隔线 + 正文 + 统计行 + 照片 + 品牌签名
         var contentHeight: CGFloat = 0
         contentHeight += topPadding
         
-        // 标题区域
+        // 标题（目的地名称，极简海报风）
+        let titleWidth = contentWidth * 0.8
         let titleAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 36, weight: .bold),
-            .foregroundColor: UIColor.white,
+            .font: UIFont.systemFont(ofSize: 42, weight: .black),
+            .foregroundColor: UIColor(red: 0.08, green: 0.08, blue: 0.08, alpha: 1.0),
+            .kern: 1.5,
             .paragraphStyle: {
                 let style = NSMutableParagraphStyle()
                 style.lineBreakMode = .byWordWrapping
@@ -3303,51 +3377,100 @@ struct PosterPromoLayoutGenerator: DestinationLayoutGenerator {
         ]
         let titleString = NSAttributedString(string: destination.name, attributes: titleAttributes)
         let titleRect = titleString.boundingRect(
-            with: CGSize(width: contentWidth, height: 150),
+            with: CGSize(width: titleWidth, height: 160),
             options: [.usesLineFragmentOrigin, .usesFontLeading],
             context: nil
         )
         let titleHeight = ceil(titleRect.height)
-        contentHeight += titleHeight + 12
+        contentHeight += titleHeight + 10
         
-        // 副标题/描述（如果有笔记）
+        // 副标题（备注首句或城市信息）
         var subtitleHeight: CGFloat = 0
-        if !destination.notes.isEmpty {
+        let subtitleText: String = {
+            if !destination.notes.isEmpty {
+                // 取备注第一句（按句号/换行切分），过长再截断
+                let separators: CharacterSet = ["。", ".", "\n"].reduce(into: CharacterSet()) { set, ch in
+                    set.insert(charactersIn: String(ch))
+                }
+                let components = destination.notes.components(separatedBy: separators).filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+                let firstSentence = components.first ?? destination.notes
+                let trimmed = firstSentence.trimmingCharacters(in: .whitespaces)
+                return String(trimmed.prefix(40))
+            } else if let trip = destination.trip {
+                return trip.name
+            } else {
+                return ""
+            }
+        }()
+        
+        if !subtitleText.isEmpty {
             let subtitleAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 16, weight: .medium),
-                .foregroundColor: UIColor.white.withAlphaComponent(0.9),
+                .font: UIFont.systemFont(ofSize: 15, weight: .medium),
+                .foregroundColor: UIColor(red: 0.45, green: 0.45, blue: 0.45, alpha: 1.0),
+                .kern: 1.0,
                 .paragraphStyle: {
                     let style = NSMutableParagraphStyle()
                     style.lineBreakMode = .byWordWrapping
                     return style
                 }()
             ]
-            let subtitleString = NSAttributedString(string: destination.notes, attributes: subtitleAttributes)
+            let subtitleString = NSAttributedString(string: subtitleText, attributes: subtitleAttributes)
             let subtitleRect = subtitleString.boundingRect(
-                with: CGSize(width: contentWidth, height: 100),
+                with: CGSize(width: contentWidth, height: 80),
                 options: [.usesLineFragmentOrigin, .usesFontLeading],
                 context: nil
             )
-            subtitleHeight = ceil(subtitleRect.height) + 8
-        }
-        contentHeight += subtitleHeight + 24
-        
-        // 主图区域（16:9比例）
-        let mainImageHeight = contentWidth * 9.0 / 16.0
-        contentHeight += mainImageHeight + 16
-        
-        // 底部小图区域（如果有）
-        if photoCount > 1 {
-            let smallImageSize = (contentWidth - 16 * 2) / 3 // 3张小图，间距16
-            contentHeight += smallImageSize + bottomPadding
+            subtitleHeight = ceil(subtitleRect.height)
+            contentHeight += subtitleHeight + 18
         } else {
-            contentHeight += bottomPadding
+            contentHeight += 16
         }
         
-        // 底部日期和签名
-        let dateHeight: CGFloat = 20
-        let signatureHeight: CGFloat = 40
-        contentHeight += dateHeight + 16 + signatureHeight + bottomPadding
+        // 分隔线
+        let dividerHeight: CGFloat = 1
+        contentHeight += dividerHeight + 18
+        
+        // 正文与下方统计行之间的留白（略大，让整页到图片的视觉空隙更舒展）
+        let bodyBottomSpacing: CGFloat = 48
+        
+        // 正文（宽度与 content 同宽；高度按全文测量，避免 120 字与限高裁切）
+        var bodyHeight: CGFloat = 0
+        if !bodyNotesText.isEmpty {
+            let notesAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 10, weight: .regular),
+                .foregroundColor: UIColor(red: 0.22, green: 0.22, blue: 0.22, alpha: 1.0),
+                .paragraphStyle: {
+                    let style = NSMutableParagraphStyle()
+                    style.lineSpacing = 5
+                    style.lineBreakMode = .byWordWrapping
+                    return style
+                }()
+            ]
+            let notesString = NSAttributedString(string: bodyNotesText, attributes: notesAttributes)
+            let notesRect = notesString.boundingRect(
+                with: CGSize(width: contentWidth, height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                context: nil
+            )
+            bodyHeight = ceil(notesRect.height)
+            contentHeight += bodyHeight + bodyBottomSpacing
+        }
+        
+        // 统计行（极简）
+        let statsHeight: CGFloat = 16
+        contentHeight += statsHeight + 32
+        
+        // 照片区域：与 content 同宽
+        let photoWidth = contentWidth
+        let photoHeight: CGFloat = hasPhoto ? photoWidth * 0.6 : 0
+        contentHeight += photoHeight
+        if hasPhoto {
+            contentHeight += 44
+        }
+        
+        // 品牌签名区域（与极简海报同款底栏，高度与 circle brandRow 一致）
+        let signatureHeight: CGFloat = 36
+        contentHeight += signatureHeight + 24
         
         let imageSize = CGSize(width: screenWidth, height: contentHeight)
         
@@ -3361,186 +3484,190 @@ struct PosterPromoLayoutGenerator: DestinationLayoutGenerator {
         return renderer.image { context in
             let cgContext = context.cgContext
             
-            // 绘制背景（使用浅色背景，适合海报风格）
-            let backgroundColor = UIColor(red: 0.96, green: 0.96, blue: 0.97, alpha: 1.0) // 浅灰
-            cgContext.setFillColor(backgroundColor.cgColor)
+            // 背景（纯白）
+            cgContext.setFillColor(UIColor.white.cgColor)
             cgContext.fill(CGRect(origin: .zero, size: imageSize))
             
             var currentY: CGFloat = topPadding
             
-            // 绘制标题（白色文字，需要深色背景或渐变遮罩）
-            if let mainPhoto = allPhotos.first, let _ = UIImage(data: mainPhoto) {
-                // 在标题区域绘制渐变遮罩背景
-                let titleBackgroundHeight = titleHeight + subtitleHeight + 32
-                let titleBackgroundRect = CGRect(
-                    x: 0,
-                    y: currentY - 8,
-                    width: screenWidth,
-                    height: titleBackgroundHeight
-                )
-                
-                // 绘制渐变遮罩（从黑色半透明到透明）
-                let gradient = CGGradient(
-                    colorsSpace: CGColorSpaceCreateDeviceRGB(),
-                    colors: [
-                        UIColor.black.withAlphaComponent(0.6).cgColor,
-                        UIColor.black.withAlphaComponent(0.3).cgColor,
-                        UIColor.clear.cgColor
-                    ] as CFArray,
-                    locations: [0.0, 0.5, 1.0]
-                )!
-                cgContext.saveGState()
-                cgContext.addRect(titleBackgroundRect)
-                cgContext.clip()
-                cgContext.drawLinearGradient(
-                    gradient,
-                    start: CGPoint(x: 0, y: titleBackgroundRect.minY),
-                    end: CGPoint(x: 0, y: titleBackgroundRect.maxY),
-                    options: []
-                )
-                cgContext.restoreGState()
-            }
+            // 标题（使用 fixed width 矩形绘制以保证自动换行）
+            let titleDrawRect = CGRect(
+                x: horizontalPadding,
+                y: currentY,
+                width: titleWidth,
+                height: titleHeight
+            )
+            titleString.draw(in: titleDrawRect)
+            currentY += titleHeight + 10
             
-            // 绘制标题文字
-            titleString.draw(at: CGPoint(x: horizontalPadding, y: currentY))
-            currentY += titleHeight + 12
-            
-            // 绘制副标题
-            if !destination.notes.isEmpty {
+            // 副标题
+            if !subtitleText.isEmpty {
                 let subtitleAttributes: [NSAttributedString.Key: Any] = [
-                    .font: UIFont.systemFont(ofSize: 16, weight: .medium),
-                    .foregroundColor: UIColor.white.withAlphaComponent(0.9),
+                    .font: UIFont.systemFont(ofSize: 15, weight: .medium),
+                    .foregroundColor: UIColor(red: 0.45, green: 0.45, blue: 0.45, alpha: 1.0),
+                    .kern: 1.0,
                     .paragraphStyle: {
                         let style = NSMutableParagraphStyle()
                         style.lineBreakMode = .byWordWrapping
                         return style
                     }()
                 ]
-                let subtitleString = NSAttributedString(string: destination.notes, attributes: subtitleAttributes)
+                let subtitleString = NSAttributedString(string: subtitleText, attributes: subtitleAttributes)
                 let subtitleRect = subtitleString.boundingRect(
-                    with: CGSize(width: contentWidth, height: 100),
+                    with: CGSize(width: contentWidth, height: 80),
                     options: [.usesLineFragmentOrigin, .usesFontLeading],
                     context: nil
                 )
-                subtitleString.draw(in: CGRect(x: horizontalPadding, y: currentY, width: contentWidth, height: ceil(subtitleRect.height)))
-                currentY += ceil(subtitleRect.height) + 8
+                subtitleString.draw(
+                    in: CGRect(
+                        x: horizontalPadding,
+                        y: currentY,
+                        width: contentWidth,
+                        height: ceil(subtitleRect.height)
+                    )
+                )
+                currentY += ceil(subtitleRect.height) + 18
+            } else {
+                currentY += 16
             }
             
-            currentY += 16
+            // 分隔线
+            let dividerPath = UIBezierPath()
+            dividerPath.move(to: CGPoint(x: horizontalPadding, y: currentY))
+            dividerPath.addLine(to: CGPoint(x: horizontalPadding + 64, y: currentY))
+            cgContext.setStrokeColor(UIColor(white: 0.8, alpha: 1.0).cgColor)
+            cgContext.setLineWidth(1)
+            cgContext.addPath(dividerPath.cgPath)
+            cgContext.strokePath()
+            currentY += dividerHeight + 18
             
-            // 绘制主图
-            autoreleasepool {
-                if let mainPhoto = allPhotos.first, let mainImage = UIImage(data: mainPhoto) {
-                    let mainImageRect = CGRect(x: horizontalPadding, y: currentY, width: contentWidth, height: mainImageHeight)
-                    drawMainImage(mainImage, in: mainImageRect, context: cgContext)
-                    currentY += mainImageHeight + 16
-                }
+            // 正文（完整高度绘制）
+            if !bodyNotesText.isEmpty {
+                let notesAttributes: [NSAttributedString.Key: Any] = [
+                    .font: UIFont.systemFont(ofSize: 10, weight: .regular),
+                    .foregroundColor: UIColor(red: 0.22, green: 0.22, blue: 0.22, alpha: 1.0),
+                    .paragraphStyle: {
+                        let style = NSMutableParagraphStyle()
+                        style.lineSpacing = 5
+                        style.lineBreakMode = .byWordWrapping
+                        return style
+                    }()
+                ]
+                let notesString = NSAttributedString(string: bodyNotesText, attributes: notesAttributes)
+                let notesRect = notesString.boundingRect(
+                    with: CGSize(width: contentWidth, height: .greatestFiniteMagnitude),
+                    options: [.usesLineFragmentOrigin, .usesFontLeading],
+                    context: nil
+                )
+                let notesDrawHeight = ceil(notesRect.height)
+                notesString.draw(
+                    in: CGRect(
+                        x: horizontalPadding,
+                        y: currentY,
+                        width: contentWidth,
+                        height: notesDrawHeight
+                    )
+                )
+                currentY += notesDrawHeight + bodyBottomSpacing
             }
             
-            // 绘制底部小图（3张小图）
-            if photoCount > 1 {
-                let smallImageSize = (contentWidth - 16 * 2) / 3
-                var smallImageX = horizontalPadding
-                let smallImageY = currentY
-                
-                for i in 1..<min(photoCount, 4) {
-                    autoreleasepool {
-                        if i < allPhotos.count, let smallImage = UIImage(data: allPhotos[i]) {
-                            let smallImageRect = CGRect(
-                                x: smallImageX,
-                                y: smallImageY,
-                                width: smallImageSize,
-                                height: smallImageSize
-                            )
-                            drawGridPhoto(smallImage, in: smallImageRect, context: cgContext)
-                            smallImageX += smallImageSize + 16
-                        }
-                    }
-                }
-                currentY += smallImageSize + 16
-            }
+            // 统计行（左文案 + 右数字）
+            let dateFormatter = LanguageManager.shared.localizedDateFormatter(dateStyle: .medium, timeStyle: .none)
+            let fullDate = dateFormatter.string(from: destination.visitDate)
+            let calendar = Calendar.current
+            let year = calendar.component(.year, from: destination.visitDate)
             
-            // 绘制日期
-            let dateFormatter = LanguageManager.shared.localizedDateFormatter(dateStyle: .full, timeStyle: .none)
-            let dateString = dateFormatter.string(from: destination.visitDate)
-            let dateAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 14),
-                .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0)
+            // 与正文同字号、字重与色系
+            let statsLeftAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 10, weight: .regular),
+                .foregroundColor: UIColor(red: 0.22, green: 0.22, blue: 0.22, alpha: 1.0),
+                .kern: 2.0,
+                .paragraphStyle: {
+                    let style = NSMutableParagraphStyle()
+                    style.lineSpacing = 5
+                    style.lineBreakMode = .byWordWrapping
+                    return style
+                }()
             ]
-            let dateStringAttr = NSAttributedString(string: dateString, attributes: dateAttributes)
-            let dateSize = dateStringAttr.size()
-            dateStringAttr.draw(at: CGPoint(x: horizontalPadding, y: currentY))
-            currentY += dateSize.height + 16
+            // 日期与正文同字号与同色系
+            let statsRightAttributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 10, weight: .regular),
+                .foregroundColor: UIColor(red: 0.22, green: 0.22, blue: 0.22, alpha: 1.0),
+                .paragraphStyle: {
+                    let style = NSMutableParagraphStyle()
+                    style.lineSpacing = 5
+                    style.lineBreakMode = .byWordWrapping
+                    return style
+                }()
+            ]
             
-            // 绘制签名
-            TripImageGenerator.drawSignature(
-                at: CGPoint(x: screenWidth/2, y: currentY),
-                width: contentWidth,
+            let statsLeftText = "#\(year) VISIT".uppercased()
+            let statsRightText = fullDate
+            
+            let statsLeft = NSAttributedString(string: statsLeftText, attributes: statsLeftAttributes)
+            let statsRight = NSAttributedString(string: statsRightText, attributes: statsRightAttributes)
+            
+            let leftSize = statsLeft.size()
+            let rightSize = statsRight.size()
+            
+            statsLeft.draw(at: CGPoint(x: horizontalPadding, y: currentY))
+            statsRight.draw(
+                at: CGPoint(
+                    x: screenWidth - horizontalPadding - rightSize.width,
+                    y: currentY
+                )
+            )
+            currentY += max(leftSize.height, rightSize.height) + 32
+            
+            // 照片（无圆角，保留直角矩形；与 content 同宽）
+            if let mainImage = mainImage, hasPhoto {
+                let photoWidth = contentWidth
+                let photoHeight = photoWidth * 0.6
+                let rect = CGRect(
+                    x: horizontalPadding,
+                    y: currentY,
+                    width: photoWidth,
+                    height: photoHeight
+                )
+                // 直接绘制，无裁剪圆角
+                mainImage.draw(in: rect)
+                currentY += photoHeight + 44
+            }
+            
+            // 品牌签名（与极简海报同款）
+            TripImageGenerator.drawDestinationShareCircleStyleBrandRow(
+                topY: currentY,
+                canvasWidth: screenWidth,
+                horizontalPadding: horizontalPadding,
                 context: cgContext
             )
         }
     }
     
-    private func drawMainImage(_ image: UIImage, in rect: CGRect, context: CGContext) {
+    private func drawRoundedImage(_ image: UIImage, in rect: CGRect, context: CGContext) {
         context.saveGState()
-        let path = UIBezierPath(roundedRect: rect, cornerRadius: 12)
+        let path = UIBezierPath(roundedRect: rect, cornerRadius: 18)
         context.addPath(path.cgPath)
         context.clip()
         
-        // 计算图片缩放以适应矩形
         let imageSize = image.size
-        let rectAspectRatio = rect.width / rect.height
-        let imageAspectRatio = imageSize.width / imageSize.height
+        let rectAspect = rect.width / rect.height
+        let imageAspect = imageSize.width / imageSize.height
         
         var drawRect = rect
-        if imageAspectRatio > rectAspectRatio {
-            // 图片更宽，以高度为准
-            let scaledWidth = rect.height * imageAspectRatio
+        if imageAspect > rectAspect {
+            let scaledWidth = rect.height * imageAspect
             drawRect = CGRect(
-                x: rect.midX - scaledWidth/2,
+                x: rect.midX - scaledWidth / 2,
                 y: rect.minY,
                 width: scaledWidth,
                 height: rect.height
             )
         } else {
-            // 图片更高，以宽度为准
-            let scaledHeight = rect.width / imageAspectRatio
+            let scaledHeight = rect.width / imageAspect
             drawRect = CGRect(
                 x: rect.minX,
-                y: rect.midY - scaledHeight/2,
-                width: rect.width,
-                height: scaledHeight
-            )
-        }
-        
-        image.draw(in: drawRect)
-        context.restoreGState()
-    }
-    
-    private func drawGridPhoto(_ image: UIImage, in rect: CGRect, context: CGContext) {
-        context.saveGState()
-        let path = UIBezierPath(roundedRect: rect, cornerRadius: 8)
-        context.addPath(path.cgPath)
-        context.clip()
-        
-        let imageSize = image.size
-        let rectAspectRatio = rect.width / rect.height
-        let imageAspectRatio = imageSize.width / imageSize.height
-        
-        var drawRect = rect
-        if imageAspectRatio > rectAspectRatio {
-            let scaledWidth = rect.height * imageAspectRatio
-            drawRect = CGRect(
-                x: rect.midX - scaledWidth/2,
-                y: rect.minY,
-                width: scaledWidth,
-                height: rect.height
-            )
-        } else {
-            let scaledHeight = rect.width / imageAspectRatio
-            drawRect = CGRect(
-                x: rect.minX,
-                y: rect.midY - scaledHeight/2,
+                y: rect.midY - scaledHeight / 2,
                 width: rect.width,
                 height: scaledHeight
             )
@@ -3551,100 +3678,161 @@ struct PosterPromoLayoutGenerator: DestinationLayoutGenerator {
     }
 }
 
-/// 拼贴海报版面生成器（3x3网格布局）
-struct PosterCollageLayoutGenerator: DestinationLayoutGenerator {
+/// 极简海报版面（圆形构图，参考原型图 1 / 效果图 2）
+struct CirclePosterDestinationLayoutGenerator: DestinationLayoutGenerator {
     func generateImage(from destination: TravelDestination) -> UIImage? {
-        let screenWidth = UIScreen.main.bounds.width
-        let horizontalPadding: CGFloat = 20
-        let topPadding: CGFloat = 24
-        let bottomPadding: CGFloat = 24
-        let contentWidth = screenWidth - horizontalPadding * 2
+        // 目标画布宽度上限 1200pt，高宽比约 1200x1800，用于控制最小高度
+        let deviceWidth = UIScreen.main.bounds.width
+        let targetWidth: CGFloat = min(deviceWidth, 1200)
+        let targetHeight: CGFloat = targetWidth * (1800.0 / 1200.0)
         
-        // 获取所有照片（最多9张）
+        let screenWidth = targetWidth
+        let horizontalPadding: CGFloat = 32
+        let topPadding: CGFloat = 48
+        let bottomPadding: CGFloat = 16
+        let circleToPhotoSpacing: CGFloat = 28
+        let photoToSignatureSpacing: CGFloat = 20
+        let contentWidth = screenWidth - horizontalPadding * 2
+        let centerX = screenWidth / 2.0
+        let titleWidth = contentWidth * 0.55
+        let bodyWidth = contentWidth * 0.35
+        // 与左右正文同一内容宽：左 = horizontalPadding，右 = screenWidth - horizontalPadding
+        let photoWidth = contentWidth
+        let photoHeight = photoWidth * 0.42
+        
+        // 照片
         let allPhotos: [Data] = {
             if !destination.photoDatas.isEmpty {
                 return destination.photoDatas
-            } else if let photoData = destination.photoData {
-                return [photoData]
+            } else if let data = destination.photoData {
+                return [data]
             } else {
                 return []
             }
         }()
+        let mainImage = allPhotos.first.flatMap { UIImage(data: $0) }
         
-        let photoCount = min(allPhotos.count, 9)
+        // 标题：ASCII 「.」后强制换行，便于控制断行；末尾孤立换行去掉避免多算一行
+        let titleDisplayText = destination.name
+            .replacingOccurrences(of: ".", with: ".\n")
+            .trimmingCharacters(in: .newlines)
         
-        // 计算内容高度
-        var contentHeight: CGFloat = 0
-        contentHeight += topPadding
+        // 标题：严格最多三行；超出则逐级缩小字号，直至满足或降至最小字号（再裁剪）
+        let titleMaxLines = 3
+        let titleStartFontSize: CGFloat = 44
+        let titleMinFontSize: CGFloat = 18
+        var titleString = NSAttributedString(string: titleDisplayText)
+        var titleHeight: CGFloat = 0
+        var fittedWithinMaxLines = false
+        var trySize = titleStartFontSize
+        while trySize >= titleMinFontSize {
+            let tryFont = UIFont.systemFont(ofSize: trySize, weight: .black)
+            let maxAllowedHeight = ceil(tryFont.lineHeight * CGFloat(titleMaxLines))
+            let titleAttributes: [NSAttributedString.Key: Any] = [
+                .font: tryFont,
+                .foregroundColor: UIColor.black,
+                .kern: 1.5,
+                .paragraphStyle: {
+                    let style = NSMutableParagraphStyle()
+                    style.lineBreakMode = .byWordWrapping
+                    return style
+                }()
+            ]
+            let str = NSAttributedString(string: titleDisplayText, attributes: titleAttributes)
+            let rect = str.boundingRect(
+                with: CGSize(width: titleWidth, height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                context: nil
+            )
+            let h = ceil(rect.height)
+            if h <= maxAllowedHeight {
+                titleString = str
+                titleHeight = h
+                fittedWithinMaxLines = true
+                break
+            }
+            trySize -= 2
+        }
+        if !fittedWithinMaxLines {
+            let minFont = UIFont.systemFont(ofSize: titleMinFontSize, weight: .black)
+            let maxAllowedHeight = ceil(minFont.lineHeight * CGFloat(titleMaxLines))
+            let titleAttributes: [NSAttributedString.Key: Any] = [
+                .font: minFont,
+                .foregroundColor: UIColor.black,
+                .kern: 1.5,
+                .paragraphStyle: {
+                    let style = NSMutableParagraphStyle()
+                    style.lineBreakMode = .byWordWrapping
+                    return style
+                }()
+            ]
+            titleString = NSAttributedString(string: titleDisplayText, attributes: titleAttributes)
+            let rect = titleString.boundingRect(
+                with: CGSize(width: titleWidth, height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                context: nil
+            )
+            titleHeight = min(ceil(rect.height), maxAllowedHeight)
+        }
         
-        // 顶部标题区域
-        let titleAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 32, weight: .bold),
-            .foregroundColor: UIColor(red: 0.1, green: 0.1, blue: 0.1, alpha: 1.0),
+        // 正文（右上；完整展示备注，仅对极端长文做上限避免性能问题）
+        let bodyText: String = {
+            if destination.notes.isEmpty { return "" }
+            let maxChars = 4000
+            if destination.notes.count <= maxChars {
+                return destination.notes
+            }
+            return String(destination.notes.prefix(maxChars))
+        }()
+        let bodyAttributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 7, weight: .regular),
+            .foregroundColor: UIColor(white: 0.2, alpha: 1.0),
             .paragraphStyle: {
                 let style = NSMutableParagraphStyle()
+                style.lineSpacing = 3
                 style.lineBreakMode = .byWordWrapping
                 return style
             }()
         ]
-        let titleString = NSAttributedString(string: destination.name, attributes: titleAttributes)
-        let titleRect = titleString.boundingRect(
-            with: CGSize(width: contentWidth, height: 120),
+        let bodyString = NSAttributedString(string: bodyText, attributes: bodyAttributes)
+        let bodyRect = bodyString.boundingRect(
+            with: CGSize(width: bodyWidth, height: .greatestFiniteMagnitude),
             options: [.usesLineFragmentOrigin, .usesFontLeading],
             context: nil
         )
-        let titleHeight = ceil(titleRect.height)
-        contentHeight += titleHeight + 12
+        let bodyHeight = ceil(bodyRect.height)
         
-        // 日期信息
+        // 日期
         let dateFormatter = LanguageManager.shared.localizedDateFormatter(dateStyle: .medium, timeStyle: .none)
-        let dateString = dateFormatter.string(from: destination.visitDate)
+        let dateStringValue = dateFormatter.string(from: destination.visitDate)
         let dateAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 14),
-            .foregroundColor: UIColor(red: 0.5, green: 0.5, blue: 0.5, alpha: 1.0)
+            .font: UIFont.systemFont(ofSize: 7, weight: .regular),
+            .foregroundColor: UIColor(white: 0.2, alpha: 1.0),
+            .paragraphStyle: {
+                let style = NSMutableParagraphStyle()
+                style.lineSpacing = 3
+                style.lineBreakMode = .byWordWrapping
+                return style
+            }()
         ]
-        let dateStringAttr = NSAttributedString(string: dateString, attributes: dateAttributes)
-        let dateHeight = ceil(dateStringAttr.size().height)
-        contentHeight += dateHeight + 20
+        let dateString = NSAttributedString(string: dateStringValue, attributes: dateAttributes)
+        let dateSize = dateString.size()
         
-        // 3x3网格照片区域
-        if photoCount > 0 {
-            let photoSpacing: CGFloat = 4
-            let photoSize = (contentWidth - photoSpacing * 2) / 3
-            let gridRows = min(3, (photoCount + 2) / 3) // 向上取整
-            let gridHeight = CGFloat(gridRows) * photoSize + CGFloat(max(0, gridRows - 1)) * photoSpacing
-            contentHeight += gridHeight + 20
-        }
+        let circleDiameter = screenWidth * 0.7
+        let brandRowHeight: CGFloat = 36
+        // 标题底 + 正文/日期实际占用高度可能超过圆形下沿，照片起始下移避免压住正文
+        let titleBottomYLayout = topPadding + 8 + titleHeight
+        let rightTopYLayout = max(topPadding + 24, titleBottomYLayout - bodyHeight)
+        let notesBlockBottom = rightTopYLayout + 10 + bodyHeight + 24 + dateSize.height
+        let circleBottomLayout = topPadding + circleDiameter
+        let headerVisualBottom = max(circleBottomLayout, notesBlockBottom + 8)
+        let photoStartY = headerVisualBottom + circleToPhotoSpacing
         
-        // 笔记/引用文字区域（如果有）
-        var notesHeight: CGFloat = 0
-        if !destination.notes.isEmpty {
-            let notesAttributes: [NSAttributedString.Key: Any] = [
-                .font: UIFont.italicSystemFont(ofSize: 15),
-                .foregroundColor: UIColor(red: 0.3, green: 0.3, blue: 0.3, alpha: 1.0),
-                .paragraphStyle: {
-                    let style = NSMutableParagraphStyle()
-                    style.lineSpacing = 4
-                    style.lineBreakMode = .byWordWrapping
-                    style.alignment = .center
-                    return style
-                }()
-            ]
-            let notesString = NSAttributedString(string: destination.notes, attributes: notesAttributes)
-            let notesRect = notesString.boundingRect(
-                with: CGSize(width: contentWidth, height: 200),
-                options: [.usesLineFragmentOrigin, .usesFontLeading],
-                context: nil
-            )
-            notesHeight = ceil(notesRect.height) + 20
-        }
-        contentHeight += notesHeight
+        let contentHeight = photoStartY + photoHeight + photoToSignatureSpacing + brandRowHeight + bottomPadding
         
-        // 底部签名
-        let signatureHeight: CGFloat = 40
-        contentHeight += signatureHeight + bottomPadding
-        
-        let imageSize = CGSize(width: screenWidth, height: contentHeight)
+        // 保证整体画布至少达到目标高宽比
+        let imageHeight = max(contentHeight, targetHeight)
+        let imageSize = CGSize(width: screenWidth, height: imageHeight)
         
         let rendererFormat = UIGraphicsImageRendererFormat.default()
         rendererFormat.scale = UIScreen.main.scale
@@ -3656,116 +3844,112 @@ struct PosterCollageLayoutGenerator: DestinationLayoutGenerator {
         return renderer.image { context in
             let cgContext = context.cgContext
             
-            // 绘制浅色背景
-            let backgroundColor = UIColor(red: 0.98, green: 0.98, blue: 0.99, alpha: 1.0)
-            cgContext.setFillColor(backgroundColor.cgColor)
+            // 背景（纯白）
+            cgContext.setFillColor(UIColor.white.cgColor)
             cgContext.fill(CGRect(origin: .zero, size: imageSize))
             
-            var currentY: CGFloat = topPadding
+            var currentY = topPadding
             
-            // 绘制标题
-            titleString.draw(at: CGPoint(x: horizontalPadding, y: currentY))
-            currentY += titleHeight + 12
+            // 浅灰圆形底纹（X 略向左偏移，Y 保持原有比例，但整体更小）
+            let circleCenter = CGPoint(x: centerX - circleDiameter * 0.55, y: currentY + circleDiameter / 2)
+            let circleRect = CGRect(
+                x: circleCenter.x - circleDiameter / 2,
+                y: circleCenter.y - circleDiameter / 2,
+                width: circleDiameter,
+                height: circleDiameter
+            )
+            cgContext.setFillColor(UIColor(white: 0.93, alpha: 1.0).cgColor)
+            cgContext.fillEllipse(in: circleRect)
             
-            // 绘制日期
-            dateStringAttr.draw(at: CGPoint(x: horizontalPadding, y: currentY))
-            currentY += dateHeight + 20
+            // 标题（在左上，覆盖到圆形之上；高度不超过三行，超出部分裁剪）
+            let titleDrawRect = CGRect(
+                x: horizontalPadding,
+                y: currentY + 8,
+                width: titleWidth,
+                height: titleHeight
+            )
+            cgContext.saveGState()
+            cgContext.addRect(titleDrawRect)
+            cgContext.clip()
+            titleString.draw(in: titleDrawRect)
+            cgContext.restoreGState()
             
-            // 绘制3x3网格照片
-            if photoCount > 0 {
-                let photoSpacing: CGFloat = 4
-                let photoSize = (contentWidth - photoSpacing * 2) / 3
-                var gridY = currentY
-                
-                for row in 0..<3 {
-                    var gridX = horizontalPadding
-                    for col in 0..<3 {
-                        let index = row * 3 + col
-                        autoreleasepool {
-                            if index < photoCount, let photoImage = UIImage(data: allPhotos[index]) {
-                                let photoRect = CGRect(x: gridX, y: gridY, width: photoSize, height: photoSize)
-                                drawGridPhoto(photoImage, in: photoRect, context: cgContext)
-                            }
-                        }
-                        gridX += photoSize + photoSpacing
-                    }
-                    if row < 2 {
-                        gridY += photoSize + photoSpacing
-                    } else {
-                        gridY += photoSize
-                    }
-                }
-                currentY = gridY + 20
+            // 右上正文：整块右缘与 content 右缘对齐（与照片同宽区域的右边界一致）
+            let rightOriginX = horizontalPadding + contentWidth - bodyWidth
+            // 与标题“靠下对齐”：与布局阶段 rightTopYLayout 一致
+            let rightTopY = rightTopYLayout
+
+            // 正文（完整高度绘制，不再用 120 限高截断）
+            if !bodyText.isEmpty {
+                let bodyDrawRect = CGRect(
+                    x: rightOriginX,
+                    y: rightTopY + 10,
+                    width: bodyWidth,
+                    height: bodyHeight
+                )
+                bodyString.draw(in: bodyDrawRect)
             }
             
-            // 绘制笔记/引用文字（居中显示）
-            if !destination.notes.isEmpty {
-                let notesAttributes: [NSAttributedString.Key: Any] = [
-                    .font: UIFont.italicSystemFont(ofSize: 15),
-                    .foregroundColor: UIColor(red: 0.3, green: 0.3, blue: 0.3, alpha: 1.0),
-                    .paragraphStyle: {
-                        let style = NSMutableParagraphStyle()
-                        style.lineSpacing = 4
-                        style.lineBreakMode = .byWordWrapping
-                        style.alignment = .center
-                        return style
-                    }()
-                ]
-                let notesString = NSAttributedString(string: destination.notes, attributes: notesAttributes)
-                let notesRect = notesString.boundingRect(
-                    with: CGSize(width: contentWidth, height: 200),
-                    options: [.usesLineFragmentOrigin, .usesFontLeading],
-                    context: nil
-                )
-                let notesDrawRect = CGRect(
+            // 日期（正文下方右对齐）
+            let dateX = rightOriginX + bodyWidth - dateSize.width
+            let dateY = rightTopY + bodyHeight + 24
+            dateString.draw(at: CGPoint(x: dateX, y: dateY))
+            
+            // 照片起始：保证在正文+日期之下
+            currentY = photoStartY
+            
+            // 照片（保持原比例，裁切填充；左右与标题/正文内容区对齐）
+            if let mainImage = mainImage {
+                let photoRect = CGRect(
                     x: horizontalPadding,
                     y: currentY,
-                    width: contentWidth,
-                    height: ceil(notesRect.height)
+                    width: photoWidth,
+                    height: photoHeight
                 )
-                notesString.draw(in: notesDrawRect)
-                currentY += ceil(notesRect.height) + 20
+                cgContext.saveGState()
+                cgContext.addRect(photoRect)
+                cgContext.clip()
+                
+                let imageSize = mainImage.size
+                let targetAspect = photoRect.width / photoRect.height
+                let imageAspect = imageSize.width / imageSize.height
+                
+                var drawRect = photoRect
+                if imageAspect > targetAspect {
+                    // 图片更宽，按高度裁切
+                    let scaledWidth = photoRect.height * imageAspect
+                    drawRect = CGRect(
+                        x: photoRect.midX - scaledWidth / 2.0,
+                        y: photoRect.minY,
+                        width: scaledWidth,
+                        height: photoRect.height
+                    )
+                } else {
+                    // 图片更高，按宽度裁切
+                    let scaledHeight = photoRect.width / imageAspect
+                    drawRect = CGRect(
+                        x: photoRect.minX,
+                        y: photoRect.midY - scaledHeight / 2.0,
+                        width: photoRect.width,
+                        height: scaledHeight
+                    )
+                }
+                
+                mainImage.draw(in: drawRect)
+                cgContext.restoreGState()
             }
             
-            // 绘制签名
-            TripImageGenerator.drawSignature(
-                at: CGPoint(x: screenWidth/2, y: currentY),
-                width: contentWidth,
+            // 签名尽可能靠画布底部：内容流位置与「贴底」位置取较大者（满足最小高度时多出的空白在照片与签名之间）
+            let flowSignatureY = photoStartY + photoHeight + photoToSignatureSpacing
+            let pinnedSignatureY = imageSize.height - bottomPadding - brandRowHeight
+            currentY = max(flowSignatureY, pinnedSignatureY)
+            
+            TripImageGenerator.drawDestinationShareCircleStyleBrandRow(
+                topY: currentY,
+                canvasWidth: screenWidth,
+                horizontalPadding: horizontalPadding,
                 context: cgContext
             )
         }
-    }
-    
-    private func drawGridPhoto(_ image: UIImage, in rect: CGRect, context: CGContext) {
-        context.saveGState()
-        let path = UIBezierPath(roundedRect: rect, cornerRadius: 6)
-        context.addPath(path.cgPath)
-        context.clip()
-        
-        let imageSize = image.size
-        let rectAspectRatio = rect.width / rect.height
-        let imageAspectRatio = imageSize.width / imageSize.height
-        
-        var drawRect = rect
-        if imageAspectRatio > rectAspectRatio {
-            let scaledWidth = rect.height * imageAspectRatio
-            drawRect = CGRect(
-                x: rect.midX - scaledWidth/2,
-                y: rect.minY,
-                width: scaledWidth,
-                height: rect.height
-            )
-        } else {
-            let scaledHeight = rect.width / imageAspectRatio
-            drawRect = CGRect(
-                x: rect.minX,
-                y: rect.midY - scaledHeight/2,
-                width: rect.width,
-                height: scaledHeight
-            )
-        }
-        
-        image.draw(in: drawRect)
-        context.restoreGState()
     }
 }

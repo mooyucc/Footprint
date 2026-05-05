@@ -146,14 +146,8 @@
 "beta_reminder_countdown" = "剩余天数：%d";
 "beta_reminder_days_label" = "剩余天数";
 "beta_reminder_expiry_date" = "到期日：%@";
-"beta_reminder_backup_tip" = "请前往“我的 > 设置 > 数据”导出本地备份，避免测试版到期后数据丢失。";
-"beta_reminder_backup_button" = "如何备份";
+"beta_reminder_backup_tip" = "为确保数据安全，请下载正式版使用";
 "beta_reminder_continue_button" = "打开 墨鱼足迹Beta";
-"beta_reminder_backup_guide_title" = "备份指引";
-"beta_reminder_backup_guide_message" = "打开“我的 > 设置 > 数据 > 导出本地数据”生成备份包。请将文件保存到 iCloud Drive 或本地，升级新版本后可重新导入。";
-"beta_reminder_backup_step1" = "我的 → 设置 → 数据";
-"beta_reminder_backup_step2" = "点击“导出本地数据”生成备份包";
-"beta_reminder_backup_step3" = "将备份保存到 iCloud Drive 或本地";
 
 // Beta Expired
 "beta_expired_title" = "测试版已到期";
@@ -475,6 +469,15 @@
 "trip_share_layout_list_desc" = "详细展示旅程信息，包含封面、时间卡片和完整行程路线";
 "trip_share_layout_extended_grid" = "网格版面";
 "trip_share_layout_extended_grid_desc" = "以网格形式展示所有目的地照片，支持超过9个地点";
+
+// Destination share image layouts
+"destination_share_layout_classic" = "经典版面";
+"destination_share_layout_classic_desc" = "传统的垂直布局，适合展示详细信息";
+"destination_share_layout_modern_poster" = "现代海报";
+"destination_share_layout_modern_poster_desc" = "采用极简海报风格的版面，适合展示地点故事与氛围";
+"destination_share_layout_circle_poster" = "极简海报";
+"destination_share_layout_circle_poster_desc" = "极简风格下圆形与矩形叠加的版面，适合强调标题、留白与空间感";
+"share_generating" = "正在生成…";
 
 // Travel Stats Share Image
 "stats_share_my_travel_footprint" = "我的旅行足迹";

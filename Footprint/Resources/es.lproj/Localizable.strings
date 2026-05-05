@@ -153,14 +153,8 @@
 "beta_reminder_subtitle" = "This is a beta build. It is valid for 7 days.";
 "beta_reminder_countdown" = "Days remaining: %d";
 "beta_reminder_expiry_date" = "Expires on %@";
-"beta_reminder_backup_tip" = "Please export a local backup via Me > Settings > Data to avoid data loss after the test build expires.";
-"beta_reminder_backup_button" = "How to back up";
+"beta_reminder_backup_tip" = "Para proteger tus datos, descarga y usa la versión oficial.";
 "beta_reminder_continue_button" = "Open MooFootprint Beta";
-"beta_reminder_backup_guide_title" = "Backup guide";
-"beta_reminder_backup_guide_message" = "Open Me > Settings > Data > Export Local Data to generate a backup package. Save it to iCloud Drive or locally so you can re-import after updating to a new build.";
-"beta_reminder_backup_step1" = "Me → Settings → Data";
-"beta_reminder_backup_step2" = "Tap “Export Local Data” to create a backup package";
-"beta_reminder_backup_step3" = "Save the backup to iCloud Drive or local storage";
 
 // Beta Expired
 "beta_expired_title" = "Test build expired";
@@ -493,6 +487,15 @@
 "trip_share_layout_list_desc" = "Información detallada del viaje con portada, tarjeta de tiempo y ruta completa";
 "trip_share_layout_extended_grid" = "Vista de cuadrícula";
 "trip_share_layout_extended_grid_desc" = "Muestra todas las fotos de destinos en un diseño de cuadrícula, admite más de 9 ubicaciones";
+
+// Destination share image layouts
+"destination_share_layout_classic" = "Diseño clásico";
+"destination_share_layout_classic_desc" = "Diseño vertical tradicional, ideal para información detallada";
+"destination_share_layout_modern_poster" = "Póster moderno";
+"destination_share_layout_modern_poster_desc" = "Estilo de póster minimalista para historias del lugar y ambiente";
+"destination_share_layout_circle_poster" = "Póster minimalista";
+"destination_share_layout_circle_poster_desc" = "Estilo minimalista con tipografía y formas superpuestas (círculos y rectángulos); resalta títulos, espacio en blanco y equilibrio visual";
+"share_generating" = "Generando…";
 
 // Travel Stats Share Image
 "stats_share_my_travel_footprint" = "Mi huella de viaje";

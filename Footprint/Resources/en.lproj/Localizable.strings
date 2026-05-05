@@ -146,14 +146,8 @@
 "beta_reminder_countdown" = "Days remaining: %d";
 "beta_reminder_days_label" = "Days Remaining";
 "beta_reminder_expiry_date" = "Expires on %@";
-"beta_reminder_backup_tip" = "Please export a local backup via Me > Settings > Data to avoid data loss after the test build expires.";
-"beta_reminder_backup_button" = "How to back up";
+"beta_reminder_backup_tip" = "To keep your data secure, please download and use the official version.";
 "beta_reminder_continue_button" = "Open MooFootprint Beta";
-"beta_reminder_backup_guide_title" = "Backup guide";
-"beta_reminder_backup_guide_message" = "Open Me > Settings > Data > Export Local Data to generate a backup package. Save it to iCloud Drive or locally so you can re-import after updating to a new build.";
-"beta_reminder_backup_step1" = "Me → Settings → Data";
-"beta_reminder_backup_step2" = "Tap “Export Local Data” to create a backup package";
-"beta_reminder_backup_step3" = "Save the backup to iCloud Drive or local storage";
 
 // Beta Expired
 "beta_expired_title" = "Test build expired";
@@ -536,6 +530,15 @@
 "trip_share_layout_list_desc" = "Detailed journey information with cover, time card and complete route";
 "trip_share_layout_extended_grid" = "Grid View";
 "trip_share_layout_extended_grid_desc" = "Display all destination photos in a grid layout, supports more than 9 locations";
+
+// Destination share image layouts
+"destination_share_layout_classic" = "Classic Layout";
+"destination_share_layout_classic_desc" = "Traditional vertical layout, ideal for detailed information";
+"destination_share_layout_modern_poster" = "Modern Poster";
+"destination_share_layout_modern_poster_desc" = "Minimalist poster style for place stories and atmosphere";
+"destination_share_layout_circle_poster" = "Minimalist Poster";
+"destination_share_layout_circle_poster_desc" = "Minimalist-style layout with overlapping circles and rectangles; emphasizes titles, whitespace, and spatial balance";
+"share_generating" = "Generating…";
 
 // Travel Stats Share Image
 "stats_share_my_travel_footprint" = "My Travel Footprint";

@@ -1,0 +1,2 @@
+// 应用对外营销版本（About / CFBundleShortVersionString），单一来源
+MARKETING_VERSION = 2.30

@@ -15,6 +15,7 @@ import UIKit
 import PhotosUI
 import Photos
 import ImageIO
+import Contacts
 
 /// 用于在闭包中安全更新选中旅程/按天筛选（避免 struct 的 self 不可变）
 private final class RouteSelectionHolder: ObservableObject {
@@ -409,7 +410,7 @@ struct MapView: View {
     }
     
     private var shouldShowAssistiveMenu: Bool {
-        selectedDestination == nil && !showRouteCards && !showSearchBar
+        !autoShowRouteCards && selectedDestination == nil && !showRouteCards && !showSearchBar
     }
     
     private var brandAccentColor: Color {
@@ -2649,19 +2650,46 @@ struct MapView: View {
                     mapStyleRawValue = styles[0].rawValue
                 }
             } label: {
-                Image(systemName: currentMapStyle.iconName)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [.primary, .primary.opacity(0.7)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                if #available(iOS 26, *) {
+                    Image(systemName: currentMapStyle.iconName)
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.primary, .primary.opacity(0.7)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
-                    )
-                    .frame(width: 44, height: 44)
-                    .background(.bar, in: Circle())
-                    .contentShape(Circle())
-                    .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
+                        .frame(width: 44, height: 44)
+                        .glassEffect(.regular.interactive(), in: Circle())
+                        .contentShape(Circle())
+                        .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
+                } else {
+                    Image(systemName: currentMapStyle.iconName)
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.primary, .primary.opacity(0.7)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 44, height: 44)
+                        .background(
+                            Circle()
+                                .fill(.ultraThinMaterial)
+                                .overlay(
+                                    Circle()
+                                        .fill((isDarkMapStyle ? Color.white.opacity(0.12) : Color.white.opacity(0.85)))
+                                )
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.white.opacity(isDarkMapStyle ? 0.25 : 0.35), lineWidth: 1)
+                                )
+                        )
+                        .contentShape(Circle())
+                        .shadow(color: .black.opacity(0.25), radius: 8, x: 0, y: 4)
+                }
             }
             .accessibilityLabel("map_button_style".localized)
             
@@ -4071,7 +4099,7 @@ struct MapView: View {
             streetNumber: streetNumber
         )
         
-        let countryName = placemark.country ?? "unknown_country".localized
+        let countryName = resolvedCountryName(from: placemark)
         let isoCountryCode = placemark.isoCountryCode ?? ""
         let category = (isoCountryCode == "CN" || countryName == "中国" || countryName == "China") ? "domestic" : "international"
         
@@ -4094,15 +4122,80 @@ struct MapView: View {
         // 仅当本次地理编码是为「添加目的地/打卡」发起的才更新预填充，避免启动时的自动定位覆盖用户即将添加的地点
         guard updatePrefill else { return }
         
-        let mkPlacemark = MKPlacemark(placemark: placemark)
-        let mapItem = MKMapItem(placemark: mkPlacemark)
-        mapItem.name = locationName
+        // 使用本次查询坐标作为锚点；CLPlacemark.location 常偏向路网/区块中心，与照片 EXIF 或选点不一致
+        let mapItem = mkMapItemForPrefill(
+            displayCoordinate: coordinate,
+            placemark: placemark,
+            locationName: locationName
+        )
         updateAddDestinationPrefill(
             mapItem: mapItem,
             name: locationName,
             country: countryName,
             category: category
         )
+    }
+    
+    /// 境外反向地理编码常见：`country` 为空但 `isoCountryCode` 有值（如 MY），需本地化展示。
+    private func resolvedCountryName(from placemark: CLPlacemark) -> String {
+        if let c = placemark.country?.trimmingCharacters(in: .whitespacesAndNewlines), !c.isEmpty {
+            return c
+        }
+        if let iso = placemark.isoCountryCode, !iso.isEmpty {
+            return Locale.current.localizedString(forRegionCode: iso) ?? iso
+        }
+        return "unknown_country".localized
+    }
+    
+    /// 预填/保存用的 `MKMapItem`：锚点用查询坐标；国家/州/市从 `CLPlacemark` 写入 `CNPostalAddress`。
+    /// 境外常无 `postalAddress`，若仅用 `MKPlacemark(coordinate:)` 会导致国家、行政区空白（未知国家、省份为空）。
+    private func mkMapItemForPrefill(
+        displayCoordinate: CLLocationCoordinate2D,
+        placemark: CLPlacemark,
+        locationName: String
+    ) -> MKMapItem {
+        let postal: CNPostalAddress = {
+            let m: CNMutablePostalAddress
+            if let existing = placemark.postalAddress {
+                m = existing.mutableCopy() as! CNMutablePostalAddress
+            } else {
+                m = CNMutablePostalAddress()
+            }
+            if m.state.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               let s = placemark.administrativeArea, !s.isEmpty {
+                m.state = s
+            }
+            if m.city.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               let s = placemark.locality, !s.isEmpty {
+                m.city = s
+            }
+            if m.subLocality.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               let s = placemark.subLocality, !s.isEmpty {
+                m.subLocality = s
+            }
+            if m.street.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                let parts = [placemark.thoroughfare, placemark.subThoroughfare].compactMap { $0 }.filter { !$0.isEmpty }
+                if !parts.isEmpty {
+                    m.street = parts.joined(separator: " ")
+                }
+            }
+            if m.country.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                if let iso = placemark.isoCountryCode, !iso.isEmpty {
+                    m.isoCountryCode = iso
+                    m.country = Locale.current.localizedString(forRegionCode: iso) ?? iso
+                } else if let c = placemark.country, !c.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    m.country = c
+                }
+            }
+            if m.isoCountryCode.isEmpty, let iso = placemark.isoCountryCode, !iso.isEmpty {
+                m.isoCountryCode = iso
+            }
+            return m
+        }()
+        let mk = MKPlacemark(coordinate: displayCoordinate, postalAddress: postal)
+        let item = MKMapItem(placemark: mk)
+        item.name = locationName
+        return item
     }
     
     // 反向地理编码：获取城市和国家信息（带多重回退和优化）
@@ -4303,7 +4396,7 @@ struct MapView: View {
                     streetNumber: streetNumber
                 )
                 
-                let countryName = item.placemark.country ?? "unknown_country".localized
+                let countryName = self.resolvedCountryName(from: item.placemark)
                 let isoCountryCode = item.placemark.isoCountryCode ?? ""
                 let category = (isoCountryCode == "CN" || countryName == "中国" || countryName == "China") ? "domestic" : "international"
                 
@@ -4321,8 +4414,11 @@ struct MapView: View {
                 }
                 print("   国家: \(countryName)")
                 
-                let mapItem = item
-                mapItem.name = locationName
+                let mapItem = self.mkMapItemForPrefill(
+                    displayCoordinate: coordinate,
+                    placemark: item.placemark,
+                    locationName: locationName
+                )
                 DispatchQueue.main.async {
                     self.isGeocodingLocation = false
                     if forAddDestinationPrefill {
@@ -4470,6 +4566,46 @@ struct MapView: View {
         }
     }
     
+    /// 从 EXIF GPS 字典解析 WGS84（与 CoreLocation / PHAsset 一致）；支持标量、NSNumber、度分秒数组及有理数分量。
+    private func coordinateFromEXIFGPSDictionary(_ gps: [CFString: Any]) -> CLLocationCoordinate2D? {
+        guard let latRefRaw = gps[kCGImagePropertyGPSLatitudeRef],
+              let lonRefRaw = gps[kCGImagePropertyGPSLongitudeRef] else { return nil }
+        let latRef = String(describing: latRefRaw).uppercased()
+        let lonRef = String(describing: lonRefRaw).uppercased()
+        guard let latDeg = exifGPSDegrees(from: gps[kCGImagePropertyGPSLatitude]),
+              let lonDeg = exifGPSDegrees(from: gps[kCGImagePropertyGPSLongitude]) else { return nil }
+        let lat = (latRef == "S") ? -latDeg : latDeg
+        let lon = (lonRef == "W") ? -lonDeg : lonDeg
+        guard lat >= -90, lat <= 90, lon >= -180, lon <= 180 else { return nil }
+        return CLLocationCoordinate2D(latitude: lat, longitude: lon)
+    }
+    
+    private func exifGPSDegrees(from value: Any?) -> Double? {
+        guard let value = value else { return nil }
+        if let d = value as? Double { return d }
+        if let n = value as? NSNumber { return n.doubleValue }
+        if let arr = value as? [Any], arr.count >= 3 {
+            return exifRationalComponent(arr[0]) + exifRationalComponent(arr[1]) / 60.0 + exifRationalComponent(arr[2]) / 3600.0
+        }
+        if let arr = value as? NSArray, arr.count >= 3 {
+            return exifRationalComponent(arr[0]) + exifRationalComponent(arr[1]) / 60.0 + exifRationalComponent(arr[2]) / 3600.0
+        }
+        return nil
+    }
+    
+    private func exifRationalComponent(_ value: Any?) -> Double {
+        guard let value = value else { return 0 }
+        if let d = value as? Double { return d }
+        if let n = value as? NSNumber { return n.doubleValue }
+        if let dict = value as? NSDictionary,
+           let num = dict["Numerator"] as? NSNumber,
+           let den = dict["Denominator"] as? NSNumber,
+           den.doubleValue != 0 {
+            return num.doubleValue / den.doubleValue
+        }
+        return 0
+    }
+    
     private func extractMetadata(for item: PhotosPickerItem, imageData: Data) -> PhotoMetadata {
         var coordinate: CLLocationCoordinate2D?
         var captureDate: Date?
@@ -4500,21 +4636,15 @@ struct MapView: View {
             if let source = CGImageSourceCreateWithData(imageData as CFData, nil),
                let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] {
                 
-                // 提取 GPS 坐标
+                // 提取 GPS（兼容 Double、NSNumber、度分秒数组；PHAsset 已为 WGS84）
                 if coordinate == nil,
-                   let gps = properties[kCGImagePropertyGPSDictionary] as? [CFString: Any],
-                   let latitude = gps[kCGImagePropertyGPSLatitude] as? Double,
-                   let latitudeRef = gps[kCGImagePropertyGPSLatitudeRef] as? String,
-                   let longitude = gps[kCGImagePropertyGPSLongitude] as? Double,
-                   let longitudeRef = gps[kCGImagePropertyGPSLongitudeRef] as? String {
-                    let latRef = latitudeRef.uppercased()
-                    let lonRef = longitudeRef.uppercased()
-                    let lat = latRef == "S" ? -latitude : latitude
-                    let lon = lonRef == "W" ? -longitude : longitude
-                    coordinate = CLLocationCoordinate2D(latitude: lat, longitude: lon)
-                    print("✅ 从 EXIF GPS 获取坐标: (\(String(format: "%.6f", lat)), \(String(format: "%.6f", lon)))")
-                } else if coordinate == nil {
-                    print("⚠️ EXIF 中未找到 GPS 信息")
+                   let gps = properties[kCGImagePropertyGPSDictionary] as? [CFString: Any] {
+                    if let coord = coordinateFromEXIFGPSDictionary(gps) {
+                        coordinate = coord
+                        print("✅ 从 EXIF GPS 获取坐标: (\(String(format: "%.6f", coord.latitude)), \(String(format: "%.6f", coord.longitude)))")
+                    } else {
+                        print("⚠️ EXIF 中未找到 GPS 信息")
+                    }
                 }
                 
                 // 提取拍摄日期

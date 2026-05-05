@@ -153,14 +153,8 @@
 "beta_reminder_subtitle" = "This is a beta build. It is valid for 7 days.";
 "beta_reminder_countdown" = "Days remaining: %d";
 "beta_reminder_expiry_date" = "Expires on %@";
-"beta_reminder_backup_tip" = "Please export a local backup via Me > Settings > Data to avoid data loss after the test build expires.";
-"beta_reminder_backup_button" = "How to back up";
+"beta_reminder_backup_tip" = "Pour la sécurité de vos données, téléchargez et utilisez la version officielle.";
 "beta_reminder_continue_button" = "Open MooFootprint Beta";
-"beta_reminder_backup_guide_title" = "Backup guide";
-"beta_reminder_backup_guide_message" = "Open Me > Settings > Data > Export Local Data to generate a backup package. Save it to iCloud Drive or locally so you can re-import after updating to a new build.";
-"beta_reminder_backup_step1" = "Me → Settings → Data";
-"beta_reminder_backup_step2" = "Tap “Export Local Data” to create a backup package";
-"beta_reminder_backup_step3" = "Save the backup to iCloud Drive or local storage";
 
 // Beta Expired
 "beta_expired_title" = "Test build expired";
@@ -493,6 +487,15 @@
 "trip_share_layout_list_desc" = "Informations détaillées sur le voyage avec couverture, carte temporelle et itinéraire complet";
 "trip_share_layout_extended_grid" = "Vue en grille";
 "trip_share_layout_extended_grid_desc" = "Afficher toutes les photos de destination dans une mise en page en grille, prend en charge plus de 9 lieux";
+
+// Destination share image layouts
+"destination_share_layout_classic" = "Mise en page classique";
+"destination_share_layout_classic_desc" = "Disposition verticale traditionnelle, idéale pour les informations détaillées";
+"destination_share_layout_modern_poster" = "Affichette moderne";
+"destination_share_layout_modern_poster_desc" = "Style affiche minimaliste, adapté aux récits de lieux et à l’ambiance";
+"destination_share_layout_circle_poster" = "Affichette minimaliste";
+"destination_share_layout_circle_poster_desc" = "Style minimaliste : typographie et formes superposées (cercles et rectangles) ; met en valeur le titre, les blancs et l’équilibre de l’espace";
+"share_generating" = "Génération…";
 
 // Travel Stats Share Image
 "stats_share_my_travel_footprint" = "Mon empreinte de voyage";
