@@ -162,9 +162,8 @@ extension FootprintApp {
         DispatchQueue.main.async {
             // 1. 提前启动定位服务
             let locationManager = LocationManager.shared
-            locationManager.startUpdatingLocation()
             locationManager.requestLocation()
-            print("📍 定位服务已在启动画面期间启动")
+            print("📍 启动画面期间仅请求一次性定位（持续定位在进入地图 Tab 后启动）")
             
             // 2. 提前创建 Geocoder（通过通知通知 MapView）
             // Geocoder 需要在 MapView 中创建，因为需要 @State 变量

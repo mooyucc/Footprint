@@ -1004,6 +1004,7 @@ struct GeneralSettingsView: View {
     @EnvironmentObject var brandColorManager: BrandColorManager
     @ObservedObject var appearanceManager: AppearanceManager
     @AppStorage("mapStyle") private var mapStyleRawValue: String = MapStyle.muted.rawValue
+    @AppStorage("mapWeatherEnabled") private var mapWeatherEnabled = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var systemColorScheme
     @State private var showingLanguagePicker = false
@@ -1137,6 +1138,14 @@ struct GeneralSettingsView: View {
                 
                 // 地图样式
                 Section {
+                    Toggle(isOn: $mapWeatherEnabled) {
+                        SettingsRowLabel(
+                            title: "map_weather_display".localized,
+                            systemImage: "cloud.sun.fill",
+                            iconColor: brandColorManager.currentBrandColor
+                        )
+                    }
+                    
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 10) {
                         ForEach(MapStyle.allCases, id: \.self) { style in
                             MapStyleCard(
@@ -1152,6 +1161,8 @@ struct GeneralSettingsView: View {
                     .padding(.vertical, 4)
                 } header: {
                     Text("map_style_title".localized)
+                } footer: {
+                    Text("map_weather_display_description".localized)
                 }
             }
             .navigationTitle("general_settings".localized)

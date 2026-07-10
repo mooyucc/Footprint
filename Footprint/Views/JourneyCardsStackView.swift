@@ -9,6 +9,7 @@ import SwiftUI
 import SwiftData
 import UIKit
 import AudioToolbox
+import MapKit
 
 /// 旅程列表的「压缩堆叠 + 滚轮拨动」卡片视图：拖拽切换焦点，点按直接选中。
 struct JourneyCardsStackView: View {
@@ -125,9 +126,13 @@ struct JourneyCardsStackView: View {
             }
             .onAppear {
                 clampFocusedIndex()
+                scheduleRoutePrewarm()
             }
             .onChange(of: trips.count) { _, _ in
                 clampFocusedIndex()
+            }
+            .onChange(of: focusedIndex) { _, _ in
+                scheduleRoutePrewarm()
             }
             .navigationDestination(item: $detailTripId) { tripId in
                 if let trip = trips.first(where: { $0.id == tripId }) {
@@ -298,6 +303,10 @@ struct JourneyCardsStackView: View {
         focusedIndex = min(max(0, focusedIndex), displayTrips.count - 1)
     }
     
+    private func scheduleRoutePrewarm() {
+        TripRoutePrewarmer.schedulePrewarm(for: displayTrips, focusIndex: focusedIndex)
+    }
+    
     private func importTripFromURL(_ url: URL) {
         importResult = TripDataImporter.importTrip(from: url, modelContext: modelContext)
         showingImportResult = true
@@ -403,6 +412,13 @@ private struct JourneyTripRouteMapSheet: View {
     }
     
     var body: some View {
+        let prefilledRoutes: [UUID: [MKRoute?]] = {
+            if let routes = TripRoutePrewarmer.prefillRoutes(for: trip) {
+                return [trip.id: routes]
+            }
+            return [:]
+        }()
+        
         NavigationStack {
             MapView(
                 autoShowRouteCards: true,
@@ -412,7 +428,8 @@ private struct JourneyTripRouteMapSheet: View {
                 selectedDayFilterBinding: $selectedDayFilter,
                 tripsOverride: [trip],
                 hasMoreTrips: false,
-                onLoadMoreTrips: nil
+                onLoadMoreTrips: nil,
+                prefilledTripRoutes: prefilledRoutes.isEmpty ? nil : prefilledRoutes
             )
             .environment(\.mapViewInNavigationStack, true)
             .navigationTitle(navigationBarTitle)

@@ -331,6 +331,7 @@
 "map_button_footprints" = "足迹";
 "map_button_search" = "搜索";
 "map_button_style" = "样式";
+"map_zoom_in_for_more" = "地点较多，放大地图查看更多";
 "map_button_menu" = "快捷操作";
 "map_button_import_photo" = "导入照片";
 "map_button_ai" = "AI 助手";
@@ -499,6 +500,8 @@
 "map_style_satellite" = "卫星地图";
 "map_style_hybrid" = "混合地图";
 "map_style_imagery" = "卫星图像";
+"map_weather_display" = "地图显示天气";
+"map_weather_display_description" = "开启后在地图标注上显示各地点当前天气。地点较多时可能影响性能与流畅度。";
 
 // Duplicate Destination Check
 "duplicate_destination_title" = "重复的目的地";

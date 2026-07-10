@@ -559,6 +559,8 @@
 "map_style_satellite" = "衛星地圖";
 "map_style_hybrid" = "混合地圖";
 "map_style_imagery" = "衛星圖像";
+"map_weather_display" = "地圖顯示天氣";
+"map_weather_display_description" = "開啟後在地圖標註上顯示各地點目前天氣。地點較多時可能影響效能與流暢度。";
 
 // Duplicate Destination Check
 "duplicate_destination_title" = "重複的目的地";

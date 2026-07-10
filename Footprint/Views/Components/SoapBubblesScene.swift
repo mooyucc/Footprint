@@ -310,6 +310,8 @@ class SoapBubbleNode: SKNode {
 /// 吹出肥皂泡泡的场景
 class SoapBubblesScene: SKScene {
     
+    private static let maxBubbleCount = 24
+    
     // MARK: - 属性
     
     /// 是否为深色地图样式
@@ -421,7 +423,7 @@ class SoapBubblesScene: SKScene {
         )
         
         let bubbleColors = generateBubbleColors()
-        let bubbleCount = 15 // 泡泡数量
+        let bubbleCount = min(15, Self.maxBubbleCount) // 泡泡数量
         
         // 创建多个泡泡
         for i in 0..<bubbleCount {
@@ -451,6 +453,16 @@ class SoapBubblesScene: SKScene {
                 }
             }
         }
+    }
+    
+    /// 动画结束或视图销毁时立即停止所有 SpriteKit action，释放 GPU
+    func teardown() {
+        isPaused = true
+        removeAllActions()
+        children.forEach { child in
+            child.removeAllActions()
+        }
+        removeAllChildren()
     }
     
     /// 创建单个泡泡
@@ -541,16 +553,18 @@ struct SoapBubblesView: UIViewRepresentable {
     let direction: CGFloat
     let spreadAngle: CGFloat
     let isDarkMapStyle: Bool
+    let isActive: Bool
     let onPlaySound: ((Int) -> Void)?
     let onComplete: () -> Void
     
     let id: UUID
     
-    init(position: CGPoint, direction: CGFloat = .pi / 2, spreadAngle: CGFloat = .pi / 3, isDarkMapStyle: Bool = false, onPlaySound: ((Int) -> Void)? = nil, onComplete: @escaping () -> Void) {
+    init(position: CGPoint, direction: CGFloat = .pi / 2, spreadAngle: CGFloat = .pi / 3, isDarkMapStyle: Bool = false, isActive: Bool = true, onPlaySound: ((Int) -> Void)? = nil, onComplete: @escaping () -> Void) {
         self.position = position
         self.direction = direction
         self.spreadAngle = spreadAngle
         self.isDarkMapStyle = isDarkMapStyle
+        self.isActive = isActive
         self.onPlaySound = onPlaySound
         self.onComplete = onComplete
         self.id = UUID()
@@ -599,7 +613,18 @@ struct SoapBubblesView: UIViewRepresentable {
             if newSize.width > 0 && newSize.height > 0 {
                 scene.size = newSize
             }
+            scene.isPaused = !isActive
+            if !isActive {
+                scene.teardown()
+            }
         }
+    }
+    
+    static func dismantleUIView(_ uiView: SKView, coordinator: ()) {
+        if let scene = uiView.scene as? SoapBubblesScene {
+            scene.teardown()
+        }
+        uiView.presentScene(nil)
     }
 }
 

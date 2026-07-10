@@ -22,6 +22,24 @@ final class TripRoutePrecomputationStore: ObservableObject {
         routesByTripId = newMap
     }
     
+    /// 写入预热或主地图同步的整趟路线（段数须完整才存储）
+    func storeRoutes(for tripId: UUID, routes: [MKRoute?]) {
+        guard routes.allSatisfy({ $0 != nil }) else { return }
+        let compact = routes.compactMap { $0 }
+        guard compact.count == routes.count else { return }
+        routesByTripId[tripId] = compact
+    }
+    
+    /// 主地图已算好的整趟路线（段数须与 `segmentCount` 一致才可信）
+    func precomputedRoutes(for tripId: UUID, segmentCount: Int) -> [MKRoute]? {
+        guard segmentCount > 0,
+              let routes = routesByTripId[tripId],
+              routes.count == segmentCount else {
+            return nil
+        }
+        return routes
+    }
+    
     private func approximatelyEqual(_ a: [UUID: [MKRoute]], _ b: [UUID: [MKRoute]]) -> Bool {
         guard a.count == b.count else { return false }
         for (id, routesA) in a {

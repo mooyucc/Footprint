@@ -138,6 +138,8 @@
 // Map Coordinate Picker
 "select_point_on_map" = "मानचित्र पर बिंदु चुनें";
 "long_press_on_map_to_select" = "नया स्थान चुनने के लिए मानचित्र पर लंबे समय तक दबाएं";
+"map_weather_display" = "मानचित्र पर मौसम दिखाएँ";
+"map_weather_display_description" = "सक्षम होने पर, मानचित्र पर प्रत्येक गंतव्य का वर्तमान मौसम दिखाया जाता है। अधिक गंतव्य होने पर प्रदर्शन प्रभावित हो सकता है।";
 "use_this_location" = "इस स्थान का उपयोग करें";
 "select_location" = "स्थान चुनें";
 "reverse_geocoding_failed" = "रिवर्स जियोकोडिंग विफल: %@";

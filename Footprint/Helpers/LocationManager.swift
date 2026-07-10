@@ -10,6 +10,16 @@ import Foundation
 import CoreLocation
 import Combine
 
+/// 定位精度模式：按场景分级，降低地图浏览时的 GPS 基线功耗
+enum LocationTrackingMode {
+    /// 地图浏览（默认）：十米级精度，30m 距离过滤
+    case mapBrowsing
+    /// 打卡 / 等待定位：最佳精度，10m 过滤
+    case checkIn
+    /// 轨迹播放 / 导航：导航级精度，5m 过滤
+    case navigation
+}
+
 // MARK: - 位置管理器
 /// 位置管理器 - 单例模式，支持在启动画面期间提前初始化
 class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
@@ -20,6 +30,9 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
     @Published var lastLocationAccuracy: Double?
     private var isUpdatingLocation = false
+    var isActivelyUpdatingLocation: Bool { isUpdatingLocation }
+    private var thermalMitigationActive = false
+    private(set) var currentMode: LocationTrackingMode = .mapBrowsing
     
     // 位置去重和优化
     private var lastProcessedLocation: CLLocation?
@@ -52,13 +65,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         // 系统会智能地将所有信号源结合起来，提供最快、最准确的位置信息
         // 我们只需要设置精度要求，系统会自动选择最佳组合
         
-        // 使用导航级精度：精度更高（±5米或更好），系统会智能优化功耗
-        // 适合长时间追踪路线，类似健身app的策略
-        // 系统会自动使用 GPS + WiFi + 蜂窝网络等所有可用技术
-        locationManager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
-        
-        // 设置距离过滤器：当位置变化超过5米时更新（平衡精度和功耗）
-        locationManager.distanceFilter = 5.0
+        applyMode(.mapBrowsing)
         
         // 设置活动类型为健身/导航，系统会根据活动类型优化定位技术使用和功耗
         // 例如：静止时更多使用 WiFi/蜂窝网络，运动时更多使用 GPS
@@ -69,6 +76,72 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         
         // 检查当前授权状态
         authorizationStatus = locationManager.authorizationStatus
+    }
+    
+    /// 按场景切换定位精度；若已在持续定位，会重启以应用新参数
+    func applyMode(_ mode: LocationTrackingMode) {
+        guard !thermalMitigationActive else {
+            currentMode = mode
+            return
+        }
+        guard currentMode != mode ||
+                locationManager.desiredAccuracy != accuracy(for: mode) ||
+                locationManager.distanceFilter != distanceFilter(for: mode) else {
+            currentMode = mode
+            return
+        }
+        
+        currentMode = mode
+        locationManager.desiredAccuracy = accuracy(for: mode)
+        locationManager.distanceFilter = distanceFilter(for: mode)
+        
+        if isUpdatingLocation {
+            locationManager.stopUpdatingLocation()
+            locationManager.startUpdatingLocation()
+        }
+    }
+    
+    private func accuracy(for mode: LocationTrackingMode) -> CLLocationAccuracy {
+        switch mode {
+        case .mapBrowsing:
+            return kCLLocationAccuracyNearestTenMeters
+        case .checkIn:
+            return kCLLocationAccuracyBest
+        case .navigation:
+            return kCLLocationAccuracyBestForNavigation
+        }
+    }
+    
+    private func distanceFilter(for mode: LocationTrackingMode) -> CLLocationDistance {
+        switch mode {
+        case .mapBrowsing:
+            return 30.0
+        case .checkIn:
+            return 10.0
+        case .navigation:
+            return 5.0
+        }
+    }
+    
+    /// 系统发热降级：serious/critical 时降低 GPS 精度
+    func applyThermalMitigation(_ state: ProcessInfo.ThermalState) {
+        switch state {
+        case .nominal:
+            thermalMitigationActive = false
+            if isUpdatingLocation {
+                applyMode(currentMode)
+            }
+        case .fair:
+            thermalMitigationActive = false
+        case .serious, .critical:
+            thermalMitigationActive = true
+            if isUpdatingLocation {
+                locationManager.desiredAccuracy = kCLLocationAccuracyHundredMeters
+                locationManager.distanceFilter = 50
+            }
+        @unknown default:
+            break
+        }
     }
     
     func requestLocation() {
@@ -82,7 +155,9 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
     
     /// 开始持续定位更新（用于实时跟踪用户位置）
-    func startUpdatingLocation() {
+    func startUpdatingLocation(mode: LocationTrackingMode = .mapBrowsing) {
+        applyMode(mode)
+        
         // 如果尚未请求权限，先请求权限
         if authorizationStatus == .notDetermined {
             locationManager.requestWhenInUseAuthorization()
@@ -102,7 +177,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         
         locationManager.startUpdatingLocation()
         isUpdatingLocation = true
-        print("📍 开始持续定位更新")
+        print("📍 开始持续定位更新（模式: \(mode))")
     }
     
     /// 停止持续定位更新（节省电量）
@@ -223,12 +298,12 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         lastProcessedLocation = location
         lastUpdateTime = Date()
         
-        // 输出位置信息（精度反映了综合定位技术的效果）
-        // horizontalAccuracy 越小表示精度越高，通常：
-        // - < 5米：主要使用 GPS（室外）
-        // - 5-20米：GPS + WiFi/蜂窝网络混合（城市环境）
-        // - 20-50米：主要使用 WiFi/蜂窝网络（室内或信号弱时）
-        print("📍 获取到用户位置（综合定位）: WGS84(\(wgsCoord.latitude), \(wgsCoord.longitude)) -> GCJ02(\(gcjCoord.latitude), \(gcjCoord.longitude)), 精度=\(String(format: "%.1f", location.horizontalAccuracy))米, 速度=\(String(format: "%.1f", location.speed * 3.6))km/h")
+        // 输出位置信息（地图浏览模式减少日志噪音）
+        #if DEBUG
+        if currentMode != .mapBrowsing || !hasDeliveredInitialFix {
+            print("📍 获取到用户位置（综合定位）: WGS84(\(wgsCoord.latitude), \(wgsCoord.longitude)) -> GCJ02(\(gcjCoord.latitude), \(gcjCoord.longitude)), 精度=\(String(format: "%.1f", location.horizontalAccuracy))米, 速度=\(String(format: "%.1f", location.speed * 3.6))km/h")
+        }
+        #endif
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {

@@ -331,6 +331,7 @@
 "map_button_footprints" = "Footprints";
 "map_button_search" = "Search";
 "map_button_style" = "Style";
+"map_zoom_in_for_more" = "Too many places here. Zoom in to see more.";
 "map_button_menu" = "Quick Actions";
 "map_button_import_photo" = "Import Photo";
 "map_button_ai" = "AI Assistant";
@@ -560,6 +561,8 @@
 "map_style_satellite" = "Satellite";
 "map_style_hybrid" = "Hybrid";
 "map_style_imagery" = "Imagery";
+"map_weather_display" = "Show Weather on Map";
+"map_weather_display_description" = "When enabled, shows current weather for each destination on the map. May affect performance when there are many destinations.";
 
 // Duplicate Destination Check
 "duplicate_destination_title" = "Duplicate Destination";

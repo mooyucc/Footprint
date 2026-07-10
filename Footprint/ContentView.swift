@@ -11,6 +11,8 @@ import UIKit
 
 struct ContentView: View {
     @State private var selectedTab = 0
+    /// 已实例化的 Tab 索引；默认仅加载地图 Tab，避免启动时 4 个 Tab 同时 @Query 全量数据
+    @State private var loadedTabs: Set<Int> = [0]
     @EnvironmentObject var languageManager: LanguageManager
     @EnvironmentObject var brandColorManager: BrandColorManager
     @Environment(\.colorScheme) private var colorScheme
@@ -19,52 +21,60 @@ struct ContentView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             // 足迹地图（个人）
-            MapView()
-                .tabItem {
-                    Label {
-                        Text("footprint_map".localized)
-                    } icon: {
-                        Image(systemName: "map.fill")
-                    }
+            lazyTabContent(0) {
+                MapView()
+            }
+            .tabItem {
+                Label {
+                    Text("footprint_map".localized)
+                } icon: {
+                    Image(systemName: "map.fill")
                 }
-                .tag(0)
+            }
+            .tag(0)
             
-            JourneyCardsStackView()
-                .tabItem {
-                    Label {
-                        Text("journey_cards_tab".localized)
-                    } icon: {
-                        Image(systemName: "square.stack.3d.up.fill")
-                    }
+            lazyTabContent(1) {
+                JourneyCardsStackView()
+            }
+            .tabItem {
+                Label {
+                    Text("journey_cards_tab".localized)
+                } icon: {
+                    Image(systemName: "square.stack.3d.up.fill")
                 }
-                .tag(1)
+            }
+            .tag(1)
             
-            BadgeView()
-                .tabItem {
-                    Label {
-                        Text("badges".localized)
-                    } icon: {
-                        Image(systemName: "medal.star")
-                    }
+            lazyTabContent(2) {
+                BadgeView(isTabSelected: selectedTab == 2)
+            }
+            .tabItem {
+                Label {
+                    Text("badges".localized)
+                } icon: {
+                    Image(systemName: "medal.star")
                 }
-                .tag(2)
+            }
+            .tag(2)
             
-            ProfileView()
-                .tabItem {
-                    Label {
-                        Text("profile".localized)
-                    } icon: {
-                        Image(systemName: "person.fill")
-                    }
+            lazyTabContent(3) {
+                ProfileView()
+            }
+            .tabItem {
+                Label {
+                    Text("profile".localized)
+                } icon: {
+                    Image(systemName: "person.fill")
                 }
-                .tag(3)
+            }
+            .tag(3)
         }
         .tint(brandColorManager.currentBrandColor) // 使用品牌主题色，确保所有 tab 一致，并响应颜色变化
         .onAppear {
             configureTabBarAppearance(for: colorScheme, brandColor: brandColorManager.currentBrandColor)
             // 默认选中足迹地图 tab 时不会触发 onChange(selectedTab)，定位改由此处与 scenePhase 统一启动（原 MapView.onAppear 已仅用于嵌入全屏地图）
             if selectedTab == 0 {
-                LocationManager.shared.startUpdatingLocation()
+                LocationManager.shared.startUpdatingLocation(mode: .mapBrowsing)
             }
         }
         .onChange(of: colorScheme) { newScheme in
@@ -90,10 +100,13 @@ struct ContentView: View {
         .onChange(of: selectedTab) { oldValue, newValue in
             // Tab 切换不再重复 configureTabBarAppearance：全局 appearance 已在 onAppear / 主题与深浅色变化时设置；
             // 此前每次切换递归整窗 UIView + layoutIfNeeded 会加重首切 Tab 时的主线程卡顿。
+            if newValue >= 0 {
+                loadedTabs.insert(newValue)
+            }
             let locationManager = LocationManager.shared
             if newValue == 0 {
                 // 切换到地图 tab（足迹地图），启动实时定位
-                locationManager.startUpdatingLocation()
+                locationManager.startUpdatingLocation(mode: .mapBrowsing)
                 print("📍 切换到地图 tab，启动实时定位")
             } else if oldValue == 0 {
                 // 从地图 tab 切换到其他 tab，停止实时定位以节省电量
@@ -110,9 +123,25 @@ struct ContentView: View {
                 print("📍 App 进入后台/非活跃状态，停止实时定位")
             } else if newPhase == .active && selectedTab == 0 {
                 // App 回到前台且当前在足迹地图 tab，重新启动实时定位
-                locationManager.startUpdatingLocation()
+                locationManager.startUpdatingLocation(mode: .mapBrowsing)
                 print("📍 App 回到前台且在地图 tab，重新启动实时定位")
             }
+        }
+    }
+
+    @ViewBuilder
+    private func lazyTabContent<Content: View>(_ index: Int, @ViewBuilder content: () -> Content) -> some View {
+        if index == 0 {
+            // 地图 Tab：离屏即卸载，停止 GPU/内存占用
+            if selectedTab == 0 {
+                content()
+            } else {
+                Color.clear
+            }
+        } else if loadedTabs.contains(index) {
+            content()
+        } else {
+            Color.clear
         }
     }
     
@@ -234,6 +263,8 @@ struct ProfileView: View {
     @State private var favoriteDestinationsCache: [TravelDestination] = []
     /// 缓存时间线年份及对应数量，避免每次渲染都重新分组
     @State private var timelineYearItemsCache: [(year: Int, count: Int)] = []
+    @State private var profileCacheTask: Task<Void, Never>?
+    @State private var lastProfileDestinationsSignature = ""
     @Environment(\.colorScheme) var colorScheme
     
     // MARK: - 配色（使用统一的 AppColorScheme 工具类）
@@ -332,9 +363,12 @@ struct ProfileView: View {
                 AllDestinationsListView()
             }
             .onAppear {
+                lastProfileDestinationsSignature = profileDestinationsSignature
                 refreshProfileCaches()
             }
-            .onChange(of: destinations) { _, _ in
+            .onChange(of: profileDestinationsSignature) { _, newSignature in
+                guard newSignature != lastProfileDestinationsSignature else { return }
+                lastProfileDestinationsSignature = newSignature
                 refreshProfileCaches()
             }
             .onChange(of: shareImage) { newImage in
@@ -764,28 +798,114 @@ struct ProfileView: View {
         }
     }
     
-    /// 重新计算「我的」页相关统计与缓存，集中在一个函数里，避免在多个计算属性中重复遍历所有目的地
+    /// 重新计算「我的」页相关统计与缓存（后台线程计算，主线程仅更新 UI）
+    private var profileDestinationsSignature: String {
+        DestinationCollectionSignature.makeForProfile(from: destinations)
+    }
+
     private func refreshProfileCaches() {
-        let all = destinations
-        let total = all.count
-        // 使用 CountryManager 来判断是否为国内
-        let domestic = all.filter { countryManager.isDomestic(country: $0.country) }.count
-        let international = total - domestic
-        let countries = Set(all.map { $0.country }).count
-        
-        let continents = estimateContinents(from: all)
-        statisticsCache = (total, domestic, international, countries, continents)
-        
-        favoriteDestinationsCache = all
-            .filter { $0.isFavorite }
-            .sorted { $0.visitDate > $1.visitDate }
-        
-        let groups = Dictionary(grouping: all) { destination in
-            Calendar.current.component(.year, from: destination.visitDate)
+        profileCacheTask?.cancel()
+
+        let snapshots = destinations.map {
+            ProfileDestinationSnapshot(
+                id: $0.id,
+                country: $0.country,
+                category: $0.category,
+                isFavorite: $0.isFavorite,
+                visitDate: $0.visitDate
+            )
         }
-        timelineYearItemsCache = groups
+        let userCountry = countryManager.currentCountry
+
+        profileCacheTask = Task {
+            let computed = await Task.detached(priority: .userInitiated) {
+                ProfileView.computeProfileCaches(from: snapshots, userCountry: userCountry)
+            }.value
+
+            guard !Task.isCancelled else { return }
+
+            await MainActor.run {
+                let destinationByID = Dictionary(uniqueKeysWithValues: destinations.map { ($0.id, $0) })
+                statisticsCache = computed.statistics
+                favoriteDestinationsCache = computed.favoriteIDs.compactMap { destinationByID[$0] }
+                timelineYearItemsCache = computed.timelineYearItems
+            }
+        }
+    }
+
+    private struct ProfileDestinationSnapshot: Sendable {
+        let id: UUID
+        let country: String
+        let category: String
+        let isFavorite: Bool
+        let visitDate: Date
+    }
+
+    private static func computeProfileCaches(
+        from snapshots: [ProfileDestinationSnapshot],
+        userCountry: CountryManager.Country
+    ) -> (
+        statistics: (total: Int, domestic: Int, international: Int, countries: Int, continents: Int),
+        favoriteIDs: [UUID],
+        timelineYearItems: [(year: Int, count: Int)]
+    ) {
+        let total = snapshots.count
+        let domestic = snapshots.filter { isDomestic(country: $0.country, userCountry: userCountry) }.count
+        let international = total - domestic
+        let countries = Set(snapshots.map(\.country)).count
+        let continents = estimateContinents(from: snapshots)
+
+        let favoriteIDs = snapshots
+            .filter(\.isFavorite)
+            .sorted { $0.visitDate > $1.visitDate }
+            .map(\.id)
+
+        let calendar = Calendar.current
+        let groups = Dictionary(grouping: snapshots) { snapshot in
+            calendar.component(.year, from: snapshot.visitDate)
+        }
+        let timelineYearItems = groups
             .map { (year: $0.key, count: $0.value.count) }
             .sorted { $0.year > $1.year }
+
+        return (
+            (total, domestic, international, countries, continents),
+            favoriteIDs,
+            timelineYearItems
+        )
+    }
+
+    private static func isDomestic(country: String, userCountry: CountryManager.Country) -> Bool {
+        if country == userCountry.rawValue { return true }
+        if country == userCountry.displayName { return true }
+        if country == userCountry.englishName { return true }
+        return false
+    }
+
+    private static func estimateContinents(from snapshots: [ProfileDestinationSnapshot]) -> Int {
+        let asianCountries = ["中国", "日本", "韩国", "泰国", "新加坡", "马来西亚", "印度", "越南"]
+        let europeanCountries = ["法国", "德国", "英国", "意大利", "西班牙", "瑞士", "荷兰", "冰岛"]
+        let americanCountries = ["美国", "加拿大", "墨西哥", "巴西", "阿根廷"]
+        let oceaniaCountries = ["澳大利亚", "新西兰"]
+        let africanCountries = ["南非", "埃及", "摩洛哥", "肯尼亚"]
+
+        var continents = Set<String>()
+
+        for snapshot in snapshots {
+            if asianCountries.contains(snapshot.country) || snapshot.category == "domestic" {
+                continents.insert("Asia")
+            } else if europeanCountries.contains(snapshot.country) {
+                continents.insert("Europe")
+            } else if americanCountries.contains(snapshot.country) {
+                continents.insert("America")
+            } else if oceaniaCountries.contains(snapshot.country) {
+                continents.insert("Oceania")
+            } else if africanCountries.contains(snapshot.country) {
+                continents.insert("Africa")
+            }
+        }
+
+        return continents.count
     }
     
     private var aboutSection: some View {
@@ -830,32 +950,6 @@ struct ProfileView: View {
             // 设置图片，onChange 会自动触发分享面板显示
             shareImage = image
         }
-    }
-    
-    private func estimateContinents(from destinations: [TravelDestination]) -> Int {
-        let asianCountries = ["中国", "日本", "韩国", "泰国", "新加坡", "马来西亚", "印度", "越南"]
-        let europeanCountries = ["法国", "德国", "英国", "意大利", "西班牙", "瑞士", "荷兰", "冰岛"]
-        let americanCountries = ["美国", "加拿大", "墨西哥", "巴西", "阿根廷"]
-        let oceaniaCountries = ["澳大利亚", "新西兰"]
-        let africanCountries = ["南非", "埃及", "摩洛哥", "肯尼亚"]
-        
-        var continents = Set<String>()
-        
-        for destination in destinations {
-            if asianCountries.contains(destination.country) || destination.category == "domestic" {
-                continents.insert("Asia")
-            } else if europeanCountries.contains(destination.country) {
-                continents.insert("Europe")
-            } else if americanCountries.contains(destination.country) {
-                continents.insert("America")
-            } else if oceaniaCountries.contains(destination.country) {
-                continents.insert("Oceania")
-            } else if africanCountries.contains(destination.country) {
-                continents.insert("Africa")
-            }
-        }
-        
-        return continents.count
     }
 }
 

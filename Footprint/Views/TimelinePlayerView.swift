@@ -41,7 +41,7 @@ enum PlaybackSpeed: Double, CaseIterable {
         case .fast:
             return 0.5
         case .veryFast:
-            return 0.2
+            return 0.1
         }
     }
 }
@@ -102,6 +102,7 @@ class TimelinePlayerState: ObservableObject {
 struct TimelinePlayerView: View {
     @ObservedObject var playerState: TimelinePlayerState
     @StateObject private var languageManager = LanguageManager.shared
+    @Environment(\.scenePhase) private var scenePhase
     @State private var playbackTimer: Timer?
     var onCameraMove: ((MapCameraPosition) -> Void)?
     var isCoordinateVisible: ((CLLocationCoordinate2D) -> Bool)?  // 检查坐标是否在当前视图范围内
@@ -125,6 +126,11 @@ struct TimelinePlayerView: View {
         .padding(.bottom, 20)
         .onDisappear {
             stopPlayback()
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase != .active {
+                stopPlayback()
+            }
         }
     }
     

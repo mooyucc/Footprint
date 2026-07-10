@@ -139,6 +139,10 @@ final class DestinationWeatherManager: ObservableObject {
     private var cacheExpiry: [UUID: Date] = [:]
     private var lastFailure: [UUID: Date] = [:]
     private var inFlight: Set<UUID> = []
+    private var activeRequestCount = 0
+    private let maxConcurrentRequests = 3
+    private var isPaused = false
+    private var isThermallyLimited = false
     private let cacheDuration: TimeInterval = 30 * 60
     private let failureCooldown: TimeInterval = 3 * 60
     private let measurementFormatter: MeasurementFormatter
@@ -155,7 +159,19 @@ final class DestinationWeatherManager: ObservableObject {
         summaries[destinationID]
     }
     
+    /// Tab 非活跃或 App 进后台时暂停新请求
+    func setPaused(_ paused: Bool) {
+        isPaused = paused
+    }
+    
+    /// 设备发热时暂停天气请求（与 setPaused 叠加）
+    func setThermallyLimited(_ limited: Bool) {
+        isThermallyLimited = limited
+    }
+    
     func refreshWeatherIfNeeded(for destination: TravelDestination, force: Bool = false) async {
+        guard !isPaused, !isThermallyLimited else { return }
+        
         // 旧数据依然有效，直接返回
         if !force,
            let expiry = cacheExpiry[destination.id],
@@ -172,8 +188,19 @@ final class DestinationWeatherManager: ObservableObject {
         }
         
         guard !inFlight.contains(destination.id) else { return }
+        
+        while activeRequestCount >= maxConcurrentRequests {
+            if Task.isCancelled || isPaused || isThermallyLimited { return }
+            try? await Task.sleep(nanoseconds: 200_000_000)
+        }
+        
+        guard !isPaused, !isThermallyLimited else { return }
         inFlight.insert(destination.id)
-        defer { inFlight.remove(destination.id) }
+        activeRequestCount += 1
+        defer {
+            inFlight.remove(destination.id)
+            activeRequestCount -= 1
+        }
         
         await fetchWeather(for: destination)
     }

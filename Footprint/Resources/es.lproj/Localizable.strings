@@ -517,6 +517,8 @@
 "map_style_satellite" = "Satélite";
 "map_style_hybrid" = "Híbrido";
 "map_style_imagery" = "Imágenes";
+"map_weather_display" = "Mostrar el clima en el mapa";
+"map_weather_display_description" = "Al activar esta opción, se muestra el clima actual de cada destino en el mapa. Puede afectar el rendimiento cuando hay muchos destinos.";
 
 // Duplicate Destination Check
 "duplicate_destination_title" = "Destino duplicado";

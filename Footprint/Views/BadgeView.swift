@@ -10,6 +10,9 @@ import SwiftData
 
 /// 勋章主视图
 struct BadgeView: View {
+    /// 当前是否为选中的 Tab（非选中时不运行动画，降低离屏 CPU）
+    var isTabSelected: Bool = true
+    
     @Query private var destinations: [TravelDestination]
     @State private var selectedType: BadgeType = .country
     
@@ -25,6 +28,7 @@ struct BadgeView: View {
     @State private var isLoading = false
     @State private var lastUpdateDestinationCount = 0
     @State private var lastDestinationsSignature = ""
+    @State private var badgeUpdateDebounceTask: Task<Void, Never>?
     
     // 全屏详情视图状态
     @State private var selectedBadge: BadgeDetail?
@@ -52,11 +56,7 @@ struct BadgeView: View {
     
     /// 生成目的地签名（基于国家、省份），用于检测数据变化
     private var destinationsSignature: String {
-        // 生成一个基于所有目的地的国家、省份的签名
-        let signature = destinations.map { destination in
-            "\(destination.country)|\(destination.province)"
-        }.sorted().joined(separator: ";")
-        return signature
+        DestinationCollectionSignature.makeForBadges(from: destinations)
     }
     
     /// 获取所有国家勋章
@@ -198,174 +198,221 @@ struct BadgeView: View {
     /// 计算并更新排序后的勋章缓存（在后台线程执行）
     /// - Parameter forceUpdate: 是否强制更新（即使数量没变化也更新，用于处理省份、国家变化）
     private func updateSortedBadges(forceUpdate: Bool = false) {
-        // 如果数据没有变化，且已有缓存，且不是强制更新，则跳过更新
         let countChanged = destinations.count != lastUpdateDestinationCount
         let hasNoCache = cachedSortedCountryBadges.isEmpty
-        
+
         guard forceUpdate || countChanged || hasNoCache else {
             return
         }
-        
-        // 设置加载状态
+
         isLoading = true
         lastUpdateDestinationCount = destinations.count
-        
-        // 在后台线程执行计算
+
+        // 主线程仅提取轻量快照，避免在 Task 中复制全量 SwiftData model
+        let snapshots = destinations.map {
+            BadgeDestinationSnapshot(
+                id: $0.id,
+                country: $0.country,
+                province: $0.province,
+                visitDate: $0.visitDate
+            )
+        }
+        let allCountryBadges = BadgeDataProvider.getAllCountryBadges()
+        let isChina = countryManager.currentCountry == .china
+        let allProvinceBadges = isChina ? BadgeDataProvider.getAllProvinceBadges() : []
+
         Task.detached(priority: .userInitiated) {
-            // 在主线程获取必要的数据
-            let (allCountryBadges, allProvinceBadges, destinationsCopy, visitedCountriesSet, visitedProvincesSet, isChina) = await MainActor.run {
-                (
-                    BadgeDataProvider.getAllCountryBadges(),
-                    // 只有当前国家是中国时才获取省份勋章
-                    countryManager.currentCountry == .china ? BadgeDataProvider.getAllProvinceBadges() : [],
-                    destinations,
-                    badgeManager.getVisitedCountries(from: destinations),
-                    badgeManager.getVisitedProvinces(from: destinations),
-                    countryManager.currentCountry == .china
-                )
-            }
-            
-            // 预先构建目的地索引字典，提高查询效率
-            var countryDestinationsMap: [String: [TravelDestination]] = [:]
-            var provinceDestinationsMap: [String: [TravelDestination]] = [:]
-            
-            for destination in destinationsCopy {
-                // 国家索引
-                let countryCodes = [
-                    destination.country,
-                    badgeManager.normalizeCountryName(destination.country)
-                ]
-                for code in countryCodes {
-                    if !code.isEmpty {
-                        countryDestinationsMap[code, default: []].append(destination)
-                    }
-                }
-                
-                // 省份索引（仅限中国）
-                let isChina = destination.country == "中国" || 
-                             destination.country == "CN" || 
-                             destination.country == "China"
-                if isChina && !destination.province.isEmpty {
-                    let normalizedProvince = badgeManager.normalizeProvinceName(destination.province)
-                    if !normalizedProvince.isEmpty {
-                        provinceDestinationsMap[normalizedProvince, default: []].append(destination)
-                    }
-                }
-            }
-            
-            // 计算国家勋章
-            var countryBadgeDataCache: [String: (destinations: [TravelDestination], yearRange: String?)] = [:]
-            let countryBadgeData = allCountryBadges.map { badge -> (badge: CountryBadge, isUnlocked: Bool, earliestYear: Int) in
-                let isUnlocked = badgeManager.isCountryBadgeUnlocked(
-                    country: badge.country,
-                    visitedCountries: visitedCountriesSet
-                )
-                
-                var countryDestinations: [TravelDestination] = []
-                if isUnlocked {
-                    // 从索引字典中查找，提高效率
-                    let countryCodes = [badge.country.rawValue, badge.country.displayName, badge.country.englishName]
-                    for code in countryCodes {
-                        if let dests = countryDestinationsMap[code] {
-                            countryDestinations.append(contentsOf: dests)
-                        }
-                    }
-                    // 去重
-                    countryDestinations = Array(Set(countryDestinations.map { $0.id })).compactMap { id in
-                        countryDestinations.first { $0.id == id }
-                    }
-                }
-                
-                // 计算最早年份和年份范围（在后台线程中直接计算）
-                let calendar = Calendar.current
-                let years = countryDestinations.compactMap { destination in
-                    calendar.component(.year, from: destination.visitDate)
-                }
-                let earliestYear = years.min() ?? Int.max
-                let yearRange: String? = {
-                    guard !years.isEmpty, let minYear = years.min(), let maxYear = years.max() else { return nil }
-                    if minYear == maxYear {
-                        return "\(minYear)"
-                    } else {
-                        return "\(minYear)～\(maxYear)"
-                    }
-                }()
-                
-                // 缓存数据
-                countryBadgeDataCache[badge.id] = (destinations: countryDestinations, yearRange: yearRange)
-                
-                return (badge: badge, isUnlocked: isUnlocked, earliestYear: earliestYear)
-            }
-            
-            let sortedCountryBadges = countryBadgeData.sorted { data1, data2 in
-                if data1.isUnlocked != data2.isUnlocked {
-                    return data1.isUnlocked
-                }
-                if data1.isUnlocked && data2.isUnlocked {
-                    return data1.earliestYear < data2.earliestYear
-                }
-                return data1.badge.country.englishName.localizedCaseInsensitiveCompare(data2.badge.country.englishName) == .orderedAscending
-            }.map { $0.badge }
-            
-            // 计算省份勋章（只有当前国家是中国时才计算）
-            var provinceBadgeDataCache: [String: (destinations: [TravelDestination], yearRange: String?)] = [:]
-            let provinceBadgeData = isChina ? allProvinceBadges.map { badge -> (badge: ProvinceBadge, isUnlocked: Bool, earliestYear: Int) in
-                let normalizedProvince = badgeManager.normalizeProvinceName(badge.provinceName)
-                let isUnlocked = badgeManager.isProvinceBadgeUnlocked(
-                    provinceName: normalizedProvince,
-                    visitedProvinces: visitedProvincesSet
-                )
-                
-                var provinceDestinations: [TravelDestination] = []
-                if isUnlocked {
-                    // 从索引字典中查找（使用标准化后的名称）
-                    // 索引字典的key已经是标准化后的名称（在构建索引时处理）
-                    // 支持"新疆"和"新疆维吾尔自治区"都能匹配，因为两者标准化后都是"新疆"
-                    if let dests = provinceDestinationsMap[normalizedProvince] {
-                        provinceDestinations = dests
-                    }
-                }
-                
-                // 计算最早年份和年份范围（在后台线程中直接计算）
-                let calendar = Calendar.current
-                let years = provinceDestinations.compactMap { destination in
-                    calendar.component(.year, from: destination.visitDate)
-                }
-                let earliestYear = years.min() ?? Int.max
-                let yearRange: String? = {
-                    guard !years.isEmpty, let minYear = years.min(), let maxYear = years.max() else { return nil }
-                    if minYear == maxYear {
-                        return "\(minYear)"
-                    } else {
-                        return "\(minYear)～\(maxYear)"
-                    }
-                }()
-                
-                // 缓存数据
-                provinceBadgeDataCache[badge.id] = (destinations: provinceDestinations, yearRange: yearRange)
-                
-                return (badge: badge, isUnlocked: isUnlocked, earliestYear: earliestYear)
-            } : []
-            
-            let sortedProvinceBadges = isChina ? provinceBadgeData.sorted { data1, data2 in
-                if data1.isUnlocked != data2.isUnlocked {
-                    return data1.isUnlocked
-                }
-                if data1.isUnlocked && data2.isUnlocked {
-                    return data1.earliestYear < data2.earliestYear
-                }
-                return data1.badge.displayName.localizedCaseInsensitiveCompare(data2.badge.displayName) == .orderedAscending
-            }.map { $0.badge } : []
-            
-            // 回到主线程更新UI
+            let result = Self.computeBadgeCaches(
+                snapshots: snapshots,
+                allCountryBadges: allCountryBadges,
+                allProvinceBadges: allProvinceBadges,
+                isChina: isChina
+            )
+
             await MainActor.run {
-                self.cachedSortedCountryBadges = sortedCountryBadges
-                self.cachedSortedProvinceBadges = sortedProvinceBadges
-                self.countryBadgeDataCache = countryBadgeDataCache
-                self.provinceBadgeDataCache = provinceBadgeDataCache
-                self.isLoading = false
+                let destinationByID = Dictionary(uniqueKeysWithValues: destinations.map { ($0.id, $0) })
+
+                func resolveDestinations(_ ids: [UUID]) -> [TravelDestination] {
+                    ids.compactMap { destinationByID[$0] }
+                }
+
+                cachedSortedCountryBadges = result.sortedCountryBadges
+                cachedSortedProvinceBadges = result.sortedProvinceBadges
+                countryBadgeDataCache = result.countryEntries.mapValues { entry in
+                    (destinations: resolveDestinations(entry.destinationIDs), yearRange: entry.yearRange)
+                }
+                provinceBadgeDataCache = result.provinceEntries.mapValues { entry in
+                    (destinations: resolveDestinations(entry.destinationIDs), yearRange: entry.yearRange)
+                }
+                isLoading = false
             }
         }
+    }
+
+    private struct BadgeDestinationSnapshot: Sendable {
+        let id: UUID
+        let country: String
+        let province: String
+        let visitDate: Date
+    }
+
+    private struct BadgeCacheEntry: Sendable {
+        let destinationIDs: [UUID]
+        let yearRange: String?
+    }
+
+    private struct BadgeCacheComputation: Sendable {
+        let sortedCountryBadges: [CountryBadge]
+        let sortedProvinceBadges: [ProvinceBadge]
+        let countryEntries: [String: BadgeCacheEntry]
+        let provinceEntries: [String: BadgeCacheEntry]
+    }
+
+    private static func computeBadgeCaches(
+        snapshots: [BadgeDestinationSnapshot],
+        allCountryBadges: [CountryBadge],
+        allProvinceBadges: [ProvinceBadge],
+        isChina: Bool
+    ) -> BadgeCacheComputation {
+        let badgeManager = BadgeManager.shared
+        let visitedCountriesSet = visitedCountries(from: snapshots)
+        let visitedProvincesSet = visitedProvinces(from: snapshots)
+
+        var countryDestinationsMap: [String: [UUID]] = [:]
+        var provinceDestinationsMap: [String: [UUID]] = [:]
+
+        for snapshot in snapshots {
+            let countryCodes = [
+                snapshot.country,
+                badgeManager.normalizeCountryName(snapshot.country)
+            ]
+            for code in countryCodes where !code.isEmpty {
+                countryDestinationsMap[code, default: []].append(snapshot.id)
+            }
+
+            let snapshotIsChina = snapshot.country == "中国" ||
+                snapshot.country == "CN" ||
+                snapshot.country == "China"
+            if snapshotIsChina, !snapshot.province.isEmpty {
+                let normalizedProvince = badgeManager.normalizeProvinceName(snapshot.province)
+                if !normalizedProvince.isEmpty {
+                    provinceDestinationsMap[normalizedProvince, default: []].append(snapshot.id)
+                }
+            }
+        }
+
+        let visitDateByID = Dictionary(uniqueKeysWithValues: snapshots.map { ($0.id, $0.visitDate) })
+        var countryEntries: [String: BadgeCacheEntry] = [:]
+
+        let countryBadgeData = allCountryBadges.map { badge -> (badge: CountryBadge, isUnlocked: Bool, earliestYear: Int) in
+            let isUnlocked = badgeManager.isCountryBadgeUnlocked(
+                country: badge.country,
+                visitedCountries: visitedCountriesSet
+            )
+
+            var destinationIDs: [UUID] = []
+            if isUnlocked {
+                var seen = Set<UUID>()
+                let countryCodes = [badge.country.rawValue, badge.country.displayName, badge.country.englishName]
+                for code in countryCodes {
+                    for id in countryDestinationsMap[code, default: []] where seen.insert(id).inserted {
+                        destinationIDs.append(id)
+                    }
+                }
+            }
+
+            let years = destinationIDs.compactMap { id in
+                visitDateByID[id].map { Calendar.current.component(.year, from: $0) }
+            }
+            let earliestYear = years.min() ?? Int.max
+            let yearRange = yearRangeString(from: years)
+
+            countryEntries[badge.id] = BadgeCacheEntry(destinationIDs: destinationIDs, yearRange: yearRange)
+            return (badge: badge, isUnlocked: isUnlocked, earliestYear: earliestYear)
+        }
+
+        let sortedCountryBadges = countryBadgeData.sorted { data1, data2 in
+            if data1.isUnlocked != data2.isUnlocked {
+                return data1.isUnlocked
+            }
+            if data1.isUnlocked && data2.isUnlocked {
+                return data1.earliestYear < data2.earliestYear
+            }
+            return data1.badge.country.englishName.localizedCaseInsensitiveCompare(data2.badge.country.englishName) == .orderedAscending
+        }.map(\.badge)
+
+        var provinceEntries: [String: BadgeCacheEntry] = [:]
+        let provinceBadgeData = isChina ? allProvinceBadges.map { badge -> (badge: ProvinceBadge, isUnlocked: Bool, earliestYear: Int) in
+            let normalizedProvince = badgeManager.normalizeProvinceName(badge.provinceName)
+            let isUnlocked = badgeManager.isProvinceBadgeUnlocked(
+                provinceName: normalizedProvince,
+                visitedProvinces: visitedProvincesSet
+            )
+
+            let destinationIDs = isUnlocked ? (provinceDestinationsMap[normalizedProvince] ?? []) : []
+            let years = destinationIDs.compactMap { id in
+                visitDateByID[id].map { Calendar.current.component(.year, from: $0) }
+            }
+            let earliestYear = years.min() ?? Int.max
+            let yearRange = yearRangeString(from: years)
+
+            provinceEntries[badge.id] = BadgeCacheEntry(destinationIDs: destinationIDs, yearRange: yearRange)
+            return (badge: badge, isUnlocked: isUnlocked, earliestYear: earliestYear)
+        } : []
+
+        let sortedProvinceBadges = isChina ? provinceBadgeData.sorted { data1, data2 in
+            if data1.isUnlocked != data2.isUnlocked {
+                return data1.isUnlocked
+            }
+            if data1.isUnlocked && data2.isUnlocked {
+                return data1.earliestYear < data2.earliestYear
+            }
+            return data1.badge.displayName.localizedCaseInsensitiveCompare(data2.badge.displayName) == .orderedAscending
+        }.map(\.badge) : []
+
+        return BadgeCacheComputation(
+            sortedCountryBadges: sortedCountryBadges,
+            sortedProvinceBadges: sortedProvinceBadges,
+            countryEntries: countryEntries,
+            provinceEntries: provinceEntries
+        )
+    }
+
+    private static func visitedCountries(from snapshots: [BadgeDestinationSnapshot]) -> Set<String> {
+        var visited = Set<String>()
+        let badgeManager = BadgeManager.shared
+        for snapshot in snapshots {
+            let normalized = badgeManager.normalizeCountryName(snapshot.country)
+            if !normalized.isEmpty {
+                visited.insert(normalized)
+            }
+        }
+        return visited
+    }
+
+    private static func visitedProvinces(from snapshots: [BadgeDestinationSnapshot]) -> Set<String> {
+        var visited = Set<String>()
+        let badgeManager = BadgeManager.shared
+        for snapshot in snapshots {
+            let snapshotIsChina = snapshot.country == "中国" ||
+                snapshot.country == "CN" ||
+                snapshot.country == "China"
+            if snapshotIsChina, !snapshot.province.isEmpty {
+                let normalized = badgeManager.normalizeProvinceName(snapshot.province)
+                if !normalized.isEmpty {
+                    visited.insert(normalized)
+                }
+            }
+        }
+        return visited
+    }
+
+    private static func yearRangeString(from years: [Int]) -> String? {
+        guard !years.isEmpty, let minYear = years.min(), let maxYear = years.max() else { return nil }
+        if minYear == maxYear {
+            return "\(minYear)"
+        }
+        return "\(minYear)～\(maxYear)"
     }
     
     // MARK: - Body
@@ -556,7 +603,14 @@ struct BadgeView: View {
                     updateSortedBadges()
                     lastDestinationsSignature = destinationsSignature
                 }
-                animateProgressNumber(resetToZero: true)
+                if isTabSelected {
+                    animateProgressNumber(resetToZero: true)
+                }
+            }
+            .onChange(of: isTabSelected) { _, selected in
+                if selected {
+                    animateProgressNumber(resetToZero: true)
+                }
             }
             .onChange(of: destinations.count) { oldCount, newCount in
                 // 当目的地数量变化时（新增或删除），更新缓存
@@ -575,32 +629,24 @@ struct BadgeView: View {
             }
             .onChange(of: selectedType) { _ in
                 // 切换类型时不需要重新计算，因为两个列表都已缓存
-                animateProgressNumber(resetToZero: true)
+                if isTabSelected {
+                    animateProgressNumber(resetToZero: true)
+                }
             }
             .onChange(of: progressPercentage) { _, _ in
                 // 数据变化时同步刷新数字动画
-                animateProgressNumber(resetToZero: false)
+                if isTabSelected {
+                    animateProgressNumber(resetToZero: false)
+                }
             }
             .onReceive(NotificationCenter.default.publisher(for: .destinationDeleted)) { _ in
-                // 当目的地被删除时，延迟更新以确保数据已同步
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    updateSortedBadges()
-                    lastDestinationsSignature = destinationsSignature
-                }
+                scheduleBadgeUpdate(forceUpdate: true)
             }
             .onReceive(NotificationCenter.default.publisher(for: .destinationUpdated)) { _ in
-                // 当目的地被更新时（如添加省份、修改国家），强制更新以确保数据已同步
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    updateSortedBadges(forceUpdate: true)
-                    lastDestinationsSignature = destinationsSignature
-                }
+                scheduleBadgeUpdate(forceUpdate: true)
             }
             .onReceive(NotificationCenter.default.publisher(for: .countryChanged)) { _ in
-                // 当所在国家改变时，强制更新勋章列表
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    updateSortedBadges(forceUpdate: true)
-                    lastDestinationsSignature = destinationsSignature
-                }
+                scheduleBadgeUpdate(forceUpdate: true)
             }
             .fullScreenCover(item: $selectedBadge) { badge in
                 BadgeDetailView(
@@ -621,7 +667,21 @@ struct BadgeView: View {
     
     // MARK: - 数字动画
     
+    /// 通知触发的防抖更新，避免连发通知导致多次后台重算
+    private func scheduleBadgeUpdate(forceUpdate: Bool = false) {
+        badgeUpdateDebounceTask?.cancel()
+        badgeUpdateDebounceTask = Task {
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                updateSortedBadges(forceUpdate: forceUpdate)
+                lastDestinationsSignature = destinationsSignature
+            }
+        }
+    }
+    
     private func animateProgressNumber(resetToZero: Bool) {
+        guard isTabSelected else { return }
         if resetToZero {
             animatedProgressPercentage = 0
             // 必须在延迟闭包内读取 progressPercentage：首次进入时缓存尚未写入，

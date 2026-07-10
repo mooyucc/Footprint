@@ -124,7 +124,7 @@ struct AllDestinationsListView: View {
                 // 目的地列表
                 if !filteredDestinations.isEmpty {
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 12) {
+                        LazyVStack(alignment: .leading, spacing: 12) {
                             Text("travel_destinations".localized)
                                 .font(.headline)
                                 .fontWeight(.semibold)

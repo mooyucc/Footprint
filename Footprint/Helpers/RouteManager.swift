@@ -543,6 +543,78 @@ class RouteManager: ObservableObject {
         }
     }
     
+    /// 增量计算路线：先读缓存，仅对未命中段发起 MKDirections（可限制并发，供卡片页预热）
+    func incrementalRoutes(
+        for coordinates: [CLLocationCoordinate2D],
+        maxConcurrentMisses: Int = 5
+    ) async -> [MKRoute?] {
+        guard coordinates.count >= 2 else { return [] }
+        
+        var calculatedRoutes: [MKRoute?] = Array(repeating: nil, count: coordinates.count - 1)
+        
+        for index in 0..<coordinates.count - 1 {
+            let source = coordinates[index]
+            let destination = coordinates[index + 1]
+            let userTransportType = getUserTransportType(from: source, to: destination)
+            let transportType = userTransportType ?? .automobile
+            calculatedRoutes[index] = getCachedRoute(
+                from: source,
+                to: destination,
+                transportType: transportType
+            )
+        }
+        
+        if calculatedRoutes.allSatisfy({ $0 != nil }) {
+            return calculatedRoutes
+        }
+        
+        let misses: [(Int, CLLocationCoordinate2D, CLLocationCoordinate2D)] = calculatedRoutes.enumerated().compactMap { index, route in
+            guard route == nil else { return nil }
+            return (index, coordinates[index], coordinates[index + 1])
+        }
+        
+        guard !misses.isEmpty else { return calculatedRoutes }
+        
+        let limit = max(1, maxConcurrentMisses)
+        await withTaskGroup(of: (Int, MKRoute?).self) { group in
+            var inFlight = 0
+            var nextMissIndex = 0
+            
+            while nextMissIndex < misses.count || inFlight > 0 {
+                while inFlight < limit, nextMissIndex < misses.count {
+                    let (index, source, destination) = misses[nextMissIndex]
+                    nextMissIndex += 1
+                    inFlight += 1
+                    group.addTask {
+                        let userTransportType = self.getUserTransportType(from: source, to: destination)
+                        let transportType = userTransportType ?? .automobile
+                        let route = await self.calculateRoute(
+                            from: source,
+                            to: destination,
+                            transportType: transportType
+                        )
+                        return (index, route)
+                    }
+                }
+                
+                if let result = await group.next() {
+                    inFlight -= 1
+                    calculatedRoutes[result.0] = result.1
+                }
+            }
+        }
+        
+        return calculatedRoutes
+    }
+    
+    /// 按相邻坐标顺序从缓存组装路线段（内存 + 磁盘）；未命中段为 nil
+    func cachedRoutes(for coordinates: [CLLocationCoordinate2D]) -> [MKRoute?] {
+        guard coordinates.count >= 2 else { return [] }
+        return (0..<coordinates.count - 1).map { index in
+            getCachedRoute(from: coordinates[index], to: coordinates[index + 1])
+        }
+    }
+    
     /// 检查路线是否已缓存
     /// - Parameters:
     ///   - source: 起点坐标

@@ -10,6 +10,60 @@ import Foundation
 import CoreLocation
 import SwiftUI
 
+// MARK: - 地图聚类（后台线程安全）
+
+struct MapClusterPoint: Sendable {
+    let id: UUID
+    let latitude: Double
+    let longitude: Double
+}
+
+enum MapClusterEngine {
+    /// 按距离聚合，返回每组地点 ID（可在后台线程调用）
+    static func clusterGroups(points: [MapClusterPoint], distance: Double) -> [[UUID]] {
+        guard distance > 0 else {
+            return points.map { [$0.id] }
+        }
+
+        var clusters: [[UUID]] = []
+        var processed = Set<UUID>()
+        let sorted = points.sorted { $0.latitude < $1.latitude }
+        let latitudeThreshold = distance / 111_000.0
+
+        for point in sorted {
+            if processed.contains(point.id) { continue }
+
+            var group = [point.id]
+            processed.insert(point.id)
+
+            for other in sorted {
+                if processed.contains(other.id) { continue }
+                if abs(point.latitude - other.latitude) > latitudeThreshold { continue }
+
+                let dist = coordinateDistance(
+                    lat1: point.latitude, lon1: point.longitude,
+                    lat2: other.latitude, lon2: other.longitude
+                )
+                if dist < distance {
+                    group.append(other.id)
+                    processed.insert(other.id)
+                }
+            }
+            clusters.append(group)
+        }
+        return clusters
+    }
+
+    private static func coordinateDistance(
+        lat1: Double, lon1: Double,
+        lat2: Double, lon2: Double
+    ) -> Double {
+        let location1 = CLLocation(latitude: lat1, longitude: lon1)
+        let location2 = CLLocation(latitude: lat2, longitude: lon2)
+        return location1.distance(from: location2)
+    }
+}
+
 // MARK: - 显示类型枚举
 /// 地图标注的显示类型，用于三级显示策略
 enum AnnotationDisplayType: Equatable {

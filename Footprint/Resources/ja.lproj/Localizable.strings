@@ -531,6 +531,8 @@
 "map_style_satellite" = "衛星地図";
 "map_style_hybrid" = "ハイブリッド地図";
 "map_style_imagery" = "衛星画像";
+"map_weather_display" = "地図に天気を表示";
+"map_weather_display_description" = "オンにすると、地図の各目的地に現在の天気を表示します。目的地が多い場合、パフォーマンスに影響する可能性があります。";
 
 // Duplicate Destination Check
 "duplicate_destination_title" = "重複する目的地";

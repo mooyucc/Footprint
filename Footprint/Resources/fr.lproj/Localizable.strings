@@ -517,6 +517,8 @@
 "map_style_satellite" = "Satellite";
 "map_style_hybrid" = "Hybride";
 "map_style_imagery" = "Imagerie";
+"map_weather_display" = "Afficher la météo sur la carte";
+"map_weather_display_description" = "Lorsque cette option est activée, la météo actuelle s'affiche pour chaque destination sur la carte. Peut affecter les performances lorsqu'il y a de nombreuses destinations.";
 
 // Duplicate Destination Check
 "duplicate_destination_title" = "Destination en double";
