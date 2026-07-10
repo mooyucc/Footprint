@@ -162,6 +162,7 @@ extension FootprintApp {
         DispatchQueue.main.async {
             // 1. 提前启动定位服务
             let locationManager = LocationManager.shared
+            aiCreditManager.grantFreeTrialIfNeeded()
             locationManager.requestLocation()
             print("📍 启动画面期间仅请求一次性定位（持续定位在进入地图 Tab 后启动）")
             

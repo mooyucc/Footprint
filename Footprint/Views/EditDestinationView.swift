@@ -16,6 +16,7 @@ import Contacts
 struct EditDestinationView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var entitlementManager: EntitlementManager
     @Query(sort: \TravelTrip.startDate, order: .reverse) private var trips: [TravelTrip]
     @StateObject private var languageManager = LanguageManager.shared
     
@@ -58,7 +59,9 @@ struct EditDestinationView: View {
         "outdoor_adventure": "destination_type_outdoor_adventure",
         "artistic_checkin": "destination_type_artistic_checkin"
     ]
-    private let maxPhotos = 9
+    private var maxPhotos: Int {
+        entitlementManager.maxPhotosPerDestination
+    }
     
     // 城市数据管理器实例
     private let cityDataManager = CityDataManager.shared

@@ -272,7 +272,7 @@
 "change_photo" = "更換照片";
 "video" = "視頻";
 "select_video" = "選擇視頻";
-"photo_limit_hint" = "最多可添加9張照片";
+"photo_limit_hint" = "最多可添加 %d 張照片";
 "video_limit_hint" = "僅支持1段視頻，時長不超過10秒";
 
 // Notes Section Placeholders
@@ -698,6 +698,20 @@
 "onboarding_page2_color_description" = "自定義應用的主題顏色，將應用於圖標、按鈕和其他UI元素";
 "onboarding_next" = "下一步";
 "onboarding_complete" = "開始使用";
+"onboarding_paywall_nav_title" = "選擇方案";
+"onboarding_paywall_title" = "歡迎使用墨魚足跡";
+"onboarding_paywall_subtitle" = "免費版即可開始記錄旅程；升級 Pro 解鎖全部功能。";
+"onboarding_free_tier_title" = "免費版包含";
+"onboarding_free_destinations" = "最多 %d 個打卡地點";
+"onboarding_free_trips" = "最多 %d 個旅程";
+"onboarding_free_photos" = "每地點最多 %d 張照片";
+"onboarding_free_share" = "基礎分享版面（分享圖含水印）";
+"onboarding_free_ai_trial" = "贈送 %d 次 AI 體驗";
+"onboarding_pro_feature_title" = "升級 Pro 額外解鎖";
+"onboarding_pricing_section_title" = "選擇訂閱方案";
+"onboarding_recommended_plan" = "推薦";
+"onboarding_continue_free" = "免費開始使用";
+"onboarding_continue_free_hint" = "繼續使用免費版，部分功能有限制。可隨時在「我的」升級 Pro。";
 
 // Profile - Identity Tag & MBTI
 "identity_tag" = "身份標籤";

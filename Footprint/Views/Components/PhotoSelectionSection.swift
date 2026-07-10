@@ -14,10 +14,15 @@ struct PhotoSelectionSection: View {
     @Binding var selectedPhotos: [PhotosPickerItem]
     @Binding var photoDatas: [Data]
     @Binding var photoThumbnailDatas: [Data]
-    
+    var maxPhotos: Int = ProTierLimits.maxPhotosPerDestination
+
     var body: some View {
         Section("photo".localized) {
-            PhotosPicker(selection: $selectedPhotos, maxSelectionCount: 9, matching: .images) {
+            PhotosPicker(
+                selection: $selectedPhotos,
+                maxSelectionCount: max(0, maxPhotos - photoDatas.count),
+                matching: .images
+            ) {
                 HStack {
                     Image(systemName: "photo")
                         .foregroundColor(Color.footprintRed)
@@ -25,11 +30,12 @@ struct PhotoSelectionSection: View {
                         .foregroundColor(.primary)
                 }
             }
-            
-            Text("photo_limit_hint".localized)
+            .disabled(photoDatas.count >= maxPhotos)
+
+            Text("photo_limit_hint".localized(with: maxPhotos))
                 .font(.caption)
                 .foregroundColor(.secondary)
-            
+
             if !photoDatas.isEmpty {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 90), spacing: 8)], spacing: 8) {
                     ForEach(Array(photoDatas.enumerated()), id: \.offset) { index, data in
@@ -64,6 +70,7 @@ struct PhotoSelectionSection: View {
             Task {
                 var processed: [(Data, Data)] = []
                 for item in newValue {
+                    if processed.count + photoDatas.count >= maxPhotos { break }
                     if let data = try? await item.loadTransferable(type: Data.self) {
                         let result = ImageProcessor.process(data: data)
                         processed.append(result)
@@ -72,9 +79,11 @@ struct PhotoSelectionSection: View {
                 if !processed.isEmpty {
                     await MainActor.run {
                         for (resized, thumbnail) in processed {
+                            guard photoDatas.count < maxPhotos else { break }
                             photoDatas.append(resized)
                             photoThumbnailDatas.append(thumbnail)
                         }
+                        selectedPhotos = []
                     }
                 }
             }
@@ -87,8 +96,8 @@ struct PhotoSelectionSection: View {
         PhotoSelectionSection(
             selectedPhotos: .constant([]),
             photoDatas: .constant([]),
-            photoThumbnailDatas: .constant([])
+            photoThumbnailDatas: .constant([]),
+            maxPhotos: 3
         )
     }
 }
-

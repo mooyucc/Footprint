@@ -41,6 +41,8 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     private var lastSpeed: Double = 0.0
     private var hasDeliveredInitialFix = false
     private var lastDeliveredAccuracy: Double = .greatestFiniteMagnitude
+    /// `startUpdatingLocation` 在权限未定时会先请求授权；授权通过后需自动启动持续定位
+    private var pendingContinuousUpdates = false
     
     // 配置常量
     private let minUpdateInterval: TimeInterval = 1.0 // 最小更新间隔（秒）
@@ -160,9 +162,12 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         
         // 如果尚未请求权限，先请求权限
         if authorizationStatus == .notDetermined {
+            pendingContinuousUpdates = true
             locationManager.requestWhenInUseAuthorization()
             return
         }
+        
+        pendingContinuousUpdates = false
         
         // 检查授权状态
         guard authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways else {
@@ -341,10 +346,19 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         authorizationStatus = manager.authorizationStatus
         print("📍 位置授权状态变更: \(authorizationStatus.rawValue)")
         
+        guard authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways else {
+            pendingContinuousUpdates = false
+            return
+        }
+        
         // 如果已授权且正在更新，重新启动定位
-        if (authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways) && isUpdatingLocation {
+        if isUpdatingLocation {
             locationManager.startUpdatingLocation()
-        } else if authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways {
+        } else if pendingContinuousUpdates {
+            // 此前因权限未决而中断的 startUpdatingLocation，授权后继续启动
+            pendingContinuousUpdates = false
+            startUpdatingLocation(mode: currentMode)
+        } else {
             // 如果已授权但未在更新，请求一次位置（用于一次性定位场景）
             locationManager.requestLocation()
         }

@@ -39,11 +39,13 @@ final class EntitlementManager: ObservableObject {
     }
 
     func canAddDestination(currentCount: Int) -> Bool {
-        currentEntitlement.canAddDestination(currentCount: currentCount)
+        if BetaInfo.isBetaBuild { return true }
+        return currentEntitlement.canAddDestination(currentCount: currentCount)
     }
 
     func canAddTripCard(currentCount: Int) -> Bool {
-        currentEntitlement.canAddTripCard(currentCount: currentCount)
+        if BetaInfo.isBetaBuild { return true }
+        return currentEntitlement.canAddTripCard(currentCount: currentCount)
     }
 
     var canUseBasicShareLayouts: Bool {
@@ -67,7 +69,32 @@ final class EntitlementManager: ObservableObject {
     }
     
     var canUseAIFeatures: Bool {
-        currentEntitlement.canUseAIFeatures
+        if BetaInfo.isBetaBuild { return true }
+        return currentEntitlement.canUseAIFeatures
+    }
+
+    var maxPhotosPerDestination: Int {
+        if BetaInfo.isBetaBuild { return ProTierLimits.maxPhotosPerDestination }
+        return currentEntitlement.maxPhotosPerDestination
+    }
+
+    var shouldApplyShareWatermark: Bool {
+        if BetaInfo.isBetaBuild { return false }
+        return currentEntitlement.shouldApplyShareWatermark
+    }
+
+    func allowedTripShareLayouts() -> [TripShareLayout] {
+        if BetaInfo.isBetaBuild || canUseFullShareLayouts {
+            return TripShareLayout.allCases
+        }
+        return [.list]
+    }
+
+    func allowedDestinationShareLayouts() -> [DestinationShareLayout] {
+        if BetaInfo.isBetaBuild || canUseFullShareLayouts {
+            return DestinationShareLayout.allCases
+        }
+        return [.classic]
     }
 
     // MARK: - 权益更新

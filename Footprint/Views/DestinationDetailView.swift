@@ -423,9 +423,10 @@ struct DestinationDetailView: View {
     
     // 分享地点图片
     private func shareDestination() {
-        // 生成地点分享图片
-        let destinationImage = TripImageGenerator.generateDestinationImage(from: destination)
-        // 只分享图片，不分享文字（因为所有信息都已经包含在图片中）
+        let destinationImage = ShareImageUtilities.applyingWatermarkIfNeeded(
+            TripImageGenerator.generateDestinationImage(from: destination),
+            shouldApply: entitlementManager.shouldApplyShareWatermark
+        )
         shareItem = TripShareItem(text: "", image: destinationImage)
     }
     

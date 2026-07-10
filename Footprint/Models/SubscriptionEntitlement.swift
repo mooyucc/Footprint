@@ -19,6 +19,19 @@ enum SubscriptionProductID {
     static let all: [String] = [proMonthly, proYearly, proLifetime]
 }
 
+/// 免费版数量与体验限制
+enum FreeTierLimits {
+    static let maxDestinations = 40
+    static let maxTrips = 3
+    static let maxPhotosPerDestination = 3
+    static let aiFreeTrialCredits = 5
+}
+
+/// Pro 版数量限制
+enum ProTierLimits {
+    static let maxPhotosPerDestination = 9
+}
+
 /// 应用内权益等级
 enum SubscriptionEntitlement: String, Codable {
     case free
@@ -34,43 +47,60 @@ enum SubscriptionEntitlement: String, Codable {
     // MARK: - 权限判断
 
     func canAddDestination(currentCount: Int) -> Bool {
-        // 免费版和 Pro 都无限制
-        return true
+        switch self {
+        case .free:
+            return currentCount < FreeTierLimits.maxDestinations
+        case .pro:
+            return true
+        }
     }
 
     func canAddTripCard(currentCount: Int) -> Bool {
-        // 免费版和 Pro 都无限制
-        return true
+        switch self {
+        case .free:
+            return currentCount < FreeTierLimits.maxTrips
+        case .pro:
+            return true
+        }
     }
 
-    /// 免费版和 Pro 都提供完整版面
+    var maxPhotosPerDestination: Int {
+        switch self {
+        case .free:
+            return FreeTierLimits.maxPhotosPerDestination
+        case .pro:
+            return ProTierLimits.maxPhotosPerDestination
+        }
+    }
+
+    /// Pro 可使用全部分享版面；免费版仅基础版面
     var canUseFullShareLayouts: Bool {
-        true
+        self == .pro
     }
 
-    /// 免费版允许基础旅程分享图片
+    /// 免费版允许基础旅程/地点分享版面
     var canUseBasicShareLayouts: Bool {
         true
     }
 
+    /// 免费版分享图带水印
+    var shouldApplyShareWatermark: Bool {
+        self == .free
+    }
+
     var canImportTrips: Bool {
-        // 免费版和 Pro 都可以导入旅程
         true
     }
 
     var canLinkToSystemMaps: Bool {
-        // 免费版和 Pro 都可以链接系统地图
         true
     }
 
     var canUseLocalDataIO: Bool {
-        // 仅 Pro 可以使用本地数据导入/导出
         self == .pro
     }
-    
+
     var canUseAIFeatures: Bool {
-        // 仅 Pro 可以使用AI功能
         self == .pro
     }
 }
-

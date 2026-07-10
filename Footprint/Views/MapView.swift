@@ -134,6 +134,7 @@ struct MapView: View {
     @State private var locationInitializationPending = false // 定位初始化是否待执行（等待启动画面结束）
     @State private var initialCameraPositionSet = false // 初始相机位置是否已设置
     @State private var waitingForLocationToSetCamera = false // 是否正在等待位置来设置相机
+    @State private var isWaitingForUserLocate = false // 用户点击定位按钮后等待位置
     
     // 底部浮动按钮参数
     private let tabBarHeight: CGFloat = 49
@@ -188,8 +189,9 @@ struct MapView: View {
     @State private var lastReverseGeocodeTimestamp: Date?
     @State private var lastGeocodedAccuracy: Double = .greatestFiniteMagnitude
     @State private var showingPhotoImportPicker = false
-    @State private var photoImportItem: PhotosPickerItem?
+    @State private var photoImportItems: [PhotosPickerItem] = []
     @State private var photoImportError: PhotoImportError?
+    private let photoImportMaxSelectionCount = 9
     
     // POI点击相关状态
     @State private var selectedPOI: MKMapItem?
@@ -347,14 +349,21 @@ struct MapView: View {
     
     private struct PendingPhotoPrefill {
         var visitDate: Date?
-        var photoData: Data
-        var thumbnailData: Data
+        var photoDatas: [Data]
+        var photoThumbnailDatas: [Data]
         var suggestedPlaceType: String?
     }
     
     private struct PhotoMetadata {
         var coordinate: CLLocationCoordinate2D?
         var captureDate: Date?
+    }
+    
+    private struct ResolvedPhotoImportMetadata {
+        var coordinate: CLLocationCoordinate2D?
+        var visitDate: Date?
+        var typeSourceIndex: Int
+        var gpsSourceIndex: Int?
     }
     
     private enum GeocodeResultSource {
@@ -674,11 +683,15 @@ struct MapView: View {
             .sheet(isPresented: $showingAIAssistant) {
                 AIAssistantView()
             }
-            .photosPicker(isPresented: $showingPhotoImportPicker, selection: $photoImportItem, matching: .images)
-            .onChange(of: photoImportItem) { _, newValue in
-                if let item = newValue {
-                    handlePhotoImportSelection(item)
-                }
+            .photosPicker(
+                isPresented: $showingPhotoImportPicker,
+                selection: $photoImportItems,
+                maxSelectionCount: photoImportMaxSelectionCount,
+                matching: .images
+            )
+            .onChange(of: photoImportItems) { _, newValue in
+                guard !newValue.isEmpty else { return }
+                handlePhotoImportSelection(newValue)
             }
             .alert(item: $photoImportError) { error in
                 Alert(
@@ -927,6 +940,17 @@ struct MapView: View {
         guard let newLocation = newValue else { return }
         
         let accuracy = locationManager.lastLocationAccuracy ?? Double.greatestFiniteMagnitude
+        
+        // 用户点击定位按钮后，收到位置即移动地图
+        if isWaitingForUserLocate {
+            if accuracy > 0 && accuracy < 200.0 {
+                setCameraToUserLocation(newLocation)
+                isWaitingForUserLocate = false
+                restoreMapBrowsingLocationModeIfNeeded()
+                print("📍 定位按钮：已定位到用户位置（精度: \(String(format: "%.1f", accuracy))米）")
+            }
+            return
+        }
         
         // 如果正在等待位置来设置初始相机位置，现在设置它
         if waitingForLocationToSetCamera && !initialCameraPositionSet {
@@ -1276,7 +1300,7 @@ struct MapView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
             addDestinationPrefill = nil
             pendingPhotoPrefill = nil
-            photoImportItem = nil
+            photoImportItems = []
             isGeocodingLocation = false
             isWaitingForLocation = false
             showingPhotoImportPicker = true
@@ -1293,6 +1317,7 @@ struct MapView: View {
                 } else {
                     clusterMarkers
                 }
+                memoryBubbleDestinationMarker
                 userLocationMarker
             }
             .mapStyle(currentMapStyle.toMapKitStyle())
@@ -1564,6 +1589,34 @@ struct MapView: View {
                         mapSelection = destination
                     }
                 }
+            }
+        }
+    }
+    
+    /// 回忆泡泡流程中需要钉住的目标地点（飞行中或吹泡泡时）
+    private var memoryBubblePinnedDestination: TravelDestination? {
+        guard !autoShowRouteCards else { return nil }
+        guard let destination = selectedBubbleDestination ?? targetBubbleDestination else { return nil }
+        let alreadyInClusters = clusterAnnotations.contains {
+            $0.destinations.count == 1 && $0.destinations[0].id == destination.id
+        }
+        return alreadyInClusters ? nil : destination
+    }
+    
+    // 回忆泡泡：目标地点临时圆圈标记（不依赖异步 fetch/聚类）
+    @MapContentBuilder
+    private var memoryBubbleDestinationMarker: some MapContent {
+        if let destination = memoryBubblePinnedDestination {
+            Annotation(destination.name, coordinate: destination.coordinate) {
+                ClusterAnnotationView(
+                    cluster: ClusterAnnotation(destinations: [destination]),
+                    zoomLevel: currentZoomLevel,
+                    tripColorMap: tripColorMapping,
+                    accentColor: brandAccentColor,
+                    weatherSummary: nil,
+                    mapMode: .myFootprints
+                )
+                .equatable()
             }
         }
     }
@@ -3226,15 +3279,6 @@ struct MapView: View {
                 action: {
                     triggerMemoryBubble()
                 }
-            ),
-            AssistiveMenuAction(
-                id: "check_in",
-                icon: "DakaIcon",
-                title: "map_button_check_in".localized,
-                isActive: false,
-                action: {
-                    handleCheckIn()
-                }
             )
         ]
     }
@@ -3243,15 +3287,6 @@ struct MapView: View {
     private func menuIcon(for icon: String, isActive: Bool) -> AnyView {
         switch icon {
         case "PaopaoIcon":
-            return AnyView(
-                Image(icon)
-                    .resizable()
-                    .renderingMode(.template)
-                    .scaledToFit()
-                    .foregroundColor(buttonIconColor(isActive: isActive))
-                    .frame(width: 22, height: 22)
-            )
-        case "DakaIcon":
             return AnyView(
                 Image(icon)
                     .resizable()
@@ -4182,8 +4217,8 @@ struct MapView: View {
         )
         if let pending = pendingPhotoPrefill {
             prefill.visitDate = pending.visitDate
-            prefill.photoDatas = [pending.photoData]
-            prefill.photoThumbnailDatas = [pending.thumbnailData]
+            prefill.photoDatas = pending.photoDatas
+            prefill.photoThumbnailDatas = pending.photoThumbnailDatas
             prefill.suggestedPlaceType = pending.suggestedPlaceType
             pendingPhotoPrefill = nil
         }
@@ -4667,34 +4702,50 @@ struct MapView: View {
         return inside
     }
     
-    private func handlePhotoImportSelection(_ item: PhotosPickerItem) {
+    private func handlePhotoImportSelection(_ items: [PhotosPickerItem]) {
         Task {
-            print("📸 开始处理图片导入...")
+            print("📸 开始处理 \(items.count) 张图片导入...")
             
-            guard let data = try? await item.loadTransferable(type: Data.self) else {
-                print("❌ 图片加载失败：无法从 PhotosPickerItem 获取数据")
+            var loaded: [(item: PhotosPickerItem, data: Data, processed: (Data, Data))] = []
+            for item in items {
+                guard let data = try? await item.loadTransferable(type: Data.self) else {
+                    print("⚠️ 跳过无法加载的图片")
+                    continue
+                }
+                loaded.append((item, data, ImageProcessor.process(data: data)))
+                print("✅ 图片数据加载成功，大小: \(data.count / 1024) KB")
+            }
+            
+            guard !loaded.isEmpty else {
+                print("❌ 图片加载失败：所选图片均无法读取")
                 await MainActor.run {
                     photoImportError = .failedToLoad
                     showingQuickCheckIn = false
                     pendingPhotoPrefill = nil
-                    photoImportItem = nil
+                    photoImportItems = []
                     showingPhotoImportPicker = false
                 }
                 return
             }
             
-            print("✅ 图片数据加载成功，大小: \(data.count / 1024) KB")
+            let resolved = resolveImportMetadata(
+                items: loaded.map(\.item),
+                loadedData: loaded.map(\.data)
+            )
+            let photoDatas = loaded.map { $0.processed.0 }
+            let thumbnailDatas = loaded.map { $0.processed.1 }
+            let suggestedType = PlaceTypeImageClassifier.suggestPlaceType(from: photoDatas[resolved.typeSourceIndex])
             
-            let processed = ImageProcessor.process(data: data)
-            let metadata = extractMetadata(for: item, imageData: data)
-            let suggestedType = PlaceTypeImageClassifier.suggestPlaceType(from: processed.0)
-
             await MainActor.run {
-                photoImportItem = nil
+                photoImportItems = []
                 showingPhotoImportPicker = false
                 
-                if let wgsCoordinate = metadata.coordinate {
-                    // 📍 关键修复：iPhone 拍摄的照片 GPS 信息是 WGS84 坐标系
+                if let wgsCoordinate = resolved.coordinate {
+                    if let gpsIndex = resolved.gpsSourceIndex {
+                        print("📍 使用第 \(gpsIndex + 1) 张照片的 GPS 信息建立地点")
+                    }
+                    
+                    // 📍 iPhone 拍摄的照片 GPS 信息是 WGS84 坐标系
                     // 在中国境内需要转换为 GCJ02（火星坐标）才能准确定位
                     let isInChina = !CoordinateConverter.isOutOfChina(wgsCoordinate)
                     let finalCoordinate: CLLocationCoordinate2D
@@ -4709,44 +4760,66 @@ struct MapView: View {
                         print("📍 坐标（境外，无需转换）: (\(String(format: "%.6f", finalCoordinate.latitude)), \(String(format: "%.6f", finalCoordinate.longitude)))")
                     }
                     
-                    if let captureDate = metadata.captureDate {
+                    if let captureDate = resolved.visitDate {
                         print("📅 拍摄日期: \(captureDate)")
                     } else {
                         print("⚠️ 未找到拍摄日期")
                     }
                     
                     pendingPhotoPrefill = PendingPhotoPrefill(
-                        visitDate: metadata.captureDate,
-                        photoData: processed.0,
-                        thumbnailData: processed.1,
+                        visitDate: resolved.visitDate,
+                        photoDatas: photoDatas,
+                        photoThumbnailDatas: thumbnailDatas,
                         suggestedPlaceType: suggestedType
                     )
                     photoImportError = nil
-                    isGeocodingLocation = true  // 先显示加载状态，避免首帧出现空表单
+                    isGeocodingLocation = true
                     showingQuickCheckIn = true
                     addDestinationPrefill = nil
                     
                     print("🔄 开始逆地理编码...")
                     reverseGeocodeLocation(coordinate: finalCoordinate, forAddDestinationPrefill: true)
                 } else {
-                    print("⚠️ 图片中未找到 GPS 坐标信息")
-                    if let captureDate = metadata.captureDate {
-                        print("📅 拍摄日期: \(captureDate)")
+                    print("⚠️ 所选图片均无 GPS，进入手动填写")
+                    if let captureDate = resolved.visitDate {
+                        print("📅 使用顺延得到的拍摄日期: \(captureDate)")
                     }
                     
                     pendingPhotoPrefill = nil
                     addDestinationPrefill = AddDestinationPrefill(
-                        visitDate: metadata.captureDate,
-                        photoDatas: [processed.0],
-                        photoThumbnailDatas: [processed.1],
+                        visitDate: resolved.visitDate,
+                        photoDatas: photoDatas,
+                        photoThumbnailDatas: thumbnailDatas,
                         suggestedPlaceType: suggestedType
                     )
                     isGeocodingLocation = false
                     showingQuickCheckIn = true
-                    photoImportError = .missingLocation
+                    photoImportError = nil
                 }
             }
         }
+    }
+    
+    /// 按选中顺序顺延解析 EXIF：GPS 决定地点；日期优先 GPS 源，否则取首张有日期的照片。
+    private func resolveImportMetadata(
+        items: [PhotosPickerItem],
+        loadedData: [Data]
+    ) -> ResolvedPhotoImportMetadata {
+        let metadatas = zip(items, loadedData).map { extractMetadata(for: $0.0, imageData: $0.1) }
+        let gpsIndex = metadatas.firstIndex { $0.coordinate != nil }
+        let visitDate: Date? = {
+            if let index = gpsIndex, let date = metadatas[index].captureDate {
+                return date
+            }
+            return metadatas.compactMap(\.captureDate).first
+        }()
+        
+        return ResolvedPhotoImportMetadata(
+            coordinate: gpsIndex.flatMap { metadatas[$0].coordinate },
+            visitDate: visitDate,
+            typeSourceIndex: gpsIndex ?? 0,
+            gpsSourceIndex: gpsIndex
+        )
     }
     
     /// 从 EXIF GPS 字典解析 WGS84（与 CoreLocation / PHAsset 一致）；支持标量、NSNumber、度分秒数组及有理数分量。
@@ -5442,25 +5515,22 @@ struct MapView: View {
     // 将地图定位到当前位置
     private func centerMapOnCurrentLocation() {
         if let userLocation = locationManager.lastKnownLocation {
-            // 如果有已知位置，定位到该位置
-            let region = MKCoordinateRegion(
-                center: userLocation,
-                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-            )
-            
-            withAnimation(.easeInOut(duration: 0.5)) {
-                mapCameraPosition = .region(region)
-            }
+            locationManager.startUpdatingLocation(mode: .mapBrowsing)
+            setCameraToUserLocation(userLocation)
             print("📍 定位到当前位置")
-        } else {
-            // 如果没有位置信息，请求位置
-            locationManager.requestLocation()
-            
-            // 使用自动定位
-            withAnimation(.easeInOut(duration: 0.4)) {
-                mapCameraPosition = .automatic
-            }
-            print("⚠️ 正在获取当前位置...")
+            return
+        }
+        
+        isWaitingForUserLocate = true
+        locationManager.startUpdatingLocation(mode: .checkIn)
+        locationManager.requestLocation()
+        print("⏳ 定位按钮：正在获取当前位置...")
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            guard self.isWaitingForUserLocate else { return }
+            self.isWaitingForUserLocate = false
+            self.restoreMapBrowsingLocationModeIfNeeded()
+            print("⏰ 定位按钮：获取位置超时")
         }
     }
     

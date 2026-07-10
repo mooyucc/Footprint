@@ -485,6 +485,8 @@ struct ProfileView: View {
             
             VStack(alignment: .leading, spacing: 6) {
                 featureRow(title: "paywall_feature_ai".localized)
+                featureRow(title: "paywall_feature_unlimited".localized)
+                featureRow(title: "paywall_feature_share_layouts".localized)
                 featureRow(title: "paywall_feature_import_export".localized)
             }
             
@@ -959,7 +961,6 @@ struct ProfileStatCard: View {
     let label: String
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var brandColorManager: BrandColorManager
-    @State private var animatedValue: Double = 0
     
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -968,12 +969,11 @@ struct ProfileStatCard: View {
                 .foregroundColor(brandColorManager.currentBrandColor)
 
             HStack(alignment: .firstTextBaseline, spacing: 0) {
-                Text("\(Int(animatedValue.rounded()))")
+                Text("\(targetValue)")
                     .font(.system(size: 36, weight: .black, design: .default))
                     .tracking(-0.8)
                     .foregroundStyle(.primary)
                     .monospacedDigit()
-                    .contentTransition(.numericText(value: animatedValue))
                     .lineLimit(1)
                     .minimumScaleFactor(0.65)
 
@@ -989,29 +989,6 @@ struct ProfileStatCard: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
         .padding(.horizontal, 12)
-        .onAppear {
-            animateStatNumber(resetToZero: true)
-        }
-        .onChange(of: targetValue) { _, _ in
-            animateStatNumber(resetToZero: false)
-        }
-    }
-    
-    /// 与「点亮进度」一致的数字递增动效
-    private func animateStatNumber(resetToZero: Bool) {
-        let target = Double(targetValue)
-        if resetToZero {
-            animatedValue = 0
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
-                withAnimation(.easeOut(duration: 0.9)) {
-                    animatedValue = target
-                }
-            }
-        } else {
-            withAnimation(.easeOut(duration: 0.55)) {
-                animatedValue = target
-            }
-        }
     }
 }
 

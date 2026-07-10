@@ -308,7 +308,8 @@ struct AddDestinationView: View {
                 PhotoSelectionSection(
                     selectedPhotos: $selectedPhotos,
                     photoDatas: $photoDatas,
-                    photoThumbnailDatas: $photoThumbnailDatas
+                    photoThumbnailDatas: $photoThumbnailDatas,
+                    maxPhotos: entitlementManager.maxPhotosPerDestination
                 )
                 
                 // 使用可复用的视频选择组件
@@ -681,6 +682,11 @@ struct AddDestinationView: View {
     
     private func createAndSaveDestination() {
         guard let location = selectedLocation else { return }
+
+        guard entitlementManager.canAddDestination(currentCount: allDestinations.count) else {
+            showPaywall = true
+            return
+        }
         
         let destination = TravelDestination(
             name: name,

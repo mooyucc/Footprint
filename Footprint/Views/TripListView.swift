@@ -72,7 +72,11 @@ struct TripListView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Button {
-                            showingAddTrip = true
+                            if entitlementManager.canAddTripCard(currentCount: trips.count) {
+                                showingAddTrip = true
+                            } else {
+                                showPaywall = true
+                            }
                         } label: {
                             Label("create_trip".localized, systemImage: "plus.circle.fill")
                         }
@@ -149,10 +153,10 @@ struct TripListView: View {
     }
     
     private func shareTrip(_ trip: TravelTrip) {
-        // 生成旅程图片
-        let tripImage = TripImageGenerator.generateTripImage(from: trip)
-        
-        // 只分享图片，不分享文字（因为所有信息都已经包含在图片中）
+        let tripImage = ShareImageUtilities.applyingWatermarkIfNeeded(
+            TripImageGenerator.generateTripImage(from: trip),
+            shouldApply: entitlementManager.shouldApplyShareWatermark
+        )
         shareItem = TripShareItem(text: "", image: tripImage)
     }
     
@@ -280,7 +284,11 @@ struct TripStatItem: View {
 
 struct EmptyTripView: View {
     @Binding var showingAddTrip: Bool
+    @Query private var trips: [TravelTrip]
     @EnvironmentObject var languageManager: LanguageManager
+    @EnvironmentObject private var entitlementManager: EntitlementManager
+    @EnvironmentObject private var purchaseManager: PurchaseManager
+    @State private var showPaywall = false
     
     var body: some View {
         VStack(spacing: 20) {
@@ -298,7 +306,11 @@ struct EmptyTripView: View {
                 .multilineTextAlignment(.center)
             
             Button {
-                showingAddTrip = true
+                if entitlementManager.canAddTripCard(currentCount: trips.count) {
+                    showingAddTrip = true
+                } else {
+                    showPaywall = true
+                }
             } label: {
                 Label("create_first_trip".localized, systemImage: "plus.circle.fill")
                     .font(.headline)
@@ -309,6 +321,11 @@ struct EmptyTripView: View {
             }
         }
         .padding()
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+                .environmentObject(purchaseManager)
+                .environmentObject(entitlementManager)
+        }
     }
 }
 

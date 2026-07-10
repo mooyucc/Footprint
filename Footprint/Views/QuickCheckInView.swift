@@ -22,6 +22,7 @@ struct QuickCheckInView: View {
     @StateObject private var languageManager = LanguageManager.shared
     @EnvironmentObject private var entitlementManager: EntitlementManager
     @EnvironmentObject private var aiCreditManager: AICreditManager
+    @EnvironmentObject private var purchaseManager: PurchaseManager
     
     // 从外部传入的预填充数据（位置信息）
     private let prefill: AddDestinationPrefill?
@@ -52,6 +53,7 @@ struct QuickCheckInView: View {
     @State private var isSaving = false
     @State private var showingAINotePreview = false
     @State private var tempDestinationForAI: TravelDestination?
+    @State private var showPaywall = false
     @State private var showCreditPaywall = false
     
     // 天气信息
@@ -97,7 +99,8 @@ struct QuickCheckInView: View {
                 PhotoSelectionSection(
                     selectedPhotos: $selectedPhotos,
                     photoDatas: $photoDatas,
-                    photoThumbnailDatas: $photoThumbnailDatas
+                    photoThumbnailDatas: $photoThumbnailDatas,
+                    maxPhotos: entitlementManager.maxPhotosPerDestination
                 )
                 
                 // 使用可复用的视频选择组件
@@ -187,6 +190,11 @@ struct QuickCheckInView: View {
             }
             .sheet(isPresented: $showCreditPaywall) {
                 AICreditPaywallView()
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
+                    .environmentObject(purchaseManager)
+                    .environmentObject(entitlementManager)
             }
             .sheet(isPresented: $showingAINotePreview) {
                 if let tempDestination = tempDestinationForAI {
@@ -301,6 +309,12 @@ struct QuickCheckInView: View {
     private func createAndSaveDestination() {
         guard let location = selectedLocation else {
             isSaving = false
+            return
+        }
+
+        guard entitlementManager.canAddDestination(currentCount: allDestinations.count) else {
+            isSaving = false
+            showPaywall = true
             return
         }
         

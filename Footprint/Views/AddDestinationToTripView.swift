@@ -326,6 +326,11 @@ struct AddDestinationToTripView: View {
         if selectedMode == 0 {
             // 创建新目的地并添加到旅程
             guard let location = selectedLocation else { return }
+
+            guard entitlementManager.canAddDestination(currentCount: allDestinations.count) else {
+                showPaywall = true
+                return
+            }
             
             let destination = TravelDestination(
                 name: name,

@@ -267,7 +267,7 @@
 "change_photo" = "更换照片";
 "video" = "视频";
 "select_video" = "选择视频";
-"photo_limit_hint" = "最多可添加9张照片";
+"photo_limit_hint" = "最多可添加 %d 张照片";
 "video_limit_hint" = "仅支持1段视频，时长不超过10秒";
 
 // Notes Section Placeholders
@@ -653,6 +653,20 @@
 "onboarding_page2_color_description" = "自定义应用的主题颜色，将应用于图标、按钮和其他UI元素";
 "onboarding_next" = "下一步";
 "onboarding_complete" = "开始使用";
+"onboarding_paywall_nav_title" = "选择方案";
+"onboarding_paywall_title" = "欢迎使用墨鱼足迹";
+"onboarding_paywall_subtitle" = "免费版即可开始记录旅程；升级 Pro 解锁全部功能。";
+"onboarding_free_tier_title" = "免费版包含";
+"onboarding_free_destinations" = "最多 %d 个打卡地点";
+"onboarding_free_trips" = "最多 %d 个旅程";
+"onboarding_free_photos" = "每地点最多 %d 张照片";
+"onboarding_free_share" = "基础分享版面（分享图含水印）";
+"onboarding_free_ai_trial" = "赠送 %d 次 AI 体验";
+"onboarding_pro_feature_title" = "升级 Pro 额外解锁";
+"onboarding_pricing_section_title" = "选择订阅方案";
+"onboarding_recommended_plan" = "推荐";
+"onboarding_continue_free" = "免费开始使用";
+"onboarding_continue_free_hint" = "继续使用免费版，部分功能有限制。可随时在「我的」升级 Pro。";
 
 // AI Assistant
 "ai_assistant_title" = "AI 助手";

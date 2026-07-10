@@ -272,6 +272,7 @@
 "photo" = "写真";
 "add_photo" = "写真を追加";
 "change_photo" = "写真を変更";
+"photo_limit_hint" = "写真は最大 %d 枚まで追加できます";
 "notes" = "ノート";
 
 // Notes Section Placeholders
@@ -670,6 +671,20 @@
 "onboarding_page2_color_description" = "アプリのテーマカラーをカスタマイズします。アイコン、ボタン、その他のUI要素に適用されます";
 "onboarding_next" = "次へ";
 "onboarding_complete" = "始める";
+"onboarding_paywall_nav_title" = "プランを選択";
+"onboarding_paywall_title" = "MooFootprintへようこそ";
+"onboarding_paywall_subtitle" = "無料版ですぐに記録を始められます。Proにアップグレードすると全機能が使えます。";
+"onboarding_free_tier_title" = "無料版に含まれる内容";
+"onboarding_free_destinations" = "チェックイン地点 最大 %d 件";
+"onboarding_free_trips" = "旅程 最大 %d 件";
+"onboarding_free_photos" = "地点あたり写真 最大 %d 枚";
+"onboarding_free_share" = "基本共有レイアウト（透かし入り）";
+"onboarding_free_ai_trial" = "AI体験 %d 回プレゼント";
+"onboarding_pro_feature_title" = "Proでさらに解放";
+"onboarding_pricing_section_title" = "サブスクリプションを選択";
+"onboarding_recommended_plan" = "おすすめ";
+"onboarding_continue_free" = "無料で始める";
+"onboarding_continue_free_hint" = "無料版で続行します（一部機能に制限あり）。「マイページ」からいつでもProにアップグレードできます。";
 
 // Profile - Identity Tag & MBTI
 "identity_tag" = "アイデンティティタグ";

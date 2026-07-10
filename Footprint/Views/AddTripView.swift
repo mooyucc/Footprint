@@ -135,6 +135,11 @@ struct AddTripView: View {
     }
     
     private func saveTrip() {
+        guard entitlementManager.canAddTripCard(currentCount: allTrips.count) else {
+            showPaywall = true
+            return
+        }
+
         let newTrip = TravelTrip(
             name: name,
             desc: desc,

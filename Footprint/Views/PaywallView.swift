@@ -17,7 +17,7 @@ struct PaywallView: View {
 
     @State private var isRestoring: Bool = false
     @State private var isPurchasing: Set<String> = []
-    
+
     // 引导流程相关
     var isOnboarding: Bool = false
     var onSkip: (() -> Void)? = nil
@@ -27,28 +27,40 @@ struct PaywallView: View {
             ScrollView {
                 VStack(spacing: 24) {
                     heroSection
+
+                    if isOnboarding {
+                        freeTierSection
+                    }
+
                     featureList
                     pricingSection
-                    restoreSection
-                    
-                    // 引导流程中显示"开始使用"按钮
-                    if isOnboarding, let onSkip = onSkip {
-                        skipButton(onSkip: onSkip)
+
+                    if isOnboarding {
+                        subscriptionTermsSection
                     }
-                    
-                    termsSection
+
+                    if !isOnboarding {
+                        restoreSection
+                    }
+
+                    if isOnboarding, let onSkip = onSkip {
+                        continueFreeSection(onSkip: onSkip)
+                        onboardingRestoreLink
+                        legalLinksSection
+                    } else {
+                        termsSection
+                    }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 32)
                 .padding(.top, 12)
             }
-            .navigationTitle("paywall_title".localized)
+            .navigationTitle(navigationTitleKey.localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // 仅在非引导流程中显示关闭按钮
                 if !isOnboarding {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("close".localized) { dismiss() }
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("close".localized) { dismiss() }
                     }
                 }
             }
@@ -65,7 +77,6 @@ struct PaywallView: View {
                 .ignoresSafeArea()
             )
             .task {
-                // 每次打开 PaywallView 时重新加载产品列表
                 await purchaseManager.loadProducts()
             }
         }
@@ -73,18 +84,22 @@ struct PaywallView: View {
 
     // MARK: - Sections
 
+    private var navigationTitleKey: String {
+        isOnboarding ? "onboarding_paywall_nav_title" : "paywall_title"
+    }
+
     private var heroSection: some View {
         VStack(spacing: 12) {
-            Image(systemName: "sparkles.rectangle.stack")
+            Image(systemName: isOnboarding ? "map.fill" : "sparkles.rectangle.stack")
                 .symbolRenderingMode(.hierarchical)
                 .font(.system(size: 48, weight: .semibold))
                 .foregroundStyle(brandColorManager.currentBrandColor)
 
-            Text("paywall_title".localized)
+            Text(isOnboarding ? "onboarding_paywall_title".localized : "paywall_title".localized)
                 .font(.title2.bold())
                 .multilineTextAlignment(.center)
 
-            Text("paywall_subtitle".localized)
+            Text(isOnboarding ? "onboarding_paywall_subtitle".localized : "paywall_subtitle".localized)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -97,12 +112,33 @@ struct PaywallView: View {
         )
     }
 
+    private var freeTierSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("onboarding_free_tier_title".localized)
+                .font(.headline)
+
+            freeTierRow(title: "onboarding_free_destinations".localized(with: FreeTierLimits.maxDestinations))
+            freeTierRow(title: "onboarding_free_trips".localized(with: FreeTierLimits.maxTrips))
+            freeTierRow(title: "onboarding_free_photos".localized(with: FreeTierLimits.maxPhotosPerDestination))
+            freeTierRow(title: "onboarding_free_share".localized)
+            freeTierRow(title: "onboarding_free_ai_trial".localized(with: FreeTierLimits.aiFreeTrialCredits))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(.secondarySystemBackground))
+        )
+    }
+
     private var featureList: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("paywall_feature_title".localized)
+            Text(isOnboarding ? "onboarding_pro_feature_title".localized : "paywall_feature_title".localized)
                 .font(.headline)
 
             featureRow(icon: "sparkles", title: "paywall_feature_ai".localized)
+            featureRow(icon: "infinity", title: "paywall_feature_unlimited".localized)
+            featureRow(icon: "square.grid.3x3.square.badge.ellipsis", title: "paywall_feature_share_layouts".localized)
             featureRow(icon: "tray.and.arrow.down.fill", title: "paywall_feature_import_export".localized)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -115,6 +151,12 @@ struct PaywallView: View {
 
     private var pricingSection: some View {
         VStack(spacing: 12) {
+            if isOnboarding {
+                Text("onboarding_pricing_section_title".localized)
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
             if hasLifetime {
                 lifetimeUnlockedCard
             } else {
@@ -129,7 +171,7 @@ struct PaywallView: View {
                                 .font(.footnote)
                                 .foregroundColor(.secondary)
                                 .multilineTextAlignment(.center)
-                            
+
                             Button {
                                 Task {
                                     await purchaseManager.loadProducts()
@@ -148,7 +190,6 @@ struct PaywallView: View {
                             .padding()
                     }
                 } else {
-                    // 显示错误信息（如果有）
                     if let errorMessage = purchaseManager.errorMessage, !errorMessage.isEmpty {
                         Text(errorMessage)
                             .font(.footnote)
@@ -157,7 +198,7 @@ struct PaywallView: View {
                             .padding(.horizontal)
                             .padding(.bottom, 8)
                     }
-                    
+
                     ForEach(sortedProducts(), id: \.id) { product in
                         purchaseButton(for: product)
                     }
@@ -173,6 +214,9 @@ struct PaywallView: View {
                 await purchaseManager.restorePurchases()
                 isRestoring = false
                 entitlementManager.updateEntitlement()
+                if entitlementManager.isSubscriptionActive {
+                    completeActiveSubscriptionFlow()
+                }
             }
         } label: {
             HStack {
@@ -184,21 +228,55 @@ struct PaywallView: View {
         .buttonStyle(.bordered)
         .controlSize(.large)
     }
-    
-    private func skipButton(onSkip: @escaping () -> Void) -> some View {
+
+    private var onboardingRestoreLink: some View {
         Button {
-            onSkip()
+            Task {
+                isRestoring = true
+                await purchaseManager.restorePurchases()
+                isRestoring = false
+                entitlementManager.updateEntitlement()
+                if entitlementManager.isSubscriptionActive {
+                    completeActiveSubscriptionFlow()
+                }
+            }
         } label: {
-            Text("onboarding_complete".localized)
-                .font(.headline)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(brandColorManager.currentBrandColor)
-                )
+            HStack(spacing: 6) {
+                if isRestoring { ProgressView().scaleEffect(0.7) }
+                Text("paywall_button_restore".localized)
+            }
+            .font(.footnote.weight(.medium))
         }
+        .buttonStyle(.plain)
+        .foregroundColor(.secondary)
+        .frame(maxWidth: .infinity)
+    }
+
+    private func continueFreeSection(onSkip: @escaping () -> Void) -> some View {
+        VStack(spacing: 10) {
+            Button {
+                onSkip()
+            } label: {
+                Text("onboarding_continue_free".localized)
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.large)
+
+            Text("onboarding_continue_free_hint".localized)
+                .font(.footnote)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+    }
+
+    private var subscriptionTermsSection: some View {
+        Text("subscription_auto_renew_note".localized)
+            .font(.footnote)
+            .foregroundColor(.secondary)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
     }
 
     private var termsSection: some View {
@@ -208,19 +286,36 @@ struct PaywallView: View {
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
 
-            HStack(spacing: 4) {
-                Link("terms_of_use".localized, destination: URL(string: "terms_url".localized)!)
-                Text("|")
-                    .foregroundColor(.secondary)
-                Link("privacy_policy".localized, destination: URL(string: "privacy_url".localized)!)
-            }
-            .font(.footnote.weight(.semibold))
-            .foregroundColor(.secondary)
+            legalLinksSection
         }
         .padding(.top, 4)
     }
 
+    private var legalLinksSection: some View {
+        HStack(spacing: 4) {
+            Link("terms_of_use".localized, destination: URL(string: "terms_url".localized)!)
+            Text("|")
+                .foregroundColor(.secondary)
+            Link("privacy_policy".localized, destination: URL(string: "privacy_url".localized)!)
+        }
+        .font(.footnote.weight(.semibold))
+        .foregroundColor(.secondary)
+        .frame(maxWidth: .infinity)
+    }
+
     // MARK: - Helpers
+
+    private func freeTierRow(title: String) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundColor(.secondary)
+                .frame(width: 26)
+            Text(title)
+                .font(.subheadline)
+                .foregroundColor(.primary)
+            Spacer()
+        }
+    }
 
     private func featureRow(icon: String, title: String) -> some View {
         HStack(spacing: 10) {
@@ -237,69 +332,33 @@ struct PaywallView: View {
     private func purchaseButton(for product: Product) -> some View {
         let isPurchasingThis = isPurchasing.contains(product.id)
         let isCurrentSubscription = entitlementManager.currentSubscriptionProductID == product.id && entitlementManager.isSubscriptionActive
-        
+        let isRecommended = isOnboarding && product.id == SubscriptionProductID.proYearly
+
         return Button {
-            guard !isPurchasingThis else { 
-                print("⚠️ 购买进行中，忽略重复点击")
-                return 
-            }
-            
-            // 如果已经是当前订阅，不允许再次购买
-            guard !isCurrentSubscription else {
-                print("ℹ️ 用户已拥有该订阅: \(product.id)，不允许重复购买")
-                return
-            }
-            
-            print("🔄 用户点击购买: \(product.id)")
-            print("🔄 当前订阅状态: isActive=\(entitlementManager.isSubscriptionActive), productID=\(entitlementManager.currentSubscriptionProductID ?? "nil")")
-            
-            // 立即设置购买状态，提供即时反馈
+            guard !isPurchasingThis else { return }
+            guard !isCurrentSubscription else { return }
+
             isPurchasing.insert(product.id)
-            
+
             Task { @MainActor in
-                // 清除之前的错误信息
                 purchaseManager.errorMessage = nil
-                
-                print("🔄 准备调用 purchase()，等待系统弹窗...")
-                // 执行购买
                 let transaction = await purchaseManager.purchase(product)
-                
-                print("🔄 purchase() 返回: transaction=\(transaction != nil ? "有" : "无")")
-                
-                // 如果购买成功，更新权益
+
                 if let transaction = transaction {
-                    print("🔄 购买成功，基于交易直接更新权益状态...")
-                    
-                    // 使用刚完成的交易直接更新权益（不依赖 currentEntitlements）
-                    // 这样可以处理沙箱环境中订阅立即过期的情况
                     entitlementManager.updateEntitlement(from: transaction)
-                    
-                    // 等待权益更新完成
-                    try? await Task.sleep(nanoseconds: 300_000_000) // 0.3秒
-                    
-                    print("🔄 权益更新完成，当前状态: entitlement=\(entitlementManager.currentEntitlement), isActive=\(entitlementManager.isSubscriptionActive), productID=\(entitlementManager.currentSubscriptionProductID ?? "nil")")
-                    
-                    // 如果权益更新成功，关闭 PaywallView
+                    try? await Task.sleep(nanoseconds: 300_000_000)
+
                     if entitlementManager.isSubscriptionActive {
-                        print("✅ 订阅已激活，关闭 PaywallView")
-                        dismiss()
+                        completeActiveSubscriptionFlow()
                     } else {
-                        print("⚠️ 订阅状态未更新，尝试使用标准方法更新...")
-                        // 如果直接更新失败，尝试使用标准方法
                         entitlementManager.updateEntitlement()
                     }
                 }
-                
-                // 延迟移除购买状态，确保用户看到反馈
-                // 如果购买失败，立即移除状态以便重试
+
                 if transaction == nil && purchaseManager.errorMessage == nil {
-                    // 用户取消，立即移除状态
-                    print("🔄 用户取消或购买失败，移除购买状态")
                     isPurchasing.remove(product.id)
                 } else {
-                    // 购买成功或失败，延迟移除状态
-                    print("🔄 延迟移除购买状态...")
-                    try? await Task.sleep(nanoseconds: 1_000_000_000) // 1秒延迟
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
                     isPurchasing.remove(product.id)
                 }
             }
@@ -309,6 +368,17 @@ struct PaywallView: View {
                     HStack {
                         Text(product.displayName)
                             .font(.headline)
+                        if isRecommended {
+                            Text("onboarding_recommended_plan".localized)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(
+                                    Capsule()
+                                        .fill(brandColorManager.currentBrandColor)
+                                )
+                        }
                         Spacer()
                         if isCurrentSubscription {
                             HStack(spacing: 4) {
@@ -342,7 +412,7 @@ struct PaywallView: View {
                         }
                     }
                 }
-                
+
                 if isPurchasingThis {
                     ProgressView()
                         .scaleEffect(0.8)
@@ -352,19 +422,28 @@ struct PaywallView: View {
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(isCurrentSubscription ? 
+                    .fill(isCurrentSubscription ?
                           Color.green.opacity(colorScheme == .dark ? 0.2 : 0.1) :
-                          brandColorManager.currentBrandColor.opacity(colorScheme == .dark ? 0.25 : 0.15))
+                            brandColorManager.currentBrandColor.opacity(colorScheme == .dark ? 0.25 : 0.15))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(isCurrentSubscription ? Color.green.opacity(0.5) : Color.clear, lineWidth: 1.5)
+                    .stroke(isRecommended ? brandColorManager.currentBrandColor.opacity(0.55) :
+                                (isCurrentSubscription ? Color.green.opacity(0.5) : Color.clear), lineWidth: 1.5)
             )
         }
         .buttonStyle(.plain)
         .disabled(isPurchasingThis || isCurrentSubscription)
     }
-    
+
+    private func completeActiveSubscriptionFlow() {
+        if isOnboarding, let onSkip = onSkip {
+            onSkip()
+        } else {
+            dismiss()
+        }
+    }
+
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
@@ -374,12 +453,25 @@ struct PaywallView: View {
     }
 
     private func sortedProducts() -> [Product] {
-        // 订阅付费墙仅展示订阅类产品（不包含 AI 调用次数等消耗型商品）
-        purchaseManager.products
+        let subscriptions = purchaseManager.products
             .filter { SubscriptionProductID.all.contains($0.id) }
-            .sorted { lhs, rhs in
-                lhs.price < rhs.price
+
+        if isOnboarding {
+            return subscriptions.sorted { lhs, rhs in
+                planSortOrder(for: lhs.id) < planSortOrder(for: rhs.id)
             }
+        }
+
+        return subscriptions.sorted { $0.price < $1.price }
+    }
+
+    private func planSortOrder(for productID: String) -> Int {
+        switch productID {
+        case SubscriptionProductID.proYearly: return 0
+        case SubscriptionProductID.proMonthly: return 1
+        case SubscriptionProductID.proLifetime: return 2
+        default: return 3
+        }
     }
 
     private func subtitle(for product: Product) -> String {
@@ -391,11 +483,11 @@ struct PaywallView: View {
         }
         return ""
     }
-    
+
     private var hasLifetime: Bool {
         entitlementManager.currentEntitlement == .pro && entitlementManager.subscriptionExpiryDate == nil
     }
-    
+
     private var lifetimeUnlockedCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
@@ -429,4 +521,3 @@ private extension Product.SubscriptionPeriod.Unit {
         }
     }
 }
-

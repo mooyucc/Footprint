@@ -100,10 +100,14 @@ struct YearShareLayoutSelectionView: View {
         }
         
         isGenerating = true
+        let applyWatermark = entitlementManager.shouldApplyShareWatermark
         
         // 在后台线程生成图片，避免阻塞UI
         DispatchQueue.global(qos: .userInitiated).async {
-            let yearImage = YearImageGenerator.generateYearImage(year: year, destinations: destinations, layout: selectedLayout)
+            let yearImage = ShareImageUtilities.applyingWatermarkIfNeeded(
+                YearImageGenerator.generateYearImage(year: year, destinations: destinations, layout: selectedLayout),
+                shouldApply: applyWatermark
+            )
             
             DispatchQueue.main.async {
                 self.isGenerating = false
@@ -113,8 +117,7 @@ struct YearShareLayoutSelectionView: View {
     }
 
     private var allowedLayouts: [TripShareLayout] {
-        // 免费版和 Pro 都可以使用所有分享版面
-        TripShareLayout.allCases
+        entitlementManager.allowedTripShareLayouts()
     }
 }
 

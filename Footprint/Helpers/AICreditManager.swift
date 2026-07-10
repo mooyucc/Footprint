@@ -26,6 +26,15 @@ final class AICreditManager: ObservableObject {
         self.remaining = max(0, storedRemaining)
         self.used = max(0, storedUsed)
     }
+
+    /// 首次启动赠送免费 AI 体验次数（仅一次）
+    func grantFreeTrialIfNeeded() {
+        guard !BetaInfo.isBetaBuild else { return }
+        let grantedKey = "ai_credits_free_trial_granted"
+        guard !defaults.bool(forKey: grantedKey) else { return }
+        defaults.set(true, forKey: grantedKey)
+        addCredits(FreeTierLimits.aiFreeTrialCredits)
+    }
     
     /// 购买后增加一定数量的 AI 调用次数。
     func addCredits(_ amount: Int) {

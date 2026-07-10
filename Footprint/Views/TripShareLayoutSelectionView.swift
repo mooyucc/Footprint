@@ -99,10 +99,14 @@ struct TripShareLayoutSelectionView: View {
         }
         
         isGenerating = true
+        let applyWatermark = entitlementManager.shouldApplyShareWatermark
         
         // 在后台线程生成图片，避免阻塞UI
         DispatchQueue.global(qos: .userInitiated).async {
-            let tripImage = TripImageGenerator.generateTripImage(from: trip, layout: selectedLayout)
+            let tripImage = ShareImageUtilities.applyingWatermarkIfNeeded(
+                TripImageGenerator.generateTripImage(from: trip, layout: selectedLayout),
+                shouldApply: applyWatermark
+            )
             
             DispatchQueue.main.async {
                 self.isGenerating = false
@@ -112,8 +116,7 @@ struct TripShareLayoutSelectionView: View {
     }
 
     private var allowedLayouts: [TripShareLayout] {
-        // 免费版和 Pro 都可以使用所有分享版面
-        TripShareLayout.allCases
+        entitlementManager.allowedTripShareLayouts()
     }
 }
 

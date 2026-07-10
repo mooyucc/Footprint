@@ -16,10 +16,13 @@ struct JourneyCardsStackView: View {
     @Query(sort: \TravelTrip.startDate, order: .reverse) private var trips: [TravelTrip]
     @EnvironmentObject private var languageManager: LanguageManager
     @EnvironmentObject private var brandColorManager: BrandColorManager
+    @EnvironmentObject private var entitlementManager: EntitlementManager
+    @EnvironmentObject private var purchaseManager: PurchaseManager
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
     
     @State private var showingAddTrip = false
+    @State private var showPaywall = false
     @State private var showingFilePicker = false
     @State private var selectedURL: URL?
     @State private var importResult: ImportResult?
@@ -77,7 +80,11 @@ struct JourneyCardsStackView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Button {
-                            showingAddTrip = true
+                            if entitlementManager.canAddTripCard(currentCount: trips.count) {
+                                showingAddTrip = true
+                            } else {
+                                showPaywall = true
+                            }
                         } label: {
                             Label("create_trip".localized, systemImage: "plus.circle.fill")
                         }
@@ -101,6 +108,11 @@ struct JourneyCardsStackView: View {
             }
             .sheet(isPresented: $showingAddTrip) {
                 AddTripView()
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
+                    .environmentObject(purchaseManager)
+                    .environmentObject(entitlementManager)
             }
             .sheet(isPresented: $showingFilePicker) {
                 DocumentPicker(selectedURL: $selectedURL)

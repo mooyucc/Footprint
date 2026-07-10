@@ -267,7 +267,7 @@
 "change_photo" = "Change Photo";
 "video" = "Video";
 "select_video" = "Select Video";
-"photo_limit_hint" = "You can add up to 9 photos";
+"photo_limit_hint" = "You can add up to %d photos";
 "video_limit_hint" = "Only 1 video supported, max 10 seconds";
 
 // Notes Section Placeholders
@@ -715,6 +715,20 @@
 "onboarding_page2_color_description" = "Customize the app's theme color, which will be applied to icons, buttons, and other UI elements";
 "onboarding_next" = "Next";
 "onboarding_complete" = "Get Started";
+"onboarding_paywall_nav_title" = "Choose a Plan";
+"onboarding_paywall_title" = "Welcome to MooFootprint";
+"onboarding_paywall_subtitle" = "Start for free and upgrade to Pro anytime for the full experience.";
+"onboarding_free_tier_title" = "Free plan includes";
+"onboarding_free_destinations" = "Up to %d destinations";
+"onboarding_free_trips" = "Up to %d trips";
+"onboarding_free_photos" = "Up to %d photos per destination";
+"onboarding_free_share" = "Basic share layouts (with watermark)";
+"onboarding_free_ai_trial" = "%d free AI trial uses";
+"onboarding_pro_feature_title" = "Upgrade to Pro for";
+"onboarding_pricing_section_title" = "Choose a subscription";
+"onboarding_recommended_plan" = "Recommended";
+"onboarding_continue_free" = "Continue with Free";
+"onboarding_continue_free_hint" = "You'll use the free plan with some limits. Upgrade anytime in Profile.";
 
 // Profile - Identity Tag & MBTI
 "identity_tag" = "Identity Tag";

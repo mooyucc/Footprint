@@ -272,6 +272,7 @@
 "photo" = "Photo";
 "add_photo" = "Ajouter une photo";
 "change_photo" = "Changer la photo";
+"photo_limit_hint" = "Vous pouvez ajouter jusqu'à %d photos";
 "notes" = "Notes";
 
 // Notes Section Placeholders
@@ -656,6 +657,20 @@
 "onboarding_page2_color_description" = "Personnalisez la couleur du thème de l'application, qui sera appliquée aux icônes, boutons et autres éléments de l'interface";
 "onboarding_next" = "Suivant";
 "onboarding_complete" = "Commencer";
+"onboarding_paywall_nav_title" = "Choisir un plan";
+"onboarding_paywall_title" = "Bienvenue sur MooFootprint";
+"onboarding_paywall_subtitle" = "Commencez gratuitement et passez à Pro à tout moment pour profiter de toutes les fonctionnalités.";
+"onboarding_free_tier_title" = "Inclus dans la version gratuite";
+"onboarding_free_destinations" = "Jusqu'à %d destinations";
+"onboarding_free_trips" = "Jusqu'à %d voyages";
+"onboarding_free_photos" = "Jusqu'à %d photos par destination";
+"onboarding_free_share" = "Mises en page de partage de base (avec filigrane)";
+"onboarding_free_ai_trial" = "%d essais IA offerts";
+"onboarding_pro_feature_title" = "Passez à Pro pour";
+"onboarding_pricing_section_title" = "Choisir un abonnement";
+"onboarding_recommended_plan" = "Recommandé";
+"onboarding_continue_free" = "Continuer gratuitement";
+"onboarding_continue_free_hint" = "Vous utiliserez la version gratuite avec certaines limites. Passez à Pro à tout moment dans Profil.";
 
 // Profile - Identity Tag & MBTI
 "identity_tag" = "Étiquette d'Identité";

@@ -272,6 +272,7 @@
 "photo" = "사진";
 "add_photo" = "사진 추가";
 "change_photo" = "사진 변경";
+"photo_limit_hint" = "최대 %d장의 사진을 추가할 수 있습니다";
 "notes" = "노트";
 
 // Notes Section Placeholders
@@ -666,6 +667,20 @@
 "onboarding_page2_color_description" = "앱의 테마 색상을 사용자 정의합니다. 아이콘, 버튼 및 기타 UI 요소에 적용됩니다";
 "onboarding_next" = "다음";
 "onboarding_complete" = "시작하기";
+"onboarding_paywall_nav_title" = "플랜 선택";
+"onboarding_paywall_title" = "MooFootprint에 오신 것을 환영합니다";
+"onboarding_paywall_subtitle" = "무료 버전으로 바로 기록을 시작하고, Pro로 업그레이드하면 모든 기능을 사용할 수 있습니다.";
+"onboarding_free_tier_title" = "무료 버전 포함";
+"onboarding_free_destinations" = "최대 %d개의 체크인 장소";
+"onboarding_free_trips" = "최대 %d개의 여행";
+"onboarding_free_photos" = "장소당 최대 %d장의 사진";
+"onboarding_free_share" = "기본 공유 레이아웃(워터마크 포함)";
+"onboarding_free_ai_trial" = "AI 체험 %d회 제공";
+"onboarding_pro_feature_title" = "Pro 업그레이드 시 추가";
+"onboarding_pricing_section_title" = "구독 플랜 선택";
+"onboarding_recommended_plan" = "추천";
+"onboarding_continue_free" = "무료로 시작하기";
+"onboarding_continue_free_hint" = "무료 버전으로 계속합니다. 일부 기능에 제한이 있습니다. 프로필에서 언제든 Pro로 업그레이드할 수 있습니다.";
 
 // Profile - Identity Tag & MBTI
 "identity_tag" = "신원 태그";
