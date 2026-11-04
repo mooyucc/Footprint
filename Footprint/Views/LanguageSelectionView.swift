@@ -13,36 +13,38 @@ struct LanguageSelectionView: View {
     
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(LanguageManager.Language.allCases, id: \.self) { language in
-                    Button(action: {
-                        languageManager.setLanguage(language)
-                        dismiss()
-                    }) {
-                        HStack {
-                            Text(language.flag)
-                                .font(.title2)
-                            
-                            Text(language.displayName)
-                                .foregroundColor(.primary)
-                            
-                            Spacer()
-                            
-                            if languageManager.currentLanguage == language {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(.blue)
+            FootprintFormScaffold(accent: Color.footprintRed) {
+                List {
+                    ForEach(LanguageManager.Language.allCases, id: \.self) { language in
+                        Button(action: {
+                            languageManager.setLanguage(language)
+                            dismiss()
+                        }) {
+                            HStack {
+                                Text(language.flag)
+                                    .font(.title2)
+                                
+                                Text(language.displayName)
+                                    .foregroundStyle(.primary)
+                                
+                                Spacer()
+                                
+                                if languageManager.currentLanguage == language {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(Color.footprintRed)
+                                }
                             }
                         }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(PlainButtonStyle())
                 }
-            }
-            .navigationTitle("language_selection".localized)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("done".localized) {
-                        dismiss()
+                .navigationTitle("language_selection".localized)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("done".localized) {
+                            dismiss()
+                        }
                     }
                 }
             }

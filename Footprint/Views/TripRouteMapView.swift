@@ -279,8 +279,7 @@ struct TripRouteMapView: View {
             .padding(.horizontal)
             .padding(.bottom, 12)
         }
-        .background(Color(.secondarySystemBackground))
-        .cornerRadius(12)
+        .footprintGlassCard(cornerRadius: 12)
         .onAppear {
             calculateRoutes()
             adjustCameraPosition()

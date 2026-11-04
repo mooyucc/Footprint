@@ -1,5 +1,5 @@
 "paywall_title" = "Unlock Pro";
-"paywall_subtitle" = "Unlock AI Assistant, unlimited records, and more Pro features to make your travel memories smarter and complete.";
+"paywall_subtitle" = "Unlock unlimited records, data management, and more Pro features. AI uses call credits.";
 "paywall_button_upgrade" = "View Subscription Plan";
 "paywall_button_restore" = "Restore Purchases";
 
@@ -10,6 +10,9 @@
 "membership_status_pro_active" = "Pro Active";
 "membership_status_all_features" = "All features unlocked; you can restore purchases anytime to sync devices.";
 "membership_status_view_restore" = "View benefits / Restore purchases";
+"membership_section" = "Membership";
+"membership_status_free" = "Free";
+"membership_status_free_hint" = "Upgrade to unlock Pro features";
 
 // Paywall lifetime unlocked
 "paywall_lifetime_unlocked" = "Lifetime access unlocked, no need to purchase again.";
@@ -18,7 +21,7 @@
 "paywall_expires_on" = "Expires: ";
 "paywall_terms_privacy" = "By purchasing you agree to the Terms of Use and Privacy Policy. Auto-renewable; cancel anytime in system subscriptions.";
 "paywall_feature_title" = "Pro features";
-"paywall_feature_ai" = "AI Assistant: smart notes, trip descriptions, photo analysis, destination recommendations";
+"paywall_feature_ai" = "AI Assistant: notes, trip descriptions, photo analysis, destination recommendations (uses call credits)";
 "paywall_feature_unlimited" = "Unlimited destinations and trip cards";
 "paywall_feature_share_layouts" = "Full share layouts";
 "paywall_feature_import_export" = "Local data import/export";
@@ -26,20 +29,42 @@
 "paywall_banner_title" = "Upgrade to Pro to unlock data management";
 "paywall_emotional_message_part1" = "Let \"MooFootprint\" be more fun and long-lasting! We need your support to create more interesting stories together.";
 "paywall_emotional_message_part2" = "Come support us! ✨";
+"paywall_select_plan" = "Choose a plan";
+"paywall_cta_unlock" = "Unlock Pro";
+"paywall_cta_unlock_price" = "Unlock Pro · %@";
+"paywall_cta_yearly" = "Unlock Pro · %@ / year";
+"paywall_cta_start_trial" = "Start Free Trial";
+"paywall_cta_trial_then_yearly" = "Then %@ per year. Cancel anytime.";
+"paywall_cta_monthly" = "Unlock Pro · %@ / month";
+"paywall_cta_lifetime" = "Buy Lifetime · %@";
+"paywall_cta_current" = "Current Plan";
+"paywall_lifetime_no_ai" = "AI uses trial credits or paid calls";
+"paywall_ai_uses_credits" = "AI uses trial credits or paid calls";
+"paywall_subscription_includes_ai" = "Includes unlimited AI";
+"paywall_lifetime_ai_hint" = "AI uses trial credits or paid calls.";
+"paywall_yearly_monthly_equivalent" = "That's %@ per month";
+"paywall_yearly_save" = "Save %d%% vs monthly";
+"paywall_trial_days" = "Includes a %d-day free trial";
+"paywall_trial_weeks" = "Includes a %d-week free trial";
+"paywall_trial_months" = "Includes a %d-month free trial";
+"paywall_trial_years" = "Includes a %d-year free trial";
+"paywall_buy_credits_secondary" = "Buy AI calls per use";
+"membership_status_lifetime_ai_note" = "AI uses call credits. You can buy extra calls.";
+"membership_status_ai_credits_note" = "AI uses call credits. You can buy extra calls.";
 "subscription_monthly" = "Monthly subscription";
 "subscription_yearly" = "Yearly subscription";
 "subscription_weekly" = "Weekly subscription";
 "subscription_daily" = "Daily subscription";
 "subscription_default" = "Subscription";
 "close" = "Close";
-"subscription_auto_renew_note" = "Auto-renews until canceled in Settings > Apple ID > Subscriptions.";
+"subscription_auto_renew_note" = "Subscriptions auto-renew. Cancel anytime in Settings.";
 "terms_of_use" = "Terms of Use";
 "privacy_policy" = "Privacy Policy";
 "terms_url" = "https://mooyu.cc/moofootprintlicense.html";
 "privacy_url" = "https://mooyu.cc/myfootprintprivacy.html";
 "limit_destination_reached_title" = "Free limit reached";
-"limit_destination_reached_message" = "Free plan allows up to 50 destinations. Upgrade to Pro for unlimited.";
-"limit_trip_reached_message" = "Free plan allows up to 5 trips. Upgrade to Pro for unlimited.";
+"limit_destination_reached_message" = "Free plan allows up to 15 destinations. Upgrade to Pro for unlimited.";
+"limit_trip_reached_message" = "Free plan allows up to 3 trips. Upgrade to Pro for unlimited.";
 "share_layout_locked_message" = "Full share layouts are for Pro. Upgrade to unlock.";
 "import_export_locked_message" = "Import/Export requires Pro. Upgrade to continue.";
 "import_trip_locked_message" = "Trip import requires Pro. Upgrade to continue.";
@@ -59,18 +84,22 @@
 "account" = "Account";
 "not_logged_in" = "Not logged in";
 "user_profile_settings" = "User Profile Settings";
-"login_sync_description" = "Data will automatically sync to iCloud after logging in";
+"login_sync_description" = "Set your display name and avatar";
 "data_sync" = "Data Sync";
 "data_settings" = "Data";
 "icloud_sync" = "iCloud Sync";
+"default_traveler_name" = "Traveler";
+"sync_description_local" = "iCloud is unavailable. Data is stored on this device. Enable iCloud in Settings to sync across devices.";
+"sync_description_icloud" = "Travel data syncs automatically via iCloud when your device is signed into iCloud.";
+"icloud_sync_on" = "On";
 "enabled" = "Enabled";
 "not_enabled" = "Not enabled";
 "in_development" = "In Development";
 "data_storage" = "Data Storage";
 "local" = "Local";
 "icloud" = "iCloud";
-"sync_description_logged_in" = "Your travel data is automatically syncing to iCloud and accessible on all your devices.";
-"sync_description_not_logged_in" = "After logging in with Apple ID, data will automatically sync to iCloud and remain synchronized across all your devices.";
+"sync_description_logged_in" = "Travel data syncs automatically via iCloud when your device is signed into iCloud.";
+"sync_description_not_logged_in" = "iCloud is unavailable. Data is stored on this device. Enable iCloud in Settings to sync across devices.";
 "about" = "About";
 "version" = "Version";
 "app_name" = "App Name";
@@ -168,12 +197,13 @@
 "map" = "Map";
 "footprint_map" = "Footprints";
 "trips" = "Trips";
-"journey_cards_tab" = "Journey Cards";
+"journey_cards_tab" = "Journeys";
 "journey_cards_empty_hint" = "Create a trip from the Trips tab to see it here.";
 "journey_cards_focused_a11y" = "Selected";
 "journey_cards_destinations_count" = "%d destinations";
 "journey_cards_total_mileage" = "Total mileage";
-"profile" = "Profile";
+"time_capsule_tab" = "Years";
+"profile" = "Me";
 "create_trip" = "Add Trip";
 "import_trip" = "Import Trip";
 "import_result" = "Import Result";
@@ -187,13 +217,17 @@
 "record_every_journey" = "Light up every footprint in life";
 "sign_in_apple_id" = "Sign in with Apple ID";
 "sign_in_with_apple" = "Sign in with Apple";
-"enable_icloud_sync" = "Enable iCloud sync to protect your footprint memories";
+"enable_icloud_sync" = "Enable iCloud in system Settings to protect your footprint memories";
 "total_destinations" = "Places Visited";
 "countries_visited" = "Countries Visited";
 "domestic_travel" = "Domestic Footprints";
 "international_travel" = "Overseas Footprints";
 "my_favorites" = "My Favorites";
 "travel_timeline" = "Footprint Timeline";
+"time_capsule_menu" = "MENU";
+"time_capsule_year_list" = "Years";
+"time_capsule_previous_year" = "Previous Year";
+"time_capsule_next_year" = "Next Year";
 "destinations_count" = "destinations";
 "footprint_app" = "MooFootprint - Life Footprint";
 "record_journey_memories" = "Light up every footprint in your life and cherish beautiful memories";
@@ -331,7 +365,6 @@
 "map_button_footprints" = "Footprints";
 "map_button_search" = "Search";
 "map_button_style" = "Style";
-"map_zoom_in_for_more" = "Too many places here. Zoom in to see more.";
 "map_button_menu" = "Quick Actions";
 "map_button_import_photo" = "Import Photo";
 "map_button_ai" = "AI Assistant";
@@ -342,6 +375,8 @@
 "ai_assistant_subtitle" = "Intelligently generate notes, descriptions, and tags to enrich your travel memories";
 "ai_function_notes_title" = "Smart Note Generation";
 "ai_function_notes_desc" = "Automatically generate travel notes based on photos and location information";
+"ai_picker_has_notes" = "Has notes";
+"ai_picker_has_description" = "Has description";
 "ai_function_trip_desc_title" = "Trip Description Generation";
 "ai_function_trip_desc_desc" = "Generate overall trip descriptions based on multiple destinations";
 "ai_function_tags_title" = "Generate Tags";
@@ -355,6 +390,11 @@
 "ai_saved_recommend_title" = "Saved Recommendations";
 "ai_saved_recommend_empty_title" = "No recommendations yet";
 "ai_saved_recommend_empty_desc" = "After generating, tap \"Save Recommendation\" to view them here";
+"ai_recommend_hub_subtitle" = "Review saved recommendations, or let AI suggest new destinations";
+"ai_recommend_view_saved" = "View Saved Recommendations";
+"ai_recommend_view_saved_desc" = "Browse previously generated and saved destination recommendations";
+"ai_recommend_generate_new" = "Generate New Recommendation";
+"ai_recommend_generate_new_desc" = "Recommend your next trip based on your recorded places and preferences";
 "ai_function_photo_analysis_title" = "Photo Analysis";
 "ai_function_photo_analysis_desc" = "Identify scenes, objects, and landmarks in photos";
 "ai_generating_notes" = "Generating notes...";
@@ -379,6 +419,9 @@
 "ai_credits_used_label" = "Used";
 "ai_credits_buy_section_title" = "Buy AI Call Credits";
 "ai_credits_default_product_title" = "AI Call Credits (10 calls)";
+"ai_credits_default_product_title_50" = "AI Call Credits (50 calls)";
+"ai_credits_product_grant" = "Adds %d calls";
+"ai_credits_best_value" = "Best value";
 "ai_credits_product_subtitle" = "Each purchase grants %@.";
 "ai_credits_product_unavailable" = "Unable to load product information. Please try again later.";
 "ai_credits_usage_title" = "The following actions will consume AI calls:";
@@ -393,8 +436,8 @@
 "ai_beta_not_available_title" = "AI Features Not Available in Beta";
 "ai_beta_not_available_message" = "AI features are only available in the full version. Please download the full version from the App Store to enjoy the complete AI assistant experience.";
 "ai_download_full_version" = "Download Full Version from App Store";
-"ai_subscription_required_title" = "AI Features Require Pro Subscription";
-"ai_subscription_required_message" = "AI Assistant is a Pro-exclusive feature. Upgrade to Pro to access smart notes, trip descriptions, destination recommendations, and other AI features.";
+"ai_subscription_required_title" = "You're out of AI calls";
+"ai_subscription_required_message" = "Buy more call credits to keep using smart notes, trip descriptions, destination recommendations, and other AI features.";
 "ai_upgrade_to_pro" = "Upgrade to Pro";
 "footprints_action_menu" = "Quick Actions";
 "search_places" = "Search places";
@@ -601,6 +644,7 @@
 "about_app" = "About";
 "feature_introduction" = "Feature Introduction";
 "version_update" = "Version Update";
+"rate_this_app" = "Rate MooFootprint";
 "software_license_agreement" = "Software License and Service Agreement";
 "privacy_policy_summary" = "Privacy Policy Summary";
 "privacy_policy" = "Privacy Policy";
@@ -669,9 +713,23 @@
 
 // Badge View
 "badges" = "Badges";
+"badges_entry_subtitle" = "Countries & regions you've unlocked";
 "country_badges" = "Country Badges";
 "province_badges" = "Province Badges";
 "badges_progress" = "Progress";
+"badges_countries_unit" = "Countries";
+"badges_provinces_unit" = "Provinces";
+"badges_entry_countries_only" = "%d countries unlocked";
+"badges_entry_countries_provinces" = "%d countries · %d provinces unlocked";
+"badges_domestic_provinces_hint" = "%d provinces unlocked in China";
+"badges_global_countries_hint" = "%d countries unlocked worldwide";
+"badges_no_countries_yet" = "No countries unlocked yet";
+"badges_no_provinces_yet" = "No provinces unlocked yet";
+"badges_overlap_empty" = "None";
+"badges_overlap_a11y" = "%d unlocked. Tap to expand";
+"badges_overlap_expand_hint" = "Expand to see names";
+"badges_overlap_collapse_hint" = "Collapse the stack";
+"badges_overlap_collapse" = "Collapse";
 "search_badges" = "Search badges...";
 "location" = "location";
 "locations" = "locations";
@@ -717,7 +775,7 @@
 "onboarding_complete" = "Get Started";
 "onboarding_paywall_nav_title" = "Choose a Plan";
 "onboarding_paywall_title" = "Welcome to MooFootprint";
-"onboarding_paywall_subtitle" = "Start for free and upgrade to Pro anytime for the full experience.";
+"onboarding_paywall_subtitle" = "Start for free and upgrade to Pro anytime for unlimited records and data management.";
 "onboarding_free_tier_title" = "Free plan includes";
 "onboarding_free_destinations" = "Up to %d destinations";
 "onboarding_free_trips" = "Up to %d trips";
@@ -728,7 +786,7 @@
 "onboarding_pricing_section_title" = "Choose a subscription";
 "onboarding_recommended_plan" = "Recommended";
 "onboarding_continue_free" = "Continue with Free";
-"onboarding_continue_free_hint" = "You'll use the free plan with some limits. Upgrade anytime in Profile.";
+"onboarding_continue_free_hint" = "Upgrade anytime in Profile.";
 
 // Profile - Identity Tag & MBTI
 "identity_tag" = "Identity Tag";
@@ -782,3 +840,11 @@
 "constellation_option_aquarius" = "Aquarius";
 "constellation_option_pisces" = "Pisces";
 "constellation_option_prefer_not_to_say" = "Prefer not to say";
+
+// Multi-language empty states
+"no_notes" = "No notes yet";
+"no_trip_records" = "No trips yet";
+"create_first_trip" = "Create First Trip";
+"create_first_trip_hint" = "Tap the + button in the top right
+to create your first trip!";
+"my_trips" = "My Trips";

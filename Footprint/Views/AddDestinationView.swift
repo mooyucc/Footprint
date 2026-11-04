@@ -21,8 +21,6 @@ struct AddDestinationPrefill {
     var visitDate: Date?
     var photoDatas: [Data]
     var photoThumbnailDatas: [Data]
-    /// 由照片识别建议的地点类型 key（如 "natural_wonder"）
-    var suggestedPlaceType: String?
 
     init(
         location: MKMapItem? = nil,
@@ -32,8 +30,7 @@ struct AddDestinationPrefill {
         category: String? = nil,
         visitDate: Date? = nil,
         photoDatas: [Data] = [],
-        photoThumbnailDatas: [Data] = [],
-        suggestedPlaceType: String? = nil
+        photoThumbnailDatas: [Data] = []
     ) {
         self.location = location
         self.name = name
@@ -43,7 +40,6 @@ struct AddDestinationPrefill {
         self.visitDate = visitDate
         self.photoDatas = photoDatas
         self.photoThumbnailDatas = photoThumbnailDatas
-        self.suggestedPlaceType = suggestedPlaceType
     }
 }
 
@@ -100,7 +96,7 @@ struct AddDestinationView: View {
         let initialCountry = prefill?.country ?? ""
         let initialProvince = prefill?.province ?? ""
         let initialCategory = prefill?.category ?? "domestic"
-        let initialType = prefill?.suggestedPlaceType ?? ""
+        let initialType = ""
         let initialVisitDate = prefill?.visitDate ?? Date()
         let initialLocation = prefill?.location
         let initialPhotoDatas = prefill?.photoDatas ?? []
@@ -125,6 +121,7 @@ struct AddDestinationView: View {
     
     var body: some View {
         NavigationStack {
+            FootprintFormScaffold(accent: Color.footprintRed) {
             Form {
                 Section("basic_info".localized) {
                     TextField("place_name".localized, text: $name)
@@ -135,13 +132,6 @@ struct AddDestinationView: View {
                         }
                     }
                     .pickerStyle(.segmented)
-
-                    Picker("destination_type".localized, selection: $type) {
-                        Text("none".localized).tag("")
-                        ForEach(TravelDestination.placeTypeFilterOptions, id: \.key) { option in
-                            Text(option.localizedKey.localized).tag(option.key)
-                        }
-                    }
 
                     TextField("province_state".localized, text: $province)
                     
@@ -349,6 +339,7 @@ struct AddDestinationView: View {
                     .environmentObject(purchaseManager)
                     .environmentObject(entitlementManager)
             }
+            } // FootprintFormScaffold
         }
     }
     
@@ -780,6 +771,8 @@ struct AddDestinationView: View {
             return Locale(identifier: "es_ES")
         case .korean:
             return Locale(identifier: "ko_KR")
+        case .german:
+            return Locale(identifier: "de_DE")
         }
     }
 }

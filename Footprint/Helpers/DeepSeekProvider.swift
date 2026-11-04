@@ -20,8 +20,8 @@ class DeepSeekProvider: AIServiceProtocol {
     private let baseURL = "https://api.deepseek.com/v1"
     private let requestTimeout: TimeInterval = 30.0
     
-    // DeepSeek 模型配置
-    private let chatModel = "deepseek-chat"  // 文本生成模型
+    // DeepSeek 模型配置（deepseek-chat 已于 2026-07-24 退役，改用 v4-flash）
+    private let chatModel = "deepseek-v4-flash"
     // 注意：DeepSeek API 当前可能不支持多模态（图片），使用文本模型
     // private let visionModel = "deepseek-v2"  // 多模态模型（暂不支持）
     
@@ -70,7 +70,8 @@ class DeepSeekProvider: AIServiceProtocol {
                        currentLanguage == .japanese ? "ja_JP" : 
                        currentLanguage == .korean ? "ko_KR" : 
                        currentLanguage == .french ? "fr_FR" : 
-                       currentLanguage == .spanish ? "es_ES" : "en_US"
+                       currentLanguage == .spanish ? "es_ES" :
+                       currentLanguage == .german ? "de_DE" : "en_US"
         dateFormatter.locale = Locale(identifier: localeId)
         let dateString = dateFormatter.string(from: date)
         
@@ -96,7 +97,7 @@ class DeepSeekProvider: AIServiceProtocol {
         
         // 获取季节信息（用于prompt中，但不写入生成的笔记）
         let seasonString = getSeasonString(from: date, language: currentLanguage)
-        let seasonLabel = currentLanguage == .english ? "Season" : (currentLanguage == .japanese ? "季節" : (currentLanguage == .korean ? "계절" : (currentLanguage == .french ? "Saison" : (currentLanguage == .spanish ? "Estación" : "季节"))))
+        let seasonLabel = currentLanguage == .english ? "Season" : (currentLanguage == .japanese ? "季節" : (currentLanguage == .korean ? "계절" : (currentLanguage == .french ? "Saison" : (currentLanguage == .spanish ? "Estación" : (currentLanguage == .german ? "Jahreszeit" : "季节")))))
         
         // 构建prompt开头（根据语言，使用季节而非具体日期）
         var promptText: String
@@ -266,7 +267,8 @@ class DeepSeekProvider: AIServiceProtocol {
                        currentLanguage == .japanese ? "ja_JP" : 
                        currentLanguage == .korean ? "ko_KR" : 
                        currentLanguage == .french ? "fr_FR" : 
-                       currentLanguage == .spanish ? "es_ES" : "en_US"
+                       currentLanguage == .spanish ? "es_ES" :
+                       currentLanguage == .german ? "de_DE" : "en_US"
         dateFormatter.locale = Locale(identifier: localeId)
         
         let separator = currentLanguage == .english ? ": " : "："
@@ -581,6 +583,8 @@ class DeepSeekProvider: AIServiceProtocol {
                 return "printemps"
             case .spanish:
                 return "primavera"
+            case .german:
+                return "Frühling"
             }
         case 6, 7, 8:
             switch language {
@@ -596,6 +600,8 @@ class DeepSeekProvider: AIServiceProtocol {
                 return "été"
             case .spanish:
                 return "verano"
+            case .german:
+                return "Sommer"
             }
         case 9, 10, 11:
             switch language {
@@ -611,6 +617,8 @@ class DeepSeekProvider: AIServiceProtocol {
                 return "automne"
             case .spanish:
                 return "otoño"
+            case .german:
+                return "Herbst"
             }
         default: // 12, 1, 2
             switch language {
@@ -626,6 +634,8 @@ class DeepSeekProvider: AIServiceProtocol {
                 return "hiver"
             case .spanish:
                 return "invierno"
+            case .german:
+                return "Winter"
             }
         }
     }
@@ -758,6 +768,24 @@ class DeepSeekProvider: AIServiceProtocol {
                     wordLimit144: "**144자 이내로 엄격히 제한**",
                     wordLimit300: "**300자 이내로 엄격히 제한**"
                 )
+            case .german:
+                return LanguageConfig(
+                    languageCode: "de",
+                    defaultIdentity: "Reiseschriftsteller",
+                    dateFormat: "d. MMMM yyyy",
+                    outputLanguageInstruction: "Bitte auf Deutsch ausgeben",
+                    locationLabel: "Ort",
+                    countryLabel: "Land",
+                    visitDateLabel: "Besuchsdatum",
+                    photoDescriptionLabel: "Beschreibung des Fotoinhalts",
+                    photoLabel: "Foto",
+                    noteLabel: "Notizen",
+                    styleGuidanceLabel: "**Stilhinweis** (nur zur Anpassung des Schreibstils, nicht in den Notizinhalt aufnehmen)",
+                    importantNoteLabel: "**Wichtiger Hinweis**",
+                    requirementsLabel: "Anforderungen",
+                    wordLimit144: "**streng auf maximal 144 Wörter begrenzen**",
+                    wordLimit300: "**streng auf maximal 300 Wörter begrenzen**"
+                )
             }
         }
     }
@@ -796,7 +824,8 @@ class DeepSeekProvider: AIServiceProtocol {
             model: model,
             messages: messages,
             temperature: 0.7,
-            maxTokens: maxTokens
+            maxTokens: maxTokens,
+            thinking: ThinkingConfig(type: "disabled") // 对齐原 deepseek-chat 非思考行为
         )
         
         request.httpBody = try JSONEncoder().encode(requestBody)
@@ -812,7 +841,7 @@ class DeepSeekProvider: AIServiceProtocol {
         guard httpResponse.statusCode == 200 else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "未知错误"
             print("❌ [DeepSeek] API错误，状态码: \(httpResponse.statusCode), 错误: \(errorMessage)")
-            throw AIError.apiError("API错误: \(httpResponse.statusCode)")
+            throw AIError.apiError("\(httpResponse.statusCode)")
         }
         
         let chatResponse = try JSONDecoder().decode(ChatCompletionResponse.self, from: data)
@@ -1159,6 +1188,17 @@ struct ChatCompletionRequest: Codable {
     let messages: [ChatMessage]
     let temperature: Double
     let maxTokens: Int
+    let thinking: ThinkingConfig
+    
+    enum CodingKeys: String, CodingKey {
+        case model, messages, temperature, thinking
+        case maxTokens = "max_tokens"
+    }
+}
+
+/// V4 思考模式配置（disabled 对齐原 deepseek-chat）
+struct ThinkingConfig: Codable {
+    let type: String
 }
 
 /// Chat Completion 响应

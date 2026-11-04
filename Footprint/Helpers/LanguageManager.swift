@@ -25,6 +25,7 @@ class LanguageManager: ObservableObject {
         case french = "fr"
         case spanish = "es"
         case korean = "ko"
+        case german = "de"
         
         var displayName: String {
             switch self {
@@ -42,6 +43,8 @@ class LanguageManager: ObservableObject {
                 return "Español"
             case .korean:
                 return "한국어"
+            case .german:
+                return "Deutsch"
             }
         }
         
@@ -61,6 +64,8 @@ class LanguageManager: ObservableObject {
                 return "🇪🇸"
             case .korean:
                 return "🇰🇷"
+            case .german:
+                return "🇩🇪"
             }
         }
     }
@@ -114,9 +119,13 @@ class LanguageManager: ObservableObject {
             if systemLang.hasPrefix("ko") {
                 return .korean
             }
+            // 检查是否为德语
+            if systemLang.hasPrefix("de") {
+                return .german
+            }
         }
         
-        // 如果系统语言都不支持（如德语等），默认使用英文
+        // 如果系统语言都不支持，默认使用英文
         // 这是iOS应用的标准做法：使用英文作为通用语言
         return .english
     }
@@ -188,6 +197,8 @@ class LanguageManager: ObservableObject {
             return "dd MMM yyyy"
         case .korean:
             return "yyyy년 MM월 dd일"
+        case .german:
+            return "dd.MM.yyyy"
         }
     }
     
@@ -205,6 +216,8 @@ class LanguageManager: ObservableObject {
         case .spanish:
             return "HH:mm"
         case .korean:
+            return "HH:mm"
+        case .german:
             return "HH:mm"
         }
     }

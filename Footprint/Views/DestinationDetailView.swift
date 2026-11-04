@@ -8,7 +8,6 @@
 import SwiftUI
 import MapKit
 import SwiftData
-import AVKit
 import AVFoundation
 
 struct DestinationDetailView: View {
@@ -27,8 +26,7 @@ struct DestinationDetailView: View {
     @State private var photosLocal: [Data] = []
     @State private var videoData: Data?
     @State private var videoThumbnail: UIImage?
-    @State private var showVideoPlayer = false
-    @State private var videoURL: URL?
+    @State private var showMediaViewer = false
     @State private var showingSelectTrip = false
     @State private var showingAINotePreview = false
     @State private var showingShareLayoutSelection = false
@@ -45,6 +43,15 @@ struct DestinationDetailView: View {
                 return "photo_\(index)"
             case .video(let data, _):
                 return "video_\(data.hashValue)"
+            }
+        }
+        
+        var fullscreenItem: MediaFullscreenItem {
+            switch self {
+            case .photo(let data, let index):
+                return MediaFullscreenItem(id: "photo_\(index)", kind: .photo(data))
+            case .video(let data, _):
+                return MediaFullscreenItem(id: id, kind: .video(data))
             }
         }
     }
@@ -137,11 +144,11 @@ struct DestinationDetailView: View {
             .sheet(isPresented: $showingAINotePreview) {
                 AINotePreviewSheet(destination: destination)
             }
-            .sheet(isPresented: $showVideoPlayer) {
-                if let videoURL = videoURL {
-                    VideoPlayer(player: AVPlayer(url: videoURL))
-                        .ignoresSafeArea()
-                }
+            .fullScreenCover(isPresented: $showMediaViewer) {
+                MediaFullscreenViewer(
+                    items: mediaItems.map { $0.fullscreenItem },
+                    currentIndex: $selectedPhotoIndex
+                )
             }
             .onAppear {
                 loadMediaItems()
@@ -170,15 +177,9 @@ struct DestinationDetailView: View {
         .appPageBackgroundGradient(for: colorScheme)
     }
     
-    /// 与 `DestinationRowCard` / 现代列表规范一致：continuous 18、细线描边、轻阴影，材质底替代实心灰卡。
+    /// HealthUI 玻璃卡底（iOS 26 glassEffect + Material 降级）
     private var detailCardBackground: some View {
-        RoundedRectangle(cornerRadius: 18, style: .continuous)
-            .fill(.ultraThinMaterial)
-            .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.08), lineWidth: 1)
-            )
-            .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.25 : 0.08), radius: 10, x: 0, y: 4)
+        FootprintGlassBackground(cornerRadius: 18)
     }
     
     @ViewBuilder
@@ -330,29 +331,41 @@ struct DestinationDetailView: View {
                             .fill(Color.gray.opacity(0.3))
                             .frame(height: imageHeight)
                     }
-                    Button {
-                        playVideo(for: selectedMedia)
-                    } label: {
-                        ZStack {
-                            Circle()
-                                .fill(Color.black.opacity(0.6))
-                                .frame(width: 80, height: 80)
-                            Image(systemName: "play.circle.fill")
-                                .font(.system(size: 60))
-                                .foregroundColor(.white)
-                        }
+                    ZStack {
+                        Circle()
+                            .fill(Color.black.opacity(0.6))
+                            .frame(width: 80, height: 80)
+                        Image(systemName: "play.circle.fill")
+                            .font(.system(size: 60))
+                            .foregroundColor(.white)
                     }
+                    .allowsHitTesting(false)
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             }
         }
         .frame(width: contentWidth, height: imageHeight)
+        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .onTapGesture {
+            showMediaViewer = true
+        }
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel(selectedMediaAccessibilityLabel(selectedMedia))
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .stroke(Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.08), lineWidth: 1)
         )
         .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.25 : 0.1), radius: 14, x: 0, y: 6)
+    }
+    
+    private func selectedMediaAccessibilityLabel(_ media: MediaItem) -> String {
+        switch media {
+        case .photo:
+            return "photo".localized
+        case .video:
+            return "video".localized
+        }
     }
     
     @ViewBuilder
@@ -435,6 +448,7 @@ struct DestinationDetailView: View {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             destination.isFavorite.toggle()
             try? modelContext.save()
+            DestinationChangeNotifier.postUpdated()
         }
     }
     
@@ -546,22 +560,6 @@ struct DestinationDetailView: View {
         }
     }
     
-    // 播放视频
-    private func playVideo(for media: MediaItem) {
-        if case .video(let data, _) = media {
-            let tempURL = FileManager.default.temporaryDirectory
-                .appendingPathComponent(UUID().uuidString)
-                .appendingPathExtension("mov")
-            
-            do {
-                try data.write(to: tempURL)
-                videoURL = tempURL
-                showVideoPlayer = true
-            } catch {
-                print("Failed to create temporary video file: \(error.localizedDescription)")
-            }
-        }
-    }
 }
 
 // 详情页已移除拖拽排序能力，排序请前往编辑页处理

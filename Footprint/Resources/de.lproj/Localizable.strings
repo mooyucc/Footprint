@@ -1,0 +1,850 @@
+"paywall_title" = "Pro freischalten";
+"paywall_subtitle" = "Unbegrenzte Einträge, Datenverwaltung und weitere Pro-Funktionen freischalten. KI nutzt Anrufguthaben.";
+"paywall_button_upgrade" = "Abo-Plan ansehen";
+"paywall_button_restore" = "Käufe wiederherstellen";
+
+// Membership status card
+"membership_status_subscribed" = "Abonniert";
+"membership_status_expiry" = "Aktiv bis %@";
+"membership_status_lifetime_active" = "Lebenslanger Zugriff ist aktiv";
+"membership_status_pro_active" = "Pro aktiv";
+"membership_status_all_features" = "Alle Funktionen freigeschaltet; Käufe jederzeit wiederherstellen, um Geräte zu synchronisieren.";
+"membership_status_view_restore" = "Vorteile ansehen / Käufe wiederherstellen";
+"membership_section" = "Mitgliedschaft";
+"membership_status_free" = "Kostenlos";
+"membership_status_free_hint" = "Upgrade, um Pro-Funktionen freizuschalten";
+
+// Paywall lifetime unlocked
+"paywall_lifetime_unlocked" = "Lebenslanger Zugriff freigeschaltet, kein erneuter Kauf nötig.";
+"paywall_lifetime_sync_hint" = "Zum Synchronisieren auf einem neuen Gerät unten „Käufe wiederherstellen“ verwenden.";
+"paywall_current_subscription" = "Aktuell";
+"paywall_expires_on" = "Läuft ab: ";
+"paywall_terms_privacy" = "Mit dem Kauf stimmst du den Nutzungsbedingungen und der Datenschutzrichtlinie zu. Automatische Verlängerung; jederzeit in den Systemabos kündbar.";
+"paywall_feature_title" = "Pro-Funktionen";
+"paywall_feature_ai" = "KI-Assistent: Notizen, Reisebeschreibungen, Fotoanalyse, Zielvorschläge (nutzt Anrufguthaben)";
+"paywall_feature_unlimited" = "Unbegrenzte Ziele und Reisekarten";
+"paywall_feature_share_layouts" = "Alle Share-Layouts";
+"paywall_feature_import_export" = "Lokaler Datenimport/-export";
+"paywall_feature_link_maps" = "Reisen mit der System-Karten-App verknüpfen";
+"paywall_banner_title" = "Upgrade auf Pro, um die Datenverwaltung freizuschalten";
+"paywall_emotional_message_part1" = "Lass „MooFootprint“ noch mehr Spaß machen und länger begleiten! Wir brauchen deine Unterstützung, um gemeinsam mehr spannende Geschichten zu schaffen.";
+"paywall_emotional_message_part2" = "Unterstütze uns! ✨";
+"paywall_select_plan" = "Plan wählen";
+"paywall_cta_unlock" = "Pro freischalten";
+"paywall_cta_unlock_price" = "Pro freischalten · %@";
+"paywall_cta_yearly" = "Pro freischalten · %@ / Jahr";
+"paywall_cta_start_trial" = "Kostenlose Testversion starten";
+"paywall_cta_trial_then_yearly" = "Danach %@ pro Jahr. Jederzeit kündbar.";
+"paywall_cta_monthly" = "Pro freischalten · %@ / Monat";
+"paywall_cta_lifetime" = "Lebenslang kaufen · %@";
+"paywall_cta_current" = "Aktueller Plan";
+"paywall_lifetime_no_ai" = "KI nutzt Testguthaben oder bezahlte Anrufe";
+"paywall_ai_uses_credits" = "KI nutzt Testguthaben oder bezahlte Anrufe";
+"paywall_subscription_includes_ai" = "Inklusive unbegrenzter KI";
+"paywall_lifetime_ai_hint" = "KI nutzt Testguthaben oder bezahlte Anrufe.";
+"paywall_yearly_monthly_equivalent" = "Das entspricht %@ pro Monat";
+"paywall_yearly_save" = "%d %% Ersparnis gegenüber monatlich";
+"paywall_trial_days" = "Inklusive %d-tägiger kostenloser Testversion";
+"paywall_trial_weeks" = "Inklusive %d-wöchiger kostenloser Testversion";
+"paywall_trial_months" = "Inklusive %d-monatiger kostenloser Testversion";
+"paywall_trial_years" = "Inklusive %d-jähriger kostenloser Testversion";
+"paywall_buy_credits_secondary" = "KI-Anrufe nach Nutzung kaufen";
+"membership_status_lifetime_ai_note" = "KI nutzt Anrufguthaben. Du kannst zusätzliche Anrufe kaufen.";
+"membership_status_ai_credits_note" = "KI nutzt Anrufguthaben. Du kannst zusätzliche Anrufe kaufen.";
+"subscription_monthly" = "Monatsabo";
+"subscription_yearly" = "Jahresabo";
+"subscription_weekly" = "Wochenabo";
+"subscription_daily" = "Tagesabo";
+"subscription_default" = "Abo";
+"close" = "Schließen";
+"subscription_auto_renew_note" = "Abos verlängern sich automatisch. Jederzeit in den Einstellungen kündbar.";
+"terms_of_use" = "Nutzungsbedingungen";
+"privacy_policy" = "Datenschutzrichtlinie";
+"terms_url" = "https://mooyu.cc/moofootprintlicense.html";
+"privacy_url" = "https://mooyu.cc/myfootprintprivacy.html";
+"limit_destination_reached_title" = "Kostenloses Limit erreicht";
+"limit_destination_reached_message" = "Der kostenlose Plan erlaubt bis zu 15 Ziele. Upgrade auf Pro für unbegrenzt.";
+"limit_trip_reached_message" = "Der kostenlose Plan erlaubt bis zu 3 Reisen. Upgrade auf Pro für unbegrenzt.";
+"share_layout_locked_message" = "Alle Share-Layouts sind für Pro. Upgrade zum Freischalten.";
+"import_export_locked_message" = "Import/Export erfordert Pro. Upgrade zum Fortfahren.";
+"import_trip_locked_message" = "Reiseimport erfordert Pro. Upgrade zum Fortfahren.";
+"loading" = "Wird geladen…";
+"one_time_purchase" = "Einmalkauf";
+"retry" = "Erneut versuchen";
+/* 
+  Localizable.strings
+  Footprint
+  
+  German localization
+*/
+
+// Settings View
+"settings" = "Einstellungen";
+"done" = "Fertig";
+"account" = "Konto";
+"not_logged_in" = "Nicht angemeldet";
+"user_profile_settings" = "Profil-Einstellungen";
+"login_sync_description" = "Anzeigenamen und Avatar festlegen";
+"data_sync" = "Datensynchronisierung";
+"data_settings" = "Daten";
+"icloud_sync" = "iCloud-Sync";
+"default_traveler_name" = "Reisende:r";
+"sync_description_local" = "iCloud ist nicht verfügbar. Daten bleiben auf diesem Gerät. Aktiviere iCloud in den Einstellungen.";
+"sync_description_icloud" = "Reisedaten werden automatisch über iCloud synchronisiert, wenn das Gerät bei iCloud angemeldet ist.";
+"icloud_sync_on" = "Ein";
+"enabled" = "Aktiviert";
+"not_enabled" = "Nicht aktiviert";
+"in_development" = "In Entwicklung";
+"data_storage" = "Datenspeicher";
+"local" = "Lokal";
+"icloud" = "iCloud";
+"sync_description_logged_in" = "Reisedaten werden automatisch über iCloud synchronisiert, wenn das Gerät bei iCloud angemeldet ist.";
+"sync_description_not_logged_in" = "iCloud ist nicht verfügbar. Daten bleiben auf diesem Gerät. Aktiviere iCloud in den Einstellungen.";
+"about" = "Info";
+"version" = "Version";
+"app_name" = "App-Name";
+"sign_out" = "Abmelden";
+"language" = "Sprache";
+"language_selection" = "Sprachauswahl";
+"appearance" = "Erscheinungsbild";
+"general_settings" = "Allgemein";
+"brand_color" = "Markenfarbe";
+"custom_color_active" = "Benutzerdefinierte Farbe aktiv";
+"default_color_active" = "Standardfarbe aktiv";
+"select_brand_color" = "Markenfarbe wählen";
+"reset_to_default_color" = "Auf Standardfarbe zurücksetzen";
+"brand_color_description" = "Lege die Akzentfarbe der App für Schaltflächen und Hervorhebungen fest.";
+
+// Edit User Name
+"edit_username" = "Benutzername bearbeiten";
+"custom_username" = "Benutzerdefinierter Name";
+"username_description" = "Lege einen Anzeigenamen fest";
+"enter_username" = "Benutzername eingeben";
+"cancel" = "Abbrechen";
+"save" = "Speichern";
+"iCloud_synced" = "Mit iCloud synchronisiert";
+
+// Edit User Avatar
+"edit_avatar" = "Avatar bearbeiten";
+"avatar_description" = "Wähle ein Foto als Avatar";
+"select_photo" = "Foto auswählen";
+"remove_avatar" = "Avatar entfernen";
+"restore_avatar" = "Avatar wiederherstellen";
+"remove_avatar_confirm_title" = "Avatar entfernen";
+"remove_avatar_confirm_message" = "Möchtest du deinen aktuellen Avatar wirklich entfernen?";
+"remove" = "Entfernen";
+
+// Local Data
+"local_data" = "Lokale Daten";
+"import_local_data" = "Lokale Daten importieren";
+"export_local_data" = "Lokale Daten exportieren";
+"local_data_description" = "Lokales Datenbackup importieren oder exportieren";
+"optimize_images" = "Bilder optimieren";
+"optimize_images_confirm_title" = "Bilder optimieren";
+"optimize_images_confirm_message" = "Alle gespeicherten Fotos komprimieren und Vorschaubilder neu erzeugen. Bitte die App währenddessen aktiv lassen.";
+"optimize" = "Optimieren";
+"optimize_images_result_title" = "Optimierung abgeschlossen";
+"optimize_images_success" = "%d Fotos erfolgreich optimiert";
+"auto_add_place_type" = "Ortstyp automatisch hinzufügen";
+"auto_add_place_type_confirm_title" = "Ortstyp automatisch hinzufügen";
+"auto_add_place_type_confirm_message" = "Ortstyp für alle Ziele mit Fotos, aber ohne Typ automatisch anhand des ersten Fotos setzen. Fortfahren?";
+"continue" = "Weiter";
+"auto_add_place_type_result_title" = "Fertig";
+"auto_add_place_type_success" = "Ortstyp für %d Ziele automatisch hinzugefügt";
+"auto_add_place_type_none" = "Keine Ziele zu verarbeiten (gilt nur für Ziele mit Fotos und ohne Typ)";
+"auto_add_place_type_progress" = "Verarbeite %d/%d Ziele";
+"local_import_summary_title" = "Importübersicht";
+"local_import_summary_success" = "%d Reisen erfolgreich importiert";
+"local_import_summary_duplicates" = "%d doppelte Reisen übersprungen";
+"local_import_summary_standalone_destinations" = "%d einzelne Ziele erfolgreich importiert";
+"local_import_summary_failures" = "%d Importe fehlgeschlagen";
+"local_backup_error_title" = "Backup-Fehler";
+"local_backup_share_text" = "MooFootprint-Datenbackup";
+"local_backup_no_data" = "Keine Daten zum Exportieren";
+"local_backup_no_trips" = "Keine Reisen zum Exportieren";
+"local_backup_empty_package" = "Paket ist leer";
+"local_backup_read_failed" = "Lesen fehlgeschlagen: %@";
+"local_backup_decode_failed" = "Dekodierung fehlgeschlagen: %@";
+"local_backup_write_failed" = "Schreiben fehlgeschlagen: %@";
+"local_backup_unknown_error" = "Unbekannter Fehler: %@";
+"local_backup_access_denied" = "Zugriff verweigert";
+
+// Beta Reminder
+"beta_reminder_title" = "Testversion-Hinweis";
+"beta_reminder_subtitle" = "Dies ist eine Beta-Version. Sie ist 7 Tage gültig.";
+"beta_reminder_countdown" = "Verbleibende Tage: %d";
+"beta_reminder_days_label" = "Verbleibende Tage";
+"beta_reminder_expiry_date" = "Läuft ab am %@";
+"beta_reminder_backup_tip" = "Um deine Daten zu sichern, lade bitte die offizielle Version herunter.";
+"beta_reminder_continue_button" = "MooFootprint Beta öffnen";
+
+// Beta Expired
+"beta_expired_title" = "Testversion abgelaufen";
+"beta_expired_subtitle" = "Bitte lade die App-Store-Version herunter, um MooFootprint weiter zu nutzen.";
+"beta_expired_date" = "Abgelaufen am %@";
+"beta_expired_message" = "Lade die Version aus dem App Store herunter, um fortzufahren. Backups kannst du in der neuen Version importieren.";
+"beta_expired_button" = "Zum App Store (Release)";
+
+// Beta Local Data IO
+"beta_local_data_io_title" = "Einschränkung der Beta-Version";
+"beta_local_data_io_message" = "Lokaler Datenimport/-export ist nur in der Release-Version verfügbar. Bitte lade die Version aus dem App Store herunter.";
+"beta_local_data_io_continue" = "Weiter";
+"beta_local_data_io_button" = "Zum App Store (Release)";
+
+// Common
+"footprint" = "MooFootprint";
+"ok" = "OK";
+"map" = "Karte";
+"footprint_map" = "Fußabdrücke";
+"trips" = "Reisen";
+"journey_cards_tab" = "Reisen";
+"journey_cards_empty_hint" = "Erstelle eine Reise im Tab „Reisen“, um sie hier zu sehen.";
+"journey_cards_focused_a11y" = "Ausgewählt";
+"journey_cards_destinations_count" = "%d Ziele";
+"journey_cards_total_mileage" = "Gesamtkilometer";
+"time_capsule_tab" = "Jahre";
+"profile" = "Ich";
+"create_trip" = "Reise hinzufügen";
+"import_trip" = "Reise importieren";
+"import_result" = "Importergebnis";
+"import_success" = "Import erfolgreich";
+"trip_exists" = "Reise existiert bereits";
+"import_failed" = "Import fehlgeschlagen";
+"share" = "Teilen";
+
+// Profile View
+"my_travel_footprint" = "Meine Fußabdruck-Karte";
+"record_every_journey" = "Jeden Fußabdruck im Leben erhellen";
+"sign_in_apple_id" = "Mit Apple ID anmelden";
+"sign_in_with_apple" = "Mit Apple anmelden";
+"enable_icloud_sync" = "Aktiviere iCloud in den Systemeinstellungen, um deine Fußabdruck-Erinnerungen zu schützen";
+"total_destinations" = "Besuchte Orte";
+"countries_visited" = "Besuchte Länder";
+"domestic_travel" = "Inländische Fußabdrücke";
+"international_travel" = "Ausländische Fußabdrücke";
+"my_favorites" = "Meine Favoriten";
+"travel_timeline" = "Fußabdruck-Zeitleiste";
+"time_capsule_menu" = "MENU";
+"time_capsule_year_list" = "Jahre";
+"time_capsule_previous_year" = "Vorheriges Jahr";
+"time_capsule_next_year" = "Nächstes Jahr";
+"destinations_count" = "Ziele";
+"footprint_app" = "MooFootprint – Lebensfußabdruck";
+"record_journey_memories" = "Jeden Fußabdruck in deinem Leben erhellen und schöne Erinnerungen bewahren";
+
+// Destination Detail View
+"no_photo" = "Kein Foto";
+"visit_date" = "Besuchsdatum";
+"belongs_to_trip" = "Gehört zur Reise";
+"location_coordinates" = "Koordinaten";
+"latitude" = "Breitengrad";
+"longitude" = "Längengrad";
+"travel_notes" = "Reisenotizen";
+
+// Destination List View
+"my_footprints" = "Meine Fußabdrücke";
+"search_places_countries_notes" = "Orte, Länder oder Notizen suchen";
+"filter" = "Filter";
+"all" = "Alle";
+"domestic" = "Inland";
+"international" = "Ausland";
+"edit" = "Bearbeiten";
+"delete" = "Löschen";
+"travel_statistics" = "Reisestatistik";
+"total" = "Gesamt";
+"countries" = "Länder";
+"no_travel_records" = "Noch keine Reiseeinträge";
+"year_travel_records" = "%d Reiseeinträge";
+"year_travel_statistics" = "%d Reisestatistik";
+"travel_destinations" = "Reiseziele";
+"no_travel_records_for_year" = "Keine Reiseeinträge für %d";
+"add_year_travel_footprints" = "Beginne, deine %d-Reise-Fußabdrücke hinzuzufügen!";
+"add_first_destination" = "Erstes Ziel hinzufügen";
+"start_recording_footprints" = "Tippe oben rechts auf +, um deine Reise-Fußabdrücke zu erfassen!";
+"show_all_destinations" = "Alle Orte";
+"all_destinations" = "Alle Ziele";
+"no_destinations_found" = "Keine Ziele gefunden";
+
+// Discover Map
+"map_mode_my_footprints" = "Meine Karte";
+
+// Edit Destination View
+"edit_destination" = "Ziel bearbeiten";
+"basic_info" = "Grundinformationen";
+"place_name" = "Ortsname";
+"location_tag" = "Standort-Tag";
+"category" = "Kategorie";
+"destination_type" = "Zieltyp";
+"destination_type_natural_wonder" = "Naturwunder";
+"destination_type_urban_landscape" = "Stadtlandschaft";
+"destination_type_historical_culture" = "Geschichte & Kultur";
+"destination_type_food_feast" = "Kulinarik";
+"destination_type_leisure_entertainment" = "Freizeit & Unterhaltung";
+"destination_type_outdoor_adventure" = "Outdoor-Abenteuer";
+"destination_type_artistic_checkin" = "Künstlerischer Check-in";
+"province_state" = "Bundesland/Provinz";
+"country_region" = "Land/Region";
+"visit_date" = "Besuchsdatum";
+"mark_as_favorite" = "Als Favorit markieren";
+"belongs_to_trip_optional" = "Gehört zur Reise (optional)";
+"select_trip" = "Reise auswählen";
+"add_to_trip" = "Zur Reise hinzufügen";
+"no_trips_available" = "Keine Reisen verfügbar";
+"none" = "Keine";
+"location_info" = "Standortinformationen";
+"search_place" = "Ort suchen...";
+"search" = "Suchen";
+"selected" = "Ausgewählt: ";
+"current_location" = "Aktueller Standort";
+"photo" = "Foto";
+"add_photo" = "Foto hinzufügen";
+"change_photo" = "Foto ändern";
+"video" = "Video";
+"select_video" = "Video auswählen";
+"photo_limit_hint" = "Du kannst bis zu %d Fotos hinzufügen";
+"video_limit_hint" = "Nur 1 Video unterstützt, max. 10 Sekunden";
+
+// Notes Section Placeholders
+"notes_placeholder_morning" = "Guten Morgen! Wie fühlst du dich gerade? ☀️";
+"notes_placeholder_afternoon" = "Nachmittag – was möchtest du festhalten? 🌤️";
+"notes_placeholder_evening" = "Abendzeit – halte die Stimmung von heute fest 🌆";
+"notes_placeholder_night" = "Späte Nacht – halte die Stimmung von heute fest 🌙";
+
+// Weather Condition Descriptions
+"weather_condition_sun" = "Sonnig";
+"weather_condition_cloud" = "Bewölkt";
+"weather_condition_rain" = "Regnerisch";
+"weather_condition_storm" = "Stürmisch";
+"weather_condition_snow" = "Schnee";
+"weather_condition_haze" = "Diesig";
+"weather_condition_night" = "Nacht";
+
+// Notes Section Weather Placeholders
+"notes_placeholder_weather_sun_morning" = "Tolles Wetter heute (%@), sonnig und hell – wie fühlst du dich? ☀️";
+"notes_placeholder_weather_sun_afternoon" = "Sonniger Nachmittag in %@ – was möchtest du festhalten? 🌞";
+"notes_placeholder_weather_sun_evening" = "Tolles Wetter heute (%@) – halte deine Stimmung fest ✨";
+"notes_placeholder_weather_cloud" = "Heute %@, %@ – was möchtest du festhalten? ☁️";
+"notes_placeholder_weather_rain" = "Heute %@, %@ – wie fühlst du dich bei diesem Wetter? 🌧️";
+"notes_placeholder_weather_storm" = "Heute %@, %@ – halte diesen besonderen Moment fest ⛈️";
+"notes_placeholder_weather_snow" = "Heute %@, %@ – wie fühlst du dich an einem Schneetag? ❄️";
+"notes_placeholder_weather_haze" = "Heute %@, %@ – halte deine Gefühle fest 🌫️";
+"notes_placeholder_weather_night" = "Nacht in %@, %@ – was möchtest du festhalten? 🌙";
+"notes_placeholder_weather_default" = "Heute %@, %@ – halte deine Stimmung fest ✨";
+
+// Notes Section Encouragement
+"notes_encouragement_short" = "Schreib noch etwas mehr, damit die Erinnerung vollständig wird 💫";
+"notes_encouragement_medium" = "Super! Halte gerne noch mehr Details fest ✨";
+"notes_encouragement_long" = "Ausgezeichnet! Diese Worte werden wertvolle Erinnerungen 🌟";
+
+// Notes Section Actions
+"ai_generate_notes" = "KI-Notizen erzeugen";
+"notes_word_count" = "%d Wörter";
+
+// Map Coordinate Picker
+"select_point_on_map" = "Punkt auf der Karte wählen";
+"long_press_on_map_to_select" = "Lange auf die Karte drücken, um einen neuen Standort zu wählen";
+"use_this_location" = "Diesen Standort verwenden";
+"select_location" = "Standort auswählen";
+"reverse_geocoding_failed" = "Umgekehrte Geokodierung fehlgeschlagen: %@";
+"video_duration_limit" = "Videolängenlimit: %d Sekunden";
+"video_error" = "Videofehler";
+"video_load_failed" = "Video konnte nicht geladen werden. Bitte erneut versuchen.";
+"video_too_long" = "Videolänge überschreitet das Limit von %d Sekunden. Bitte ein kürzeres Video wählen.";
+"notes" = "Notizen";
+"unknown_place" = "Unbekannter Ort";
+"latitude_longitude" = "Breitengrad: %.4f, Längengrad: %.4f";
+
+// Map View
+"getting_location_info" = "Standortinformationen werden geladen...";
+"identifying_location" = "Bitte warten, der gewählte Standort wird erkannt";
+"unknown_city" = "Unbekannte Stadt";
+"unknown_country" = "Unbekanntes Land";
+"map_button_locate" = "Orten";
+"map_button_check_in" = "Check-in";
+"map_button_memory" = "Erinnerungen";
+"map_button_footprints" = "Fußabdrücke";
+"map_button_search" = "Suchen";
+"map_button_style" = "Stil";
+"map_button_menu" = "Schnellaktionen";
+"map_button_import_photo" = "Foto importieren";
+"map_button_ai" = "KI-Assistent";
+
+// AI Assistant
+"ai_assistant_title" = "KI-Assistent";
+"ai_assistant_welcome" = "Lass die KI deine Reise dokumentieren";
+"ai_assistant_subtitle" = "Notizen, Beschreibungen und Tags intelligent erzeugen, um deine Reiseerinnerungen zu bereichern";
+"ai_function_notes_title" = "Intelligente Notizerzeugung";
+"ai_function_notes_desc" = "Reisenotizen automatisch anhand von Fotos und Standortinformationen erzeugen";
+"ai_picker_has_notes" = "Hat Notizen";
+"ai_picker_has_description" = "Hat Beschreibung";
+"ai_function_trip_desc_title" = "Reisebeschreibung erzeugen";
+"ai_function_trip_desc_desc" = "Gesamte Reisebeschreibung anhand mehrerer Ziele erzeugen";
+"ai_function_tags_title" = "Tags erzeugen";
+"ai_function_tags_desc" = "Relevante Tags anhand von Fotos und Orten vorschlagen";
+"ai_function_recommend_title" = "Nächstes Ziel empfehlen";
+"ai_function_recommend_desc" = "Deine nächste Reise anhand erfasster Orte und Vorlieben empfehlen";
+"ai_generating_recommend" = "Reisevorlieben werden analysiert…";
+"ai_save_recommend" = "Empfehlung speichern";
+"ai_save_recommend_success" = "In Empfehlungen gespeichert";
+"ai_save_recommend_failed" = "Speichern fehlgeschlagen, bitte erneut versuchen";
+"ai_saved_recommend_title" = "Gespeicherte Empfehlungen";
+"ai_saved_recommend_empty_title" = "Noch keine Empfehlungen";
+"ai_saved_recommend_empty_desc" = "Tippe nach dem Erzeugen auf „Empfehlung speichern“, um sie hier zu sehen";
+"ai_recommend_hub_subtitle" = "Gespeicherte Empfehlungen ansehen oder neue Ziele von der KI vorschlagen lassen";
+"ai_recommend_view_saved" = "Gespeicherte Empfehlungen ansehen";
+"ai_recommend_view_saved_desc" = "Zuvor erzeugte und gespeicherte Zielvorschläge durchsuchen";
+"ai_recommend_generate_new" = "Neue Empfehlung erzeugen";
+"ai_recommend_generate_new_desc" = "Deine nächste Reise anhand erfasster Orte und Vorlieben empfehlen";
+"ai_function_photo_analysis_title" = "Fotoanalyse";
+"ai_function_photo_analysis_desc" = "Szenen, Objekte und Wahrzeichen in Fotos erkennen";
+"ai_generating_notes" = "Notizen werden erzeugt...";
+"ai_generating_description" = "Beschreibung wird erzeugt...";
+"ai_generating_tags" = "Tags werden erzeugt...";
+"ai_analyzing_photos" = "Fotos werden analysiert...";
+"ai_tags_result_prefix" = "Vorgeschlagene Tags:";
+"ai_tags_empty" = "Es wurden keine Tags erzeugt. Bitte später erneut versuchen.";
+"ai_copy_result" = "Ergebnis kopieren";
+"ai_error_occurred" = "Fehler aufgetreten";
+"ai_error_unknown" = "Unbekannter Fehler";
+"ai_retry" = "Erneut versuchen";
+"ai_note_preview_title" = "Vorschau der Smart-Notiz";
+"ai_note_edit_hint" = "Tippe unten, um deine Notiz zu bearbeiten";
+"ai_note_placeholder" = "Notiz hier bearbeiten...";
+"ai_note_edit_button" = "Notiz bearbeiten";
+
+// AI Credits (per-use AI calls)
+"ai_credits_title" = "KI-Anrufguthaben";
+"ai_credits_subtitle" = "Kaufe mehr Guthaben, um KI-Funktionen weiter zu nutzen.";
+"ai_credits_remaining_label" = "Verbleibend";
+"ai_credits_used_label" = "Verbraucht";
+"ai_credits_buy_section_title" = "KI-Anrufguthaben kaufen";
+"ai_credits_default_product_title" = "KI-Anrufguthaben (10 Anrufe)";
+"ai_credits_default_product_title_50" = "KI-Anrufguthaben (50 Anrufe)";
+"ai_credits_product_grant" = "Fügt %d Anrufe hinzu";
+"ai_credits_best_value" = "Bester Wert";
+"ai_credits_product_subtitle" = "Jeder Kauf gewährt %@.";
+"ai_credits_product_unavailable" = "Produktinformationen konnten nicht geladen werden. Bitte später erneut versuchen.";
+"ai_credits_usage_title" = "Folgende Aktionen verbrauchen KI-Anrufe:";
+"ai_credits_usage_desc" = "Jede KI-Reisenotiz verbraucht 1 Anruf;\nJede Reisebeschreibung oder Aktualisierung verbraucht 1 Anruf;\nJede KI-Reiseempfehlung verbraucht 1 Anruf.\nDein Guthaben verfällt nicht und kann jederzeit genutzt werden.";
+"ai_credits_restore_button" = "Käufe wiederherstellen";
+"ai_credits_restore_tip" = "Verbrauchtes KI-Anrufguthaben kann nicht über „Käufe wiederherstellen“ zurückgeholt werden. Bitte nutze gekauftes Guthaben auf dem aktuellen Gerät.";
+"ai_buy_per_use_button" = "KI-Anrufe nach Nutzung kaufen";
+"ai_select_destination" = "Ziel auswählen";
+"ai_select_trip" = "Reise auswählen";
+"ai_no_destinations" = "Keine Ziele";
+"ai_no_trips" = "Keine Reisen";
+"ai_beta_not_available_title" = "KI-Funktionen in der Beta nicht verfügbar";
+"ai_beta_not_available_message" = "KI-Funktionen sind nur in der Vollversion verfügbar. Bitte lade die Vollversion aus dem App Store herunter.";
+"ai_download_full_version" = "Vollversion im App Store laden";
+"ai_subscription_required_title" = "Keine KI-Anrufe mehr";
+"ai_subscription_required_message" = "Kaufe mehr Anrufguthaben, um Smart-Notizen, Reisebeschreibungen, Zielvorschläge und andere KI-Funktionen weiter zu nutzen.";
+"ai_upgrade_to_pro" = "Auf Pro upgraden";
+"footprints_action_menu" = "Schnellaktionen";
+"search_places" = "Orte suchen";
+"photo_import_error_title" = "Fotoimport";
+"photo_import_failed_message" = "Das ausgewählte Foto konnte nicht geladen werden. Bitte erneut versuchen.";
+"photo_import_missing_location_message" = "Keine Standortmetadaten gefunden. Das Foto wurde hinzugefügt – bitte Ort manuell wählen.";
+"selected_location" = "Ausgewählter Standort";
+"locations_count" = "Orte";
+"delete_destination" = "Ziel löschen";
+"confirm_delete_destination" = "Möchtest du „%@“ wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.";
+"reverse_geocoding_failed" = "Umgekehrte Geokodierung fehlgeschlagen: %@, Fallback wird versucht...";
+"nearby_search_success" = "Nahesuche erfolgreich, nahe Lageinferenz verwendet: %@ - %@";
+"nearby_search_failed" = "Nahesuche fehlgeschlagen: %@, weiter mit Koordinaten-Fallback...";
+"coordinate_fallback" = "Koordinaten-Fallback verwendet: %@ - %@ [Kategorie: %@]";
+"user_location_obtained" = "Benutzerstandort ermittelt: %f, %f";
+"location_permission_denied" = "Standort konnte nicht ermittelt werden: %@";
+"location_authorization_changed" = "Standortberechtigung geändert: %d";
+"using_cached_country_region" = "Zwischengespeicherte Länderregion verwendet";
+"map_positioned_to" = "Karte positioniert auf: %@ (%@)";
+"getting_user_location" = "Benutzerstandort wird ermittelt...";
+"preloaded_country_region" = "Vorgeladene Länderregion: %@ (%@)";
+"user_location" = "Mein Standort";
+
+// Add Destination View
+"add_destination" = "Ziel hinzufügen";
+"location_search" = "Standortsuche";
+"search" = "Suchen";
+"search_domestic_places" = "🇨🇳 Inlandorte suchen:";
+"use_amap_data" = "• Amap-Daten für Orte in China verwenden";
+"input_city_names" = "• Städtenamen direkt eingeben, z. B. „Beijing“, „Shanghai“, „Hangzhou“";
+"input_attractions" = "• Sehenswürdigkeiten eingeben, z. B. „Forbidden City“, „West Lake“, „The Bund“";
+"search_international_places" = "🌍 Auslandsorte suchen:";
+"use_apple_international" = "• Apple-Internationale Daten für globale Orte verwenden";
+"hot_cities_quick_search" = "• ⭐ Schnellsuche beliebter Städte: London、Paris、Tokyo usw.";
+"support_multilingual" = "• Englische und chinesische Eingabe unterstützt, aktuelle Daten über das Netzwerk";
+"searching_places" = "Suche %@ Orte...";
+"no_results_found" = "Keine Ergebnisse gefunden";
+"suggestions" = "Vorschläge:";
+"try_english_names" = "1. Versuche es mit englischen Ortsnamen";
+"input_specific_address" = "2. Gib eine genauere Adresse ein, z. B. „London, UK“";
+"check_spelling" = "3. Prüfe die Schreibweise";
+"selected_location" = "Ausgewählter Standort";
+"select_photo" = "Foto auswählen";
+"search_domestic_with_amap" = "🇨🇳 Suche Inlandorte mit Amap-Daten: %@";
+"amap_search_error" = "❌ Amap-Suchfehler: %@";
+"fallback_to_clgeocoder" = "🔄 Fallback-Suche: CLGeocoder für Inlandorte";
+"amap_found_results" = "✅ Amap hat %d Inlandorte gefunden";
+"clgeocoder_found_results" = "✅ CLGeocoder hat %d Inlandorte gefunden";
+"no_domestic_results" = "❌ Keine Inlandorte gefunden";
+"clgeocoder_search_failed" = "❌ CLGeocoder-Suche fehlgeschlagen";
+"search_international_with_apple" = "🌍 Suche Auslandsorte mit Apple-Daten: %@";
+"device_region" = "📱 Geräteregion: %@";
+"device_language" = "📱 Gerätesprache: %@";
+"device_country" = "📱 Geräteland: %@";
+"found_in_preset_cities" = "✅ In vordefinierten Städten gefunden: %@, %@";
+"using_preset_coordinates" = "✅ Vordefinierte Koordinaten verwendet: (%.4f, %.4f)";
+"not_found_in_preset" = "🔍 Nicht in Vorlagen gefunden, Apple-Internationale Daten werden versucht...";
+"apple_international_api_error" = "❌ Fehler der Apple-International-Daten-API: %@";
+"apple_api_returned_results" = "📍 Apple-International-Daten-API hat %d Rohresultate geliefert:";
+"raw_result_info" = "  Rohresultat %d:";
+"name_info" = "    - Name: %@";
+"country_info" = "    - Land: %@";
+"iso_code_info" = "    - ISO-Code: %@";
+"city_info" = "    - Stadt: %@";
+"filtered_international_count" = "🔍 Anzahl gefilterter Auslandsorte: %d";
+"apple_final_results" = "✅ Apple-Internationale Daten zeigen schließlich %d Orte";
+"display_result_info" = "Anzeigeergebnis %d: %@ - %@";
+"apple_api_no_results" = "⚠️ Apple-Internationale Daten-API hat keine Ergebnisse gefunden";
+"mksearch_error" = "❌ MKLocalSearch-Fehler: %@";
+"mksearch_found_results" = "✅ MKLocalSearch hat %d Ergebnisse gefunden";
+"location_selected" = "✅ Standort ausgewählt:";
+"selected_name" = "   Name: %@";
+"selected_country" = "   Land: %@";
+"selected_coordinates" = "   Koordinaten: (%.4f, %.4f)";
+
+// Add Destination To Trip View
+"add_destination_to_trip" = "Ziel zur Reise hinzufügen";
+"mode" = "Modus";
+"create_new_destination" = "Neues Ziel erstellen";
+"add_existing_destination" = "Vorhandenes Ziel hinzufügen";
+"no_destinations_to_add" = "Keine Ziele zum Hinzufügen";
+"all_destinations_in_trip" = "Alle Ziele sind bereits in dieser Reise";
+"searching" = "Suche...";
+
+// Trip Edit/Add View
+"trip_info" = "Routeninformationen";
+"trip_name" = "Routenname";
+"description_optional" = "Beschreibung (optional)";
+"time" = "Zeit";
+"start_date" = "Startdatum";
+"end_date" = "Enddatum";
+"cover_image_optional" = "Titelbild (optional)";
+"add_cover_image" = "Titelbild hinzufügen";
+"change_cover_image" = "Titelbild ändern";
+"trip_duration" = "Reisedauer";
+"destination_count" = "Anzahl Ziele";
+
+// Trip Detail View
+"start" = "Start";
+"end" = "Ende";
+"duration" = "Dauer";
+"days" = "Tage";
+"trip_route" = "Reiseroute";
+"trip_route_day_title" = "Tag %d · %@";
+"load_more_trips" = "Mehr laden";
+"locations" = "Orte";
+"share_trip" = "Reise teilen";
+"share_to_team" = "Mit Freunden teilen";
+"edit_trip" = "Reise bearbeiten";
+"delete_trip" = "Reise löschen";
+"confirm_delete_trip" = "Möchtest du diese Reise wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.";
+"no_destinations_added" = "Noch keine Ziele hinzugefügt";
+
+// Trip Share Image
+"select_layout" = "Share-Layout wählen";
+"share" = "Teilen";
+"trip_share_start" = "Start";
+"trip_share_end" = "Ende";
+"trip_share_duration" = "Dauer";
+"trip_share_days" = "Tage";
+"trip_share_route" = "Reiseroute";
+"trip_share_locations_count" = "Orte";
+"trip_share_no_destinations" = "Noch keine Ziele hinzugefügt";
+
+// Route Card
+"route_card_location" = "Standort";
+"route_card_total_distance" = "Gesamtdistanz";
+"route_card_calculating" = "Berechnung...";
+"route_card_start_point" = "Start";
+"route_card_end_point" = "Ende";
+"trip_share_signature" = "✨ MooFootprint • Jede Reise festhalten";
+"trip_share_subtitle" = "Wundervolle Reisen festhalten, schöne Momente teilen";
+"trip_share_layout_list" = "Listenlayout";
+"trip_share_layout_list_desc" = "Detaillierte Reiseinfos mit Cover, Zeitkarte und vollständiger Route";
+"trip_share_layout_extended_grid" = "Rasteransicht";
+"trip_share_layout_extended_grid_desc" = "Alle Zielfotos im Raster anzeigen, unterstützt mehr als 9 Orte";
+
+// Destination share image layouts
+"destination_share_layout_classic" = "Klassisches Layout";
+"destination_share_layout_classic_desc" = "Traditionelles vertikales Layout, ideal für detaillierte Infos";
+"destination_share_layout_modern_poster" = "Modernes Poster";
+"destination_share_layout_modern_poster_desc" = "Minimalistischer Posterstil für Ortsgeschichten und Atmosphäre";
+"destination_share_layout_circle_poster" = "Minimalistisches Poster";
+"destination_share_layout_circle_poster_desc" = "Minimalistisches Layout mit überlappenden Kreisen und Rechtecken; betont Titel, Weißraum und Balance";
+"share_generating" = "Wird erzeugt…";
+
+// Travel Stats Share Image
+"stats_share_my_travel_footprint" = "Mein Reisefußabdruck";
+"stats_share_destinations_count" = "Reiseziele";
+"stats_share_countries_count" = "Länder";
+"stats_share_travel_timeline" = "Reisezeitleiste";
+"stats_share_footer" = "✨ Footprint • Jede Reise festhalten";
+
+// Country Settings
+"country" = "Land";
+"country_selection" = "Landauswahl";
+"country_description" = "Lege dein Land fest, um Inland- und Auslandsreisen zu unterscheiden";
+"search_countries" = "Länder suchen...";
+
+// Map Style
+"map_style_title" = "Kartenstil";
+"map_style_standard" = "Standard";
+"map_style_muted" = "Standard";
+"map_style_satellite" = "Satellit";
+"map_style_hybrid" = "Hybrid";
+"map_style_imagery" = "Bilder";
+"map_weather_display" = "Wetter auf der Karte anzeigen";
+"map_weather_display_description" = "Wenn aktiviert, wird das aktuelle Wetter für jedes Ziel auf der Karte angezeigt. Kann bei vielen Zielen die Leistung beeinflussen.";
+
+// Duplicate Destination Check
+"duplicate_destination_title" = "Doppeltes Ziel";
+"duplicate_destination_message" = "Ein Ziel namens „%@“ existiert bereits. Möchtest du das bestehende Ziel überschreiben?\n\nBestehende Infos:\nLand: %@\nBesuchsdatum: %@%@\n\nDoppelte Zielnamen sind grundsätzlich nicht erlaubt";
+"duplicate_destination_overwrite" = "Überschreiben";
+"duplicate_destination_cancel" = "Abbrechen";
+
+// Timeline Player
+"timeline_mode" = "Zeitleistenmodus";
+"timeline_play" = "Abspielen";
+"timeline_pause" = "Pause";
+"timeline_reset" = "Zurücksetzen";
+"timeline_speed" = "Wiedergabegeschwindigkeit";
+"timeline_current_date" = "Aktuelles Datum";
+"timeline_current_location" = "Aktueller Standort";
+"timeline_progress" = "Fortschritt";
+"timeline_follow_camera" = "Kamera folgen";
+
+// Trip Route Map
+"route_map" = "Routenkarte";
+"routes" = "Routen";
+"no_routes_available" = "Keine Routen verfügbar";
+"create_trip_with_at_least_two_destinations" = "Erstelle eine Reise mit mindestens zwei Zielen, um hier Routeninformationen zu sehen";
+"view_details" = "Details ansehen";
+
+// Image Optimization
+"optimize_images" = "Bilder optimieren";
+"optimize_images_confirm_title" = "Bilder optimieren";
+"optimize_images_confirm_message" = "Alle gespeicherten Bilder werden komprimiert und Vorschaubilder erzeugt. Dieser Vorgang kann einige Zeit dauern.";
+"optimize" = "Optimieren";
+"optimize_images_result_title" = "Optimierung abgeschlossen";
+"optimize_images_success" = "%d Bilder erfolgreich optimiert";
+"optimize_images_failed" = "Optimierung von %d Bildern fehlgeschlagen";
+
+// About View
+"about_app" = "Info";
+"feature_introduction" = "Funktionen";
+"version_update" = "Versionsupdate";
+"rate_this_app" = "MooFootprint bewerten";
+"software_license_agreement" = "Softwarelizenz- und Servicevereinbarung";
+"privacy_policy_summary" = "Zusammenfassung der Datenschutzrichtlinie";
+"privacy_policy" = "Datenschutzrichtlinie";
+"weather_attribution" = "Wetterdatenquelle";
+"customer_service_phone" = "Kundenservice";
+"copyright" = "Urheberrecht";
+"all_rights_reserved" = "Alle Rechte vorbehalten";
+
+// Brand Color Settings
+"appearance" = "Erscheinungsbild";
+"brand_color" = "Markenfarbe";
+"select_brand_color" = "Markenfarbe wählen";
+"custom_color_active" = "Benutzerdefinierte Farbe aktiv";
+"default_color_active" = "Standardfarbe aktiv";
+"reset_to_default_color" = "Auf Standard zurücksetzen";
+"brand_color_description" = "Passe die Themenfarbe der App an – sie gilt für Icons, Schaltflächen und andere UI-Elemente";
+
+// Appearance Mode Settings
+"appearance_mode" = "Erscheinungsmodus";
+"appearance_mode_system" = "System";
+"appearance_mode_dark" = "Dunkel";
+"appearance_mode_light" = "Hell";
+"appearance_mode_description" = "Wähle den Erscheinungsmodus der App. „System“ folgt automatisch den Systemeinstellungen";
+
+// Account deletion
+"delete_account" = "Konto löschen";
+"delete_account_description" = "Entfernt deine Kontoinformationen und löscht alle Reisen auf diesem Gerät.";
+"delete_account_detail" = "Diese Aktion löscht deine Kontodaten und alle lokalen Reisen, Backups und Medien.";
+"delete_account_warning_title" = "Konto löschen?";
+"delete_account_warning_message" = "Möchtest du dein Konto wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.";
+"delete_account_confirm_button" = "Konto löschen";
+"delete_account_keyword" = "DELETE";
+"delete_account_placeholder" = "Gib %@ zur Bestätigung ein";
+"delete_account_instruction" = "Gib %@ zur Bestätigung ein. Dein Konto und alle lokalen Daten werden entfernt.";
+"delete_account_success_title" = "Konto gelöscht";
+"delete_account_success_message" = "Dein Konto und alle lokalen Daten wurden gelöscht.";
+"delete_account_error_title" = "Löschen fehlgeschlagen";
+
+// Quick Check In View
+"quick_check_in" = "Schnell-Check-in";
+"more_options" = "Weitere Optionen";
+"loading_location" = "Standort wird geladen...";
+"notes_guide_question" = "Wie fühlst du dich heute?";
+"notes_guide_question_with_weather" = "Heute ist es %@ und %@ – wie fühlst du dich?";
+
+// POI Search Loading
+"searching_location" = "Standort wird gesucht...";
+"please_wait" = "Bitte warten";
+
+// POI Preview Card
+"open_in_maps" = "In Karten öffnen";
+"unknown_location" = "Unbekannter Standort";
+"point_of_interest" = "Punkt von Interesse";
+"restaurant" = "Restaurant";
+"cafe" = "Café";
+"hotel" = "Hotel";
+"gas_station" = "Tankstelle";
+"airport" = "Flughafen";
+"park" = "Park";
+"museum" = "Museum";
+"theater" = "Theater";
+"store" = "Geschäft";
+"school" = "Schule";
+"hospital" = "Krankenhaus";
+"bank" = "Bank";
+
+// Badge View
+"badges" = "Abzeichen";
+"badges_entry_subtitle" = "Freigeschaltete Länder und Regionen";
+"country_badges" = "Länderabzeichen";
+"province_badges" = "Provinzabzeichen";
+"badges_progress" = "Fortschritt";
+"badges_countries_unit" = "Länder";
+"badges_provinces_unit" = "Provinzen";
+"badges_entry_countries_only" = "%d Länder freigeschaltet";
+"badges_entry_countries_provinces" = "%d Länder · %d Provinzen freigeschaltet";
+"badges_domestic_provinces_hint" = "%d Provinzen in China freigeschaltet";
+"badges_global_countries_hint" = "%d Länder weltweit freigeschaltet";
+"badges_no_countries_yet" = "Noch keine Länder freigeschaltet";
+"badges_no_provinces_yet" = "Noch keine Provinzen freigeschaltet";
+"badges_overlap_empty" = "Keine";
+"badges_overlap_a11y" = "%d freigeschaltet. Tippen zum Erweitern";
+"badges_overlap_expand_hint" = "Erweitern, um Namen zu sehen";
+"badges_overlap_collapse_hint" = "Stapel einklappen";
+"badges_overlap_collapse" = "Einklappen";
+"search_badges" = "Abzeichen suchen...";
+"location" = "Ort";
+"locations" = "Orte";
+"not_visited" = "Nicht besucht";
+"view_badge" = "Abzeichen ansehen";
+"view_destinations" = "Ziele ansehen";
+"no_destinations" = "Keine Ziele";
+
+// Transport Type
+"auto_select" = "Automatisch";
+"walking" = "Zu Fuß";
+"automobile" = "Auto";
+"transit" = "ÖPNV";
+"airplane" = "Flugzeug";
+"transport_none" = "Keine";
+
+// Onboarding
+"onboarding_welcome_hello" = "Hallo";
+"onboarding_welcome_subtitle" = "Willkommen bei MooFootprint. Lass uns deine Einstellungen festlegen.";
+"onboarding_welcome_continue" = "Loslegen";
+"onboarding_page1_title" = "Grundeinstellungen";
+"onboarding_page1_language_title" = "Sprache";
+"onboarding_page1_country_title" = "Land";
+"onboarding_page1_country_description" = "Lege dein Land fest, um Inland- und Auslandsreisen zu unterscheiden";
+"onboarding_identity_tag_title" = "Identitäts-Tag";
+"onboarding_identity_tag_description" = "Wähle ein Identitäts-Tag oder gib ein eigenes ein, damit die KI in deinem Stil antwortet.";
+"onboarding_personality_tag_title" = "Persönlichkeitstyp";
+"onboarding_personality_tag_description" = "Wähle deinen Persönlichkeitstyp, damit die KI in einem passenden Stil antwortet.";
+"onboarding_user_attributes_title" = "Nutzerattribute";
+"onboarding_user_attributes_description" = "Wähle Geschlecht, Altersgruppe und Sternzeichen, damit die KI dich besser versteht und persönlicher antwortet.";
+"onboarding_user_attributes_description_short" = "Wähle Geschlecht und Altersgruppe, damit die KI dich besser versteht und persönlicher antwortet.";
+"onboarding_constellation_title" = "Sternzeichen";
+"onboarding_constellation_description" = "Wähle dein Sternzeichen, damit die KI in einem zu dir passenden Stil antwortet.";
+"onboarding_page2_title" = "Erscheinungsbild";
+"onboarding_page2_appearance_title" = "Erscheinungsmodus";
+"onboarding_page2_appearance_description" = "Wähle den Erscheinungsmodus der App. „System“ folgt automatisch den Systemeinstellungen";
+"onboarding_page2_color_title" = "Themenfarbe";
+"onboarding_page2_color_preview" = "Farbvorschau";
+"onboarding_page2_color_custom" = "Benutzerdefinierte Farbe aktiv";
+"onboarding_page2_color_default" = "Standardfarbe aktiv";
+"onboarding_page2_color_description" = "Passe die Themenfarbe der App an – sie gilt für Icons, Schaltflächen und andere UI-Elemente";
+"onboarding_next" = "Weiter";
+"onboarding_complete" = "Loslegen";
+"onboarding_paywall_nav_title" = "Plan wählen";
+"onboarding_paywall_title" = "Willkommen bei MooFootprint";
+"onboarding_paywall_subtitle" = "Starte kostenlos und upgrade jederzeit auf Pro für unbegrenzte Einträge und Datenverwaltung.";
+"onboarding_free_tier_title" = "Kostenloser Plan enthält";
+"onboarding_free_destinations" = "Bis zu %d Ziele";
+"onboarding_free_trips" = "Bis zu %d Reisen";
+"onboarding_free_photos" = "Bis zu %d Fotos pro Ziel";
+"onboarding_free_share" = "Basis-Share-Layouts (mit Wasserzeichen)";
+"onboarding_free_ai_trial" = "%d kostenlose KI-Testnutzungen";
+"onboarding_pro_feature_title" = "Upgrade auf Pro für";
+"onboarding_pricing_section_title" = "Abo wählen";
+"onboarding_recommended_plan" = "Empfohlen";
+"onboarding_continue_free" = "Kostenlos fortfahren";
+"onboarding_continue_free_hint" = "Jederzeit im Profil upgraden.";
+
+// Profile - Identity Tag & MBTI
+"identity_tag" = "Identitäts-Tag";
+"identity_tag_description" = "Wähle ein Identitäts-Tag oder gib ein eigenes ein, damit die KI in deinem Stil antwortet.";
+"identity_tag_placeholder" = "Reisender, Foodie, Designer…";
+"mbti_title" = "MBTI";
+"mbti_description" = "Wähle deinen Persönlichkeitstyp für passendere Antworten.";
+"gender_title" = "Geschlecht";
+"gender_description" = "Wähle dein Geschlecht, damit die KI persönlicher antworten kann.";
+"age_group_title" = "Altersgruppe";
+"age_group_description" = "Wähle deine Altersgruppe, damit die KI deine Bedürfnisse besser versteht.";
+"constellation_title" = "Sternzeichen";
+"constellation_description" = "Wähle dein Sternzeichen, damit die KI in einem zu dir passenden Stil antwortet.";
+
+// Profile Options - Persona
+"persona_option_traveler" = "Reisender";
+"persona_option_hiker" = "Wanderer";
+"persona_option_photographer" = "Fotograf";
+"persona_option_designer" = "Designer";
+"persona_option_foodie" = "Foodie";
+"persona_option_techie" = "Technikfan";
+"persona_option_custom" = "Benutzerdefiniert";
+"persona_option_prefer_not_to_say" = "Keine Angabe";
+
+// Profile Options - Gender
+"gender_option_male" = "Männlich";
+"gender_option_female" = "Weiblich";
+"gender_option_other" = "Divers";
+"gender_option_prefer_not_to_say" = "Keine Angabe";
+
+// Profile Options - Age Group
+"age_group_option_under_18" = "Unter 18";
+"age_group_option_18_25" = "18–25";
+"age_group_option_26_35" = "26–35";
+"age_group_option_36_45" = "36–45";
+"age_group_option_46_55" = "46–55";
+"age_group_option_over_56" = "Über 56";
+"age_group_option_prefer_not_to_say" = "Keine Angabe";
+
+// Profile Options - Constellation
+"constellation_option_aries" = "Widder";
+"constellation_option_taurus" = "Stier";
+"constellation_option_gemini" = "Zwillinge";
+"constellation_option_cancer" = "Krebs";
+"constellation_option_leo" = "Löwe";
+"constellation_option_virgo" = "Jungfrau";
+"constellation_option_libra" = "Waage";
+"constellation_option_scorpio" = "Skorpion";
+"constellation_option_sagittarius" = "Schütze";
+"constellation_option_capricorn" = "Steinbock";
+"constellation_option_aquarius" = "Wassermann";
+"constellation_option_pisces" = "Fische";
+"constellation_option_prefer_not_to_say" = "Keine Angabe";
+
+// Multi-language empty states
+"no_notes" = "Noch keine Notizen";
+"no_trip_records" = "Noch keine Reisen";
+"create_first_trip" = "Erste Reise erstellen";
+"create_first_trip_hint" = "Tippe oben rechts auf +,
+um deine erste Reise zu erstellen!";
+"my_trips" = "Meine Reisen";

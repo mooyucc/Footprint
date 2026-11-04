@@ -930,7 +930,7 @@ class CountryManager: ObservableObject {
             return country.displayName
         case .english:
             return country.englishName
-        case .japanese, .french, .spanish, .korean:
+        case .japanese, .french, .spanish, .korean, .german:
             // 对于其他语言，尝试使用系统本地化名称
             // 如果系统不支持，则使用英文名称作为后备
             let locale = Locale(identifier: currentLanguage.rawValue)

@@ -23,6 +23,7 @@ struct EditTripView: View {
     
     var body: some View {
         NavigationStack {
+            FootprintFormScaffold(accent: Color.footprintRed) {
             Form {
                 Section(header: Text("trip_info".localized)) {
                     TextField("trip_name".localized, text: $editedName)
@@ -123,6 +124,7 @@ struct EditTripView: View {
             .onDisappear {
                 applyEditedTextToTrip()
             }
+            } // FootprintFormScaffold
         }
     }
     

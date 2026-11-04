@@ -7,7 +7,7 @@
 
 // Paywall
 "paywall_title" = "Proをアンロック";
-"paywall_subtitle" = "AIアシスタント、無制限の記録などのPro機能をアンロックして、旅行記録をよりスマートで完全にします。";
+"paywall_subtitle" = "無制限の記録やデータ管理などのPro機能をアンロック。AIは回数制です。";
 "paywall_button_upgrade" = "購読プランを表示";
 "paywall_button_restore" = "購入を復元";
 
@@ -18,6 +18,9 @@
 "membership_status_pro_active" = "Pro有効";
 "membership_status_all_features" = "すべての機能がアンロックされています。デバイスを同期するためにいつでも購入を復元できます。";
 "membership_status_view_restore" = "特典を表示 / 購入を復元";
+"membership_section" = "メンバーシップ";
+"membership_status_free" = "無料";
+"membership_status_free_hint" = "アップグレードで Pro 機能を解除";
 
 // Paywall lifetime unlocked
 "paywall_lifetime_unlocked" = "生涯アクセスがアンロックされました。再度購入する必要はありません。";
@@ -26,7 +29,7 @@
 "paywall_expires_on" = "有効期限: ";
 "paywall_terms_privacy" = "購入することで、利用規約とプライバシーポリシーに同意したことになります。自動更新。システムの購読設定でいつでもキャンセルできます。";
 "paywall_feature_title" = "Pro機能";
-"paywall_feature_ai" = "AIアシスタント：スマートノート、旅の説明、写真分析、旅行先おすすめ";
+"paywall_feature_ai" = "AIアシスタント（スマートノート、旅の説明、写真分析、旅行先おすすめ。回数制）";
 "paywall_feature_unlimited" = "無制限の目的地と旅行カード";
 "paywall_feature_share_layouts" = "完全な共有レイアウト";
 "paywall_feature_import_export" = "ローカルデータのインポート/エクスポート";
@@ -34,6 +37,28 @@
 "paywall_banner_title" = "Proにアップグレードしてデータ管理をアンロック";
 "paywall_emotional_message_part1" = "「MooFootprint」をもっと楽しく、長続きさせましょう！一緒にもっと面白いストーリーを作るために、あなたのサポートが必要です。";
 "paywall_emotional_message_part2" = "私たちをサポートしてください！ ✨";
+"paywall_select_plan" = "プランを選択";
+"paywall_cta_unlock" = "Proをアンロック";
+"paywall_cta_unlock_price" = "%@ で Pro をアンロック";
+"paywall_cta_yearly" = "%@ /年で Pro をアンロック";
+"paywall_cta_start_trial" = "無料トライアルを開始";
+"paywall_cta_trial_then_yearly" = "終了後は %@ /年で自動更新。いつでもキャンセルできます。";
+"paywall_cta_monthly" = "%@ /月で Pro をアンロック";
+"paywall_cta_lifetime" = "%@ で生涯版を購入";
+"paywall_cta_current" = "現在のプラン";
+"paywall_lifetime_no_ai" = "AIは体験回数または都度購入";
+"paywall_ai_uses_credits" = "AIは体験回数または都度購入";
+"paywall_subscription_includes_ai" = "AIアシスタント使い放題";
+"paywall_lifetime_ai_hint" = "AIは体験回数または都度購入をご利用ください。";
+"paywall_yearly_monthly_equivalent" = "月あたり %@";
+"paywall_yearly_save" = "月額より %d%% お得";
+"paywall_trial_days" = "%d日間の無料トライアル付き";
+"paywall_trial_weeks" = "%d週間の無料トライアル付き";
+"paywall_trial_months" = "%dか月の無料トライアル付き";
+"paywall_trial_years" = "%d年の無料トライアル付き";
+"paywall_buy_credits_secondary" = "AI回数を購入";
+"membership_status_lifetime_ai_note" = "AIは回数制です。追加回数を購入できます。";
+"membership_status_ai_credits_note" = "AIは回数制です。追加回数を購入できます。";
 "subscription_monthly" = "月額購読";
 "subscription_yearly" = "年額購読";
 "subscription_weekly" = "週額購読";
@@ -46,8 +71,8 @@
 "terms_url" = "https://mooyu.cc/moofootprintlicense.html";
 "privacy_url" = "https://mooyu.cc/myfootprintprivacy.html";
 "limit_destination_reached_title" = "無料プランの上限に達しました";
-"limit_destination_reached_message" = "無料プランは最大50の目的地まで利用できます。Proにアップグレードすると無制限になります。";
-"limit_trip_reached_message" = "無料プランは最大5つの旅行まで利用できます。Proにアップグレードすると無制限になります。";
+"limit_destination_reached_message" = "無料プランは最大15の目的地まで利用できます。Proにアップグレードすると無制限になります。";
+"limit_trip_reached_message" = "無料プランは最大3つの旅行まで利用できます。Proにアップグレードすると無制限になります。";
 "share_layout_locked_message" = "完全な共有レイアウトはPro機能です。アップグレードしてアンロックしてください。";
 "import_export_locked_message" = "インポート/エクスポートにはProが必要です。続行するにはアップグレードしてください。";
 "import_trip_locked_message" = "旅行のインポートにはProが必要です。続行するにはアップグレードしてください。";
@@ -59,19 +84,23 @@
 "done" = "完了";
 "account" = "アカウント";
 "not_logged_in" = "ログインしていません";
-"login_sync_description" = "ログイン後、データは自動的にiCloudに同期されます";
+"login_sync_description" = "表示名とアバターを設定";
 "user_profile_settings" = "ユーザープロフィール設定";
 "data_sync" = "データ同期";
 "data_settings" = "データ";
 "icloud_sync" = "iCloud同期";
+"default_traveler_name" = "トラベラー";
+"sync_description_local" = "iCloud を利用できません。データはこのデバイスにのみ保存されます。システム設定で iCloud を有効にしてください。";
+"sync_description_icloud" = "デバイスが iCloud にサインインしている場合、旅行データは自動的に同期されます。";
+"icloud_sync_on" = "オン";
 "enabled" = "有効";
 "not_enabled" = "無効";
 "in_development" = "開発中";
 "data_storage" = "データストレージ";
 "local" = "ローカル";
 "icloud" = "iCloud";
-"sync_description_logged_in" = "旅行データは自動的にiCloudに同期され、すべてのデバイスでアクセスできます。";
-"sync_description_not_logged_in" = "Apple IDでログインすると、データは自動的にiCloudに同期され、すべてのデバイス間で同期が維持されます。";
+"sync_description_logged_in" = "デバイスが iCloud にサインインしている場合、旅行データは自動的に同期されます。";
+"sync_description_not_logged_in" = "iCloud を利用できません。データはこのデバイスにのみ保存されます。システム設定で iCloud を有効にしてください。";
 "about" = "について";
 "version" = "バージョン";
 "app_name" = "アプリ名";
@@ -175,12 +204,13 @@
 "map" = "地図";
 "footprint_map" = "足跡";
 "trips" = "旅程";
-"journey_cards_tab" = "旅程カード";
+"journey_cards_tab" = "旅程";
 "journey_cards_empty_hint" = "「旅程」で旅程を作成すると、ここに表示されます。";
 "journey_cards_focused_a11y" = "選択中";
 "journey_cards_destinations_count" = "%d か所";
 "journey_cards_total_mileage" = "総走行距離";
-"profile" = "マイページ";
+"time_capsule_tab" = "振り返り";
+"profile" = "マイ";
 "create_trip" = "旅程を追加";
 "import_trip" = "旅程をインポート";
 "import_result" = "インポート結果";
@@ -194,13 +224,17 @@
 "record_every_journey" = "人生のすべての足跡を照らす";
 "sign_in_apple_id" = "Apple IDでサインイン";
 "sign_in_with_apple" = "Appleでサインイン";
-"enable_icloud_sync" = "iCloud同期を有効にして、足跡の思い出を保護";
+"enable_icloud_sync" = "システム設定で iCloud を有効にして、足跡の思い出を保護";
 "total_destinations" = "訪れた場所";
 "countries_visited" = "訪れた国";
 "domestic_travel" = "国内の足跡";
 "international_travel" = "海外の足跡";
 "my_favorites" = "お気に入り";
 "travel_timeline" = "足跡タイムライン";
+"time_capsule_menu" = "MENU";
+"time_capsule_year_list" = "年を選択";
+"time_capsule_previous_year" = "前年";
+"time_capsule_next_year" = "翌年";
 "destinations_count" = "目的地";
 "footprint_app" = "MooFootprint - 人生の足跡";
 "record_journey_memories" = "人生のすべての足跡を照らし、美しい思い出を大切に";
@@ -341,6 +375,8 @@
 "ai_assistant_subtitle" = "ノート、説明、タグを自動生成して、旅行の思い出をより豊かに";
 "ai_function_notes_title" = "スマートノート生成";
 "ai_function_notes_desc" = "写真と場所情報に基づいて旅行ノートを自動生成";
+"ai_picker_has_notes" = "ノートあり";
+"ai_picker_has_description" = "説明あり";
 "ai_function_trip_desc_title" = "旅行説明生成";
 "ai_function_trip_desc_desc" = "複数の目的地に基づいて全体的な旅行説明を生成";
 "ai_function_tags_title" = "タグ生成";
@@ -354,6 +390,11 @@
 "ai_saved_recommend_title" = "保存したおすすめ";
 "ai_saved_recommend_empty_title" = "おすすめはまだありません";
 "ai_saved_recommend_empty_desc" = "生成後「おすすめを保存」をタップするとここに表示されます";
+"ai_recommend_hub_subtitle" = "保存済みのおすすめを見るか、AIに新しい目的地を提案してもらいましょう";
+"ai_recommend_view_saved" = "保存したおすすめを見る";
+"ai_recommend_view_saved_desc" = "以前生成して保存した旅行先のおすすめを閲覧";
+"ai_recommend_generate_new" = "新しいおすすめを生成";
+"ai_recommend_generate_new_desc" = "記録した場所の傾向から、次の旅行先をおすすめ";
 "ai_function_photo_analysis_title" = "写真分析";
 "ai_function_photo_analysis_desc" = "写真内のシーン、オブジェクト、ランドマークを識別";
 "ai_generating_notes" = "ノートを生成中...";
@@ -572,6 +613,7 @@
 "about_app" = "について";
 "feature_introduction" = "機能紹介";
 "version_update" = "バージョン更新";
+"rate_this_app" = "MooFootprintを評価";
 "software_license_agreement" = "ソフトウェアライセンスおよびサービス契約";
 "privacy_policy_summary" = "プライバシーポリシー要約";
 "privacy_policy" = "プライバシーポリシー";
@@ -625,9 +667,23 @@
 
 // Badge View
 "badges" = "バッジ";
+"badges_entry_subtitle" = "解除した国・地域";
 "country_badges" = "国バッジ";
 "province_badges" = "都道府県バッジ";
 "badges_progress" = "進捗";
+"badges_countries_unit" = "か国";
+"badges_provinces_unit" = "の省";
+"badges_entry_countries_only" = "%d か国を解除済み";
+"badges_entry_countries_provinces" = "%d か国 · %d の省を解除済み";
+"badges_domestic_provinces_hint" = "国内で %d の省を解除済み";
+"badges_global_countries_hint" = "世界で %d か国を解除済み";
+"badges_no_countries_yet" = "まだ国がありません";
+"badges_no_provinces_yet" = "まだ省がありません";
+"badges_overlap_empty" = "なし";
+"badges_overlap_a11y" = "%d 件解除済み。タップで展開";
+"badges_overlap_expand_hint" = "展開して名前を表示";
+"badges_overlap_collapse_hint" = "重ねて閉じる";
+"badges_overlap_collapse" = "閉じる";
 "search_badges" = "バッジを検索...";
 "location" = "場所";
 "locations" = "場所";
@@ -673,7 +729,7 @@
 "onboarding_complete" = "始める";
 "onboarding_paywall_nav_title" = "プランを選択";
 "onboarding_paywall_title" = "MooFootprintへようこそ";
-"onboarding_paywall_subtitle" = "無料版ですぐに記録を始められます。Proにアップグレードすると全機能が使えます。";
+"onboarding_paywall_subtitle" = "無料版ですぐに記録を始められます。Proにアップグレードすると無制限の記録とデータ管理が使えます。";
 "onboarding_free_tier_title" = "無料版に含まれる内容";
 "onboarding_free_destinations" = "チェックイン地点 最大 %d 件";
 "onboarding_free_trips" = "旅程 最大 %d 件";
@@ -684,7 +740,7 @@
 "onboarding_pricing_section_title" = "サブスクリプションを選択";
 "onboarding_recommended_plan" = "おすすめ";
 "onboarding_continue_free" = "無料で始める";
-"onboarding_continue_free_hint" = "無料版で続行します（一部機能に制限あり）。「マイページ」からいつでもProにアップグレードできます。";
+"onboarding_continue_free_hint" = "「マイページ」からいつでもアップグレードできます。";
 
 // Profile - Identity Tag & MBTI
 "identity_tag" = "アイデンティティタグ";
@@ -737,3 +793,15 @@
 "constellation_option_aquarius" = "水瓶座";
 "constellation_option_pisces" = "魚座";
 "constellation_option_prefer_not_to_say" = "答えたくない";
+
+"ai_credits_default_product_title_50" = "AI呼び出し（50回）";
+"ai_credits_product_grant" = "購入で %d 回追加";
+"ai_credits_best_value" = "お得";
+
+// Multi-language empty states
+"no_notes" = "ノートはまだありません";
+"no_trip_records" = "まだ旅程がありません";
+"create_first_trip" = "最初の旅程を作成";
+"create_first_trip_hint" = "右上の + ボタンをタップして
+最初の旅程を作成しましょう！";
+"my_trips" = "マイ旅程";

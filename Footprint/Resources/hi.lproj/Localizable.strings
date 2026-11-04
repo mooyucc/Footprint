@@ -1,11 +1,13 @@
 "paywall_current_subscription" = "वर्तमान सदस्यता";
 "paywall_expires_on" = "समाप्ति समय: ";
-"paywall_feature_ai" = "AI सहायक: स्मार्ट नोट्स, यात्रा विवरण, फोटो विश्लेषण, यात्रा गंतव्य सुझाव";
+"paywall_feature_ai" = "AI सहायक (नोट्स, यात्रा विवरण, फोटो विश्लेषण, सुझाव; क्रेडिट से)";
 "ai_assistant_title" = "AI सहायक";
 "ai_assistant_welcome" = "AI को आपकी यात्रा दर्ज करने में मदद करने दें";
 "ai_assistant_subtitle" = "नोट्स, विवरण और टैग बुद्धिमानी से बनाएँ, ताकि आपकी यात्रा की यादें समृद्ध हों";
 "ai_function_notes_title" = "नोट्स बनाएं";
 "ai_function_notes_desc" = "फोटो और स्थान के आधार पर यात्रा नोट्स स्वतः जनरेट करें";
+"ai_picker_has_notes" = "नोट मौजूद";
+"ai_picker_has_description" = "विवरण मौजूद";
 "ai_function_trip_desc_title" = "यात्रा विवरण बनाएं";
 "ai_function_trip_desc_desc" = "कई गंतव्यों के आधार पर संपूर्ण यात्रा विवरण तैयार करें";
 "ai_function_tags_title" = "टैग जनरेट करें";
@@ -19,6 +21,11 @@
 "ai_saved_recommend_title" = "सहेजे गए सुझाव";
 "ai_saved_recommend_empty_title" = "अभी कोई सुझाव नहीं";
 "ai_saved_recommend_empty_desc" = "जनरेट के बाद \"सुझाव सहेजें\" पर टैप करें";
+"ai_recommend_hub_subtitle" = "सहेजे गए सुझाव देखें, या AI से नए गंतव्य सुझाएँ";
+"ai_recommend_view_saved" = "सहेजे गए सुझाव देखें";
+"ai_recommend_view_saved_desc" = "पहले जनरेट और सहेजे गए यात्रा सुझाव ब्राउज़ करें";
+"ai_recommend_generate_new" = "नया सुझाव जनरेट करें";
+"ai_recommend_generate_new_desc" = "आपके दर्ज स्थानों के आधार पर अगली यात्रा सुझाएँ";
 "ai_function_photo_analysis_title" = "फोटो विश्लेषण";
 "ai_function_photo_analysis_desc" = "फोटो में दृश्य, वस्तुएँ और स्थलों की पहचान करें";
 "ai_generating_notes" = "नोट्स बनाए जा रहे हैं...";
@@ -144,11 +151,18 @@
 "select_location" = "स्थान चुनें";
 "reverse_geocoding_failed" = "रिवर्स जियोकोडिंग विफल: %@";
 
-"journey_cards_tab" = "यात्रा कार्ड";
+"journey_cards_tab" = "यात्राएँ";
 "journey_cards_empty_hint" = "यहाँ देखने के लिए यात्रा टैब से एक यात्रा बनाएँ।";
 "journey_cards_focused_a11y" = "चयनित";
 "journey_cards_destinations_count" = "%d गंतव्य";
 "journey_cards_total_mileage" = "कुल दूरी";
+"time_capsule_tab" = "वर्ष";
+"time_capsule_menu" = "MENU";
+"time_capsule_year_list" = "वर्ष";
+"time_capsule_previous_year" = "पिछला वर्ष";
+"time_capsule_next_year" = "अगला वर्ष";
+"travel_timeline" = "फ़ुटप्रिंट समयरेखा";
+"destinations_count" = "गंतव्य";
 
 // Destination share image layouts
 "destination_share_layout_classic" = "क्लासिक लेआउट";
@@ -158,3 +172,70 @@
 "destination_share_layout_circle_poster" = "मिनिमलिस्ट शैली पोस्टर";
 "destination_share_layout_circle_poster_desc" = "मिनिमलिस्ट शैली का लेआउट — ओवरलैपिंग वृत्त और आयत के साथ टाइपोग्राफी; शीर्षक, खाली जगह और दृश्य संतुलन पर जोर";
 "share_generating" = "बना रहे हैं…";
+
+"paywall_select_plan" = "योजना चुनें";
+"paywall_cta_unlock" = "Pro अनलॉक करें";
+"paywall_cta_unlock_price" = "%@ में Pro अनलॉक करें";
+"paywall_cta_yearly" = "%@ / वर्ष में Pro अनलॉक करें";
+"paywall_cta_start_trial" = "निःशुल्क ट्रायल शुरू करें";
+"paywall_cta_trial_then_yearly" = "ट्रायल के बाद %@ प्रति वर्ष। कभी भी रद्द करें।";
+"paywall_cta_monthly" = "%@ / माह में Pro अनलॉक करें";
+"paywall_cta_lifetime" = "%@ में लाइफटाइम खरीदें";
+"paywall_cta_current" = "वर्तमान योजना";
+"paywall_lifetime_no_ai" = "AI ट्रायल क्रेडिट या खरीदी गई कॉल का उपयोग करता है";
+"paywall_ai_uses_credits" = "AI ट्रायल क्रेडिट या खरीदी गई कॉल का उपयोग करता है";
+"paywall_subscription_includes_ai" = "असीमित AI शामिल";
+"paywall_lifetime_ai_hint" = "AI ट्रायल क्रेडिट या खरीदी गई कॉल का उपयोग करता है।";
+"paywall_yearly_monthly_equivalent" = "यानी प्रति माह %@";
+"paywall_yearly_save" = "मासिक की तुलना में %d%% बचत";
+"paywall_trial_days" = "%d दिन का निःशुल्क ट्रायल शामिल";
+"paywall_trial_weeks" = "%d सप्ताह का निःशुल्क ट्रायल शामिल";
+"paywall_trial_months" = "%d महीने का निःशुल्क ट्रायल शामिल";
+"paywall_trial_years" = "%d वर्ष का निःशुल्क ट्रायल शामिल";
+"paywall_buy_credits_secondary" = "AI कॉल खरीदें";
+"membership_status_lifetime_ai_note" = "AI क्रेडिट से चलता है। अतिरिक्त कॉल खरीद सकते हैं।";
+"membership_status_ai_credits_note" = "AI क्रेडिट से चलता है। अतिरिक्त कॉल खरीद सकते हैं।";
+"ai_credits_default_product_title_50" = "AI कॉल (50 बार)";
+"ai_credits_product_grant" = "खरीदने पर %d कॉल जुड़ती हैं";
+"ai_credits_best_value" = "बेहतर मूल्य";
+"rate_this_app" = "MooFootprint को रेट करें";
+
+// Multi-language empty states
+"no_notes" = "अभी तक कोई नोट नहीं";
+"no_trip_records" = "अभी तक कोई यात्रा नहीं";
+"create_first_trip" = "पहली यात्रा बनाएँ";
+"create_first_trip_hint" = "ऊपर दाईं ओर + बटन टैप करें
+और अपनी पहली यात्रा बनाएँ!";
+"my_trips" = "मेरी यात्राएँ";
+"badges" = "बैज";
+"badges_entry_subtitle" = "अनलॉक किए गए देश और क्षेत्र";
+"badges_progress" = "प्रगति";
+"badges_countries_unit" = "देश";
+"badges_provinces_unit" = "प्रांत";
+"badges_entry_countries_only" = "%d देश अनलॉक";
+"badges_entry_countries_provinces" = "%d देश · %d प्रांत अनलॉक";
+"badges_domestic_provinces_hint" = "चीन में %d प्रांत अनलॉक";
+"badges_global_countries_hint" = "दुनिया भर में %d देश अनलॉक";
+"badges_no_countries_yet" = "अभी कोई देश अनलॉक नहीं";
+"badges_no_provinces_yet" = "अभी कोई प्रांत अनलॉक नहीं";
+"badges_overlap_empty" = "कोई नहीं";
+"badges_overlap_a11y" = "%d अनलॉक। विस्तार के लिए टैप करें";
+"badges_overlap_expand_hint" = "नाम देखने के लिए विस्तार करें";
+"badges_overlap_collapse_hint" = "स्टैक समेटें";
+"badges_overlap_collapse" = "समेटें";
+"membership_section" = "सदस्यता";
+"membership_status_free" = "मुफ़्त";
+"membership_status_free_hint" = "Pro सुविधाएँ अनलॉक करने के लिए अपग्रेड करें";
+"membership_status_pro_active" = "Pro सक्रिय";
+"membership_status_view_restore" = "लाभ देखें / खरीदारी पुनर्स्थापित करें";
+"membership_status_expiry" = "%@ तक सक्रिय";
+"membership_status_lifetime_active" = "लाइफटाइम सक्रिय";
+"paywall_button_upgrade" = "सदस्यता योजना देखें";
+"paywall_buy_credits_secondary" = "AI कॉल खरीदें";
+"icloud_sync_on" = "चालू";
+"sync_description_icloud" = "डिवाइस iCloud में साइन इन होने पर यात्रा डेटा अपने आप सिंक होता है।";
+"sync_description_local" = "iCloud उपलब्ध नहीं है। डेटा केवल इस डिवाइस पर सहेजा जाता है। सिंक के लिए सिस्टम सेटिंग्स में iCloud चालू करें।";
+"default_traveler_name" = "यात्री";
+"enable_icloud_sync" = "अपनी फ़ुटप्रिंट यादें सुरक्षित रखने के लिए सिस्टम सेटिंग्स में iCloud चालू करें";
+"sync_description_logged_in" = "डिवाइस iCloud में साइन इन होने पर यात्रा डेटा अपने आप सिंक होता है।";
+"login_sync_description" = "डिस्प्ले नाम और अवतार सेट करें";

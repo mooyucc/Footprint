@@ -80,21 +80,13 @@ struct OnboardingPage1View: View {
                             .padding(.horizontal, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(Color(.secondarySystemBackground))
+                                    .fill(Color.primary.opacity(0.06))
                             )
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
                     .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Color(.systemBackground))
-                            .shadow(color: Color.black.opacity(0.1), radius: 12, x: 0, y: 4)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
-                    )
+                    .footprintGlassCard(cornerRadius: 18, glow: brandColorManager.currentBrandColor)
                     
                     // 国家设置卡片
                     VStack(alignment: .leading, spacing: 14) {
@@ -129,7 +121,7 @@ struct OnboardingPage1View: View {
                             .padding(.horizontal, 16)
                             .background(
                                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(Color(.secondarySystemBackground))
+                                    .fill(Color.primary.opacity(0.06))
                             )
                         }
                         .buttonStyle(PlainButtonStyle())
@@ -140,15 +132,7 @@ struct OnboardingPage1View: View {
                             .padding(.top, 4)
                     }
                     .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Color(.systemBackground))
-                            .shadow(color: Color.black.opacity(0.1), radius: 12, x: 0, y: 4)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
-                    )
+                    .footprintGlassCard(cornerRadius: 18, glow: brandColorManager.currentBrandColor)
                     
                     Spacer(minLength: 40)
                 }
@@ -202,18 +186,12 @@ struct OnboardingPage1View: View {
             }
             .padding(.top, 20)
         }
-        .background(
-            LinearGradient(
-                colors: [
-                    Color.blue.opacity(0.12),
-                    Color.pink.opacity(0.08),
-                    Color(.systemBackground)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
+        .background {
+            FootprintAtmosphereBackground(
+                accent: brandColorManager.currentBrandColor,
+                secondaryAccent: FootprintTheme.Accent.secondary
             )
-            .ignoresSafeArea(.all)
-        )
+        }
         .sheet(isPresented: $showingLanguagePicker) {
             LanguageSelectionView()
         }

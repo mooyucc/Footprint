@@ -183,7 +183,7 @@ struct DestinationPreviewCard: View {
     
     private var photoThumbnail: some View {
         Group {
-            if let photoData = destination.photoData,
+            if let photoData = destination.photoThumbnailData ?? destination.photoData,
                let uiImage = UIImage(data: photoData) {
                 Image(uiImage: uiImage)
                     .resizable()
@@ -217,6 +217,7 @@ struct DestinationPreviewCard: View {
         withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
             destination.isFavorite.toggle()
             try? modelContext.save()
+            DestinationChangeNotifier.postUpdated()
         }
     }
     

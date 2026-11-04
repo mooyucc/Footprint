@@ -2,7 +2,7 @@
 //  TripRoutePrecomputationStore.swift
 //  Footprint
 //
-//  与 MapView `tripRoutes` 同步，供「旅程卡片」总里程与地图抽屉 `RouteCard` 使用相同的预计算路线。
+//  与 MapView `tripRoutes` 同步，供「旅程卡片」总里程使用相同的预计算路线。
 //
 
 import Foundation
@@ -13,7 +13,7 @@ import Combine
 final class TripRoutePrecomputationStore: ObservableObject {
     static let shared = TripRoutePrecomputationStore()
     
-    /// 各旅程 `MKRoute` 段（与 `JourneyDrawer` 传入 `RouteCard` 的 `precomputedRoutes` 同源）
+    /// 各旅程 `MKRoute` 段（与 MapView `tripRoutes` 同源）
     @Published private(set) var routesByTripId: [UUID: [MKRoute]] = [:]
     
     func sync(from tripRoutes: [UUID: [MKRoute?]]) {

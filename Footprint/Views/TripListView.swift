@@ -249,11 +249,7 @@ struct TripStatisticsCard: View {
             }
         }
         .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 15)
-                .fill(Color(.systemBackground))
-                .shadow(color: .gray.opacity(0.2), radius: 5, x: 0, y: 2)
-        )
+        .footprintGlassCard(cornerRadius: FootprintTheme.Radius.card, glow: .blue)
         .padding()
     }
 }
@@ -300,7 +296,7 @@ struct EmptyTripView: View {
                 .font(.title2)
                 .fontWeight(.semibold)
             
-            Text(languageManager.currentLanguage == .chinese ? "点击右上角的 + 按钮\n创建你的第一个旅程吧！" : "Tap the + button in the top right\nto create your first trip!")
+            Text("create_first_trip_hint".localized)
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)

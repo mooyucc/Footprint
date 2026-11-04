@@ -18,7 +18,6 @@ struct BadgeDetailView: View {
     
     @Binding var isPresented: Bool
     @State private var isFlipped = false
-    @State private var animatedLocationCount: Double = 0
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject private var brandColorManager: BrandColorManager
     
@@ -28,9 +27,10 @@ struct BadgeDetailView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                // 背景：使用渐变背景（符合配色标准）
-                AppColorScheme.pageBackgroundGradient(for: colorScheme)
-                    .ignoresSafeArea()
+                FootprintAtmosphereBackground(
+                    accent: brandColorManager.currentBrandColor,
+                    secondaryAccent: FootprintTheme.Accent.secondary
+                )
                 
                 // 翻转容器
                 ZStack {
@@ -109,16 +109,6 @@ struct BadgeDetailView: View {
             }
             .navigationBarHidden(true)
             .statusBarHidden()
-            .onChange(of: isFlipped) { _, newValue in
-                if newValue && !destinations.isEmpty {
-                    animateLocationCount(resetToZero: true)
-                }
-            }
-            .onChange(of: destinations.count) { _, _ in
-                if isFlipped && !destinations.isEmpty {
-                    animateLocationCount(resetToZero: false)
-                }
-            }
         }
     }
     
@@ -272,7 +262,7 @@ struct BadgeDetailView: View {
                             NavigationLink {
                                 DestinationDetailView(destination: destination)
                             } label: {
-                                DestinationRowCard(destination: destination)
+                                DestinationRowCard(destination: destination, highResolutionCover: true)
                             }
                             .buttonStyle(PlainButtonStyle())
                         }
@@ -304,12 +294,11 @@ struct BadgeDetailView: View {
                     
                     if !destinations.isEmpty {
                         HStack(alignment: .firstTextBaseline, spacing: 6) {
-                            Text("\(Int(animatedLocationCount.rounded()))")
+                            Text("\(destinations.count)")
                                 .font(.system(size: 34, weight: .black, design: .default))
                                 .tracking(-0.8)
                                 .foregroundStyle(.primary)
                                 .monospacedDigit()
-                                .contentTransition(.numericText(value: animatedLocationCount))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.65)
                             Text("locations".localized)
@@ -347,22 +336,6 @@ struct BadgeDetailView: View {
                 rotationAngle = 180
             }
             isFlipped.toggle()
-        }
-    }
-    
-    private func animateLocationCount(resetToZero: Bool) {
-        let target = Double(destinations.count)
-        if resetToZero {
-            animatedLocationCount = 0
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
-                withAnimation(.easeOut(duration: 0.9)) {
-                    animatedLocationCount = target
-                }
-            }
-        } else {
-            withAnimation(.easeOut(duration: 0.55)) {
-                animatedLocationCount = target
-            }
         }
     }
 }

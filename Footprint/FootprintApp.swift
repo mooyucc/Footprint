@@ -10,7 +10,7 @@ import SwiftData
 
 @main
 struct FootprintApp: App {
-    @StateObject private var appleSignInManager = AppleSignInManager.shared
+    @StateObject private var userProfileManager = UserProfileManager.shared
     @StateObject private var purchaseManager = PurchaseManager.shared
     @StateObject private var entitlementManager = EntitlementManager.shared
     @StateObject private var aiCreditManager = AICreditManager.shared
@@ -55,7 +55,7 @@ struct FootprintApp: App {
                         .ignoresSafeArea()
                 } else {
                     ContentView()
-                        .environmentObject(appleSignInManager)
+                        .environmentObject(userProfileManager)
                         .environmentObject(purchaseManager)
                         .environmentObject(entitlementManager)
                         .environmentObject(aiCreditManager)
@@ -64,6 +64,10 @@ struct FootprintApp: App {
                         .environmentObject(brandColorManager)
                         .environmentObject(appearanceManager)
                         .preferredColorScheme(appearanceManager.preferredColorScheme)
+                        .onAppear { appearanceManager.syncInterfaceStyle() }
+                        .onChange(of: appearanceManager.currentMode) { _, _ in
+                            appearanceManager.syncInterfaceStyle()
+                        }
                         .environment(\.isAppReady, isAppReady)  // 传递应用就绪状态
                 }
                 
@@ -95,7 +99,7 @@ struct FootprintApp: App {
                         .environmentObject(appearanceManager)
                         .environmentObject(purchaseManager)
                         .environmentObject(entitlementManager)
-                        .environmentObject(appleSignInManager)
+                        .environmentObject(userProfileManager)
                         .zIndex(998)  // 低于启动画面和Beta提醒
                         .transition(.opacity)
                 }
@@ -126,6 +130,11 @@ struct FootprintApp: App {
                 }
                 #endif
             }
+            .onAppear {
+                if !showSplash {
+                    startBackgroundInitialization()
+                }
+            }
         }
         .modelContainer(sharedModelContainer)
     }
@@ -136,10 +145,19 @@ private struct IsAppReadyKey: EnvironmentKey {
     static let defaultValue: Bool = true  // 默认值：已就绪（向后兼容）
 }
 
+private struct IsMapTabActiveKey: EnvironmentKey {
+    static let defaultValue: Bool = true
+}
+
 extension EnvironmentValues {
     var isAppReady: Bool {
         get { self[IsAppReadyKey.self] }
         set { self[IsAppReadyKey.self] = newValue }
+    }
+    
+    var isMapTabActive: Bool {
+        get { self[IsMapTabActiveKey.self] }
+        set { self[IsMapTabActiveKey.self] = newValue }
     }
 }
 
@@ -155,7 +173,11 @@ extension FootprintApp {
     }
     #endif
     
+    private static var didStartInitialization = false
+
     private func startBackgroundInitialization() {
+        guard !Self.didStartInitialization else { return }
+        Self.didStartInitialization = true
         print("🚀 开始后台初始化工作...")
         
         // 在主线程启动定位服务（定位服务需要在主线程）
@@ -170,26 +192,20 @@ extension FootprintApp {
             // Geocoder 需要在 MapView 中创建，因为需要 @State 变量
             // 这里通过通知告知 MapView 可以提前创建
             NotificationCenter.default.post(name: .shouldPrepareGeocoder, object: nil)
+
+            // 3. 触达 Profile 磁盘快照，Splash 结束前即可给「我的」首帧数字
+            _ = ProfileCacheStore.shared
         }
         
-        // 在后台队列执行其他初始化工作
-        DispatchQueue.global(qos: .userInitiated).async {
-            // 3. 其他后台初始化工作
-            // 注意：iCloud/CloudKit 同步已暂时禁用
-            
-            // 本地数据库初始化很快，不需要额外等待时间
-            // 如果后续需要添加其他初始化工作，可以在这里添加
-            
-            // 给定位服务一些时间进行初始化（定位获取需要时间）
-            // 同时确保开机动画有足够时间完整播放（色块→墨鱼→文字约 1s），
-            // 再发送「初始化完成」，避免动画未播完就被关闭导致卡顿、直接进 app 的体验问题
-            Thread.sleep(forTimeInterval: 1.2)
-            
-            print("✅ 后台初始化工作完成（定位服务已启动）")
-            
-            // 通知启动画面初始化完成（不等待定位完成，让定位在后台继续进行）
-            DispatchQueue.main.async {
-                NotificationCenter.default.post(name: .appInitializationCompleted, object: nil)
+        // 预热必须走视图主上下文；临时 context 的对象缓存不会留给各 Tab 的 @Query
+        let container = sharedModelContainer
+        Task { @MainActor in
+            await MapDestinationFetcher.prewarmTabQueries(in: container.mainContext)
+            NotificationCenter.default.post(name: .appInitializationCompleted, object: nil)
+            // 旧内联多图/封面迁到外部存储：不阻塞 Splash，空闲时分批重写
+            Task(priority: .utility) { @MainActor in
+                try? await Task.sleep(nanoseconds: 1_200_000_000)
+                await PhotoExternalStorageMigrator.migrateIfNeeded(in: container.mainContext)
             }
         }
     }

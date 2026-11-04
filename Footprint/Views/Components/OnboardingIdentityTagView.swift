@@ -10,7 +10,7 @@ import SwiftUI
 /// 引导身份标签页：身份标签选择
 struct OnboardingIdentityTagView: View {
     @EnvironmentObject var brandColorManager: BrandColorManager
-    @EnvironmentObject var appleSignInManager: AppleSignInManager
+    @EnvironmentObject var userProfileManager: UserProfileManager
     @Environment(\.colorScheme) private var colorScheme
     
     @State private var selectedPersonaOption: String = UserProfileOptions.localizedPersona(for: "traveler")
@@ -80,15 +80,7 @@ struct OnboardingIdentityTagView: View {
                     }
                     .padding(20)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Color(.systemBackground))
-                            .shadow(color: Color.black.opacity(0.1), radius: 12, x: 0, y: 4)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
-                    )
+                    .footprintGlassCard(cornerRadius: 18, glow: brandColorManager.currentBrandColor)
                     
                     // 身份标签选择卡片
                     VStack(alignment: .leading, spacing: 16) {
@@ -117,7 +109,7 @@ struct OnboardingIdentityTagView: View {
                                             RoundedRectangle(cornerRadius: 15, style: .continuous)
                                                 .fill(selectedPersonaOption == option ? 
                                                       brandColorManager.currentBrandColor : 
-                                                      Color(.secondarySystemBackground))
+                                                      Color.primary.opacity(0.06))
                                         )
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 15, style: .continuous)
@@ -164,7 +156,7 @@ struct OnboardingIdentityTagView: View {
                                     RoundedRectangle(cornerRadius: 15, style: .continuous)
                                         .fill(selectedPersonaOption == customOptionLocalized ? 
                                               brandColorManager.currentBrandColor : 
-                                              Color(.secondarySystemBackground))
+                                              Color.primary.opacity(0.06))
                                 )
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 15, style: .continuous)
@@ -187,15 +179,7 @@ struct OnboardingIdentityTagView: View {
                         }
                     }
                     .padding(20)
-                    .background(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Color(.systemBackground))
-                            .shadow(color: Color.black.opacity(0.1), radius: 12, x: 0, y: 4)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
-                    )
+                    .footprintGlassCard(cornerRadius: 18, glow: brandColorManager.currentBrandColor)
                     
                     Spacer(minLength: 40)
                 }
@@ -217,7 +201,7 @@ struct OnboardingIdentityTagView: View {
                                 return UserProfileOptions.personaKey(for: selectedPersonaOption)
                             }
                         }()
-                        appleSignInManager.setPersonaTag(personaToSave)
+                        userProfileManager.setPersonaTag(personaToSave)
                     }
                     onNext()
                 } label: {
@@ -265,22 +249,16 @@ struct OnboardingIdentityTagView: View {
             }
             .padding(.top, 20)
         }
-        .background(
-            LinearGradient(
-                colors: [
-                    Color.blue.opacity(0.12),
-                    Color.pink.opacity(0.08),
-                    Color(.systemBackground)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
+        .background {
+            FootprintAtmosphereBackground(
+                accent: brandColorManager.currentBrandColor,
+                secondaryAccent: FootprintTheme.Accent.secondary
             )
-            .ignoresSafeArea(.all)
-        )
+        }
         .onAppear {
             // 如果已有保存的身份标签，恢复选择
-            if !appleSignInManager.personaTag.isEmpty {
-                let savedTag = appleSignInManager.personaTag
+            if !userProfileManager.personaTag.isEmpty {
+                let savedTag = userProfileManager.personaTag
                 if personaOptions.contains(savedTag) {
                     selectedPersonaOption = savedTag
                 } else {
@@ -297,6 +275,6 @@ struct OnboardingIdentityTagView: View {
         print("Next tapped")
     }
     .environmentObject(BrandColorManager.shared)
-    .environmentObject(AppleSignInManager.shared)
+    .environmentObject(UserProfileManager.shared)
 }
 

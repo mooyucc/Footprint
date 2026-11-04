@@ -21,6 +21,7 @@ struct SelectOrCreateTripView: View {
     
     var body: some View {
         NavigationStack {
+            FootprintFormScaffold(accent: Color.footprintRed) {
             Form {
                 if trips.isEmpty {
                     Section {
@@ -112,6 +113,7 @@ struct SelectOrCreateTripView: View {
                 }
                 previousTripsCount = trips.count
             }
+            } // FootprintFormScaffold
         }
     }
     
@@ -119,6 +121,7 @@ struct SelectOrCreateTripView: View {
         guard let trip = selectedTrip else { return }
         destination.trip = trip
         try? modelContext.save()
+        DestinationChangeNotifier.postUpdated()
         dismiss()
     }
 }

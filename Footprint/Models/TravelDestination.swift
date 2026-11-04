@@ -19,13 +19,13 @@ final class TravelDestination {
     var longitude: Double = 0.0
     var visitDate: Date = Date()
     var notes: String = ""
-    var photoData: Data?
-    var photoThumbnailData: Data?
-    // 新增：支持多张照片
-    var photoDatas: [Data] = []
-    var photoThumbnailDatas: [Data] = []
+    @Attribute(.externalStorage) var photoData: Data?
+    @Attribute(.externalStorage) var photoThumbnailData: Data?
+    // 多图：外置，避免全表 @Query 把二进制一并装进主库行
+    @Attribute(.externalStorage) var photoDatas: [Data] = []
+    @Attribute(.externalStorage) var photoThumbnailDatas: [Data] = []
     // 新增：支持视频（限制1段，10秒以内）
-    var videoData: Data?
+    @Attribute(.externalStorage) var videoData: Data?
     var category: String = "international" // domestic or international
     var type: String = "" // 地点类型：自然奇观、城市风貌、历史人文、美食盛宴、休闲娱乐、户外冒险、文艺打卡
     var isFavorite: Bool = false

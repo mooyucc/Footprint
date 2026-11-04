@@ -148,7 +148,7 @@ struct BetaReminderView: View {
                                     .foregroundStyle(.secondary)
                                 
                                 Text("\(daysRemaining)")
-                                    .font(.system(size: 48, weight: .bold, design: .rounded))
+                                    .font(.system(size: 48, weight: .bold))
                                     .foregroundStyle(
                                         LinearGradient(
                                             colors: [
@@ -216,17 +216,16 @@ struct BetaReminderView: View {
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(12)
-                            .background(Color(.secondarySystemBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .background(
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(Color.primary.opacity(0.06))
+                            )
                             .opacity(showContent ? 1 : 0)
                             .offset(y: showContent ? 0 : 10)
                         }
                         .padding(24)
                     }
-                    .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-                    .shadow(color: .black.opacity(0.1), radius: 20, x: 0, y: 8)
-                    .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+                    .footprintGlassCard(cornerRadius: FootprintTheme.Radius.card, glow: .blue)
                     .padding(.horizontal, 24)
                     
                     Spacer()
@@ -265,13 +264,8 @@ struct BetaReminderView: View {
                                 .fontWeight(.medium)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
-                                .background(Color(.secondarySystemBackground))
+                                .footprintGlassCard(cornerRadius: 16)
                                 .foregroundStyle(.primary)
-                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                        .strokeBorder(Color.primary.opacity(0.1), lineWidth: 1)
-                                )
                         }
                         .buttonStyle(.plain)
                     }

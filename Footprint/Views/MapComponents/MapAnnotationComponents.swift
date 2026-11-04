@@ -9,6 +9,7 @@
 import SwiftUI
 import MapKit
 import SwiftData
+import UIKit
 
 // MARK: - 聚合标注视图
 /// 地图上的聚合标注视图，支持单个地点和聚合显示
@@ -24,7 +25,6 @@ struct ClusterAnnotationView: View, Equatable {
     static func == (lhs: ClusterAnnotationView, rhs: ClusterAnnotationView) -> Bool {
         lhs.cluster.id == rhs.cluster.id &&
         abs(lhs.zoomLevel - rhs.zoomLevel) < 0.5 &&
-        lhs.accentColorSignature == rhs.accentColorSignature &&
         lhs.weatherSummary == rhs.weatherSummary &&
         lhs.mapMode == rhs.mapMode
     }
@@ -76,10 +76,6 @@ struct ClusterAnnotationView: View, Equatable {
         cluster.destinations.contains { $0.trip != nil }
     }
     
-    private var accentColorSignature: String {
-        UIColor(accentColor).description
-    }
-    
     var body: some View {
         // 发现地图模式下的显示逻辑
         if mapMode == .discover {
@@ -89,7 +85,7 @@ struct ClusterAnnotationView: View, Equatable {
                 if let destination = cluster.destinations.first {
                     MapDestinationCalloutAnnotationView(
                         destination: destination,
-                        appleSignInManager: AppleSignInManager.shared
+                        userProfileManager: UserProfileManager.shared
                     )
                 }
                 
@@ -98,7 +94,7 @@ struct ClusterAnnotationView: View, Equatable {
                 if let destination = cluster.destinations.first {
                     SimplifiedAvatarAnnotationView(
                         destination: destination,
-                        appleSignInManager: AppleSignInManager.shared,
+                        userProfileManager: UserProfileManager.shared,
                         accentColor: accentColor
                     )
                 }
@@ -107,7 +103,7 @@ struct ClusterAnnotationView: View, Equatable {
                 // 聚合卡片：显示层叠头像和随机笔记
                 ClusterCalloutAnnotationView(
                     destinations: cluster.destinations,
-                    appleSignInManager: AppleSignInManager.shared
+                    userProfileManager: UserProfileManager.shared
                 )
                 
             case .hidden:
@@ -145,34 +141,13 @@ struct ClusterAnnotationView: View, Equatable {
                         // 照片显示规则：仅当尺寸较大（>20）且有照片时展示图片；
                         // 尺寸为20时，与无照片一致使用液态玻璃渐变
                         if markerSize > 20 {
-                            if let photoData = destination.photoData,
-                               let uiImage = UIImage(data: photoData) {
-                                // 有照片：使用用户照片作为标记
-                                Image(uiImage: uiImage)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: markerSize, height: markerSize)
-                                    .clipShape(Circle())
-                                    .overlay(
-                                        Circle()
-                                            .stroke(.white, lineWidth: strokeWidth)
-                                    )
-                                    .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
-                            } else {
-                                // 无照片：使用内置形象图 ImageMooyu 作为标记
-                                Image("ImageMooyu")
-                                    .resizable()
-                                    .interpolation(.high)  // 高质量插值，确保边缘光滑
-                                    .antialiased(true)     // 启用抗锯齿
-                                    .scaledToFill()
-                                    .frame(width: markerSize, height: markerSize)
-                                    .clipShape(Circle())
-                                    .overlay(
-                                        Circle()
-                                            .stroke(.white, lineWidth: strokeWidth)
-                                    )
-                                    .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
-                            }
+                            MapDestinationPhotoMarker(
+                                destinationID: destination.id,
+                                thumbnailData: destination.photoThumbnailData,
+                                fallbackData: destination.photoData,
+                                markerSize: markerSize,
+                                strokeWidth: strokeWidth
+                            )
                         } else {
                             // 液态玻璃标注
                             LiquidGlassMarkerView(
@@ -201,7 +176,7 @@ struct ClusterAnnotationView: View, Equatable {
                             )
                             // 聚合数量文本
                             Text("\(cluster.destinations.count)")
-                                .font(.system(size: markerSize * 0.45, weight: .bold, design: .rounded))
+                                .font(.system(size: markerSize * 0.45, weight: .bold))
                                 .foregroundColor(.white)
                                 .shadow(color: .black.opacity(0.3), radius: 1, x: 0, y: 1)
                         }
@@ -213,6 +188,52 @@ struct ClusterAnnotationView: View, Equatable {
 
     private var shouldDisplayWeatherBadge: Bool {
         markerSize >= 40 && cluster.destinations.count == 1 && weatherSummary != nil
+    }
+}
+
+/// 地图圆点照片：后台解码缩略图并缓存，避免在 body 里解原图
+private struct MapDestinationPhotoMarker: View {
+    let destinationID: UUID
+    let thumbnailData: Data?
+    let fallbackData: Data?
+    let markerSize: CGFloat
+    let strokeWidth: CGFloat
+    
+    @State private var image: UIImage?
+    
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+                    .interpolation(.medium)
+                    .scaledToFill()
+            } else {
+                Image("ImageMooyu")
+                    .resizable()
+                    .interpolation(.medium)
+                    .antialiased(true)
+                    .scaledToFill()
+            }
+        }
+        .frame(width: markerSize, height: markerSize)
+        .clipShape(Circle())
+        .overlay(
+            Circle()
+                .stroke(.white, lineWidth: strokeWidth)
+        )
+        .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 2)
+        .task(id: destinationID) {
+            if let cached = DestinationThumbnailCache.shared.cachedImage(for: destinationID) {
+                image = cached
+                return
+            }
+            image = await DestinationThumbnailCache.shared.image(
+                for: destinationID,
+                thumbnailData: thumbnailData,
+                fallbackData: fallbackData
+            )
+        }
     }
 }
 
@@ -282,7 +303,7 @@ struct MemoryBubbleView: View {
             
             // 地点名称
             Text(destination.name)
-                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .font(.system(size: 12, weight: .bold))
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)

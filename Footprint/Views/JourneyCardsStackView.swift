@@ -39,41 +39,58 @@ struct JourneyCardsStackView: View {
     @State private var wheelDragSessionActive = false
     /// 上一次已触发刻度的「最近邻」索引，用于跨格时只震一次
     @State private var wheelLastNearestIndex: Int?
+    /// 聚焦卡片后延迟预热缺段路线
+    @State private var routeWarmTask: Task<Void, Never>?
+    /// 景深双缓冲：底图始终垫住，顶图淡入后再 promote，避免露亮 Atmosphere
+    @State private var depthBaseImage: UIImage?
+    @State private var depthBaseTripId: UUID?
+    @State private var depthBaseOpacity: Double = 1
+    @State private var depthTopImage: UIImage?
+    @State private var depthTopTripId: UUID?
+    @State private var depthTopOpacity: Double = 0
+    /// 正在解码的行程 id（避免拖拽时反复 cancel/restart）
+    @State private var depthCoverLoadingTripId: UUID?
+    @State private var depthCoverLoadTask: Task<Void, Never>?
     
     private static let stackLimit = 24
+    /// 只绘制焦点附近的卡片（上下各约 2～3 张），避免顶层叠卡过远过稀
+    private static let visibleCardWindow: CGFloat = 2.5
     /// 旅程卡片固定高度（内容区 + padding(20)）
     private static let cardBaseHeight: CGFloat = 220
     /// 相邻卡片中心之间的垂直间距（滚轮节距，影响拨动手感与吸附粒度）
     private static let pitch: CGFloat = 54
+    /// 焦点卡中心相对内容区高度的位置（整体偏下，上半多露景深）
+    private static let focusCenterYRatio: CGFloat = 0.68
+    /// 焦点卡底边距内容区底的最小留白（避开 Tab / Home Indicator）
+    private static let stackBottomClearance: CGFloat = 24
     
     private var displayTrips: [TravelTrip] {
         Array(trips.prefix(Self.stackLimit))
     }
     
-    private let cardGradients: [(Color, Color)] = [
-        (.orange.opacity(0.95), .pink.opacity(0.75)),
-        (.mint, .cyan.opacity(0.85)),
-        (.indigo.opacity(0.9), .purple.opacity(0.75)),
-        (.yellow.opacity(0.9), .orange.opacity(0.8)),
-        (.blue.opacity(0.85), .teal.opacity(0.8)),
-        (.red.opacity(0.85), .orange.opacity(0.75))
+    /// 每张卡的强调色（仅用于底光晕 / 装饰渗色，不再整卡铺渐变）
+    private let cardAccents: [Color] = [
+        .orange, .mint, .indigo, .pink, .blue, .teal
     ]
     
     var body: some View {
         NavigationStack {
-            Group {
-                if displayTrips.isEmpty {
-                    ContentUnavailableView(
-                        "no_trips_available",
-                        systemImage: "square.stack.3d.up.slash",
-                        description: Text("journey_cards_empty_hint".localized)
-                    )
-                } else {
-                    journeyStack
+            ZStack {
+                journeyDepthBackground
+                Group {
+                    if displayTrips.isEmpty {
+                        ContentUnavailableView(
+                            "no_trips_available".localized,
+                            systemImage: "square.stack.3d.up.slash",
+                            description: Text("journey_cards_empty_hint".localized)
+                        )
+                    } else {
+                        journeyStack
+                    }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .appPageBackgroundGradient(for: colorScheme)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .navigationTitle("journey_cards_tab".localized)
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -138,13 +155,25 @@ struct JourneyCardsStackView: View {
             }
             .onAppear {
                 clampFocusedIndex()
-                scheduleRoutePrewarm()
+                scheduleRouteWarm(forFocusedIndex: focusedIndex, delay: 0.15)
+                scheduleDepthCoverLoad(forEffectiveFocus: effectiveFocus)
             }
             .onChange(of: trips.count) { _, _ in
                 clampFocusedIndex()
+                scheduleDepthCoverLoad(forEffectiveFocus: effectiveFocus)
             }
-            .onChange(of: focusedIndex) { _, _ in
-                scheduleRoutePrewarm()
+            .onChange(of: focusedIndex) { _, newIndex in
+                scheduleRouteWarm(forFocusedIndex: newIndex)
+                scheduleDepthCoverLoad(forEffectiveFocus: effectiveFocus)
+            }
+            .onChange(of: dragOffset) { _, _ in
+                scheduleDepthCoverLoad(forEffectiveFocus: effectiveFocus)
+            }
+            .onDisappear {
+                routeWarmTask?.cancel()
+                routeWarmTask = nil
+                depthCoverLoadTask?.cancel()
+                depthCoverLoadTask = nil
             }
             .navigationDestination(item: $detailTripId) { tripId in
                 if let trip = trips.first(where: { $0.id == tripId }) {
@@ -162,23 +191,171 @@ struct JourneyCardsStackView: View {
         }
     }
     
+    /// 封面氛围背景：双缓冲 crossfade；有封面则单层轻视差，否则回退 Atmosphere
+    @ViewBuilder
+    private var journeyDepthBackground: some View {
+        ZStack {
+            FootprintAtmosphereBackground(
+                accent: Color.footprintRed,
+                secondaryAccent: FootprintTheme.Accent.secondary
+            )
+            // 常驻暗垫：即使短暂露底也不会「高亮闪」
+            Color.black.opacity(colorScheme == .dark ? 0.12 : 0.06)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+            
+            if let depthBaseImage {
+                JourneyDepthScrollBackground(
+                    image: depthBaseImage,
+                    scrollOffset: dragOffset
+                )
+                .opacity(depthBaseOpacity)
+            }
+            if let depthTopImage {
+                JourneyDepthScrollBackground(
+                    image: depthTopImage,
+                    scrollOffset: dragOffset
+                )
+                .opacity(depthTopOpacity)
+            }
+        }
+    }
+    
     private var journeyStack: some View {
         GeometryReader { geo in
             let cardWidth = min(geo.size.width - 40, 400)
+            // 默认 ZStack 居中；下移使焦点卡落在下半带，上半多露景深背景
+            let targetCenterY = geo.size.height * Self.focusCenterYRatio
+            let maxCenterY = geo.size.height - Self.cardBaseHeight * 0.5 - Self.stackBottomClearance
+            let centerY = min(max(targetCenterY, Self.cardBaseHeight * 0.5), maxCenterY)
+            let stackOffsetY = centerY - geo.size.height * 0.5
             ZStack {
                 ForEach(Array(displayTrips.enumerated()), id: \.element.id) { index, trip in
-                    journeyCard(
-                        for: trip,
-                        index: index,
-                        cardWidth: cardWidth,
-                        effectiveFocus: effectiveFocus
-                    )
+                    if abs(CGFloat(index) - effectiveFocus) <= Self.visibleCardWindow {
+                        journeyCard(
+                            for: trip,
+                            index: index,
+                            cardWidth: cardWidth,
+                            effectiveFocus: effectiveFocus
+                        )
+                    }
                 }
             }
+            .offset(y: stackOffsetY)
             .frame(width: geo.size.width, height: geo.size.height)
             .contentShape(Rectangle())
             // 滚轮必须优先于子视图「点按」：`Button` 会抢走手势，在卡片上拖动会被当成按钮；`highPriorityGesture` + 卡片 `onTapGesture` 可区分拖动与轻点
             .highPriorityGesture(wheelDragGesture)
+        }
+    }
+    
+    /// 按最近邻焦点加载封面；无封面则淡出，露出 Atmosphere底
+    private func scheduleDepthCoverLoad(forEffectiveFocus focus: CGFloat) {
+        let count = displayTrips.count
+        guard count > 0 else {
+            depthCoverLoadTask?.cancel()
+            depthCoverLoadingTripId = nil
+            clearDepthCovers(animated: false)
+            return
+        }
+        let nearest = Int(round(min(max(focus, 0), CGFloat(count - 1))))
+        guard displayTrips.indices.contains(nearest) else { return }
+        let trip = displayTrips[nearest]
+        let tripId = trip.id
+        // 已稳定显示该封面，或正在淡入该封面
+        if tripId == depthBaseTripId, depthBaseImage != nil, depthTopImage == nil { return }
+        if tripId == depthTopTripId, depthTopImage != nil { return }
+        if tripId == depthCoverLoadingTripId { return }
+        
+        if trip.coverPhotoData == nil {
+            depthCoverLoadTask?.cancel()
+            depthCoverLoadingTripId = nil
+            clearDepthCovers(animated: true)
+            return
+        }
+        
+        depthCoverLoadTask?.cancel()
+        depthCoverLoadingTripId = tripId
+        let coverData = trip.coverPhotoData
+        depthCoverLoadTask = Task {
+            let image = await DestinationThumbnailCache.shared.imageForJourneyDepthCover(
+                for: tripId,
+                coverData: coverData
+            )
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard depthCoverLoadingTripId == tripId else { return }
+                depthCoverLoadingTripId = nil
+                guard let image else {
+                    clearDepthCovers(animated: true)
+                    return
+                }
+                applyDepthCover(image, tripId: tripId)
+            }
+        }
+    }
+    
+    /// 双缓冲：有底图时顶层淡入再 promote；无底图时底图淡入
+    private func applyDepthCover(_ image: UIImage, tripId: UUID) {
+        if depthBaseTripId == tripId, depthBaseImage != nil, depthTopImage == nil { return }
+        
+        // 打断进行中的淡入：先把顶图落到底，再开新一轮
+        if let top = depthTopImage, let topId = depthTopTripId, depthTopOpacity > 0.05 {
+            depthBaseImage = top
+            depthBaseTripId = topId
+            depthBaseOpacity = 1
+            depthTopImage = nil
+            depthTopOpacity = 0
+        }
+        
+        if depthBaseImage == nil {
+            depthBaseImage = image
+            depthBaseTripId = tripId
+            depthBaseOpacity = 0
+            withAnimation(.easeInOut(duration: 0.32)) {
+                depthBaseOpacity = 1
+            }
+            return
+        }
+        
+        depthTopImage = image
+        depthTopTripId = tripId
+        depthTopOpacity = 0
+        withAnimation(.easeInOut(duration: 0.38)) {
+            depthTopOpacity = 1
+        } completion: {
+            guard depthTopTripId == tripId else { return }
+            depthBaseImage = image
+            depthBaseTripId = tripId
+            depthBaseOpacity = 1
+            depthTopImage = nil
+            depthTopOpacity = 0
+        }
+    }
+    
+    private func clearDepthCovers(animated: Bool) {
+        guard depthBaseImage != nil || depthTopImage != nil else { return }
+        let clear = {
+            depthBaseOpacity = 0
+            depthTopOpacity = 0
+        }
+        let finish = {
+            depthBaseImage = nil
+            depthBaseTripId = nil
+            depthBaseOpacity = 1
+            depthTopImage = nil
+            depthTopTripId = nil
+            depthTopOpacity = 0
+        }
+        if animated {
+            withAnimation(.easeInOut(duration: 0.28)) {
+                clear()
+            } completion: {
+                finish()
+            }
+        } else {
+            clear()
+            finish()
         }
     }
     
@@ -233,7 +410,8 @@ struct JourneyCardsStackView: View {
         let ef = CGFloat(focusedIndex) - dragOffset / Self.pitch
         let clamped = min(max(ef, 0), CGFloat(count - 1))
         let newIndex = Int(round(clamped))
-        withAnimation(.spring(response: 0.48, dampingFraction: 0.84)) {
+        // 单一 spring：勿再叠 `.animation(..., value: focusedIndex)`，避免双重回弹
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.92)) {
             focusedIndex = newIndex
             dragOffset = 0
         }
@@ -252,7 +430,7 @@ struct JourneyCardsStackView: View {
         JourneyTripCardContent(
             trip: trip,
             cardNumber: index + 1,
-            gradient: cardGradients[index % cardGradients.count],
+            accent: cardAccents[index % cardAccents.count],
             isFocused: isFocused,
             brandAccent: brandColorManager.currentBrandColor,
             onMapTap: {
@@ -262,30 +440,29 @@ struct JourneyCardsStackView: View {
         .frame(width: cardWidth, height: Self.cardBaseHeight)
         .scaleEffect(scale)
         .opacity(cardOpacity(distance: distance))
-        .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: FootprintTheme.Radius.card, style: .continuous))
         .onTapGesture {
             handleCardTap(trip: trip, index: index, isFocused: isFocused)
         }
         .offset(y: CGFloat(index - focusedIndex) * Self.pitch + dragOffset)
-        .animation(.spring(response: 0.42, dampingFraction: 0.82), value: focusedIndex)
-        .animation(.interactiveSpring(response: 0.28, dampingFraction: 0.86), value: dragOffset)
         .zIndex(z)
-        .shadow(
-            color: .black.opacity(isFocused ? 0.22 : 0.08),
-            radius: isFocused ? 18 : 8,
-            x: 0,
-            y: isFocused ? 10 : 4
-        )
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel(for: trip, focused: isFocused, cardNumber: index + 1))
         .accessibilityAddTraits(isFocused ? [.isButton, .isSelected] : [.isButton])
     }
     
+    /// 按距焦点距离连续缩放；近焦点时平滑略放大，避免 `isFocused` 硬切 1.05 造成「跳出」
     private func cardScale(distance: CGFloat) -> CGFloat {
         let t = distance
         let linear = 1.0 - 0.052 * t
         let curved = linear * (1.0 - 0.08 * min(t, 4))
-        return max(0.78, curved)
+        // 焦点附近 smoothstep：distance 0→1 时 boost 从 1.05→1.0
+        let focusBoost: CGFloat = {
+            let edge = min(max(t, 0), 1)
+            let s = edge * edge * (3 - 2 * edge)
+            return 1.05 - 0.05 * s
+        }()
+        return max(0.78, curved * focusBoost)
     }
     
     private func cardOpacity(distance: CGFloat) -> CGFloat {
@@ -304,7 +481,7 @@ struct JourneyCardsStackView: View {
     private func selectCard(at index: Int) {
         guard index != focusedIndex else { return }
         JourneyWheelHaptics.playSelect()
-        withAnimation(.spring(response: 0.52, dampingFraction: 0.78)) {
+        withAnimation(.spring(response: 0.38, dampingFraction: 0.90)) {
             focusedIndex = index
             dragOffset = 0
         }
@@ -315,10 +492,30 @@ struct JourneyCardsStackView: View {
         focusedIndex = min(max(0, focusedIndex), displayTrips.count - 1)
     }
     
-    private func scheduleRoutePrewarm() {
-        TripRoutePrewarmer.schedulePrewarm(for: displayTrips, focusIndex: focusedIndex)
+    /// 聚焦停留后预热当前卡片及相邻 ±1 张的缺段路线
+    private func scheduleRouteWarm(forFocusedIndex index: Int, delay: TimeInterval = 0.35) {
+        routeWarmTask?.cancel()
+        routeWarmTask = Task {
+            let nanos = UInt64(max(0, delay) * 1_000_000_000)
+            try? await Task.sleep(nanoseconds: nanos)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                warmRoutes(aroundFocusedIndex: index)
+            }
+        }
     }
     
+    private func warmRoutes(aroundFocusedIndex index: Int) {
+        guard displayTrips.indices.contains(index) else { return }
+        TripRoutePrewarmer.warmMissingSegments(for: displayTrips[index], maxConcurrentMisses: 3)
+        if index > 0 {
+            TripRoutePrewarmer.warmMissingSegments(for: displayTrips[index - 1], maxConcurrentMisses: 2)
+        }
+        if index + 1 < displayTrips.count {
+            TripRoutePrewarmer.warmMissingSegments(for: displayTrips[index + 1], maxConcurrentMisses: 2)
+        }
+    }
+
     private func importTripFromURL(_ url: URL) {
         importResult = TripDataImporter.importTrip(from: url, modelContext: modelContext)
         showingImportResult = true
@@ -332,6 +529,57 @@ struct JourneyCardsStackView: View {
             return "\(prefix)\(name), \("journey_cards_focused_a11y".localized)"
         }
         return "\(prefix)\(name)"
+    }
+}
+
+// MARK: - 行程封面氛围背景（单层）
+
+/// 以行程封面为氛围底：轻度模糊 + 暗角；拨动时跟轻微视差。
+private struct JourneyDepthScrollBackground: View {
+    let image: UIImage
+    /// 与卡片堆相同的垂直拖拽位移（点）
+    let scrollOffset: CGFloat
+    
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.colorScheme) private var colorScheme
+    
+    private static let blurRadius: CGFloat = 4
+    private static let parallaxFactor: CGFloat = 0.15
+    private static let coverScale: CGFloat = 1.12
+    
+    var body: some View {
+        GeometryReader { geo in
+            let size = geo.size
+            let drive = reduceMotion ? 0 : scrollOffset * Self.parallaxFactor
+            
+            ZStack {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: size.width * Self.coverScale, height: size.height * Self.coverScale)
+                    .blur(radius: Self.blurRadius)
+                    .brightness(colorScheme == .dark ? 0.06 : 0.02)
+                    .opacity(colorScheme == .dark ? 0.95 : 0.94)
+                    .offset(y: drive)
+                    .frame(width: size.width, height: size.height)
+                    .clipped()
+                
+                LinearGradient(
+                    colors: [
+                        Color.black.opacity(colorScheme == .dark ? 0.22 : 0.12),
+                        Color.black.opacity(colorScheme == .dark ? 0.10 : 0.04),
+                        Color.black.opacity(colorScheme == .dark ? 0.28 : 0.14)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            }
+            .frame(width: size.width, height: size.height)
+            .clipped()
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 
@@ -434,13 +682,9 @@ private struct JourneyTripRouteMapSheet: View {
         NavigationStack {
             MapView(
                 autoShowRouteCards: true,
-                showBottomCheckInButton: false,
-                showJourneyDrawer: false,
                 selectedTripIdBinding: $selectedTripId,
                 selectedDayFilterBinding: $selectedDayFilter,
                 tripsOverride: [trip],
-                hasMoreTrips: false,
-                onLoadMoreTrips: nil,
                 prefilledTripRoutes: prefilledRoutes.isEmpty ? nil : prefilledRoutes
             )
             .environment(\.mapViewInNavigationStack, true)
@@ -481,6 +725,7 @@ private struct JourneyTripRouteMapSheet: View {
         }
         .onAppear {
             selectedTripId = trip.id
+            TripRoutePrewarmer.syncSessionStoreFromCache(for: trip)
         }
     }
 }
@@ -518,12 +763,14 @@ private struct JourneyTripCardContent: View {
     let trip: TravelTrip
     /// 堆叠顺序编号（1…n，与列表位置一致）
     let cardNumber: Int
-    let gradient: (Color, Color)
+    /// 卡面强调色（底光晕 + 右上渗色），不铺满整卡
+    let accent: Color
     let isFocused: Bool
     let brandAccent: Color
     let onMapTap: () -> Void
     
     private static let routeMapSymbol = "point.topright.arrow.triangle.backward.to.point.bottomleft.scurvepath"
+    private static let cardRadius = FootprintTheme.Radius.card
     
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var languageManager: LanguageManager
@@ -537,7 +784,7 @@ private struct JourneyTripCardContent: View {
         return formatter.string(from: trip.startDate, to: trip.endDate)
     }
     
-    /// 与 `RouteCard` 相同：优先 MapView 同步的 `precomputedRoutes`，否则 `RouteManager` 缓存/直线
+    /// 优先 MapView 同步的 `precomputedRoutes`，否则 `RouteManager` 缓存/直线
     private var totalMileageDisplay: String {
         let dests = trip.destinations ?? []
         let pre = tripRoutePrecomputationStore.routesByTripId[trip.id]
@@ -546,49 +793,40 @@ private struct JourneyTripCardContent: View {
         return RouteManager.formatDistanceForRouteCard(m, languageManager: languageManager)
     }
     
-    /// 仅最前卡片 `isFocused`：略提高渐变两端 alpha，主背景比堆叠中其它张更「实」
-    private func mainGradientStop(_ color: Color) -> Color {
-        guard isFocused else { return color }
-        let ui = UIColor(color)
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        if ui.getRed(&r, green: &g, blue: &b, alpha: &a) {
-            return Color(red: r, green: g, blue: b, opacity: min(1.0, a + 0.12))
-        }
-        var h: CGFloat = 0, s: CGFloat = 0, br: CGFloat = 0, al: CGFloat = 0
-        if ui.getHue(&h, saturation: &s, brightness: &br, alpha: &al) {
-            return Color(hue: h, saturation: s, brightness: br, opacity: min(1.0, al + 0.12))
-        }
-        return color
+    private var secondaryLabel: Color {
+        isFocused
+            ? Color.white.opacity(0.62)
+            : FootprintChrome.secondaryLabel(colorScheme)
+    }
+    
+    private var primaryLabel: Color {
+        isFocused ? Color.white : Color.primary
     }
     
     var body: some View {
         ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [mainGradientStop(gradient.0), mainGradientStop(gradient.1)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+            if !isFocused {
+                // 非焦点：右上轻渗色，保留堆叠辨识度
+                Ellipse()
+                    .fill(accent.opacity(colorScheme == .dark ? 0.22 : 0.18))
+                    .frame(width: 160, height: 110)
+                    .blur(radius: 28)
+                    .offset(x: 180, y: -36)
+                    .allowsHitTesting(false)
+                
+                Ellipse()
+                    .fill(brandAccent.opacity(colorScheme == .dark ? 0.14 : 0.10))
+                    .frame(width: 120, height: 90)
+                    .blur(radius: 24)
+                    .offset(x: 210, y: 90)
+                    .allowsHitTesting(false)
+            }
             
-            // 装饰圆（参考信用卡式层次）
-            Circle()
-                .fill(Color.white.opacity(colorScheme == .dark ? 0.12 : 0.28))
-                .frame(width: 120, height: 120)
-                .offset(x: 200, y: -40)
-                .blur(radius: 0.5)
-            Circle()
-                .fill(brandAccent.opacity(0.35))
-                .frame(width: 88, height: 88)
-                .offset(x: 220, y: 100)
-            
-            // padding(20) 四边一致；仅标题与日期行之间一个 Spacer，把日期区压在卡片下半部
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text("\(cardNumber)")
-                        .font(.system(size: 32, weight: .thin, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.95))
+                        .font(.system(size: 32, weight: isFocused ? .light : .thin))
+                        .foregroundStyle(accent.opacity(isFocused ? 0.95 : 0.75))
                         .frame(minWidth: 36, alignment: .leading)
                         .accessibilityLabel(Text(verbatim: "\(cardNumber)"))
                     Spacer()
@@ -597,10 +835,15 @@ private struct JourneyTripCardContent: View {
                             onMapTap()
                         } label: {
                             Image(systemName: Self.routeMapSymbol)
-                                .font(.system(size: 20, weight: .semibold))
-                                .foregroundStyle(.white.opacity(0.95))
-                                .frame(width: 44, height: 44)
-                                .contentShape(Rectangle())
+                                .font(.system(size: 17, weight: .semibold))
+                                .foregroundStyle(Color.white.opacity(0.92))
+                                .frame(width: 40, height: 40)
+                                .background(Circle().fill(Color.white.opacity(0.10)))
+                                .overlay(
+                                    Circle()
+                                        .strokeBorder(accent.opacity(0.85), lineWidth: 1.5)
+                                )
+                                .contentShape(Circle())
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("map".localized)
@@ -609,7 +852,7 @@ private struct JourneyTripCardContent: View {
                 
                 Text(trip.name.isEmpty ? "—" : trip.name)
                     .font(.title2.weight(.bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(primaryLabel)
                     .lineLimit(2)
                     .minimumScaleFactor(0.75)
                 
@@ -619,38 +862,67 @@ private struct JourneyTripCardContent: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(dateRangeText)
                             .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.white.opacity(0.92))
+                            .foregroundStyle(secondaryLabel)
                         Text("journey_cards_destinations_count".localized(with: trip.destinationCount))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.85))
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(secondaryLabel)
                         Text("\("journey_cards_total_mileage".localized) \(totalMileageDisplay)")
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(.white.opacity(0.85))
+                            .foregroundStyle(secondaryLabel)
                     }
                     Spacer()
-                    // 天数数字：与勋章页一致的大号样式；单位「天」保持原先 caption 体量
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Text("\(trip.durationDays)")
-                            .font(.system(size: 72, weight: .black, design: .default))
+                            .font(.system(size: 72, weight: .black))
                             .tracking(-1)
-                            .foregroundStyle(.white)
+                            .foregroundStyle(primaryLabel)
                             .monospacedDigit()
                             .lineLimit(1)
                             .minimumScaleFactor(0.45)
                         Text("trip_share_days".localized)
                             .font(.caption.weight(.bold))
-                            .foregroundStyle(.white.opacity(0.9))
+                            .foregroundStyle(secondaryLabel)
                     }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .padding(20)
         }
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .strokeBorder(Color.white.opacity(isFocused ? 0.45 : 0.2), lineWidth: isFocused ? 1.5 : 1)
+        .background {
+            if isFocused {
+                RoundedRectangle(cornerRadius: Self.cardRadius, style: .continuous)
+                    .fill(Color(white: 0.10))
+            }
+        }
+        .modifier(JourneyCardChromeModifier(
+            isFocused: isFocused,
+            cornerRadius: Self.cardRadius,
+            accent: accent
+        ))
+        .shadow(
+            color: isFocused ? Color.black.opacity(0.35) : .clear,
+            radius: isFocused ? 18 : 0,
+            x: 0,
+            y: isFocused ? 10 : 0
         )
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+    }
+}
+
+/// 焦点：深色实底已自绘；非焦点：沿用玻璃卡 + accent 底光晕
+private struct JourneyCardChromeModifier: ViewModifier {
+    let isFocused: Bool
+    let cornerRadius: CGFloat
+    let accent: Color
+    
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if isFocused {
+            content
+                .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+        } else {
+            content
+                .footprintGlassCard(cornerRadius: cornerRadius, glow: accent.opacity(0.55))
+        }
     }
 }
 

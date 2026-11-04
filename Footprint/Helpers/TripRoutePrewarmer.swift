@@ -2,7 +2,7 @@
 //  TripRoutePrewarmer.swift
 //  Footprint
 //
-//  旅程卡片页后台预热路线缓存，供线路 Sheet 秒开。
+//  打开旅程地图 Sheet 时从 RouteManager 磁盘/内存缓存预填；实际 MKDirections 仅由 MapView 在缺段时增量计算。
 //
 
 import Foundation
@@ -10,61 +10,85 @@ import MapKit
 
 @MainActor
 enum TripRoutePrewarmer {
-    private static var activeTask: Task<Void, Never>?
+    private static var warmTasks: [UUID: Task<Void, Never>] = [:]
     
-    /// 对焦点卡片及相邻 1～2 张卡片增量预热（single-flight，避免 MKDirections 限流）
-    static func schedulePrewarm(for trips: [TravelTrip], focusIndex: Int) {
-        activeTask?.cancel()
-        guard !trips.isEmpty else { return }
+    /// 将已持久化的段缓存同步到本会话 `TripRoutePrecomputationStore`（无网络）
+    static func syncSessionStoreFromCache(for trip: TravelTrip) {
+        guard let routes = cachedRoutesIfComplete(for: trip) else { return }
+        TripRoutePrecomputationStore.shared.storeRoutes(for: trip.id, routes: routes)
+    }
+    
+    /// 卡片聚焦时后台预热缺段（限并发；已全缓存则跳过）
+    static func warmMissingSegments(for trip: TravelTrip, maxConcurrentMisses: Int = 3) {
+        guard let destinations = sortedDestinations(for: trip), destinations.count >= 2 else { return }
+        guard !isFullyCached(for: trip) else { return }
         
-        let indices = Set([focusIndex, focusIndex - 1, focusIndex + 1, focusIndex + 2])
-            .filter { $0 >= 0 && $0 < trips.count }
-            .sorted()
-        
-        activeTask = Task {
-            for index in indices {
-                guard !Task.isCancelled else { return }
-                await prewarm(trips[index])
+        warmTasks[trip.id]?.cancel()
+        warmTasks[trip.id] = Task {
+            let coordinates = destinations.map { $0.coordinate }
+            let routes = await RouteManager.shared.incrementalRoutes(
+                for: coordinates,
+                maxConcurrentMisses: maxConcurrentMisses
+            )
+            guard !Task.isCancelled else { return }
+            if routes.allSatisfy({ $0 != nil }) {
+                TripRoutePrecomputationStore.shared.storeRoutes(for: trip.id, routes: routes)
+                print("🔥 旅程 \(trip.id.uuidString.prefix(8)) 路线预热完成，共 \(routes.count) 段")
             }
+            warmTasks.removeValue(forKey: trip.id)
         }
     }
     
-    /// 打开线路 Sheet 前同步预填（RouteManager 段缓存 + TripRoutePrecomputationStore）
+    static func cancelWarm(for tripId: UUID) {
+        warmTasks[tripId]?.cancel()
+        warmTasks.removeValue(forKey: tripId)
+    }
+
+    /// 打开线路 Sheet 前同步预填（会话 store → RouteManager 段缓存）；不全则为部分段或 nil
     static func prefillRoutes(for trip: TravelTrip) -> [MKRoute?]? {
         guard let destinations = sortedDestinations(for: trip), destinations.count >= 2 else { return nil }
+        let segmentCount = destinations.count - 1
         let coordinates = destinations.map { $0.coordinate }
-        var routes = RouteManager.shared.cachedRoutes(for: coordinates)
-        
-        if !routes.allSatisfy({ $0 != nil }),
-           let precomputed = TripRoutePrecomputationStore.shared.precomputedRoutes(
-               for: trip.id,
-               segmentCount: coordinates.count - 1
-           ) {
-            for index in routes.indices where routes[index] == nil {
-                routes[index] = precomputed[index]
-            }
+
+        if let precomputed = TripRoutePrecomputationStore.shared.precomputedRoutes(
+            for: trip.id,
+            segmentCount: segmentCount
+        ) {
+            return precomputed.map { $0 as MKRoute? }
         }
-        
+
+        let routes = RouteManager.shared.cachedRoutes(for: coordinates)
+        if routes.allSatisfy({ $0 != nil }) {
+            TripRoutePrecomputationStore.shared.storeRoutes(for: trip.id, routes: routes)
+            return routes
+        }
+
         guard routes.contains(where: { $0 != nil }) else { return nil }
         return routes
     }
-    
-    private static func prewarm(_ trip: TravelTrip) async {
-        guard let destinations = sortedDestinations(for: trip), destinations.count >= 2 else { return }
-        let coordinates = destinations.map { $0.coordinate }
-        
-        let cached = RouteManager.shared.cachedRoutes(for: coordinates)
-        if cached.allSatisfy({ $0 != nil }) {
-            TripRoutePrecomputationStore.shared.storeRoutes(for: trip.id, routes: cached)
-            return
-        }
-        
-        let routes = await RouteManager.shared.incrementalRoutes(for: coordinates, maxConcurrentMisses: 2)
-        if routes.allSatisfy({ $0 != nil }) {
-            TripRoutePrecomputationStore.shared.storeRoutes(for: trip.id, routes: routes)
-        }
+
+    /// 整趟路线是否已在缓存中（无需再请求 MKDirections）
+    static func isFullyCached(for trip: TravelTrip) -> Bool {
+        cachedRoutesIfComplete(for: trip) != nil
     }
-    
+
+    private static func cachedRoutesIfComplete(for trip: TravelTrip) -> [MKRoute?]? {
+        guard let destinations = sortedDestinations(for: trip), destinations.count >= 2 else { return nil }
+        let segmentCount = destinations.count - 1
+        let coordinates = destinations.map { $0.coordinate }
+
+        if let precomputed = TripRoutePrecomputationStore.shared.precomputedRoutes(
+            for: trip.id,
+            segmentCount: segmentCount
+        ) {
+            return precomputed.map { $0 as MKRoute? }
+        }
+
+        let routes = RouteManager.shared.cachedRoutes(for: coordinates)
+        guard routes.allSatisfy({ $0 != nil }) else { return nil }
+        return routes
+    }
+
     private static func sortedDestinations(for trip: TravelTrip) -> [TravelDestination]? {
         trip.destinations?.sorted(by: { $0.visitDate < $1.visitDate })
     }

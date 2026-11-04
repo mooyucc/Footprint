@@ -15,7 +15,7 @@ struct OnboardingCoordinatorView: View {
     @EnvironmentObject var appearanceManager: AppearanceManager
     @EnvironmentObject var purchaseManager: PurchaseManager
     @EnvironmentObject var entitlementManager: EntitlementManager
-    @EnvironmentObject var appleSignInManager: AppleSignInManager
+    @EnvironmentObject var userProfileManager: UserProfileManager
     
     @State private var currentStep: OnboardingStep = .welcome
     @Binding var isPresented: Bool
@@ -33,9 +33,11 @@ struct OnboardingCoordinatorView: View {
     
     var body: some View {
         ZStack {
-            // 确保整个引导流程有背景，防止底层内容透出
-            Color(.systemBackground)
-                .ignoresSafeArea()
+            // 氛围底：防止底层内容透出，并与 HealthUI 浅/深一致
+            FootprintAtmosphereBackground(
+                accent: brandColorManager.currentBrandColor,
+                secondaryAccent: FootprintTheme.Accent.secondary
+            )
             
             switch currentStep {
             case .welcome:
@@ -147,6 +149,6 @@ struct OnboardingCoordinatorView: View {
         .environmentObject(AppearanceManager.shared)
         .environmentObject(PurchaseManager.shared)
         .environmentObject(EntitlementManager.shared)
-        .environmentObject(AppleSignInManager.shared)
+        .environmentObject(UserProfileManager.shared)
 }
 

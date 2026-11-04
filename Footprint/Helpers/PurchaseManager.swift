@@ -24,8 +24,9 @@ final class PurchaseManager: ObservableObject {
         // 启动交易监听
         updateListenerTask = listenForTransactions()
 
-        // 预加载产品与权益
         Task {
+            try? await Task.sleep(nanoseconds: 800_000_000)
+            guard !Task.isCancelled else { return }
             await loadProducts()
             await updatePurchasedProducts()
         }
@@ -92,11 +93,10 @@ final class PurchaseManager: ObservableObject {
                 // StoreKit 2 可能会自动恢复/续订而不显示购买弹窗
                 // 这是正常行为，因为系统认为这是续订而不是新购买
                 
-                // 如果是 AI 调用次数商品，增加本地次数（消耗型，不进入 currentEntitlements）
-                if transaction.productID == AICreditProductID.tenCalls {
-                    print("➕ 为 AI 调用次数增加 10 次（商品：\(transaction.productID)）")
+                if let amount = AICreditProductID.creditAmount(for: transaction.productID) {
+                    print("➕ 为 AI 调用次数增加 \(amount) 次（商品：\(transaction.productID)）")
                     await MainActor.run {
-                        AICreditManager.shared.addCredits(10)
+                        AICreditManager.shared.addCredits(amount)
                     }
                 }
                 

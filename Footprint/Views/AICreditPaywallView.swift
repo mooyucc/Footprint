@@ -30,32 +30,12 @@ struct AICreditPaywallView: View {
         usedCallsOverride ?? aiCreditManager.used
     }
     
-    // 目标商品
-    private var aiCreditProduct: Product? {
-        purchaseManager.products.first { $0.id == AICreditProductID.tenCalls }
-    }
-    
-    // 商品展示名称
-    private var productTitle: String {
-        if let override = productTitleOverride {
-            return override
+    // 目标商品：50 次优先展示，其次 10 次
+    private var creditProducts: [Product] {
+        let order = [AICreditProductID.fiftyCalls, AICreditProductID.tenCalls]
+        return order.compactMap { id in
+            purchaseManager.products.first { $0.id == id }
         }
-        if let product = aiCreditProduct {
-            return product.displayName
-        }
-        // StoreKit 信息未加载时的兜底标题
-        return "ai_credits_default_product_title".localized
-    }
-    
-    // 商品价格展示文本
-    private var productPriceText: String {
-        if let override = productPriceTextOverride {
-            return override
-        }
-        if let product = aiCreditProduct {
-            return product.displayPrice
-        }
-        return "¥3.00"
     }
     
     // 使用说明
@@ -63,25 +43,23 @@ struct AICreditPaywallView: View {
         usageDescriptionOverride ?? "ai_credits_usage_desc".localized
     }
     
+    @State private var showPaywall = false
+    @State private var purchasingProductID: String?
+    
     var body: some View {
         NavigationStack {
             ZStack {
-                // 背景
-                LinearGradient(
-                    colors: [
-                        Color(.systemBackground),
-                        Color(.systemGray6)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
+                FootprintAtmosphereBackground(
+                    accent: Color.pink,
+                    secondaryAccent: Color.orange
                 )
-                .ignoresSafeArea()
                 
                 ScrollView {
                     VStack(spacing: 24) {
                         headerSection
                         counterSection
                         productSection
+                        viewProPlansSecondaryLink
                         usageInfoSection
                         restoreSection
                     }
@@ -89,6 +67,7 @@ struct AICreditPaywallView: View {
                     .padding(.vertical, 24)
                 }
             }
+            .toolbarBackground(.hidden, for: .navigationBar)
             .navigationTitle("ai_credits_title".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -103,10 +82,10 @@ struct AICreditPaywallView: View {
                 }
             }
             .task {
-                // 确保产品信息已加载（如果尚未加载或失败）
-                if purchaseManager.products.isEmpty && !purchaseManager.isLoading {
-                    await purchaseManager.loadProducts()
-                }
+                await purchaseManager.loadProducts()
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
             }
         }
     }
@@ -138,43 +117,47 @@ struct AICreditPaywallView: View {
         .frame(maxWidth: .infinity)
     }
     
+    private var viewProPlansSecondaryLink: some View {
+        Button {
+            showPaywall = true
+        } label: {
+            Text("paywall_button_upgrade".localized)
+                .font(.footnote.weight(.medium))
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 44)
+        }
+        .buttonStyle(.plain)
+    }
+    
     private var counterSection: some View {
         VStack(spacing: 16) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("ai_credits_remaining_label".localized)
                         .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.9))
+                        .foregroundStyle(.secondary)
                     Text("\(remainingCalls)")
-                        .font(.system(size: 32, weight: .bold, design: .rounded))
-                        .foregroundColor(.white)
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundStyle(.primary)
+                        .monospacedDigit()
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("ai_credits_used_label".localized)
                         .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.9))
+                        .foregroundStyle(.secondary)
                     Text("\(usedCalls)")
-                        .font(.system(size: 24, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white.opacity(0.95))
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .monospacedDigit()
                 }
             }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 18)
         .frame(maxWidth: .infinity)
-        .background(
-            LinearGradient(
-                colors: [
-                    Color(red: 1.0, green: 0.25, blue: 0.45),
-                    Color(red: 1.0, green: 0.45, blue: 0.3)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .cornerRadius(22)
-        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.35 : 0.18), radius: 14, x: 0, y: 8)
+        .footprintGlassCard(cornerRadius: FootprintTheme.Radius.card, glow: .pink)
     }
     
     private var productSection: some View {
@@ -182,53 +165,97 @@ struct AICreditPaywallView: View {
             Text("ai_credits_buy_section_title".localized)
                 .font(.headline)
                 .foregroundColor(.primary)
-            
-            Button {
-                Task {
-                    guard let product = aiCreditProduct else {
-                        await MainActor.run {
-                            purchaseManager.errorMessage = "ai_credits_product_unavailable".localized
-                        }
-                        return
-                    }
-                    _ = await purchaseManager.purchase(product)
+
+            if purchaseManager.isLoading && creditProducts.isEmpty {
+                ProgressView()
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+            } else if creditProducts.isEmpty {
+                Text("ai_credits_product_unavailable".localized)
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            } else {
+                ForEach(creditProducts, id: \.id) { product in
+                    creditProductRow(for: product)
                 }
-            } label: {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(productTitle)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(.primary)
-                        
-                        Text("ai_credits_product_subtitle".localized(with: productTitle))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Spacer()
-                    
-                    Text(productPriceText)
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(Color(.tertiaryLabel))
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color.accentColor.opacity(0.3), lineWidth: 1)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(Color(.systemBackground))
-                        )
-                )
             }
-            .buttonStyle(.plain)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func creditProductRow(for product: Product) -> some View {
+        let isBestValue = product.id == AICreditProductID.fiftyCalls
+        let isPurchasing = purchasingProductID == product.id
+
+        return Button {
+            guard purchasingProductID == nil else { return }
+            purchasingProductID = product.id
+            Task {
+                _ = await purchaseManager.purchase(product)
+                purchasingProductID = nil
+            }
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text(title(for: product))
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary)
+                        if isBestValue {
+                            Text("ai_credits_best_value".localized)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(Capsule().fill(Color.accentColor))
+                        }
+                    }
+
+                    Text("ai_credits_product_grant".localized(with: creditGrantCount(for: product)))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                if isPurchasing {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                } else {
+                    Text(product.displayPrice)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .footprintGlassCard(cornerRadius: 16, glow: isBestValue ? Color.accentColor : nil)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(
+                        isBestValue ? Color.accentColor.opacity(0.55) : Color.accentColor.opacity(0.25),
+                        lineWidth: isBestValue ? 1.5 : 1
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(purchasingProductID != nil)
+    }
+
+    private func title(for product: Product) -> String {
+        if !product.displayName.isEmpty {
+            return product.displayName
+        }
+        switch product.id {
+        case AICreditProductID.fiftyCalls:
+            return "ai_credits_default_product_title_50".localized
+        default:
+            return "ai_credits_default_product_title".localized
+        }
+    }
+
+    private func creditGrantCount(for product: Product) -> Int {
+        AICreditProductID.creditAmount(for: product.id) ?? 0
     }
     
     private var usageInfoSection: some View {

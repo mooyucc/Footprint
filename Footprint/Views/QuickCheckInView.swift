@@ -66,7 +66,7 @@ struct QuickCheckInView: View {
         let initialCountry = prefill?.country ?? ""
         let initialProvince = prefill?.province ?? ""
         let initialCategory = prefill?.category ?? "domestic"
-        let initialType = prefill?.suggestedPlaceType ?? ""
+        let initialType = ""
         let initialVisitDate = prefill?.visitDate ?? Date()
         let initialLocation = prefill?.location
         
@@ -87,6 +87,7 @@ struct QuickCheckInView: View {
     
     var body: some View {
         NavigationStack {
+            FootprintFormScaffold(accent: Color.footprintRed) {
             Form {
                 Section("basic_info".localized) {
                     TextField("place_name".localized, text: $name)
@@ -207,6 +208,7 @@ struct QuickCheckInView: View {
                     )
                 }
             }
+            } // FootprintFormScaffold
         }
     }
     
@@ -397,8 +399,7 @@ struct QuickCheckInView: View {
             category: category,
             visitDate: visitDate,
             photoDatas: photoDatas,
-            photoThumbnailDatas: photoThumbnailDatas,
-            suggestedPlaceType: type.isEmpty ? nil : type
+            photoThumbnailDatas: photoThumbnailDatas
         )
     }
     
@@ -414,7 +415,7 @@ struct QuickCheckInView: View {
     /// 处理AI按钮点击
     private func handleAITap() {
         guard canUseAI else {
-            // 没有权限时弹出 AI 调用次数购买页
+            // 次数用完时购买调用次数
             showCreditPaywall = true
             return
         }

@@ -16,9 +16,10 @@ struct BetaExpiredView: View {
     
     var body: some View {
         ZStack {
-            Color(.systemBackground)
-                .opacity(colorScheme == .dark ? 0.94 : 0.96)
-                .ignoresSafeArea()
+            FootprintAtmosphereBackground(
+                accent: Color.footprintRed,
+                secondaryAccent: .orange
+            )
             
             VStack(spacing: 20) {
                 VStack(spacing: 12) {

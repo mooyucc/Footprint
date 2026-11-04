@@ -41,7 +41,7 @@ struct BadgeItemView: View {
                 if let image = UIImage(named: imageName) {
                     Image(uiImage: image)
                         .resizable()
-                        .interpolation(.high)  // 高质量插值，确保边缘光滑
+                        .interpolation(.medium)
                         .antialiased(true)     // 启用抗锯齿
                         .aspectRatio(contentMode: .fill)
                 } else {

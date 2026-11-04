@@ -26,53 +26,55 @@ struct CountrySelectionView: View {
     
     var body: some View {
         NavigationStack {
-            List {
-                ForEach(filteredCountries, id: \.rawValue) { country in
-                    Button(action: {
-                        countryManager.setCountry(country)
-                        dismiss()
-                    }) {
-                        HStack {
-                            Text(country.flag)
-                                .font(.title2)
-                            
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(countryManager.getLocalizedCountryName(for: country))
-                                    .font(.body)
-                                    .foregroundColor(.primary)
+            FootprintFormScaffold(accent: Color.footprintRed) {
+                List {
+                    ForEach(filteredCountries, id: \.rawValue) { country in
+                        Button(action: {
+                            countryManager.setCountry(country)
+                            dismiss()
+                        }) {
+                            HStack {
+                                Text(country.flag)
+                                    .font(.title2)
                                 
-                                // 显示另一种语言的名称作为副标题
-                                if languageManager.currentLanguage == .chinese {
-                                    Text(country.englishName)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                } else {
-                                    Text(country.displayName)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(countryManager.getLocalizedCountryName(for: country))
+                                        .font(.body)
+                                        .foregroundStyle(.primary)
+                                    
+                                    // 显示另一种语言的名称作为副标题
+                                    if languageManager.currentLanguage == .chinese {
+                                        Text(country.englishName)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    } else {
+                                        Text(country.displayName)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                
+                                Spacer()
+                                
+                                if country == countryManager.currentCountry {
+                                    Image(systemName: "checkmark")
+                                        .foregroundStyle(Color.footprintRed)
+                                        .font(.body)
                                 }
                             }
-                            
-                            Spacer()
-                            
-                            if country == countryManager.currentCountry {
-                                Image(systemName: "checkmark")
-                                    .foregroundColor(.blue)
-                                    .font(.body)
-                            }
+                            .padding(.vertical, 4)
                         }
-                        .padding(.vertical, 4)
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(PlainButtonStyle())
                 }
-            }
-            .searchable(text: $searchText, prompt: "search_countries".localized)
-            .navigationTitle("country_selection".localized)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("done".localized) {
-                        dismiss()
+                .searchable(text: $searchText, prompt: "search_countries".localized)
+                .navigationTitle("country_selection".localized)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button("done".localized) {
+                            dismiss()
+                        }
                     }
                 }
             }

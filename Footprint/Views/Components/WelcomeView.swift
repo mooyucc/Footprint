@@ -20,9 +20,10 @@ struct WelcomeView: View {
     
     var body: some View {
         ZStack {
-            // 渐变背景：使用App配色标准（浅蓝色到浅粉色）
-            AppColorScheme.pageBackgroundGradient(for: colorScheme)
-                .ignoresSafeArea(.all)
+            FootprintAtmosphereBackground(
+                accent: brandColorManager.currentBrandColor,
+                secondaryAccent: FootprintTheme.Accent.secondary
+            )
             
             VStack(spacing: 40) {
                 Spacer()

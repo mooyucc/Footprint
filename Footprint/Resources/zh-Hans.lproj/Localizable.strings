@@ -1,5 +1,5 @@
 "paywall_title" = "解锁 Pro";
-"paywall_subtitle" = "解锁AI助手、无限记录等Pro功能，让旅行记录更智能、更完整。";
+"paywall_subtitle" = "解锁无限记录、数据管理等 Pro 功能。AI 按次数使用。";
 "paywall_button_upgrade" = "查看订阅方案";
 "paywall_button_restore" = "恢复购买";
 
@@ -10,6 +10,9 @@
 "membership_status_pro_active" = "Pro 已激活";
 "membership_status_all_features" = "已解锁全部功能，随时可恢复购买以同步设备";
 "membership_status_view_restore" = "查看权益 / 恢复购买";
+"membership_section" = "会员与订阅";
+"membership_status_free" = "免费版";
+"membership_status_free_hint" = "升级解锁 Pro 功能";
 
 // Paywall lifetime unlocked
 "paywall_lifetime_unlocked" = "已解锁终身版权益，无需再次购买。";
@@ -18,7 +21,7 @@
 "paywall_expires_on" = "到期时间：";
 "paywall_terms_privacy" = "购买即表示同意《服务条款》和《隐私政策》。自动续订，可在系统订阅中随时取消。";
 "paywall_feature_title" = "Pro 功能";
-"paywall_feature_ai" = "AI 助手：智能笔记、旅程描述、照片分析、旅行目的地推荐";
+"paywall_feature_ai" = "AI 助手（笔记、旅程描述、照片分析、目的地推荐；按次数使用）";
 "paywall_feature_unlimited" = "无限目的地与旅程卡片";
 "paywall_feature_share_layouts" = "完整版旅程分享图片版面";
 "paywall_feature_import_export" = "本地数据导入/导出";
@@ -26,20 +29,42 @@
 "paywall_banner_title" = "升级 Pro 解锁数据管理功能";
 "paywall_emotional_message_part1" = "让「墨鱼足迹」更好玩、更长久！我们需要你的加入，一起创造更多有趣的故事～";
 "paywall_emotional_message_part2" = "快来支持我们吧！ ✨";
+"paywall_select_plan" = "选择方案";
+"paywall_cta_unlock" = "解锁 Pro";
+"paywall_cta_unlock_price" = "以 %@ 解锁 Pro";
+"paywall_cta_yearly" = "以 %@ 解锁 Pro（年付）";
+"paywall_cta_start_trial" = "开始免费试用";
+"paywall_cta_trial_then_yearly" = "试用结束后以 %@ 按年续订，可随时取消";
+"paywall_cta_monthly" = "以 %@ 解锁 Pro（月付）";
+"paywall_cta_lifetime" = "以 %@ 购买终身版";
+"paywall_cta_current" = "当前方案";
+"paywall_lifetime_no_ai" = "AI 使用体验次数或按次购买";
+"paywall_ai_uses_credits" = "AI 使用体验次数或按次购买";
+"paywall_subscription_includes_ai" = "含无限 AI 助手";
+"paywall_lifetime_ai_hint" = "AI 使用体验次数或按次购买。";
+"paywall_yearly_monthly_equivalent" = "相当于每月 %@";
+"paywall_yearly_save" = "比月付节省 %d%%";
+"paywall_trial_days" = "含 %d 天免费试用";
+"paywall_trial_weeks" = "含 %d 周免费试用";
+"paywall_trial_months" = "含 %d 个月免费试用";
+"paywall_trial_years" = "含 %d 年免费试用";
+"paywall_buy_credits_secondary" = "按次购买 AI 调用";
+"membership_status_lifetime_ai_note" = "AI 按次数使用，可购买调用次数。";
+"membership_status_ai_credits_note" = "AI 按次数使用，可购买调用次数。";
 "subscription_monthly" = "按月订阅";
 "subscription_yearly" = "按年订阅";
 "subscription_weekly" = "按周订阅";
 "subscription_daily" = "按日订阅";
 "subscription_default" = "订阅";
 "close" = "关闭";
-"subscription_auto_renew_note" = "自动续订，需在设置 > Apple ID > 订阅中取消。";
+"subscription_auto_renew_note" = "订阅将自动续订，可随时在系统设置中取消。";
 "terms_of_use" = "服务条款";
 "privacy_policy" = "隐私政策";
 "terms_url" = "https://mooyu.cc/moofootprintlicense.html";
 "privacy_url" = "https://mooyu.cc/myfootprintprivacy.html";
 "limit_destination_reached_title" = "已达免费版上限";
-"limit_destination_reached_message" = "免费版最多 50 个目的地，升级 Pro 解锁无限添加。";
-"limit_trip_reached_message" = "免费版最多 5 个旅程卡片，升级 Pro 解锁无限旅程。";
+"limit_destination_reached_message" = "免费版最多 15 个目的地，升级 Pro 解锁无限添加。";
+"limit_trip_reached_message" = "免费版最多 3 个旅程卡片，升级 Pro 解锁无限旅程。";
 "share_layout_locked_message" = "完整版分享版面为 Pro 功能，升级后解锁。";
 "import_export_locked_message" = "导入/导出为 Pro 功能，升级后使用。";
 "import_trip_locked_message" = "旅程导入为 Pro 功能，升级后使用。";
@@ -58,19 +83,23 @@
 "done" = "完成";
 "account" = "账户";
 "not_logged_in" = "未登录";
-"login_sync_description" = "登录后数据自动同步到 iCloud";
+"login_sync_description" = "设置显示名称和头像";
 "user_profile_settings" = "用户属性设置";
 "data_sync" = "数据同步";
 "data_settings" = "数据";
 "icloud_sync" = "iCloud 同步";
+"default_traveler_name" = "旅行者";
+"sync_description_local" = "当前无法使用 iCloud，数据仅保存在本机。请在系统设置中开启 iCloud 以同步多设备。";
+"sync_description_icloud" = "设备已登录 iCloud 时，旅行数据会通过 iCloud 自动同步到你的其他设备。";
+"icloud_sync_on" = "已开启";
 "enabled" = "已启用";
 "not_enabled" = "未启用";
 "in_development" = "开发中";
 "data_storage" = "数据存储";
 "local" = "本地";
 "icloud" = "iCloud";
-"sync_description_logged_in" = "你的旅行数据正在自动同步到 iCloud，可以在所有设备上访问。";
-"sync_description_not_logged_in" = "登录 Apple ID 后，数据将自动同步到 iCloud，并在你的所有设备间保持同步。";
+"sync_description_logged_in" = "设备已登录 iCloud 时，旅行数据会通过 iCloud 自动同步到你的其他设备。";
+"sync_description_not_logged_in" = "当前无法使用 iCloud，数据仅保存在本机。请在系统设置中开启 iCloud 以同步多设备。";
 "about" = "关于";
 "version" = "版本";
 "app_name" = "应用名称";
@@ -166,13 +195,14 @@
 "footprint" = "墨鱼足迹";
 "ok" = "确定";
 "map" = "地图";
-"footprint_map" = "足迹地图";
+"footprint_map" = "足迹";
 "trips" = "旅程";
-"journey_cards_tab" = "旅程卡片";
+"journey_cards_tab" = "旅程";
 "journey_cards_empty_hint" = "在「旅程」中创建行程后，将显示在这里。";
 "journey_cards_focused_a11y" = "已选中";
 "journey_cards_destinations_count" = "%d 个地点";
 "journey_cards_total_mileage" = "总里程";
+"time_capsule_tab" = "回顾";
 "profile" = "我的";
 "create_trip" = "添加旅程";
 "import_trip" = "导入旅程";
@@ -187,13 +217,17 @@
 "record_every_journey" = "点亮生命中每一个足迹";
 "sign_in_apple_id" = "登录 Apple ID";
 "sign_in_with_apple" = "通过Apple登录";
-"enable_icloud_sync" = "开启 iCloud 同步，保护你的足迹回忆";
+"enable_icloud_sync" = "在系统设置中开启 iCloud，保护你的足迹回忆";
 "total_destinations" = "点亮的地方";
 "countries_visited" = "去过的国家";
 "domestic_travel" = "国内足迹";
 "international_travel" = "海外足迹";
 "my_favorites" = "我的最爱";
 "travel_timeline" = "足迹时光";
+"time_capsule_menu" = "MENU";
+"time_capsule_year_list" = "选择年份";
+"time_capsule_previous_year" = "上一年";
+"time_capsule_next_year" = "下一年";
 "destinations_count" = "个目的地";
 "footprint_app" = "墨鱼足迹 - 人生足迹";
 "record_journey_memories" = "点亮人生中的每个足迹，珍藏美好回忆";
@@ -331,7 +365,6 @@
 "map_button_footprints" = "足迹";
 "map_button_search" = "搜索";
 "map_button_style" = "样式";
-"map_zoom_in_for_more" = "地点较多，放大地图查看更多";
 "map_button_menu" = "快捷操作";
 "map_button_import_photo" = "导入照片";
 "map_button_ai" = "AI 助手";
@@ -540,6 +573,7 @@
 "about_app" = "关于";
 "feature_introduction" = "功能介绍";
 "version_update" = "版本更新";
+"rate_this_app" = "为墨鱼足迹评分";
 "software_license_agreement" = "《软件许可及服务协议》";
 "privacy_policy_summary" = "《隐私保护指引摘要》";
 "privacy_policy" = "《隐私保护指引》";
@@ -607,9 +641,23 @@
 
 // Badge View
 "badges" = "徽章";
+"badges_entry_subtitle" = "已解锁的国家与地区";
 "country_badges" = "国家勋章";
 "province_badges" = "省份勋章";
 "badges_progress" = "点亮进度";
+"badges_countries_unit" = "个国家";
+"badges_provinces_unit" = "个省份";
+"badges_entry_countries_only" = "已点亮 %d 个国家";
+"badges_entry_countries_provinces" = "已点亮 %d 个国家 · %d 个省份";
+"badges_domestic_provinces_hint" = "国内已点亮 %d 个省份";
+"badges_global_countries_hint" = "全球已点亮 %d 个国家";
+"badges_no_countries_yet" = "还没有点亮国家";
+"badges_no_provinces_yet" = "还没有点亮省份";
+"badges_overlap_empty" = "暂无";
+"badges_overlap_a11y" = "已点亮 %d 个，点按展开";
+"badges_overlap_expand_hint" = "展开查看名称";
+"badges_overlap_collapse_hint" = "收起重叠排列";
+"badges_overlap_collapse" = "收起";
 "search_badges" = "搜索勋章...";
 "location" = "个地点";
 "locations" = "个地点";
@@ -655,7 +703,7 @@
 "onboarding_complete" = "开始使用";
 "onboarding_paywall_nav_title" = "选择方案";
 "onboarding_paywall_title" = "欢迎使用墨鱼足迹";
-"onboarding_paywall_subtitle" = "免费版即可开始记录旅程；升级 Pro 解锁全部功能。";
+"onboarding_paywall_subtitle" = "免费版即可开始记录旅程；升级 Pro 解锁无限记录与数据管理。";
 "onboarding_free_tier_title" = "免费版包含";
 "onboarding_free_destinations" = "最多 %d 个打卡地点";
 "onboarding_free_trips" = "最多 %d 个旅程";
@@ -666,7 +714,7 @@
 "onboarding_pricing_section_title" = "选择订阅方案";
 "onboarding_recommended_plan" = "推荐";
 "onboarding_continue_free" = "免费开始使用";
-"onboarding_continue_free_hint" = "继续使用免费版，部分功能有限制。可随时在「我的」升级 Pro。";
+"onboarding_continue_free_hint" = "可随时在「我的」升级。";
 
 // AI Assistant
 "ai_assistant_title" = "AI 助手";
@@ -674,6 +722,8 @@
 "ai_assistant_subtitle" = "智能生成笔记、描述和标签，让你的旅行回忆更丰富";
 "ai_function_notes_title" = "智能笔记生成";
 "ai_function_notes_desc" = "根据照片和地点信息，自动生成旅行笔记";
+"ai_picker_has_notes" = "已有笔记";
+"ai_picker_has_description" = "已有描述";
 "ai_function_trip_desc_title" = "旅程描述生成";
 "ai_function_trip_desc_desc" = "基于多个目的地，生成整体旅程描述";
 "ai_function_tags_title" = "生成标签";
@@ -687,6 +737,11 @@
 "ai_saved_recommend_title" = "推荐记录";
 "ai_saved_recommend_empty_title" = "暂无推荐记录";
 "ai_saved_recommend_empty_desc" = "生成旅行推荐后点击「保存推荐」即可在此查看";
+"ai_recommend_hub_subtitle" = "查看已保存的推荐，或让 AI 生成新的目的地建议";
+"ai_recommend_view_saved" = "查看已保存的推荐";
+"ai_recommend_view_saved_desc" = "浏览之前生成并保存的旅行目的地推荐";
+"ai_recommend_generate_new" = "生成新的推荐";
+"ai_recommend_generate_new_desc" = "根据你记录的地点偏好，推荐下一站旅行目的地";
 "ai_function_photo_analysis_title" = "照片智能分析";
 "ai_function_photo_analysis_desc" = "识别照片中的场景、物体和地标";
 "ai_generating_notes" = "正在生成笔记...";
@@ -764,8 +819,8 @@
 "ai_beta_not_available_title" = "试用版暂不支持AI功能";
 "ai_beta_not_available_message" = "AI功能仅在正式版中可用。请前往App Store下载正式版，享受完整的AI助手体验。";
 "ai_download_full_version" = "前往App Store下载正式版";
-"ai_subscription_required_title" = "AI功能需要Pro订阅";
-"ai_subscription_required_message" = "AI助手功能是Pro会员专享功能。升级Pro即可使用智能笔记生成、旅程描述生成、旅行目的地推荐等AI功能。";
+"ai_subscription_required_title" = "AI 次数已用完";
+"ai_subscription_required_message" = "购买调用次数即可继续使用智能笔记、旅程描述、目的地推荐等 AI 功能。";
 "ai_upgrade_to_pro" = "升级到Pro";
 
 // AI 调用次数（按次购买）
@@ -775,6 +830,9 @@
 "ai_credits_used_label" = "已使用";
 "ai_credits_buy_section_title" = "购买 AI 调用次数";
 "ai_credits_default_product_title" = "AI 调用次数（10 次）";
+"ai_credits_default_product_title_50" = "AI 调用次数（50 次）";
+"ai_credits_product_grant" = "购买后增加 %d 次调用";
+"ai_credits_best_value" = "更划算";
 "ai_credits_product_subtitle" = "每次购买可获得 %@。";
 "ai_credits_product_unavailable" = "暂时无法获取商品信息，请稍后重试。";
 "ai_credits_usage_title" = "以下操作会消耗 AI 调用次数：";
@@ -782,3 +840,11 @@
 "ai_credits_restore_button" = "恢复购买";
 "ai_credits_restore_tip" = "消耗型 AI 调用次数不会通过“恢复购买”找回，请在当前设备上使用完已购买的次数。";
 "ai_buy_per_use_button" = "按次购买 AI 调用";
+
+// Multi-language empty states
+"no_notes" = "暂无笔记";
+"no_trip_records" = "还没有旅程";
+"create_first_trip" = "创建第一个旅程";
+"create_first_trip_hint" = "点击右上角的 + 按钮
+创建你的第一个旅程吧！";
+"my_trips" = "我的旅程";

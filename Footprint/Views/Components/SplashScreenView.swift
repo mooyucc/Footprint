@@ -17,13 +17,13 @@ struct SplashScreenView: View {
     @State private var showText = false
     
     // 动画和初始化时间控制
-    private let minDisplayTime: TimeInterval = 2.5  // 最小显示时间（保证动画流畅）
-    private let maxDisplayTime: TimeInterval = 5.0  // 最大等待时间（避免等待太久）
+    private let minDisplayTime: TimeInterval = 1.2  // 最短展示，保证动画播完
+    private let maxDisplayTime: TimeInterval = 8.0  // 上限：覆盖两百余地点的主上下文预热，避免画面关掉后首次切 Tab 仍在冷读
     @State private var animationStartTime: Date?
     /// 本会话是否已触发关闭（静态，避免「通知」与「5s 定时器」重复执行导致二次打印）
     private static var hasTriggeredDismissThisSession = false
     /// 收到「初始化完成」后至少再保留的展示时间，确保动画已完整播放再关闭
-    private let minRemainingAfterNotification: TimeInterval = 1.0
+    private let minRemainingAfterNotification: TimeInterval = 0.25
     
     var body: some View {
         GeometryReader { geometry in
@@ -98,7 +98,6 @@ struct SplashScreenView: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .drawingGroup()  // 动画内容交给 GPU 合成，减轻主线程负担，提升流畅度
         .onAppear {
             Self.hasTriggeredDismissThisSession = false  // 每次展示时重置，便于再次显示（如 Beta 提醒后）
             animationStartTime = Date()
@@ -149,16 +148,15 @@ struct SplashScreenView: View {
         
         // 确保至少显示最小时间
         DispatchQueue.main.asyncAfter(deadline: .now() + remainingTime) {
-            withAnimation(.easeInOut(duration: 0.5)) {
+            withAnimation(.easeInOut(duration: 0.3)) {
                 showBars = false
                 showSquid = false
                 showText = false
             }
             
-            // 完全隐藏启动画面
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 isPresented = false
-                print("✅ 启动画面：初始化完成，关闭启动画面（总耗时：\(String(format: "%.2f", elapsedTime + remainingTime + 0.5))秒）")
+                print("✅ 启动画面：初始化完成，关闭启动画面（总耗时：\(String(format: "%.2f", elapsedTime + remainingTime + 0.3))秒）")
                 
                 // 通知启动画面已关闭
                 NotificationCenter.default.post(name: .splashScreenDismissed, object: nil)

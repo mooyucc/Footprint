@@ -50,15 +50,6 @@ struct EditDestinationView: View {
     @State private var showDeleteConfirmation = false
     
     let categories = ["domestic", "international"]
-    let destinationTypes = [
-        "natural_wonder": "destination_type_natural_wonder",
-        "urban_landscape": "destination_type_urban_landscape",
-        "historical_culture": "destination_type_historical_culture",
-        "food_feast": "destination_type_food_feast",
-        "leisure_entertainment": "destination_type_leisure_entertainment",
-        "outdoor_adventure": "destination_type_outdoor_adventure",
-        "artistic_checkin": "destination_type_artistic_checkin"
-    ]
     private var maxPhotos: Int {
         entitlementManager.maxPhotosPerDestination
     }
@@ -72,6 +63,7 @@ struct EditDestinationView: View {
     
     var body: some View {
         NavigationStack {
+            FootprintFormScaffold(accent: Color.footprintRed) {
             Form {
                 Section("basic_info".localized) {
                     TextField("location_tag".localized, text: $name)
@@ -82,13 +74,6 @@ struct EditDestinationView: View {
                         }
                     }
                     .pickerStyle(.segmented)
-                    
-                    Picker("destination_type".localized, selection: $type) {
-                        Text("none".localized).tag("")
-                        ForEach(Array(destinationTypes.keys.sorted()), id: \.self) { typeKey in
-                            Text(destinationTypes[typeKey]!.localized).tag(typeKey)
-                        }
-                    }
                     
                     TextField("province_state".localized, text: $province)
                     
@@ -338,6 +323,7 @@ struct EditDestinationView: View {
                     await MainActor.run { selectedPhotos = [] }
                 }
             }
+            } // FootprintFormScaffold
         }
     }
     
@@ -655,6 +641,8 @@ struct EditDestinationView: View {
             return Locale(identifier: "es_ES")
         case .korean:
             return Locale(identifier: "ko_KR")
+        case .german:
+            return Locale(identifier: "de_DE")
         }
     }
 }

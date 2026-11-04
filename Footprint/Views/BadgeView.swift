@@ -10,9 +10,6 @@ import SwiftData
 
 /// 勋章主视图
 struct BadgeView: View {
-    /// 当前是否为选中的 Tab（非选中时不运行动画，降低离屏 CPU）
-    var isTabSelected: Bool = true
-    
     @Query private var destinations: [TravelDestination]
     @State private var selectedType: BadgeType = .country
     
@@ -27,15 +24,16 @@ struct BadgeView: View {
     // 加载状态
     @State private var isLoading = false
     @State private var lastUpdateDestinationCount = 0
-    @State private var lastDestinationsSignature = ""
+    @ObservedObject private var destinationRevision = DestinationDataRevision.shared
+    @State private var lastHandledBadgeRevision = -1
     @State private var badgeUpdateDebounceTask: Task<Void, Never>?
     
     // 全屏详情视图状态
     @State private var selectedBadge: BadgeDetail?
     @State private var showingBadgeDetail = false
     
-    // 大数字百分比动画值
-    @State private var animatedProgressPercentage: Double = 0
+    /// 进度卡实测高度（用于给网格预留下方空间）
+    @State private var progressCardMeasuredHeight: CGFloat = 150
     
     // 徽章详情数据模型
     struct BadgeDetail: Identifiable {
@@ -51,13 +49,17 @@ struct BadgeView: View {
     private let badgeManager = BadgeManager.shared
     @StateObject private var countryManager = CountryManager.shared
     @Environment(\.colorScheme) var colorScheme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    
+    private var badgeColumnCount: Int {
+        horizontalSizeClass == .regular ? 5 : 3
+    }
+    
+    private var badgeGridColumns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 16), count: badgeColumnCount)
+    }
     
     // MARK: - 计算属性
-    
-    /// 生成目的地签名（基于国家、省份），用于检测数据变化
-    private var destinationsSignature: String {
-        DestinationCollectionSignature.makeForBadges(from: destinations)
-    }
     
     /// 获取所有国家勋章
     private var allCountryBadges: [CountryBadge] {
@@ -102,11 +104,6 @@ struct BadgeView: View {
     }
     
     /// 进度百分比
-    private var progressPercentage: CGFloat {
-        guard statistics.total > 0 else { return 0 }
-        return CGFloat(statistics.unlocked) / CGFloat(statistics.total) * 100
-    }
-
     /// 是否显示进度卡片
     private var shouldShowProgressCard: Bool {
         selectedType == .country || (selectedType == .province && isCurrentCountryChina)
@@ -132,6 +129,33 @@ struct BadgeView: View {
             let cachedData = provinceBadgeDataCache[badge.id]
             let destinationCount = cachedData?.destinations.count ?? 0
             return destinationCount > 0
+        }
+    }
+    
+    /// 主数字单位文案
+    private var primaryUnitLabel: String {
+        selectedType == .country
+            ? "badges_countries_unit".localized
+            : "badges_provinces_unit".localized
+    }
+    
+    /// 国内用户跨维度副文案（另一分段的解锁数）
+    private var crossDimensionHint: (text: String, switchTo: BadgeType)? {
+        guard isCurrentCountryChina else { return nil }
+        if selectedType == .country {
+            let count = unlockedProvinceBadges.count
+            guard count > 0 else { return nil }
+            return (
+                "badges_domestic_provinces_hint".localized(with: count),
+                .province
+            )
+        } else {
+            let count = unlockedCountryBadges.count
+            guard count > 0 else { return nil }
+            return (
+                "badges_global_countries_hint".localized(with: count),
+                .country
+            )
         }
     }
     
@@ -197,7 +221,7 @@ struct BadgeView: View {
     
     /// 计算并更新排序后的勋章缓存（在后台线程执行）
     /// - Parameter forceUpdate: 是否强制更新（即使数量没变化也更新，用于处理省份、国家变化）
-    private func updateSortedBadges(forceUpdate: Bool = false) {
+    private func updateSortedBadges(forceUpdate: Bool = false, forRevision revision: Int? = nil) {
         let countChanged = destinations.count != lastUpdateDestinationCount
         let hasNoCache = cachedSortedCountryBadges.isEmpty
 
@@ -207,6 +231,7 @@ struct BadgeView: View {
 
         isLoading = true
         lastUpdateDestinationCount = destinations.count
+        let targetRevision = revision ?? destinationRevision.revision
 
         // 主线程仅提取轻量快照，避免在 Task 中复制全量 SwiftData model
         let snapshots = destinations.map {
@@ -245,6 +270,7 @@ struct BadgeView: View {
                     (destinations: resolveDestinations(entry.destinationIDs), yearRange: entry.yearRange)
                 }
                 isLoading = false
+                lastHandledBadgeRevision = targetRevision
             }
         }
     }
@@ -418,7 +444,12 @@ struct BadgeView: View {
     // MARK: - Body
     
     var body: some View {
-        NavigationStack {
+        ZStack {
+            FootprintAtmosphereBackground(
+                accent: Color.footprintRed,
+                secondaryAccent: FootprintTheme.Accent.secondary
+            )
+                
             VStack(spacing: 0) {
                 // 类型切换器
                 Picker("mode".localized, selection: $selectedType) {
@@ -436,8 +467,10 @@ struct BadgeView: View {
                     let screenWidth = geometry.size.width
                     let horizontalPadding: CGFloat = 16
                     let columnSpacing: CGFloat = 16
-                    let numberOfColumns: CGFloat = 3
-                    let progressCardHeight: CGFloat = shouldShowProgressCard ? 150 : 0
+                    let numberOfColumns = CGFloat(badgeColumnCount)
+                    let progressCardHeight: CGFloat = shouldShowProgressCard
+                        ? max(progressCardMeasuredHeight + 12, 120)
+                        : 0
                     
                     // 计算每个卡片的宽度：可用宽度 = 屏幕宽度 - 左右padding - 列间距
                     let availableWidth = screenWidth - (horizontalPadding * 2) - (columnSpacing * (numberOfColumns - 1))
@@ -446,11 +479,7 @@ struct BadgeView: View {
                     ZStack(alignment: .top) {
                         ScrollView {
                             LazyVGrid(
-                                columns: [
-                                    GridItem(.flexible(), spacing: columnSpacing),
-                                    GridItem(.flexible(), spacing: columnSpacing),
-                                    GridItem(.flexible(), spacing: columnSpacing)
-                                ],
+                                columns: badgeGridColumns,
                                 spacing: 16
                             ) {
                                 if selectedType == .country {
@@ -527,7 +556,7 @@ struct BadgeView: View {
                                         }
                                         .frame(maxWidth: .infinity)
                                         .padding(.vertical, 60)
-                                        .gridCellColumns(3) // 占据整行
+                                        .gridCellColumns(badgeColumnCount) // 占据整行
                                     }
                                 }
                             }
@@ -537,135 +566,95 @@ struct BadgeView: View {
                         }
                         
                         if shouldShowProgressCard {
-                            VStack(alignment: .leading, spacing: 10) {
-                                HStack {
-                                    // 标题：品牌红色
-                                    Text("badges_progress".localized)
-                                        .font(.subheadline)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(AppColorScheme.iconColor)
-                                    
-                                    Spacer()
-                                }
-                                
-                                HStack(alignment: .center, spacing: 16) {
-                                    // 左侧：大数字主视觉（适配深浅模式）
-                                    HStack(alignment: .firstTextBaseline, spacing: 3) {
-                                        Text("\(Int(animatedProgressPercentage.rounded()))")
-                                            .font(.system(size: 56, weight: .black, design: .default))
-                                            .tracking(-1)
-                                            .foregroundStyle(.primary)
-                                            .monospacedDigit()
-                                            .contentTransition(.numericText(value: animatedProgressPercentage))
-                                            .lineLimit(1)
-                                            .minimumScaleFactor(0.65)
-                                        
-                                        Text("%")
-                                            .font(.system(size: 36, weight: .black, design: .default))
-                                            .tracking(-0.5)
-                                            .foregroundStyle(.primary)
-                                            .baselineOffset(2)
+                            progressSummaryCard
+                                .padding(.horizontal, 16)
+                                .padding(.top, 4)
+                                .background(
+                                    GeometryReader { geo in
+                                        Color.clear.preference(
+                                            key: BadgeProgressCardHeightKey.self,
+                                            value: geo.size.height
+                                        )
                                     }
-                                    
-                                    Spacer(minLength: 0)
-                                    
-                                    // 右侧：环形表达 14/119（参考附图2）
-                                    BadgeProgressRingView(
-                                        unlocked: statistics.unlocked,
-                                        total: statistics.total,
-                                        badgeLabel: selectedType == .country ? "country_badges".localized : "province_badges".localized
-                                    )
+                                )
+                                .onPreferenceChange(BadgeProgressCardHeightKey.self) { height in
+                                    if abs(height - progressCardMeasuredHeight) > 0.5 {
+                                        progressCardMeasuredHeight = height
+                                    }
                                 }
-                            }
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 14)
-                            .badgeProgressGlassCard()
-                            .padding(.horizontal, 16)
-                            .padding(.top, 4)
-                            .zIndex(1)
+                                .zIndex(1)
                         }
 
                         // 加载指示器
                         if isLoading && cachedSortedCountryBadges.isEmpty {
                             ProgressView()
                                 .scaleEffect(1.2)
-                                .tint(AppColorScheme.iconColor)
+                                .tint(Color.footprintRed)
                         }
                     }
                 }
             }
-            .appPageBackgroundGradient(for: colorScheme)
-            .navigationTitle("badges".localized)
-            .navigationBarTitleDisplayMode(.large)
-            .onAppear {
-                // 只在首次出现或数据为空时更新
-                if cachedSortedCountryBadges.isEmpty {
-                    updateSortedBadges()
-                    lastDestinationsSignature = destinationsSignature
-                }
-                if isTabSelected {
-                    animateProgressNumber(resetToZero: true)
-                }
-            }
-            .onChange(of: isTabSelected) { _, selected in
-                if selected {
-                    animateProgressNumber(resetToZero: true)
-                }
-            }
-            .onChange(of: destinations.count) { oldCount, newCount in
-                // 当目的地数量变化时（新增或删除），更新缓存
-                if oldCount != newCount {
-                    updateSortedBadges()
-                    lastDestinationsSignature = destinationsSignature
-                }
-            }
-            .onChange(of: destinationsSignature) { oldSignature, newSignature in
-                // 当目的地签名变化时（国家、省份变化），强制更新缓存
-                // 这能检测到即使数量不变，但国家或省份发生变化的情况
-                if oldSignature != newSignature && !oldSignature.isEmpty {
-                    updateSortedBadges(forceUpdate: true)
-                    lastDestinationsSignature = newSignature
-                }
-            }
-            .onChange(of: selectedType) { _ in
-                // 切换类型时不需要重新计算，因为两个列表都已缓存
-                if isTabSelected {
-                    animateProgressNumber(resetToZero: true)
-                }
-            }
-            .onChange(of: progressPercentage) { _, _ in
-                // 数据变化时同步刷新数字动画
-                if isTabSelected {
-                    animateProgressNumber(resetToZero: false)
-                }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .destinationDeleted)) { _ in
-                scheduleBadgeUpdate(forceUpdate: true)
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .destinationUpdated)) { _ in
-                scheduleBadgeUpdate(forceUpdate: true)
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .countryChanged)) { _ in
-                scheduleBadgeUpdate(forceUpdate: true)
-            }
-            .fullScreenCover(item: $selectedBadge) { badge in
-                BadgeDetailView(
-                    imageName: badge.imageName,
-                    title: badge.title,
-                    isUnlocked: badge.isUnlocked,
-                    destinations: badge.destinations,
-                    yearRange: badge.yearRange,
-                    badgeType: badge.badgeType,
-                    isPresented: Binding(
-                        get: { selectedBadge != nil },
-                        set: { if !$0 { selectedBadge = nil } }
-                    )
+        }
+        .toolbarBackground(.hidden, for: .navigationBar)
+        .navigationTitle("badges".localized)
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            refreshBadgesIfNeeded(forceUpdate: false)
+        }
+        .onChange(of: destinationRevision.revision) { _, _ in
+            scheduleBadgeUpdate(forceUpdate: true)
+        }
+        .fullScreenCover(item: $selectedBadge) { badge in
+            BadgeDetailView(
+                imageName: badge.imageName,
+                title: badge.title,
+                isUnlocked: badge.isUnlocked,
+                destinations: badge.destinations,
+                yearRange: badge.yearRange,
+                badgeType: badge.badgeType,
+                isPresented: Binding(
+                    get: { selectedBadge != nil },
+                    set: { if !$0 { selectedBadge = nil } }
                 )
-            }
+            )
         }
     }
     
-    // MARK: - 数字动画
+    // MARK: - 进度摘要卡
+    
+    private var progressSummaryCard: some View {
+        BadgeProgressSummaryCard(
+            items: [],
+            unlocked: statistics.unlocked,
+            total: statistics.total,
+            unitLabel: primaryUnitLabel,
+            emptyText: selectedType == .country
+                ? "badges_no_countries_yet".localized
+                : "badges_no_provinces_yet".localized,
+            crossHintText: crossDimensionHint?.text,
+            accent: Color.footprintRed,
+            // 勋章页下方已有完整网格，顶部只保留进度与跨维度入口，避免重复占高
+            showsBadgeTiles: false,
+            onCrossHintTap: {
+                guard let hint = crossDimensionHint else { return }
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    selectedType = hint.switchTo
+                }
+            }
+        )
+    }
+    
+    // MARK: - 缓存刷新
+
+    /// 仅在 revision 变化或尚无缓存时重算
+    private func refreshBadgesIfNeeded(forceUpdate: Bool) {
+        let rev = destinationRevision.revision
+        guard forceUpdate || cachedSortedCountryBadges.isEmpty || rev != lastHandledBadgeRevision else { return }
+        updateSortedBadges(
+            forceUpdate: forceUpdate || cachedSortedCountryBadges.isEmpty,
+            forRevision: rev
+        )
+    }
     
     /// 通知触发的防抖更新，避免连发通知导致多次后台重算
     private func scheduleBadgeUpdate(forceUpdate: Bool = false) {
@@ -674,132 +663,23 @@ struct BadgeView: View {
             try? await Task.sleep(nanoseconds: 300_000_000)
             guard !Task.isCancelled else { return }
             await MainActor.run {
-                updateSortedBadges(forceUpdate: forceUpdate)
-                lastDestinationsSignature = destinationsSignature
-            }
-        }
-    }
-    
-    private func animateProgressNumber(resetToZero: Bool) {
-        guard isTabSelected else { return }
-        if resetToZero {
-            animatedProgressPercentage = 0
-            // 必须在延迟闭包内读取 progressPercentage：首次进入时缓存尚未写入，
-            // 若在此处捕获 target，后续异步填充数据后仍会用 0 覆盖正确动画结果。
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
-                let target = Double(progressPercentage)
-                withAnimation(.easeOut(duration: 0.9)) {
-                    animatedProgressPercentage = target
-                }
-            }
-        } else {
-            let target = Double(progressPercentage)
-            withAnimation(.easeOut(duration: 0.55)) {
-                animatedProgressPercentage = target
+                refreshBadgesIfNeeded(forceUpdate: forceUpdate)
             }
         }
     }
 }
 
-private extension View {
-    @ViewBuilder
-    func badgeProgressGlassCard() -> some View {
-        if #available(iOS 26, *) {
-            self
-                .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 18, style: .continuous))
-                .contentShape(.rect(cornerRadius: 18, style: .continuous))
-                .shadow(color: .black.opacity(0.18), radius: 10, x: 0, y: 6)
-        } else {
-            self
-                .background(.regularMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(Color.white.opacity(0.14), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.15), radius: 10, x: 0, y: 6)
-        }
-    }
-}
-
-private struct BadgeProgressRingView: View {
-    let unlocked: Int
-    let total: Int
-    let badgeLabel: String
-    
-    @State private var animatedRingProgress: CGFloat = 0
-    
-    private var progress: CGFloat {
-        guard total > 0 else { return 0 }
-        return CGFloat(unlocked) / CGFloat(total)
-    }
-    
-    var body: some View {
-        ZStack {
-            // 单环底轨
-            Circle()
-                .stroke(
-                    Color.primary.opacity(0.14),
-                    style: StrokeStyle(lineWidth: 7, lineCap: .round)
-                )
-                .frame(width: 74, height: 74)
-            
-            // 单环进度弧：纯色描边 + .round，线帽与线段同色；accentColor 跟随 TabView/.tint 主题色
-            Circle()
-                .trim(from: 0, to: animatedRingProgress)
-                .stroke(
-                    Color.accentColor,
-                    style: StrokeStyle(lineWidth: 7, lineCap: .round)
-                )
-                .rotationEffect(.degrees(-90))
-                .frame(width: 74, height: 74)
-                .animation(.spring(response: 0.45, dampingFraction: 0.82), value: animatedRingProgress)
-            
-            VStack(spacing: 1) {
-                Text("\(unlocked)/\(total)")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
-                    .monospacedDigit()
-                
-                Text(badgeLabel)
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-            .padding(.horizontal, 6)
-        }
-        .frame(width: 74, height: 74)
-        .onAppear {
-            animateRingProgress(restart: true)
-        }
-        .onChange(of: unlocked) { _, _ in
-            animateRingProgress(restart: true)
-        }
-        .onChange(of: total) { _, _ in
-            animateRingProgress(restart: true)
-        }
-    }
-    
-    private func animateRingProgress(restart: Bool) {
-        if restart {
-            animatedRingProgress = 0
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                let target = progress
-                withAnimation(.spring(response: 0.65, dampingFraction: 0.85)) {
-                    animatedRingProgress = target
-                }
-            }
-        } else {
-            withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) {
-                animatedRingProgress = progress
-            }
-        }
+private struct BadgeProgressCardHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 150
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
 
 #Preview {
-    BadgeView()
-        .modelContainer(for: TravelDestination.self, inMemory: true)
+    NavigationStack {
+        BadgeView()
+    }
+    .modelContainer(for: TravelDestination.self, inMemory: true)
 }
 

@@ -12,45 +12,23 @@ struct AllDestinationsListView: View {
     @Query(sort: \TravelDestination.visitDate, order: .reverse) private var allDestinations: [TravelDestination]
     @State private var searchText = ""
     @State private var filterCategory: String? = nil
-    @State private var filterPlaceType: String? = nil
     @State private var editingDestination: TravelDestination?
+    @State private var detailDestination: TravelDestination?
     @EnvironmentObject var languageManager: LanguageManager
+    @EnvironmentObject var brandColorManager: BrandColorManager
     @StateObject private var countryManager = CountryManager.shared
     @State private var refreshID = UUID()
     @Environment(\.colorScheme) var colorScheme
     @Environment(\.dismiss) var dismiss
     
-    // MARK: - 配色（使用统一的 AppColorScheme 工具类）
-    
-    private var cardBackgroundColor: Color {
-        AppColorScheme.whiteCardBackground(for: colorScheme)
-    }
-    
-    private var primaryTextColor: Color {
-        AppColorScheme.primaryText(for: colorScheme)
-    }
-    
-    private var borderColor: Color {
-        AppColorScheme.border(for: colorScheme)
-    }
-    
-    private var largeCardShadow: (color: Color, radius: CGFloat, x: CGFloat, y: CGFloat) {
-        AppColorScheme.largeCardShadow
-    }
-    
     var filteredDestinations: [TravelDestination] {
         var result = allDestinations
         
         if let category = filterCategory {
-            // 使用 CountryManager 来判断是否为国内
             result = result.filter { destination in
                 let isDomestic = countryManager.isDomestic(country: destination.country)
                 return category == "domestic" ? isDomestic : !isDomestic
             }
-        }
-        
-        if let placeType = filterPlaceType {
-            result = result.filter { $0.type == placeType }
         }
         
         if !searchText.isEmpty {
@@ -66,78 +44,51 @@ struct AllDestinationsListView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // 筛选器卡片
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("filter".localized)
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.white)
-                    
-                    SegmentedPickerWithGrayUnselected(
-                        selection: $filterCategory,
-                        options: [
-                            (nil, "all".localized),
-                            ("domestic", "domestic".localized),
-                            ("international", "international".localized)
-                        ]
-                    )
-                    
-                    // 地点类型下拉筛选
-                    HStack {
-                        Text("destination_type".localized)
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(.white.opacity(0.9))
-                        Spacer()
-                        Picker("", selection: $filterPlaceType) {
-                            Text("all".localized).tag(nil as String?)
-                            ForEach(TravelDestination.placeTypeFilterOptions, id: \.key) { option in
-                                Text(option.localizedKey.localized).tag(option.key as String?)
-                            }
+            ZStack {
+                FootprintAtmosphereBackground(
+                    accent: brandColorManager.currentBrandColor,
+                    secondaryAccent: FootprintTheme.Accent.secondary
+                )
+                
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 16) {
+                        FootprintFilterChipRow(
+                            selection: $filterCategory,
+                            options: [
+                                (nil, "all".localized),
+                                ("domestic", "domestic".localized),
+                                ("international", "international".localized)
+                            ],
+                            accent: brandColorManager.currentBrandColor
+                        )
+                        
+                        HStack(spacing: 8) {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundStyle(FootprintChrome.secondaryLabel(colorScheme))
+                                .font(.subheadline)
+                            
+                            TextField("search_places_countries_notes".localized, text: $searchText)
+                                .textFieldStyle(.plain)
+                                .font(.subheadline)
                         }
-                        .pickerStyle(.menu)
-                        .tint(.white)
-                    }
-                }
-                .padding(20)
-                .redCardStyle(cornerRadius: 20)
-                .padding(.horizontal, 16)
-                .padding(.top, 16)
-                
-                // 搜索框
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
-                        .font(.subheadline)
-                    
-                    TextField("search_places_countries_notes".localized, text: $searchText)
-                        .textFieldStyle(.plain)
-                        .font(.subheadline)
-                }
-                .padding(12)
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                
-                // 目的地列表
-                if !filteredDestinations.isEmpty {
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 12) {
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .footprintCapsuleChrome()
+                        
+                        if !filteredDestinations.isEmpty {
                             Text("travel_destinations".localized)
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(primaryTextColor)
-                                .padding(.horizontal, 4)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(FootprintChrome.secondaryLabel(colorScheme))
+                                .padding(.top, 4)
                             
                             ForEach(filteredDestinations) { destination in
-                                NavigationLink {
-                                    DestinationDetailView(destination: destination)
+                                Button {
+                                    detailDestination = destination
                                 } label: {
-                                    DestinationRowCard(destination: destination)
+                                    DestinationRowCard(destination: destination, highResolutionCover: true)
                                 }
-                                .buttonStyle(PlainButtonStyle())
+                                .buttonStyle(.plain)
+                                .cylinderScrollEffect()
                                 .contextMenu {
                                     Button {
                                         editingDestination = destination
@@ -152,30 +103,27 @@ struct AllDestinationsListView: View {
                                     }
                                 }
                             }
+                        } else {
+                            VStack(spacing: 12) {
+                                Image(systemName: "location.slash")
+                                    .font(.system(size: 44))
+                                    .foregroundStyle(FootprintChrome.secondaryLabel(colorScheme))
+                                Text("no_destinations_found".localized)
+                                    .font(.headline)
+                                    .foregroundStyle(FootprintChrome.secondaryLabel(colorScheme))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 48)
                         }
-                        .padding(20)
-                        .background(AppColorScheme.whiteCardBackground(for: colorScheme))
-                        .cornerRadius(20)
-                        .shadow(color: largeCardShadow.color, radius: largeCardShadow.radius, x: largeCardShadow.x, y: largeCardShadow.y)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 12)
-                        .padding(.bottom, 20)
                     }
-                } else {
-                    Spacer()
-                    VStack(spacing: 16) {
-                        Image(systemName: "location.slash")
-                            .font(.system(size: 60))
-                            .foregroundColor(.secondary)
-                        
-                        Text("no_destinations_found".localized)
-                            .font(.headline)
-                            .foregroundColor(.secondary)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 28)
                 }
+                .contentMargins(.vertical, 16, for: .scrollContent)
             }
-            .appPageBackgroundGradient(for: colorScheme)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .navigationTitle("all_destinations".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -184,27 +132,38 @@ struct AllDestinationsListView: View {
                         dismiss()
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
+                            .foregroundStyle(.secondary)
                     }
                 }
+            }
+            .sheet(item: $detailDestination) { destination in
+                NavigationStack {
+                    DestinationDetailView(destination: destination)
+                }
+                .presentationDragIndicator(.visible)
             }
             .sheet(item: $editingDestination) { destination in
                 EditDestinationView(destination: destination)
             }
             .onReceive(NotificationCenter.default.publisher(for: .destinationDeleted)) { notification in
-                // 当当前正在编辑的地点被删除时，自动关闭编辑弹窗
                 if let userInfo = notification.userInfo,
                    let deletedDestinationId = userInfo["destinationId"] as? UUID {
                     if let editing = editingDestination, editing.id == deletedDestinationId {
                         editingDestination = nil
                     }
-                } else if editingDestination != nil {
-                    // 批量删除等没有携带 destinationId 的情况，直接关闭编辑弹窗
-                    editingDestination = nil
+                    if let detail = detailDestination, detail.id == deletedDestinationId {
+                        detailDestination = nil
+                    }
+                } else {
+                    if editingDestination != nil {
+                        editingDestination = nil
+                    }
+                    if detailDestination != nil {
+                        detailDestination = nil
+                    }
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { _ in
-                // 语言变化时刷新界面
                 refreshID = UUID()
             }
             .id(refreshID)
@@ -216,7 +175,6 @@ struct AllDestinationsListView: View {
             let destinationId = destination.id
             modelContext.delete(destination)
             try? modelContext.save()
-            // 发送删除通知，通知徽章视图更新
             NotificationCenter.default.post(name: .destinationDeleted, object: nil, userInfo: ["destinationId": destinationId])
         }
     }
@@ -226,6 +184,5 @@ struct AllDestinationsListView: View {
     AllDestinationsListView()
         .modelContainer(for: TravelDestination.self, inMemory: true)
         .environmentObject(LanguageManager.shared)
+        .environmentObject(BrandColorManager.shared)
 }
-
-

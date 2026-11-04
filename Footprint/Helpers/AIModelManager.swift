@@ -21,7 +21,7 @@ final class AIModelManager: ObservableObject {
     @Published var errorMessage: String?
     
     private var service: AIServiceProtocol
-    private let appleSignInManager = AppleSignInManager.shared
+    private let userProfileManager = UserProfileManager.shared
     
     /// 初始化AI管理器
     /// - Parameter service: 可选的AI服务实例，如果为nil则自动选择合适的服务
@@ -74,11 +74,11 @@ final class AIModelManager: ObservableObject {
                 country: destination.country,
                 date: destination.visitDate,
                 existingNotes: existingNotes,
-                persona: appleSignInManager.personaTag,
-                mbti: appleSignInManager.mbtiType,
-                gender: appleSignInManager.gender,
-                ageGroup: appleSignInManager.ageGroup,
-                constellation: appleSignInManager.constellation
+                persona: userProfileManager.personaTag,
+                mbti: userProfileManager.mbtiType,
+                gender: userProfileManager.gender,
+                ageGroup: userProfileManager.ageGroup,
+                constellation: userProfileManager.constellation
             )
             
             print("✅ [AIModelManager] 笔记生成成功，长度: \(notes.count)")
@@ -124,11 +124,11 @@ final class AIModelManager: ObservableObject {
             let description = try await service.generateTripDescription(
                 for: destinations,
                 existingDescription: existingDescription,
-                persona: appleSignInManager.personaTag,
-                mbti: appleSignInManager.mbtiType,
-                gender: appleSignInManager.gender,
-                ageGroup: appleSignInManager.ageGroup,
-                constellation: appleSignInManager.constellation
+                persona: userProfileManager.personaTag,
+                mbti: userProfileManager.mbtiType,
+                gender: userProfileManager.gender,
+                ageGroup: userProfileManager.ageGroup,
+                constellation: userProfileManager.constellation
             )
             
             print("✅ [AIModelManager] 旅程描述生成成功，长度: \(description.count)")

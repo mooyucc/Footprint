@@ -229,73 +229,64 @@ struct AppColorScheme {
     
     // MARK: - Core Graphics 渐变背景（用于图片生成）
     
-    /// 绘制三色线性渐变背景（Core Graphics版本，用于分享图片生成）
-    /// - 注意：分享图片始终使用浅色模式背景，不受系统深色模式影响
+    /// 绘制分享图背景（跟随当前外观的浅/深壳）
     /// - Parameters:
     ///   - rect: 绘制区域
     ///   - context: Core Graphics 上下文
-    static func drawGradientBackground(in rect: CGRect, context: CGContext) {
-        // 定义三色渐变的颜色（符合App配色标准，使用系统颜色的半透明版本）
-        // 获取系统蓝色和粉色的RGB值，然后应用不透明度
-        var blueRed: CGFloat = 0
-        var blueGreen: CGFloat = 0
-        var blueBlue: CGFloat = 0
-        var blueAlpha: CGFloat = 0
-        UIColor.systemBlue.getRed(&blueRed, green: &blueGreen, blue: &blueBlue, alpha: &blueAlpha)
-        
-        var pinkRed: CGFloat = 0
-        var pinkGreen: CGFloat = 0
-        var pinkBlue: CGFloat = 0
-        var pinkAlpha: CGFloat = 0
-        UIColor.systemPink.getRed(&pinkRed, green: &pinkGreen, blue: &pinkBlue, alpha: &pinkAlpha)
-        
-        // 创建半透明颜色（混合白色背景以模拟opacity效果）
-        // 分享图片始终使用浅色模式背景（白色），不受系统深色模式影响
-        let lightBackground = UIColor.white
-        var bgRed: CGFloat = 1.0
-        var bgGreen: CGFloat = 1.0
-        var bgBlue: CGFloat = 1.0
-        var bgAlpha: CGFloat = 1.0
-        lightBackground.getRed(&bgRed, green: &bgGreen, blue: &bgBlue, alpha: &bgAlpha)
-        
-        // 计算混合后的颜色（color * opacity + background * (1 - opacity)）
-        let color1 = UIColor(
-            red: blueRed * 0.12 + bgRed * 0.88,
-            green: blueGreen * 0.12 + bgGreen * 0.88,
-            blue: blueBlue * 0.12 + bgBlue * 0.88,
-            alpha: 1.0
-        ) // 浅蓝色（12% 不透明度）
-        
-        let color2 = UIColor(
-            red: pinkRed * 0.08 + bgRed * 0.92,
-            green: pinkGreen * 0.08 + bgGreen * 0.92,
-            blue: pinkBlue * 0.08 + bgBlue * 0.92,
-            alpha: 1.0
-        ) // 浅粉色（8% 不透明度）
-        
-        let color3 = lightBackground // 白色背景（始终使用浅色模式）
-        
-        // 创建颜色数组和位置数组
-        let colors = [color1.cgColor, color2.cgColor, color3.cgColor]
-        let locations: [CGFloat] = [0.0, 0.5, 1.0]
-        
-        // 创建渐变
-        guard let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors as CFArray, locations: locations) else {
-            // 如果创建失败，使用白色背景作为降级方案
-            context.setFillColor(lightBackground.cgColor)
+    ///   - colorScheme: 指定壳；默认用 `AppearanceManager.resolvedColorScheme`
+    static func drawGradientBackground(
+        in rect: CGRect,
+        context: CGContext,
+        colorScheme: ColorScheme? = nil
+    ) {
+        let scheme = colorScheme ?? AppearanceManager.shared.resolvedColorScheme
+        if scheme == .dark {
+            drawDarkShareBackground(in: rect, context: context)
+        } else {
+            drawLightShareBackground(in: rect, context: context)
+        }
+    }
+
+    /// HealthUI light share：`#F7F5FC` → `#EDEFF7`
+    private static func drawLightShareBackground(in rect: CGRect, context: CGContext) {
+        let top = UIColor(red: 0.969, green: 0.961, blue: 0.988, alpha: 1)      // #F7F5FC
+        let bottom = UIColor(red: 0.929, green: 0.937, blue: 0.969, alpha: 1)   // #EDEFF7
+        drawVerticalGradient(in: rect, context: context, colors: [top, bottom], fallback: top)
+    }
+
+    /// HealthUI dark share：black → `rgb(0.12, 0.14, 0.18)`
+    private static func drawDarkShareBackground(in rect: CGRect, context: CGContext) {
+        let top = UIColor.black
+        let bottom = UIColor(red: 0.12, green: 0.14, blue: 0.18, alpha: 1)
+        drawVerticalGradient(in: rect, context: context, colors: [top, bottom], fallback: top)
+    }
+
+    private static func drawVerticalGradient(
+        in rect: CGRect,
+        context: CGContext,
+        colors: [UIColor],
+        fallback: UIColor
+    ) {
+        let cgColors = colors.map(\.cgColor) as CFArray
+        let locations = (0..<colors.count).map { CGFloat($0) / CGFloat(max(colors.count - 1, 1)) }
+        guard let gradient = CGGradient(
+            colorsSpace: CGColorSpaceCreateDeviceRGB(),
+            colors: cgColors,
+            locations: locations
+        ) else {
+            context.setFillColor(fallback.cgColor)
             context.fill(rect)
             return
         }
-        
-        // 渐变方向：从顶部到底部
-        let startPoint = CGPoint(x: rect.midX, y: rect.minY) // 顶部中心
-        let endPoint = CGPoint(x: rect.midX, y: rect.maxY)  // 底部中心
-        
-        // 绘制渐变
         context.saveGState()
         context.addRect(rect)
         context.clip()
-        context.drawLinearGradient(gradient, start: startPoint, end: endPoint, options: [])
+        context.drawLinearGradient(
+            gradient,
+            start: CGPoint(x: rect.midX, y: rect.minY),
+            end: CGPoint(x: rect.midX, y: rect.maxY),
+            options: []
+        )
         context.restoreGState()
     }
     
@@ -631,71 +622,28 @@ extension View {
         self.background(AppColorScheme.pageBackground(for: colorScheme))
     }
     
-    /// 应用页面背景渐变（推荐使用）
-    /// - 浅色模式: 从米白色到浅粉色的渐变，提供温暖、优雅的视觉体验
-    /// - 深色模式: 系统分组背景（自动适配）
-    /// - 使用示例:
-    ///   ```swift
-    ///   ScrollView {
-    ///       VStack {
-    ///           // 内容
-    ///       }
-    ///   }
-    ///   .appPageBackgroundGradient(for: colorScheme)
-    ///   ```
+    /// 应用页面氛围底（HealthUI：浅 pastel mesh / 深色双光斑+斜纹）
+    /// - Parameter colorScheme: 保留参数以兼容旧调用；实际跟随当前 Environment
     func appPageBackgroundGradient(for colorScheme: ColorScheme) -> some View {
-        self.background(AppColorScheme.pageBackgroundGradient(for: colorScheme))
+        modifier(FootprintAtmospherePageModifier())
     }
     
-    /// 应用白卡片样式（White Card）
-    /// - 用途：统计卡片、信息展示卡片、数据卡片等常规内容展示
-    /// - 背景色：纯白色 #FFFFFF
-    /// - 阴影：轻微阴影效果
+    /// 应用白卡片样式 → 统一为玻璃卡
     func whiteCardStyle(for colorScheme: ColorScheme, cornerRadius: CGFloat = 15) -> some View {
-        let shadow = AppColorScheme.smallCardShadow
-        return self
-            .background(AppColorScheme.whiteCardBackground(for: colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-            .shadow(
-                color: shadow.color,
-                radius: shadow.radius,
-                x: shadow.x,
-                y: shadow.y
-            )
+        footprintGlassCard(cornerRadius: cornerRadius)
     }
     
-    /// 应用红卡片样式（Red Card）
-    /// - 用途：重要功能入口、设置面板、品牌强调卡片等需要突出显示的内容
-    /// - 背景色：品牌主题色 #00A1D8
-    /// - 阴影：中等强度阴影
+    /// 应用红卡片样式 → 玻璃卡 + 品牌底光晕（不再整卡铺品牌实色）
     func redCardStyle(cornerRadius: CGFloat = 20) -> some View {
-        let shadow = AppColorScheme.floatingShadow
-        return self
-            .background(AppColorScheme.redCardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-            .shadow(
-                color: shadow.color,
-                radius: shadow.radius,
-                x: shadow.x,
-                y: shadow.y
-            )
+        footprintGlassCard(
+            cornerRadius: cornerRadius,
+            glow: BrandColorManager.shared.currentBrandColor
+        )
     }
     
-    /// 应用黑卡片样式（Dark Card）
-    /// - 用途：进度展示、任务状态、重要通知等需要深色背景突出显示的内容
-    /// - 背景色：深炭灰色 #1C1C1E（浅色模式）或系统背景（深色模式）
-    /// - 阴影：较强阴影效果
+    /// 应用黑卡片样式 → 玻璃卡
     func darkCardStyle(for colorScheme: ColorScheme, cornerRadius: CGFloat = 15) -> some View {
-        let shadow = (color: Color.black.opacity(0.2), radius: CGFloat(10), x: CGFloat(0), y: CGFloat(4))
-        return self
-            .background(AppColorScheme.darkCardBackground(for: colorScheme))
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
-            .shadow(
-                color: shadow.color,
-                radius: shadow.radius,
-                x: shadow.x,
-                y: shadow.y
-            )
+        footprintGlassCard(cornerRadius: cornerRadius)
     }
     
     /// 应用浅米色卡片样式（Beige Card）
@@ -824,6 +772,22 @@ extension View {
     }
 }
 
+/// 将内容叠在 Footprint 氛围底上（供 `appPageBackgroundGradient` 使用）
+private struct FootprintAtmospherePageModifier: ViewModifier {
+    @ObservedObject private var brandColorManager = BrandColorManager.shared
+
+    func body(content: Content) -> some View {
+        ZStack {
+            FootprintAtmosphereBackground(
+                accent: brandColorManager.currentBrandColor,
+                secondaryAccent: FootprintTheme.Accent.secondary
+            )
+            content
+        }
+        .toolbarBackground(.hidden, for: .navigationBar)
+    }
+}
+
 // MARK: - AppearanceManager
 
 /// 外观模式管理器，用于管理应用的颜色模式（跟随系统/深色/浅色）
@@ -878,19 +842,12 @@ class AppearanceManager: ObservableObject {
         }
     }
     
-    /// 设置外观模式
+    /// 设置外观模式。窗口样式在本次更新里同步写入，已弹出的 sheet 就地换色。
+    @MainActor
     func setAppearanceMode(_ mode: AppearanceMode) {
-        // 直接在主线程更新（Picker 的 set 回调已经在主线程）
         UserDefaults.standard.set(mode.rawValue, forKey: appearanceModeKey)
         currentMode = mode
-        
-        // 当切换到系统模式时，强制触发更新以确保读取最新的系统颜色
-        if mode == .system {
-            // 触发 objectWillChange 以确保视图刷新
-            objectWillChange.send()
-        }
-        
-        // 发送通知（用于其他需要监听的地方）
+        syncInterfaceStyle()
         NotificationCenter.default.post(name: .appearanceModeChanged, object: nil)
     }
     
@@ -899,34 +856,12 @@ class AppearanceManager: ObservableObject {
         currentMode.toColorScheme()
     }
     
-    /// 获取系统当前的颜色模式
+    /// 系统当前的颜色模式。读屏幕 trait，不受窗口 `overrideUserInterfaceStyle` 影响。
     var systemColorScheme: ColorScheme {
-        // 使用 UITraitCollection 读取系统当前的颜色模式
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = windowScene.windows.first {
-            let traitCollection = window.traitCollection
-            switch traitCollection.userInterfaceStyle {
-            case .dark:
-                return .dark
-            case .light:
-                return .light
-            default:
-                return .light
-            }
-        }
-        // 降级方案：使用当前窗口的 trait collection
-        if let keyWindow = UIApplication.shared.windows.first(where: { $0.isKeyWindow }) {
-            switch keyWindow.traitCollection.userInterfaceStyle {
-            case .dark:
-                return .dark
-            case .light:
-                return .light
-            default:
-                return .light
-            }
-        }
-        // 默认返回浅色
-        return .light
+        let scenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+        let scene = scenes.first { $0.activationState == .foregroundActive } ?? scenes.first
+        let style = scene?.screen.traitCollection.userInterfaceStyle ?? .light
+        return style == .dark ? .dark : .light
     }
 }
 

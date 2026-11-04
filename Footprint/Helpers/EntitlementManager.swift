@@ -17,6 +17,11 @@ final class EntitlementManager: ObservableObject {
     @Published private(set) var subscriptionExpiryDate: Date?
     @Published private(set) var isSubscriptionActive: Bool = false
     @Published private(set) var currentSubscriptionProductID: String?
+    @Published private(set) var hasLifetimePurchase: Bool = false
+    /// 2026-08-31 前购买的终身版，继续享有无限 AI
+    @Published private(set) var hasLegacyLifetimeUnlimitedAI: Bool = false
+    /// 本期开始于 2026-09-05 前的月/年订阅，本期结束前继续享有无限 AI
+    @Published private(set) var hasGrandfatheredSubscriptionUnlimitedAI: Bool = false
 
     private let purchaseManager = PurchaseManager.shared
     private var cancellables = Set<AnyCancellable>()
@@ -70,7 +75,7 @@ final class EntitlementManager: ObservableObject {
     
     var canUseAIFeatures: Bool {
         if BetaInfo.isBetaBuild { return true }
-        return currentEntitlement.canUseAIFeatures
+        return hasLegacyLifetimeUnlimitedAI || hasGrandfatheredSubscriptionUnlimitedAI
     }
 
     var maxPhotosPerDestination: Int {
@@ -101,16 +106,8 @@ final class EntitlementManager: ObservableObject {
 
     func updateEntitlement() {
         Task {
-            let (hasPro, productID) = await hasActiveProSubscription()
-            let expiry = await latestExpiryDate()
-
-            await MainActor.run {
-                currentEntitlement = hasPro ? .pro : .free
-                isSubscriptionActive = hasPro
-                subscriptionExpiryDate = expiry
-                currentSubscriptionProductID = productID
-                AppAlternateIconSync.applyHomeScreenIcon(isProActive: hasPro)
-            }
+            let snapshot = await resolveEntitlement()
+            apply(snapshot)
         }
     }
     
@@ -119,72 +116,109 @@ final class EntitlementManager: ObservableObject {
     func updateEntitlement(from transaction: Transaction) {
         Task {
             print("🔄 基于交易直接更新权益: \(transaction.productID)")
-            
-            var hasPro = false
-            var productID: String? = nil
-            var expiry: Date? = nil
-            
-            // 检查交易类型和产品ID
+            var snapshot = EntitlementSnapshot()
+
+            snapshot.hasLifetime = hasLifetimePurchase
+            snapshot.legacyLifetimeAI = hasLegacyLifetimeUnlimitedAI
+            snapshot.grandfatheredSubscriptionAI = hasGrandfatheredSubscriptionUnlimitedAI
+
             switch transaction.productType {
             case .autoRenewable:
                 if transaction.productID == SubscriptionProductID.proMonthly ||
                     transaction.productID == SubscriptionProductID.proYearly {
-                    // 检查订阅是否过期
                     if let expirationDate = transaction.expirationDate {
                         if expirationDate > Date() {
-                            // 订阅未过期（生产环境和沙箱环境正常情况）
-                            hasPro = true
-                            productID = transaction.productID
-                            expiry = expirationDate
-                            print("✅ 订阅有效: \(transaction.productID), 到期: \(expirationDate)")
+                            snapshot.entitlement = .pro
+                            snapshot.productID = transaction.productID
+                            snapshot.expiry = expirationDate
+                            snapshot.grandfatheredSubscriptionAI = SubscriptionAIPolicy.includesUnlimitedAI(
+                                periodPurchaseDate: transaction.purchaseDate
+                            )
+                            print("✅ 订阅有效: \(transaction.productID), 到期: \(expirationDate)，本期无限 AI=\(snapshot.grandfatheredSubscriptionAI)")
                         } else {
-                            // 订阅已过期，但可能是刚购买的交易
-                            // 在生产环境中，这种情况不应该发生（订阅应该有正常的有效期）
-                            // 在沙箱环境中，订阅可能只有几分钟有效期，所以需要容错处理
-                            let purchaseTime = transaction.purchaseDate
-                            let timeSincePurchase = Date().timeIntervalSince(purchaseTime)
-                            let fiveMinutes: TimeInterval = 5 * 60
-                            
-                            if timeSincePurchase < fiveMinutes {
-                                // 订阅已过期，但是刚刚购买（5分钟内），认为是有效的
-                                // 这主要用于处理沙箱环境中订阅立即过期的情况
-                                // 在生产环境中，这种情况理论上不应该发生
-                                hasPro = true
-                                productID = transaction.productID
-                                expiry = expirationDate
-                                print("⚠️ 订阅刚购买但已过期（可能是沙箱环境），仍认为有效: \(transaction.productID), 到期: \(expirationDate), 购买后: \(Int(timeSincePurchase))秒")
+                            let timeSincePurchase = Date().timeIntervalSince(transaction.purchaseDate)
+                            if timeSincePurchase < 5 * 60 {
+                                snapshot.entitlement = .pro
+                                snapshot.productID = transaction.productID
+                                snapshot.expiry = expirationDate
+                                snapshot.grandfatheredSubscriptionAI = SubscriptionAIPolicy.includesUnlimitedAI(
+                                    periodPurchaseDate: transaction.purchaseDate
+                                )
+                                print("⚠️ 订阅刚购买但已过期（可能是沙箱环境），仍认为有效: \(transaction.productID)，本期无限 AI=\(snapshot.grandfatheredSubscriptionAI)")
                             } else {
                                 print("⚠️ 订阅已过期且购买时间超过5分钟: \(transaction.productID)")
                             }
                         }
                     } else {
-                        print("⚠️ 订阅没有过期时间: \(transaction.productID)")
+                        snapshot.entitlement = .pro
+                        snapshot.productID = transaction.productID
+                        snapshot.grandfatheredSubscriptionAI = SubscriptionAIPolicy.includesUnlimitedAI(
+                            periodPurchaseDate: transaction.purchaseDate
+                        )
+                        print("⚠️ 订阅没有过期时间: \(transaction.productID)，本期无限 AI=\(snapshot.grandfatheredSubscriptionAI)")
                     }
                 }
             case .nonConsumable:
                 if transaction.productID == SubscriptionProductID.proLifetime {
-                    hasPro = true
-                    productID = transaction.productID
-                    expiry = nil
-                    print("✅ 终身订阅: \(transaction.productID)")
+                    snapshot.hasLifetime = true
+                    snapshot.legacyLifetimeAI = LifetimeAIPolicy.includesUnlimitedAI(
+                        originalPurchaseDate: transaction.originalPurchaseDate
+                    )
+                    if currentEntitlement == .pro {
+                        snapshot.entitlement = .pro
+                        snapshot.productID = currentSubscriptionProductID
+                        snapshot.expiry = subscriptionExpiryDate
+                        snapshot.grandfatheredSubscriptionAI = hasGrandfatheredSubscriptionUnlimitedAI
+                    } else {
+                        snapshot.entitlement = .proLifetime
+                        snapshot.productID = transaction.productID
+                        snapshot.expiry = nil
+                        snapshot.grandfatheredSubscriptionAI = false
+                    }
+                    print("✅ 终身买断: \(transaction.productID)，兼容无限 AI=\(snapshot.legacyLifetimeAI)，购买日=\(transaction.originalPurchaseDate)")
                 }
             default:
                 break
             }
-            
-            await MainActor.run {
-                currentEntitlement = hasPro ? .pro : .free
-                isSubscriptionActive = hasPro
-                subscriptionExpiryDate = expiry
-                currentSubscriptionProductID = productID
-                AppAlternateIconSync.applyHomeScreenIcon(isProActive: hasPro)
 
-                print("🔄 权益更新完成: entitlement=\(currentEntitlement), isActive=\(isSubscriptionActive), productID=\(currentSubscriptionProductID ?? "nil")")
+            if snapshot.entitlement == .free && currentEntitlement.isPaid {
+                snapshot.entitlement = currentEntitlement
+                snapshot.productID = currentSubscriptionProductID
+                snapshot.expiry = subscriptionExpiryDate
+                snapshot.legacyLifetimeAI = hasLegacyLifetimeUnlimitedAI || snapshot.legacyLifetimeAI
+                snapshot.grandfatheredSubscriptionAI = hasGrandfatheredSubscriptionUnlimitedAI || snapshot.grandfatheredSubscriptionAI
             }
+
+            apply(snapshot)
+            print("🔄 权益更新完成: entitlement=\(snapshot.entitlement), productID=\(snapshot.productID ?? "nil")")
         }
     }
 
-    private func hasActiveProSubscription() async -> (Bool, String?) {
+    private struct EntitlementSnapshot {
+        var entitlement: SubscriptionEntitlement = .free
+        var productID: String?
+        var expiry: Date?
+        var hasLifetime: Bool = false
+        var legacyLifetimeAI: Bool = false
+        var grandfatheredSubscriptionAI: Bool = false
+    }
+
+    private func apply(_ snapshot: EntitlementSnapshot) {
+        currentEntitlement = snapshot.entitlement
+        isSubscriptionActive = snapshot.entitlement.isPaid
+        subscriptionExpiryDate = snapshot.expiry
+        currentSubscriptionProductID = snapshot.productID
+        hasLifetimePurchase = snapshot.hasLifetime
+        hasLegacyLifetimeUnlimitedAI = snapshot.legacyLifetimeAI
+        hasGrandfatheredSubscriptionUnlimitedAI = snapshot.grandfatheredSubscriptionAI
+        AppAlternateIconSync.applyHomeScreenIcon(isProActive: snapshot.entitlement.isPaid)
+    }
+
+    /// 订阅优先于终身：有有效月/年订阅则为 `.pro`；仅终身则为 `.proLifetime`。
+    /// 无限 AI 不随 `.pro` 附带，仅兼容旧终身与本期开始于政策日前的订阅。
+    private func resolveEntitlement() async -> EntitlementSnapshot {
+        var snapshot = EntitlementSnapshot()
+
         for await result in Transaction.currentEntitlements {
             do {
                 let transaction = try checkVerified(result)
@@ -192,24 +226,34 @@ final class EntitlementManager: ObservableObject {
                 case .autoRenewable:
                     if transaction.productID == SubscriptionProductID.proMonthly ||
                         transaction.productID == SubscriptionProductID.proYearly {
-                        // 检查订阅是否过期
+                        let isValid: Bool
                         if let expirationDate = transaction.expirationDate {
-                            if expirationDate > Date() {
-                                print("✅ 找到有效订阅: \(transaction.productID), 到期时间: \(expirationDate)")
-                                return (true, transaction.productID)
+                            isValid = expirationDate > Date()
+                            if isValid {
+                                snapshot.expiry = expirationDate
                             } else {
                                 print("⚠️ 订阅已过期: \(transaction.productID), 到期时间: \(expirationDate)")
                             }
                         } else {
-                            // 如果没有过期时间，认为是有效的（不应该发生，但保险起见）
+                            isValid = true
                             print("⚠️ 订阅没有过期时间: \(transaction.productID)")
-                            return (true, transaction.productID)
+                        }
+                        if isValid {
+                            snapshot.entitlement = .pro
+                            snapshot.productID = transaction.productID
+                            snapshot.grandfatheredSubscriptionAI = SubscriptionAIPolicy.includesUnlimitedAI(
+                                periodPurchaseDate: transaction.purchaseDate
+                            )
+                            print("✅ 找到有效订阅: \(transaction.productID)，本期无限 AI=\(snapshot.grandfatheredSubscriptionAI)")
                         }
                     }
                 case .nonConsumable:
                     if transaction.productID == SubscriptionProductID.proLifetime {
-                        print("✅ 找到终身订阅: \(transaction.productID)")
-                        return (true, transaction.productID)
+                        snapshot.hasLifetime = true
+                        snapshot.legacyLifetimeAI = LifetimeAIPolicy.includesUnlimitedAI(
+                            originalPurchaseDate: transaction.originalPurchaseDate
+                        )
+                        print("✅ 找到终身买断: \(transaction.productID)，兼容无限 AI=\(snapshot.legacyLifetimeAI)，购买日=\(transaction.originalPurchaseDate)")
                     }
                 default:
                     break
@@ -219,35 +263,20 @@ final class EntitlementManager: ObservableObject {
                 continue
             }
         }
-        print("ℹ️ 未找到有效的 Pro 订阅")
-        return (false, nil)
-    }
 
-    private func latestExpiryDate() async -> Date? {
-        var latest: Date?
-
-        for await result in Transaction.currentEntitlements {
-            do {
-                let transaction = try checkVerified(result)
-                // 终身买断无过期时间，直接返回 nil
-                if transaction.productType == .nonConsumable &&
-                    transaction.productID == SubscriptionProductID.proLifetime {
-                    return nil
-                }
-                if transaction.productType == .autoRenewable &&
-                    (transaction.productID == SubscriptionProductID.proMonthly ||
-                     transaction.productID == SubscriptionProductID.proYearly) {
-                    if let expiry = transaction.expirationDate {
-                        if latest == nil || expiry > latest! {
-                            latest = expiry
-                        }
-                    }
-                }
-            } catch {
-                continue
-            }
+        if snapshot.entitlement == .pro {
+            return snapshot
         }
-        return latest
+        if snapshot.hasLifetime {
+            snapshot.entitlement = .proLifetime
+            snapshot.productID = SubscriptionProductID.proLifetime
+            snapshot.expiry = nil
+            snapshot.grandfatheredSubscriptionAI = false
+            return snapshot
+        }
+
+        print("ℹ️ 未找到有效的 Pro 订阅")
+        return snapshot
     }
 
     private func checkVerified<T>(_ result: VerificationResult<T>) throws -> T {

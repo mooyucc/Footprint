@@ -46,13 +46,13 @@ struct WeatherBadgeView: View {
                 Image(systemName: summary.symbolName)
                     .symbolRenderingMode(.palette)
                     .foregroundStyle(summary.palette.symbolPrimary, summary.palette.symbolSecondary)
-                    .font(.system(size: 20, weight: .semibold, design: .rounded))
+                    .font(.system(size: 20, weight: .semibold))
                     .symbolEffect(.pulse, value: animateSymbol)
             } else {
                 Image(systemName: summary.symbolName)
                     .symbolRenderingMode(.palette)
                     .foregroundStyle(summary.palette.symbolPrimary, summary.palette.symbolSecondary)
-                    .font(.system(size: 20, weight: .semibold, design: .rounded))
+                    .font(.system(size: 20, weight: .semibold))
                     .scaleEffect(animateSymbol ? 1.0 : 0.9)
                     .animation(
                         .easeInOut(duration: 1.1).repeatForever(autoreverses: true),
@@ -64,7 +64,7 @@ struct WeatherBadgeView: View {
     
     private var temperatureLabel: some View {
         Text(summary.temperatureText)
-            .font(.system(size: 11, weight: .semibold, design: .rounded))
+            .font(.system(size: 11, weight: .semibold))
             .foregroundStyle(Color.white)
             .padding(.horizontal, 8)
             .padding(.vertical, 2)

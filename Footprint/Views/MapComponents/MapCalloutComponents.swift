@@ -14,7 +14,7 @@ import SwiftData
 /// 用于发现地图模式下的简化头像圆圈标注（当卡片可能重叠时使用）
 struct SimplifiedAvatarAnnotationView: View {
     let destination: TravelDestination
-    let appleSignInManager: AppleSignInManager
+    let userProfileManager: UserProfileManager
     let accentColor: Color  // 品牌色，用于默认头像
     
     // 头像圆圈尺寸
@@ -78,7 +78,7 @@ struct SimplifiedAvatarAnnotationView: View {
 /// 用于发现地图模式下的地点标注卡片
 struct MapDestinationCalloutAnnotationView: View {
     let destination: TravelDestination
-    let appleSignInManager: AppleSignInManager
+    let userProfileManager: UserProfileManager
     @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
@@ -118,15 +118,14 @@ struct MapDestinationCalloutAnnotationView: View {
     // MARK: - 名称和类型行
     private var nameAndCategoryRow: some View {
         HStack(spacing: 5) {
-            // 显示地点类型（如果有），否则显示地点名称
-            Text(destination.localizedType.isEmpty ? destination.name : destination.localizedType)
-                .font(.system(size: 13, weight: .semibold, design: .rounded)) // 进一步缩小字体：从16改为13
+            Text(destination.name)
+                .font(.system(size: 13, weight: .semibold)) // 进一步缩小字体：从16改为13
                 .foregroundColor(.primary)
                 .lineLimit(1)
             
             // 显示时间日期（替代原来的"国内"）
             Text(formatVisitDate(destination.visitDate))
-                .font(.system(size: 10, weight: .medium, design: .rounded)) // 进一步缩小字体：从12改为10
+                .font(.system(size: 10, weight: .medium)) // 进一步缩小字体：从12改为10
                 .foregroundColor(.secondary)
                 .padding(.horizontal, 5) // 进一步缩小内边距
                 .padding(.vertical, 2) // 进一步缩小内边距
@@ -148,14 +147,14 @@ struct MapDestinationCalloutAnnotationView: View {
         Group {
             if !destination.notes.isEmpty {
                 Text(destination.notes)
-                    .font(.system(size: 11, weight: .regular, design: .rounded)) // 进一步缩小字体：从13改为11
+                    .font(.system(size: 11, weight: .regular)) // 进一步缩小字体：从13改为11
                     .foregroundColor(.secondary)
                     .lineLimit(2) // 固定显示两行
                     .truncationMode(.tail) // 超出部分用"..."省略
                     .multilineTextAlignment(.leading)
             } else {
-                Text("暂无笔记")
-                    .font(.system(size: 11, weight: .regular, design: .rounded)) // 缩小字体
+                Text("no_notes".localized)
+                    .font(.system(size: 11, weight: .regular)) // 缩小字体
                     .foregroundStyle(.tertiary)
                     .lineLimit(2)
             }
@@ -213,7 +212,7 @@ struct MapDestinationCalloutAnnotationView: View {
     private var userAvatar: some View {
         Group {
             // 优先显示用户头像（创建地点的用户）
-            if let avatarImage = appleSignInManager.userAvatarImage {
+            if let avatarImage = userProfileManager.userAvatarImage {
                 Image(uiImage: avatarImage)
                     .resizable()
                     .scaledToFill()
@@ -250,7 +249,7 @@ struct MapDestinationCalloutAnnotationView: View {
 struct MapDestinationCalloutView: View {
     let destination: TravelDestination
     let onTap: () -> Void
-    let appleSignInManager: AppleSignInManager
+    let userProfileManager: UserProfileManager
     @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
@@ -289,15 +288,14 @@ struct MapDestinationCalloutView: View {
     // MARK: - 名称和类型行
     private var nameAndCategoryRow: some View {
         HStack(spacing: 5) {
-            // 显示地点类型（如果有），否则显示地点名称
-            Text(destination.localizedType.isEmpty ? destination.name : destination.localizedType)
-                .font(.system(size: 13, weight: .semibold, design: .rounded)) // 进一步缩小字体：从14改为13
+            Text(destination.name)
+                .font(.system(size: 13, weight: .semibold)) // 进一步缩小字体：从14改为13
                 .foregroundColor(.primary)
                 .lineLimit(1)
             
             // 显示时间日期（替代原来的"国内"）
             Text(formatVisitDate(destination.visitDate))
-                .font(.system(size: 10, weight: .medium, design: .rounded)) // 进一步缩小字体：从11改为10
+                .font(.system(size: 10, weight: .medium)) // 进一步缩小字体：从11改为10
                 .foregroundColor(.secondary)
                 .padding(.horizontal, 5) // 进一步缩小内边距
                 .padding(.vertical, 2) // 进一步缩小内边距
@@ -319,15 +317,15 @@ struct MapDestinationCalloutView: View {
         Group {
             if !destination.notes.isEmpty {
                 Text(destination.notes)
-                    .font(.system(size: 11, weight: .regular, design: .rounded)) // 进一步缩小字体：从12改为11
+                    .font(.system(size: 11, weight: .regular)) // 进一步缩小字体：从12改为11
                     .foregroundColor(.secondary)
                     .lineLimit(2, reservesSpace: false) // 只显示两行，不保留额外空间
                     .truncationMode(.tail) // 超出部分用"..."省略
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true) // 允许垂直扩展，但限制水平宽度
             } else {
-                Text("暂无笔记")
-                    .font(.system(size: 11, weight: .regular, design: .rounded)) // 进一步缩小字体
+                Text("no_notes".localized)
+                    .font(.system(size: 11, weight: .regular)) // 进一步缩小字体
                     .foregroundStyle(.tertiary)
                     .lineLimit(2)
             }
@@ -393,7 +391,7 @@ struct MapDestinationCalloutView: View {
     private var userAvatar: some View {
         Group {
             // 优先显示用户头像（创建地点的用户）
-            if let avatarImage = appleSignInManager.userAvatarImage {
+            if let avatarImage = userProfileManager.userAvatarImage {
                 Image(uiImage: avatarImage)
                     .resizable()
                     .scaledToFill()
@@ -422,7 +420,7 @@ struct MapDestinationCalloutView: View {
 struct ClusterCalloutAnnotationView: View {
     let destinations: [TravelDestination]
     @Environment(\.colorScheme) private var colorScheme
-    let appleSignInManager: AppleSignInManager
+    let userProfileManager: UserProfileManager
     
     // 最多显示的头像数量（根据卡片大小计算）
     private let maxVisibleAvatars = 3
@@ -486,7 +484,7 @@ struct ClusterCalloutAnnotationView: View {
                     if !noteDestination.notes.isEmpty {
                         // 显示笔记内容
                         Text(noteDestination.notes)
-                            .font(.system(size: 13, weight: .regular, design: .rounded)) // 字体13pt
+                            .font(.system(size: 13, weight: .regular)) // 字体13pt
                             .foregroundColor(.primary) // 黑色
                             .lineLimit(2) // 固定显示两行
                             .truncationMode(.tail)
@@ -494,14 +492,14 @@ struct ClusterCalloutAnnotationView: View {
                             .frame(width: 120, alignment: .leading) // 固定宽度120，确保文字能够换行
                     } else {
                         // 如果没有笔记，显示"暂无笔记"
-                        Text("暂无笔记")
-                            .font(.system(size: 13, weight: .regular, design: .rounded))
+                        Text("no_notes".localized)
+                            .font(.system(size: 13, weight: .regular))
                             .foregroundColor(.primary) // 黑色
                             .lineLimit(2)
                     }
                 } else {
-                    Text("暂无笔记")
-                        .font(.system(size: 13, weight: .regular, design: .rounded))
+                    Text("no_notes".localized)
+                        .font(.system(size: 13, weight: .regular))
                         .foregroundColor(.primary) // 黑色
                         .lineLimit(2)
                 }

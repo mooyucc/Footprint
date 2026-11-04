@@ -10,7 +10,7 @@ import SwiftUI
 /// 引导星座页：星座选择
 struct OnboardingConstellationView: View {
     @EnvironmentObject var brandColorManager: BrandColorManager
-    @EnvironmentObject var appleSignInManager: AppleSignInManager
+    @EnvironmentObject var userProfileManager: UserProfileManager
     @Environment(\.colorScheme) private var colorScheme
     
     @State private var selectedConstellation: String = UserProfileOptions.localizedConstellation(for: "prefer_not_to_say")
@@ -89,15 +89,7 @@ struct OnboardingConstellationView: View {
                     }
                     .padding(20)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Color(.systemBackground))
-                            .shadow(color: Color.black.opacity(0.1), radius: 12, x: 0, y: 4)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
-                    )
+                    .footprintGlassCard(cornerRadius: 18, glow: brandColorManager.currentBrandColor)
                     
                     // 星座选择卡片
                     VStack(alignment: .leading, spacing: 16) {
@@ -140,7 +132,7 @@ struct OnboardingConstellationView: View {
                                         }
                                         
                                         Text(option)
-                                            .font(.system(.caption, design: .rounded))
+                                            .font(.system(.caption))
                                             .fontWeight(.medium)
                                             .foregroundColor(selectedConstellation == option ? .white : .primary)
                                             .lineLimit(1)
@@ -153,7 +145,7 @@ struct OnboardingConstellationView: View {
                                         RoundedRectangle(cornerRadius: 15, style: .continuous)
                                             .fill(selectedConstellation == option ? 
                                                   brandColorManager.currentBrandColor : 
-                                                  Color(.secondarySystemBackground))
+                                                  Color.primary.opacity(0.06))
                                     )
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 15, style: .continuous)
@@ -170,15 +162,7 @@ struct OnboardingConstellationView: View {
                         }
                     }
                     .padding(20)
-                    .background(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Color(.systemBackground))
-                            .shadow(color: Color.black.opacity(0.1), radius: 12, x: 0, y: 4)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
-                    )
+                    .footprintGlassCard(cornerRadius: 18, glow: brandColorManager.currentBrandColor)
                     
                     Spacer(minLength: 40)
                 }
@@ -192,7 +176,7 @@ struct OnboardingConstellationView: View {
                     let preferNotToSayConstellation = UserProfileOptions.localizedConstellation(for: "prefer_not_to_say")
                     if selectedConstellation != preferNotToSayConstellation {
                         let constellationKey = UserProfileOptions.constellationKey(for: selectedConstellation)
-                        appleSignInManager.setConstellation(constellationKey)
+                        userProfileManager.setConstellation(constellationKey)
                     }
                     onNext()
                 } label: {
@@ -238,22 +222,16 @@ struct OnboardingConstellationView: View {
             }
             .padding(.top, 20)
         }
-        .background(
-            LinearGradient(
-                colors: [
-                    Color.blue.opacity(0.12),
-                    Color.pink.opacity(0.08),
-                    Color(.systemBackground)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
+        .background {
+            FootprintAtmosphereBackground(
+                accent: brandColorManager.currentBrandColor,
+                secondaryAccent: FootprintTheme.Accent.secondary
             )
-            .ignoresSafeArea(.all)
-        )
+        }
         .onAppear {
             // 如果已有保存的星座，恢复选择
-            if !appleSignInManager.constellation.isEmpty {
-                selectedConstellation = appleSignInManager.constellation
+            if !userProfileManager.constellation.isEmpty {
+                selectedConstellation = userProfileManager.constellation
             }
         }
     }
@@ -264,6 +242,6 @@ struct OnboardingConstellationView: View {
         print("Next tapped")
     }
     .environmentObject(BrandColorManager.shared)
-    .environmentObject(AppleSignInManager.shared)
+    .environmentObject(UserProfileManager.shared)
 }
 

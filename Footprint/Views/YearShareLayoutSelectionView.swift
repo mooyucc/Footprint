@@ -21,62 +21,67 @@ struct YearShareLayoutSelectionView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // 版面选择列表
-                ScrollView {
-                    VStack(spacing: 16) {
-                        ForEach(TripShareLayout.allCases) { layout in
-                            LayoutOptionCard(
-                                layout: layout,
-                                isSelected: selectedLayout == layout,
-                                isLocked: !allowedLayouts.contains(layout)
-                            ) {
-                                if allowedLayouts.contains(layout) {
-                                selectedLayout = layout
-                                } else {
-                                    showPaywall = true
+            ZStack {
+                FootprintAtmosphereBackground(
+                    accent: Color.footprintRed,
+                    secondaryAccent: FootprintTheme.Accent.secondary
+                )
+                VStack(spacing: 0) {
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            ForEach(TripShareLayout.allCases) { layout in
+                                LayoutOptionCard(
+                                    layout: layout,
+                                    isSelected: selectedLayout == layout,
+                                    isLocked: !allowedLayouts.contains(layout)
+                                ) {
+                                    if allowedLayouts.contains(layout) {
+                                    selectedLayout = layout
+                                    } else {
+                                        showPaywall = true
+                                    }
                                 }
                             }
                         }
+                        .padding()
+                    }
+                    
+                    VStack(spacing: 12) {
+                        Button {
+                            guard !isGenerating else { return }
+                            generateAndShare()
+                        } label: {
+                            HStack {
+                                if isGenerating {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                } else {
+                                    Image(systemName: "square.and.arrow.up")
+                                }
+                                Text(isGenerating ? "share_generating".localized : "share".localized)
+                            }
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(isGenerating ? Color.gray : Color.footprintRed)
+                            .cornerRadius(12)
+                        }
+                        .disabled(isGenerating)
+                        
+                        Button {
+                            dismiss()
+                        } label: {
+                            Text("cancel".localized)
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     .padding()
+                    .background(.ultraThinMaterial)
                 }
-                
-                // 底部操作按钮
-                VStack(spacing: 12) {
-                    Button {
-                        guard !isGenerating else { return }
-                        generateAndShare()
-                    } label: {
-                        HStack {
-                            if isGenerating {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            } else {
-                                Image(systemName: "square.and.arrow.up")
-                            }
-                            Text(isGenerating ? "share_generating".localized : "share".localized)
-                        }
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(isGenerating ? Color.gray : Color.blue)
-                        .cornerRadius(12)
-                    }
-                    .disabled(isGenerating)
-                    
-                    Button {
-                        dismiss()
-                    } label: {
-                        Text("cancel".localized)
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .padding()
-                .background(Color(.systemBackground))
             }
+            .toolbarBackground(.hidden, for: .navigationBar)
             .navigationTitle("select_layout".localized)
             .navigationBarTitleDisplayMode(.inline)
         }

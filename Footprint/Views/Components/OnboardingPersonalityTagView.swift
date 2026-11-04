@@ -10,7 +10,7 @@ import SwiftUI
 /// 引导性格标签页：MBTI性格类型选择
 struct OnboardingPersonalityTagView: View {
     @EnvironmentObject var brandColorManager: BrandColorManager
-    @EnvironmentObject var appleSignInManager: AppleSignInManager
+    @EnvironmentObject var userProfileManager: UserProfileManager
     @Environment(\.colorScheme) private var colorScheme
     
     @State private var selectedMbti: String = "INTJ"
@@ -95,15 +95,7 @@ struct OnboardingPersonalityTagView: View {
                     }
                     .padding(20)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Color(.systemBackground))
-                            .shadow(color: Color.black.opacity(0.1), radius: 12, x: 0, y: 4)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
-                    )
+                    .footprintGlassCard(cornerRadius: 18, glow: brandColorManager.currentBrandColor)
                     
                     // MBTI选择卡片
                     VStack(alignment: .leading, spacing: 16) {
@@ -130,7 +122,7 @@ struct OnboardingPersonalityTagView: View {
                                             .frame(height: 28)
                                         
                                         Text(mbti)
-                                            .font(.system(.caption, design: .rounded))
+                                            .font(.system(.caption))
                                             .fontWeight(.semibold)
                                             .foregroundColor(selectedMbti == mbti ? .white : .primary)
                                     }
@@ -140,7 +132,7 @@ struct OnboardingPersonalityTagView: View {
                                         RoundedRectangle(cornerRadius: 12, style: .continuous)
                                             .fill(selectedMbti == mbti ? 
                                                   brandColorManager.currentBrandColor : 
-                                                  Color(.secondarySystemBackground))
+                                                  Color.primary.opacity(0.06))
                                     )
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -157,15 +149,7 @@ struct OnboardingPersonalityTagView: View {
                         }
                     }
                     .padding(20)
-                    .background(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .fill(Color(.systemBackground))
-                            .shadow(color: Color.black.opacity(0.1), radius: 12, x: 0, y: 4)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
-                    )
+                    .footprintGlassCard(cornerRadius: 18, glow: brandColorManager.currentBrandColor)
                     
                     Spacer(minLength: 40)
                 }
@@ -176,7 +160,7 @@ struct OnboardingPersonalityTagView: View {
             VStack(spacing: 12) {
                 Button {
                     // 保存MBTI类型
-                    appleSignInManager.setMbtiType(selectedMbti)
+                    userProfileManager.setMbtiType(selectedMbti)
                     onNext()
                 } label: {
                     Text("onboarding_next".localized)
@@ -221,22 +205,16 @@ struct OnboardingPersonalityTagView: View {
             }
             .padding(.top, 20)
         }
-        .background(
-            LinearGradient(
-                colors: [
-                    Color.blue.opacity(0.12),
-                    Color.pink.opacity(0.08),
-                    Color(.systemBackground)
-                ],
-                startPoint: .top,
-                endPoint: .bottom
+        .background {
+            FootprintAtmosphereBackground(
+                accent: brandColorManager.currentBrandColor,
+                secondaryAccent: FootprintTheme.Accent.secondary
             )
-            .ignoresSafeArea(.all)
-        )
+        }
         .onAppear {
             // 如果已有保存的MBTI类型，恢复选择
-            if !appleSignInManager.mbtiType.isEmpty {
-                selectedMbti = appleSignInManager.mbtiType
+            if !userProfileManager.mbtiType.isEmpty {
+                selectedMbti = userProfileManager.mbtiType
             }
         }
     }
@@ -247,6 +225,6 @@ struct OnboardingPersonalityTagView: View {
         print("Next tapped")
     }
     .environmentObject(BrandColorManager.shared)
-    .environmentObject(AppleSignInManager.shared)
+    .environmentObject(UserProfileManager.shared)
 }
 

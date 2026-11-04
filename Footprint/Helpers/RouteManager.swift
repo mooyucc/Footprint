@@ -109,8 +109,24 @@ class RouteManager: ObservableObject {
         self.cacheFileURL = directory.appendingPathComponent("routes.json")
         self.preferencesFileURL = directory.appendingPathComponent("transportPreferences.json")
         
-        self.persistedRouteEntries = Self.loadPersistedCache(from: cacheFileURL)
-        self.userTransportPreferences = Self.loadTransportPreferences(from: preferencesFileURL)
+        self.persistedRouteEntries = [:]
+        self.userTransportPreferences = [:]
+        loadPersistedDataOffMainThread()
+    }
+    
+    private func loadPersistedDataOffMainThread() {
+        let cacheURL = cacheFileURL
+        let prefURL = preferencesFileURL
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let entries = Self.loadPersistedCache(from: cacheURL)
+            let prefs = Self.loadTransportPreferences(from: prefURL)
+            self?.cacheQueue.async(flags: .barrier) {
+                self?.persistedRouteEntries = entries
+            }
+            self?.preferencesQueue.async(flags: .barrier) {
+                self?.userTransportPreferences = prefs
+            }
+        }
     }
     
     /// 计算两个地点之间的路线
@@ -1122,14 +1138,14 @@ extension RouteManager {
     }
 }
 
-// MARK: - 与 `RouteCard` 一致的总里程（旅程卡片等复用）
+// MARK: - 旅程总里程（旅程卡片等复用）
 extension RouteManager {
-    /// 与 `MapRouteComponents.RouteCard` / `calculateRoutesSelf` 一致：每段均有 `getCachedRoute` 时累加 `footprintDistance`；任一段未命中缓存则退回整条折线的直线距离之和。
+    /// 每段均有 `getCachedRoute` 时累加 `footprintDistance`；任一段未命中缓存则退回整条折线的直线距离之和。
     func totalDistanceMetersMatchingRouteCard(destinations: [TravelDestination]) -> CLLocationDistance {
         totalDistanceMetersMatchingRouteCard(destinations: destinations, precomputedRoutes: nil)
     }
     
-    /// 与 `JourneyDrawer` → `RouteCard` 一致：优先使用 MapView 同步来的 `precomputedRoutes`（与地图同源）；否则同 `totalDistanceMetersMatchingRouteCard(destinations:)`。
+    /// 优先使用 MapView 同步来的 `precomputedRoutes`（与地图同源）；否则同 `totalDistanceMetersMatchingRouteCard(destinations:)`。
     func totalDistanceMetersMatchingRouteCard(destinations: [TravelDestination], precomputedRoutes: [MKRoute]?) -> CLLocationDistance {
         if let pre = precomputedRoutes, !pre.isEmpty {
             return pre.reduce(0) { $0 + $1.footprintDistance }
@@ -1156,7 +1172,7 @@ extension RouteManager {
         return sum
     }
     
-    /// 与 `RouteCard` 内 `MKDistanceFormatter` 设置一致
+    /// 路线距离展示格式（`MKDistanceFormatter`）
     static func formatDistanceForRouteCard(_ distance: CLLocationDistance, languageManager: LanguageManager) -> String {
         let formatter = MKDistanceFormatter()
         formatter.unitStyle = .abbreviated

@@ -19,12 +19,39 @@ struct MapClusterPoint: Sendable {
 }
 
 enum MapClusterEngine {
-    /// 按距离聚合，返回每组地点 ID（可在后台线程调用）
-    static func clusterGroups(points: [MapClusterPoint], distance: Double) -> [[UUID]] {
-        guard distance > 0 else {
-            return points.map { [$0.id] }
+    /// 地图上最多渲染的标注数（单点或聚合点）
+    static let maxVisibleClusters = 50
+
+    /// 按距离聚合，超出 `maxClusters` 时逐步加大半径直至 ≤ maxClusters（可在后台线程调用）
+    static func clusterGroups(
+        points: [MapClusterPoint],
+        distance: Double,
+        maxClusters: Int = maxVisibleClusters
+    ) -> [[UUID]] {
+        guard !points.isEmpty else { return [] }
+
+        if distance <= 0 {
+            if points.count <= maxClusters {
+                return points.map { [$0.id] }
+            }
+            return points.prefix(maxClusters).map { [$0.id] }
         }
 
+        var currentDistance = distance
+        var groups = clusterGroupsAtDistance(points: points, distance: currentDistance)
+
+        while groups.count > maxClusters && currentDistance < 500_000 {
+            currentDistance *= 1.5
+            groups = clusterGroupsAtDistance(points: points, distance: currentDistance)
+        }
+
+        if groups.count > maxClusters {
+            groups = Array(groups.prefix(maxClusters))
+        }
+        return groups
+    }
+
+    private static func clusterGroupsAtDistance(points: [MapClusterPoint], distance: Double) -> [[UUID]] {
         var clusters: [[UUID]] = []
         var processed = Set<UUID>()
         let sorted = points.sorted { $0.latitude < $1.latitude }

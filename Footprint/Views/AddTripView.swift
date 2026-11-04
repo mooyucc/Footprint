@@ -29,6 +29,7 @@ struct AddTripView: View {
     
     var body: some View {
         NavigationStack {
+            FootprintFormScaffold(accent: Color.footprintRed) {
             Form {
                 Section(header: Text("trip_info".localized)) {
                     TextField("trip_name".localized, text: $name)
@@ -125,6 +126,7 @@ struct AddTripView: View {
                     .environmentObject(purchaseManager)
                     .environmentObject(entitlementManager)
             }
+            } // FootprintFormScaffold
         }
     }
     

@@ -15,7 +15,7 @@ final class TravelTrip {
     var desc: String = "" // 行程描述
     var startDate: Date = Date()
     var endDate: Date = Date()
-    var coverPhotoData: Data? // 封面图片
+    @Attribute(.externalStorage) var coverPhotoData: Data? // 封面图片
     
     @Relationship(deleteRule: .nullify)
     var destinations: [TravelDestination]?

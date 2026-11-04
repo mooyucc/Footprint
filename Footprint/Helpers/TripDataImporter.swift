@@ -145,6 +145,7 @@ struct TripDataImporter {
             }
             
             try modelContext.save()
+            DestinationChangeNotifier.postUpdated()
             
             return .success(newTrip)
         } catch {
@@ -184,6 +185,7 @@ struct TripDataImporter {
                 existingDestination.isFavorite = destInfo.isFavorite
                 
                 try modelContext.save()
+                DestinationChangeNotifier.postUpdated()
                 return .duplicate(existingDestination)
             } else {
                 // 创建新独立地点
@@ -208,6 +210,7 @@ struct TripDataImporter {
                 
                 modelContext.insert(destination)
                 try modelContext.save()
+                DestinationChangeNotifier.postUpdated()
                 
                 return .success(destination)
             }

@@ -169,10 +169,7 @@ struct TimelinePlayerView: View {
             }
         }
         .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(.systemBackground).opacity(0.8))
-        )
+        .footprintGlassCard(cornerRadius: 12)
         .padding(.horizontal)
         .padding(.top, 10)
     }

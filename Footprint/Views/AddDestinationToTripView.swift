@@ -51,32 +51,39 @@ struct AddDestinationToTripView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // 模式选择器
-                Picker(NSLocalizedString("mode", comment: ""), selection: $selectedMode) {
-                    Text(NSLocalizedString("create_new_destination", comment: "")).tag(0)
-                    Text(NSLocalizedString("add_existing_destination", comment: "")).tag(1)
-                }
-                .pickerStyle(.segmented)
-                .padding()
-                
-                if selectedMode == 0 {
-                    createNewDestinationView
-                } else {
-                    selectExistingDestinationsView
+            ZStack {
+                FootprintAtmosphereBackground(
+                    accent: Color.footprintRed,
+                    secondaryAccent: FootprintTheme.Accent.secondary
+                )
+                VStack(spacing: 0) {
+                    // 模式选择器
+                    Picker("mode".localized, selection: $selectedMode) {
+                        Text("create_new_destination".localized).tag(0)
+                        Text("add_existing_destination".localized).tag(1)
+                    }
+                    .pickerStyle(.segmented)
+                    .padding()
+                    
+                    if selectedMode == 0 {
+                        createNewDestinationView
+                    } else {
+                        selectExistingDestinationsView
+                    }
                 }
             }
-            .navigationTitle(NSLocalizedString("add_destination_to_trip", comment: ""))
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .navigationTitle("add_destination_to_trip".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button(NSLocalizedString("cancel", comment: "")) {
+                    Button("cancel".localized) {
                         dismiss()
                     }
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(NSLocalizedString("save", comment: "")) {
+                    Button("save".localized) {
                         saveDestinations()
                     }
                     .disabled(!isValid)
@@ -89,9 +96,6 @@ struct AddDestinationToTripView: View {
                         let processed = ImageProcessor.process(data: data)
                         photoData = processed.0
                         photoThumbnailData = processed.1
-                        PlaceTypeImageClassifier.suggestPlaceType(from: processed.0) { suggested in
-                            type = suggested ?? ""
-                        }
                     }
                 }
             }
@@ -105,37 +109,30 @@ struct AddDestinationToTripView: View {
     
     private var createNewDestinationView: some View {
         Form {
-            Section(NSLocalizedString("basic_info", comment: "")) {
-                TextField(NSLocalizedString("place_name", comment: ""), text: $name)
+            Section("basic_info".localized) {
+                TextField("place_name".localized, text: $name)
                 
-                Picker(NSLocalizedString("category", comment: ""), selection: $category) {
+                Picker("category".localized, selection: $category) {
                     ForEach(categories, id: \.self) { category in
-                        Text(NSLocalizedString(category, comment: "")).tag(category)
+                        Text(category.localized).tag(category)
                     }
                 }
                 .pickerStyle(.segmented)
 
-                Picker(NSLocalizedString("destination_type", comment: ""), selection: $type) {
-                    Text(NSLocalizedString("none", comment: "")).tag("")
-                    ForEach(TravelDestination.placeTypeFilterOptions, id: \.key) { option in
-                        Text(NSLocalizedString(option.localizedKey, comment: "")).tag(option.key)
-                    }
-                }
-
-                TextField(NSLocalizedString("country_region", comment: ""), text: $country)
+                TextField("country_region".localized, text: $country)
                 
-                DatePicker(NSLocalizedString("visit_date", comment: ""), selection: $visitDate, displayedComponents: [.date, .hourAndMinute])
+                DatePicker("visit_date".localized, selection: $visitDate, displayedComponents: [.date, .hourAndMinute])
                     .environment(\.locale, Locale(identifier: languageManager.currentLanguage.rawValue))
                 
-                Toggle(NSLocalizedString("mark_as_favorite", comment: ""), isOn: $isFavorite)
+                Toggle("mark_as_favorite".localized, isOn: $isFavorite)
             }
             
-            Section(NSLocalizedString("location_search", comment: "")) {
+            Section("location_search".localized) {
                 HStack {
-                    TextField(NSLocalizedString("search_place", comment: ""), text: $searchText)
+                    TextField("search_place".localized, text: $searchText)
                         .textFieldStyle(.roundedBorder)
                     
-                    Button(NSLocalizedString("search", comment: "")) {
+                    Button("search".localized) {
                         searchLocation()
                     }
                     .disabled(searchText.isEmpty)
@@ -150,7 +147,7 @@ struct AddDestinationToTripView: View {
                         selectLocation(item)
                     } label: {
                         VStack(alignment: .leading) {
-                            Text(item.name ?? NSLocalizedString("unknown_place", comment: ""))
+                            Text(item.name ?? "unknown_place".localized)
                                 .foregroundColor(.primary)
                             if let address = item.placemark.title {
                                 Text(address)
@@ -166,9 +163,9 @@ struct AddDestinationToTripView: View {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(.green)
                         VStack(alignment: .leading) {
-                            Text("\(NSLocalizedString("selected", comment: ""))\(location.name ?? "")")
+                            Text("\("selected".localized)\(location.name ?? "")")
                                 .font(.caption)
-                            Text(String(format: NSLocalizedString("latitude_longitude", comment: ""), location.placemark.coordinate.latitude, location.placemark.coordinate.longitude))
+                            Text("latitude_longitude".localized(with: location.placemark.coordinate.latitude, location.placemark.coordinate.longitude))
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         }
@@ -177,9 +174,9 @@ struct AddDestinationToTripView: View {
                 }
             }
             
-            Section(NSLocalizedString("photo", comment: "")) {
+            Section("photo".localized) {
                 PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                    Label(NSLocalizedString("select_photo", comment: ""), systemImage: "photo")
+                    Label("select_photo".localized, systemImage: "photo")
                 }
                 
                 if let photoData = photoThumbnailData ?? photoData,
@@ -192,7 +189,7 @@ struct AddDestinationToTripView: View {
                 }
             }
             
-            Section(NSLocalizedString("notes", comment: "")) {
+            Section("notes".localized) {
                 TextEditor(text: $notes)
                     .frame(minHeight: 100)
             }
@@ -207,10 +204,10 @@ struct AddDestinationToTripView: View {
                         .font(.system(size: 50))
                         .foregroundColor(.gray.opacity(0.5))
                     
-                    Text(NSLocalizedString("no_destinations_to_add", comment: ""))
+                    Text("no_destinations_to_add".localized)
                         .foregroundColor(.secondary)
                     
-                    Text(NSLocalizedString("all_destinations_in_trip", comment: ""))
+                    Text("all_destinations_in_trip".localized)
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }

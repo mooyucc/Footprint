@@ -14,22 +14,23 @@ struct YearFilteredDestinationView: View {
     @Query private var allDestinations: [TravelDestination]
     @State private var searchText = ""
     @State private var filterCategory: String? = nil
-    @State private var filterPlaceType: String? = nil
     @State private var editingDestination: TravelDestination?
+    @State private var detailDestination: TravelDestination?
+    @State private var filteredDestinationsCache: [TravelDestination] = []
+    @State private var searchFilterDebounceTask: Task<Void, Never>?
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var languageManager: LanguageManager
     @EnvironmentObject var brandColorManager: BrandColorManager
     @StateObject private var countryManager = CountryManager.shared
+    @ObservedObject private var destinationRevision = DestinationDataRevision.shared
+    @State private var statisticsCache: (total: Int, domestic: Int, international: Int, countries: Int)?
+    @State private var lastHandledStatisticsRevision = -1
+    @State private var yearStatisticsDebounceTask: Task<Void, Never>?
     @State private var refreshID = UUID()
     @Environment(\.colorScheme) var colorScheme
     @State private var shareItem: TripShareItem?
     @State private var showingLayoutSelection = false
     @State private var selectedLayout: TripShareLayout = .list
-    
-    // MARK: - 配色（使用统一的 AppColorScheme 工具类）
-    
-    private var primaryTextColor: Color {
-        AppColorScheme.primaryText(for: colorScheme)
-    }
     
     init(year: Int) {
         self.year = year
@@ -45,19 +46,14 @@ struct YearFilteredDestinationView: View {
         self._allDestinations = Query(filter: predicate, sort: \TravelDestination.visitDate, order: .reverse)
     }
     
-    var filteredDestinations: [TravelDestination] {
+    private func recomputeFilteredDestinations() {
         var result = allDestinations
         
         if let category = filterCategory {
-            // 使用 CountryManager 来判断是否为国内
             result = result.filter { destination in
                 let isDomestic = countryManager.isDomestic(country: destination.country)
                 return category == "domestic" ? isDomestic : !isDomestic
             }
-        }
-        
-        if let placeType = filterPlaceType {
-            result = result.filter { $0.type == placeType }
         }
         
         if !searchText.isEmpty {
@@ -68,76 +64,99 @@ struct YearFilteredDestinationView: View {
             }
         }
         
-        return result
+        filteredDestinationsCache = result
+    }
+    
+    private func scheduleSearchFilterRefresh() {
+        searchFilterDebounceTask?.cancel()
+        searchFilterDebounceTask = Task {
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                recomputeFilteredDestinations()
+            }
+        }
     }
     
     var statistics: (total: Int, domestic: Int, international: Int, countries: Int) {
-        let total = allDestinations.count
-        // 使用 CountryManager 来判断是否为国内
-        let domestic = allDestinations.filter { countryManager.isDomestic(country: $0.country) }.count
-        let international = allDestinations.filter { !countryManager.isDomestic(country: $0.country) }.count
-        let countries = Set(allDestinations.map { $0.country }).count
+        statisticsCache ?? computeYearStatistics(from: allDestinations)
+    }
+    
+    private func computeYearStatistics(from destinations: [TravelDestination]) -> (total: Int, domestic: Int, international: Int, countries: Int) {
+        let total = destinations.count
+        let domestic = destinations.filter { countryManager.isDomestic(country: $0.country) }.count
+        let international = total - domestic
+        let countries = Set(destinations.map(\.country)).count
         return (total, domestic, international, countries)
+    }
+
+    private func refreshYearStatisticsIfNeeded() {
+        let rev = destinationRevision.revision
+        guard statisticsCache == nil || rev != lastHandledStatisticsRevision else { return }
+        lastHandledStatisticsRevision = rev
+        statisticsCache = computeYearStatistics(from: allDestinations)
+    }
+
+    private func scheduleYearStatisticsRefresh() {
+        yearStatisticsDebounceTask?.cancel()
+        yearStatisticsDebounceTask = Task {
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                refreshYearStatisticsIfNeeded()
+            }
+        }
     }
     
     var body: some View {
         NavigationStack {
-            ScrollView {
-                LazyVStack(spacing: 20) {
-                    // 年份统计信息卡片
-                    YearStatisticsCard(year: year, statistics: statistics)
-                    
-                    // 筛选器卡片
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("filter".localized)
-                            .font(.headline)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.white)
+            ZStack {
+                FootprintAtmosphereBackground(
+                    accent: brandColorManager.currentBrandColor,
+                    secondaryAccent: FootprintTheme.Accent.secondary
+                )
+                
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 16) {
+                        YearStatisticsCard(year: year, statistics: statistics)
                         
-                        SegmentedPickerWithGrayUnselected(
+                        FootprintFilterChipRow(
                             selection: $filterCategory,
                             options: [
                                 (nil, "all".localized),
                                 ("domestic", "domestic".localized),
                                 ("international", "international".localized)
-                            ]
+                            ],
+                            accent: brandColorManager.currentBrandColor
                         )
                         
-                        // 地点类型下拉筛选
-                        HStack {
-                            Text("destination_type".localized)
+                        HStack(spacing: 8) {
+                            Image(systemName: "magnifyingglass")
+                                .foregroundStyle(FootprintChrome.secondaryLabel(colorScheme))
                                 .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundColor(.white.opacity(0.9))
-                            Spacer()
-                            Picker("", selection: $filterPlaceType) {
-                                Text("all".localized).tag(nil as String?)
-                                ForEach(TravelDestination.placeTypeFilterOptions, id: \.key) { option in
-                                    Text(option.localizedKey.localized).tag(option.key as String?)
-                                }
-                            }
-                            .pickerStyle(.menu)
-                            .tint(.white)
-                        }
-                    }
-                    .padding(20)
-                    .redCardStyle(cornerRadius: 20)
-                    
-                    // 目的地列表
-                    if !filteredDestinations.isEmpty {
-                        LazyVStack(alignment: .leading, spacing: 16) {
-                            Text("travel_destinations".localized)
-                                .font(.headline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(primaryTextColor)
                             
-                            ForEach(filteredDestinations) { destination in
-                                NavigationLink {
-                                    DestinationDetailView(destination: destination)
+                            TextField("search_places_countries_notes".localized, text: $searchText)
+                                .textFieldStyle(.plain)
+                                .font(.subheadline)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .footprintCapsuleChrome()
+                        
+                        if !filteredDestinationsCache.isEmpty {
+                            Text("travel_destinations".localized)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(FootprintChrome.secondaryLabel(colorScheme))
+                                .padding(.top, 4)
+                            
+                            ForEach(filteredDestinationsCache) { destination in
+                                Button {
+                                    detailDestination = destination
                                 } label: {
-                                    DestinationRowCard(destination: destination)
+                                    DestinationRowCard(destination: destination, highResolutionCover: true)
                                 }
-                                .buttonStyle(PlainButtonStyle())
+                                .buttonStyle(.plain)
+                                .cylinderScrollEffect()
                                 .contextMenu {
                                     Button {
                                         editingDestination = destination
@@ -152,27 +171,53 @@ struct YearFilteredDestinationView: View {
                                     }
                                 }
                             }
+                        } else {
+                            VStack(spacing: 12) {
+                                Image(systemName: "location.slash")
+                                    .font(.system(size: 44))
+                                    .foregroundStyle(FootprintChrome.secondaryLabel(colorScheme))
+                                Text("no_destinations_found".localized)
+                                    .font(.headline)
+                                    .foregroundStyle(FootprintChrome.secondaryLabel(colorScheme))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 48)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 28)
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 20)
+                .contentMargins(.vertical, 16, for: .scrollContent)
             }
-            .appPageBackgroundGradient(for: colorScheme)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .navigationTitle("year_travel_records".localized(with: year))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
                         showingLayoutSelection = true
                     } label: {
                         Image(systemName: "square.and.arrow.up")
-                            .foregroundColor(.primary)
+                            .foregroundStyle(.primary)
                     }
                 }
             }
-            .searchable(text: $searchText, prompt: "search_places_countries_notes".localized)
+            .sheet(item: $detailDestination) { destination in
+                NavigationStack {
+                    DestinationDetailView(destination: destination)
+                }
+                .presentationDragIndicator(.visible)
+            }
             .sheet(item: $editingDestination) { destination in
                 EditDestinationView(destination: destination)
             }
@@ -182,15 +227,21 @@ struct YearFilteredDestinationView: View {
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .destinationDeleted)) { notification in
-                // 当当前正在编辑的地点被删除时，自动关闭编辑弹窗
                 if let userInfo = notification.userInfo,
                    let deletedDestinationId = userInfo["destinationId"] as? UUID {
                     if let editing = editingDestination, editing.id == deletedDestinationId {
                         editingDestination = nil
                     }
-                } else if editingDestination != nil {
-                    // 批量删除等没有携带 destinationId 的情况，直接关闭编辑弹窗
-                    editingDestination = nil
+                    if let detail = detailDestination, detail.id == deletedDestinationId {
+                        detailDestination = nil
+                    }
+                } else {
+                    if editingDestination != nil {
+                        editingDestination = nil
+                    }
+                    if detailDestination != nil {
+                        detailDestination = nil
+                    }
                 }
             }
             .sheet(isPresented: $showingLayoutSelection) {
@@ -204,6 +255,20 @@ struct YearFilteredDestinationView: View {
                 if allDestinations.isEmpty {
                     EmptyYearStateView(year: year, colorScheme: colorScheme)
                 }
+            }
+            .onAppear {
+                refreshYearStatisticsIfNeeded()
+                recomputeFilteredDestinations()
+            }
+            .onChange(of: filterCategory) { _, _ in
+                recomputeFilteredDestinations()
+            }
+            .onChange(of: searchText) { _, _ in
+                scheduleSearchFilterRefresh()
+            }
+            .onChange(of: destinationRevision.revision) { _, _ in
+                scheduleYearStatisticsRefresh()
+                recomputeFilteredDestinations()
             }
             .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { _ in
                 // 语言变化时刷新界面
@@ -225,7 +290,7 @@ struct YearFilteredDestinationView: View {
     
     private func deleteDestinations(at offsets: IndexSet) {
         for index in offsets {
-            let destination = filteredDestinations[index]
+            let destination = filteredDestinationsCache[index]
             if let modelContext = destination.modelContext {
                 let destinationId = destination.id
                 modelContext.delete(destination)
@@ -243,119 +308,89 @@ struct YearStatisticsCard: View {
     let statistics: (total: Int, domestic: Int, international: Int, countries: Int)
     @Environment(\.colorScheme) var colorScheme
     @EnvironmentObject var brandColorManager: BrandColorManager
-    
-    private var primaryTextColor: Color {
-        AppColorScheme.primaryText(for: colorScheme)
-    }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 8) {
                 Image(systemName: "chart.bar.fill")
-                    .foregroundColor(brandColorManager.currentBrandColor)
+                    .foregroundStyle(brandColorManager.currentBrandColor)
                     .font(.headline)
                 Text("year_travel_statistics".localized(with: year))
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(primaryTextColor)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(.primary)
             }
-            
-            LazyVGrid(columns: [
-                GridItem(.flexible(), spacing: 12),
-                GridItem(.flexible(), spacing: 12)
-            ], spacing: 12) {
-                YearAnimatedStatCell(
-                    icon: "flag.fill",
-                    targetValue: statistics.total,
-                    label: "total_destinations".localized
-                )
-                YearAnimatedStatCell(
-                    icon: "globe.asia.australia.fill",
-                    targetValue: statistics.countries,
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("\(statistics.total)")
+                    .font(.system(size: 52, weight: .bold))
+                    .tracking(-1.2)
+                    .foregroundStyle(.primary)
+                    .monospacedDigit()
+                    .contentTransition(.numericText(value: Double(statistics.total)))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                Text("total_destinations".localized)
+                    .font(.subheadline)
+                    .foregroundStyle(FootprintChrome.secondaryLabel(colorScheme))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
+
+            FootprintRowDivider()
+
+            HStack(spacing: 0) {
+                ProfileStatSecondaryCell(
+                    value: statistics.countries,
                     label: "countries_visited".localized
                 )
-                YearAnimatedStatCell(
-                    icon: "house.fill",
-                    targetValue: statistics.domestic,
+                Rectangle()
+                    .fill(FootprintChrome.hairline(colorScheme))
+                    .frame(width: FootprintChrome.hairlineHeight)
+                    .padding(.vertical, 4)
+                    .accessibilityHidden(true)
+                ProfileStatSecondaryCell(
+                    value: statistics.domestic,
                     label: "domestic_travel".localized
                 )
-                YearAnimatedStatCell(
-                    icon: "airplane",
-                    targetValue: statistics.international,
+                Rectangle()
+                    .fill(FootprintChrome.hairline(colorScheme))
+                    .frame(width: FootprintChrome.hairlineHeight)
+                    .padding(.vertical, 4)
+                    .accessibilityHidden(true)
+                ProfileStatSecondaryCell(
+                    value: statistics.international,
                     label: "international_travel".localized
                 )
             }
         }
+        .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-// MARK: - 与「我的」旅行统计一致的数字栅格（无卡片底板 + 递增动效）
-private struct YearAnimatedStatCell: View {
-    let icon: String
-    let targetValue: Int
-    let label: String
-    @EnvironmentObject var brandColorManager: BrandColorManager
-    @State private var animatedValue: Double = 0
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Image(systemName: icon)
-                .font(.headline)
-                .foregroundColor(brandColorManager.currentBrandColor)
-            
-            HStack(alignment: .firstTextBaseline, spacing: 0) {
-                Text("\(Int(animatedValue.rounded()))")
-                    .font(.system(size: 34, weight: .black, design: .default))
-                    .tracking(-0.8)
-                    .foregroundStyle(.primary)
-                    .monospacedDigit()
-                    .contentTransition(.numericText(value: animatedValue))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.65)
-                Spacer(minLength: 0)
-            }
-            
-            Text(label)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .lineLimit(2)
-                .multilineTextAlignment(.leading)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 6)
-        .onAppear { animateStatNumber(resetToZero: true) }
-        .onChange(of: targetValue) { _, _ in animateStatNumber(resetToZero: false) }
-    }
-    
-    private func animateStatNumber(resetToZero: Bool) {
-        let target = Double(targetValue)
-        if resetToZero {
-            animatedValue = 0
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
-                withAnimation(.easeOut(duration: 0.9)) {
-                    animatedValue = target
-                }
-            }
-        } else {
-            withAnimation(.easeOut(duration: 0.55)) {
-                animatedValue = target
-            }
-        }
+        .footprintGlassCard(glow: brandColorManager.currentBrandColor)
     }
 }
 
 struct DestinationRowCard: View {
     let destination: TravelDestination
-    @StateObject private var countryManager = CountryManager.shared
+    /// 列表默认 168；时光轮播等场景可传入更高值
+    var height: CGFloat = 168
+    /// 时光大卡：优先主图高清解码
+    var highResolutionCover: Bool = false
+    /// 封面取色氛围光（光晕在 clip 之外）
+    var showsAmbientGlow: Bool = false
+    /// 仅中心卡显示氛围光
+    var isAmbientFocused: Bool = false
+    /// 聚焦卡主色变化时回调（供时光转轮等外层光晕）
+    var onAmbientColorChange: ((Color?) -> Void)? = nil
     @Environment(\.colorScheme) var colorScheme
-    
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var ambientColor: Color?
+
     private var visitDateText: String {
         DestinationRowCard.dateFormatter.string(from: destination.visitDate)
     }
     
     private var regionTag: (text: String, color: Color)? {
-        if countryManager.isDomestic(country: destination.country) {
+        if CountryManager.shared.isDomestic(country: destination.country) {
             return ("domestic".localized, Color(red: 0x3A/255.0, green: 0x8B/255.0, blue: 0xBB/255.0)) // #3A8BBB
         } else if !destination.country.isEmpty {
             return ("international".localized, Color(red: 0x50/255.0, green: 0xA3/255.0, blue: 0x7B/255.0)) // #50A37B
@@ -364,29 +399,63 @@ struct DestinationRowCard: View {
     }
     
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            // 背景图片层（参考图2：使用地点照片作为背景）
-            // 优先使用原图，如果没有原图才使用缩略图
-            if let data = destination.photoData ?? destination.photoThumbnailData,
-               let image = UIImage(data: data) {
-                GeometryReader { geometry in
-                    Image(uiImage: image)
-                        .resizable()
-                        .interpolation(.high)  // 高质量插值
-                        .antialiased(true)     // 启用抗锯齿
-                        .scaledToFill()
-                        .frame(width: geometry.size.width, height: geometry.size.height)
-                        .clipped()
+        cardContent
+            .frame(height: height)
+            .clipShape(RoundedRectangle(cornerRadius: Self.cardRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: Self.cardRadius, style: .continuous)
+                    .stroke(FootprintChrome.cardStroke(colorScheme), lineWidth: 0.5)
+            )
+            .shadow(
+                color: colorScheme == .dark ? .clear : Color.black.opacity(0.06),
+                radius: 18,
+                y: 8
+            )
+            .contentShape(RoundedRectangle(cornerRadius: Self.cardRadius, style: .continuous))
+            // HealthUI 同款：底部椭圆渗光（透明度对齐 footprintGlassCard）
+            .background(alignment: .bottom) {
+                if showsAmbientGlow, let ambientColor {
+                    Ellipse()
+                        .fill(ambientColor.opacity(colorScheme == .dark ? 0.55 : 0.22))
+                        .frame(height: 48)
+                        .blur(radius: 26)
+                        .padding(.horizontal, 24)
+                        .offset(y: 12)
+                        .opacity(isAmbientFocused ? 1 : 0)
+                        .animation(
+                            reduceMotion ? nil : .easeInOut(duration: 0.45),
+                            value: ambientColor
+                        )
+                        .animation(
+                            reduceMotion ? nil : .easeInOut(duration: 0.3),
+                            value: isAmbientFocused
+                        )
+                        .allowsHitTesting(false)
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .allowsHitTesting(false)  // 背景图片不拦截点击事件
-            } else {
-                // 如果没有图片，使用新的背景颜色
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color(red: 0x67/255.0, green: 0x93/255.0, blue: 0xC3/255.0)) // #6793C3
-                    .allowsHitTesting(false)  // 背景不拦截点击事件
             }
-            
+            .frame(height: height)
+            .onChange(of: isAmbientFocused) { _, focused in
+                guard focused else { return }
+                onAmbientColorChange?(ambientColor)
+            }
+            .onChange(of: ambientColor) { _, color in
+                guard isAmbientFocused else { return }
+                onAmbientColorChange?(color)
+            }
+    }
+
+    private var cardContent: some View {
+        ZStack(alignment: .bottomLeading) {
+            DestinationRowCardBackground(
+                destination: destination,
+                highResolutionCover: highResolutionCover,
+                onDominantColor: showsAmbientGlow
+                    ? { color in
+                        ambientColor = color
+                    }
+                    : nil
+            )
+
             // 深色渐变遮罩（无论是否有图片都显示）
             LinearGradient(
                 gradient: Gradient(colors: [
@@ -397,37 +466,33 @@ struct DestinationRowCard: View {
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .allowsHitTesting(false)  // 渐变遮罩不拦截点击事件
-            
+            .clipShape(RoundedRectangle(cornerRadius: Self.cardRadius, style: .continuous))
+            .allowsHitTesting(false)
+
             // 内容层
             ZStack(alignment: .topLeading) {
                 VStack(alignment: .leading, spacing: 0) {
                     Spacer()
-                    
-                    // 底部内容区域
+
                     VStack(alignment: .leading, spacing: 2) {
-                        // 标题行：标题和收藏图标
                         HStack(spacing: 6) {
                             Text(destination.name.isEmpty ? "-" : destination.name)
                                 .font(.system(size: 22, weight: .black, design: .default))
                                 .tracking(-0.3)
-                                .foregroundColor(.white) // 统一使用白色文字
+                                .foregroundColor(.white)
                                 .lineLimit(1)
                                 .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
-                            
+
                             if destination.isFavorite {
                                 Image(systemName: "heart.fill")
                                     .foregroundColor(.pink)
                                     .font(.caption)
                             }
-                            
+
                             Spacer()
                         }
-                    
-                        // 地点和时间放在最底下一排
+
                         HStack(spacing: 8) {
-                            // 地点信息
                             HStack(spacing: 4) {
                                 if !destination.province.isEmpty {
                                     Text(destination.province)
@@ -443,24 +508,21 @@ struct DestinationRowCard: View {
                                     .foregroundColor(.white.opacity(0.9))
                                     .lineLimit(1)
                             }
-                            
-                            // 分隔符
+
                             Text("·")
                                 .font(.caption)
                                 .foregroundColor(.white.opacity(0.7))
-                            
-                            // 日期
+
                             Text(visitDateText)
                                 .font(.caption)
                                 .foregroundColor(.white.opacity(0.9))
-                            
+
                             Spacer()
                         }
                     }
                     .padding(16)
                 }
-                
-                // 左上角标签（独立显示在卡片左上角）
+
                 if let tag = regionTag {
                     Text(tag.text)
                         .font(.system(size: 11, weight: .semibold))
@@ -474,32 +536,9 @@ struct DestinationRowCard: View {
                 }
             }
         }
-        .frame(height: 168)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.08), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.35 : 0.1), radius: 14, x: 0, y: 6)
-        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
     
-    private var thumbnail: some View {
-        Group {
-            if let data = destination.photoThumbnailData ?? destination.photoData, let image = UIImage(data: data) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                Image("ImageMooyu")
-                    .renderingMode(.original)
-                    .resizable()
-                    .interpolation(.high)  // 高质量插值，确保边缘光滑
-                    .antialiased(true)     // 启用抗锯齿
-                    .scaledToFill()
-            }
-        }
-    }
+    private static let cardRadius = FootprintTheme.Radius.card
     
     private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
@@ -507,6 +546,77 @@ struct DestinationRowCard: View {
         formatter.timeStyle = .none
         return formatter
     }()
+}
+
+private struct DestinationRowCardBackground: View {
+    let destination: TravelDestination
+    var highResolutionCover: Bool = false
+    var onDominantColor: ((Color) -> Void)? = nil
+    @State private var image: UIImage?
+
+    private static let placeholderColor = Color(red: 0x67/255.0, green: 0x93/255.0, blue: 0xC3/255.0)
+
+    private var coverFullData: Data? {
+        if let first = destination.photoDatas.first, !first.isEmpty { return first }
+        return destination.photoData
+    }
+
+    private var coverThumbnailData: Data? {
+        if let first = destination.photoThumbnailDatas.first, !first.isEmpty { return first }
+        return destination.photoThumbnailData
+    }
+
+    var body: some View {
+        Group {
+            if let image {
+                GeometryReader { geometry in
+                    Image(uiImage: image)
+                        .resizable()
+                        .interpolation(highResolutionCover ? .high : .medium)
+                        .antialiased(true)
+                        .scaledToFill()
+                        .frame(width: geometry.size.width, height: geometry.size.height)
+                        .clipped()
+                }
+            } else {
+                RoundedRectangle(cornerRadius: FootprintTheme.Radius.card, style: .continuous)
+                    .fill(Self.placeholderColor)
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: FootprintTheme.Radius.card, style: .continuous))
+        .allowsHitTesting(false)
+        .task(id: destination.id) {
+            let loaded: UIImage?
+            if highResolutionCover {
+                if let cached = DestinationThumbnailCache.shared.cachedTimeCapsuleCoverImage(for: destination.id) {
+                    loaded = cached
+                } else {
+                    loaded = await DestinationThumbnailCache.shared.imageForTimeCapsuleCover(
+                        for: destination.id,
+                        fullData: coverFullData,
+                        thumbnailData: coverThumbnailData
+                    )
+                }
+            } else if let cached = DestinationThumbnailCache.shared.cachedListCardImage(for: destination.id) {
+                loaded = cached
+            } else {
+                loaded = await DestinationThumbnailCache.shared.imageForListCard(
+                    for: destination.id,
+                    thumbnailData: coverThumbnailData,
+                    fallbackData: coverFullData
+                )
+            }
+            image = loaded
+
+            guard let loaded, let onDominantColor else { return }
+            let uiColor = await Task.detached(priority: .utility) {
+                ImageProcessor.dominantColor(from: loaded)
+            }.value
+            if let uiColor {
+                onDominantColor(Color(uiColor))
+            }
+        }
+    }
 }
 
 // 独立的地区图标容器组件
@@ -567,19 +677,7 @@ struct SegmentedPickerWithGrayUnselected: UIViewRepresentable {
     
     func makeUIView(context: Context) -> UISegmentedControl {
         let segmentedControl = UISegmentedControl(items: options.map { $0.label })
-        
-        // 设置未选中文字颜色：半透明白色（50%不透明度）
-        segmentedControl.setTitleTextAttributes([
-            .foregroundColor: UIColor.white.withAlphaComponent(0.5) // 半透明白色
-        ], for: .normal)
-        
-        // 设置选中文字颜色：黑色（在白色背景上）
-        segmentedControl.setTitleTextAttributes([
-            .foregroundColor: UIColor.black
-        ], for: .selected)
-        
-        // 设置选中背景色：白色
-        segmentedControl.selectedSegmentTintColor = .white
+        applyChrome(to: segmentedControl)
         
         // 设置初始选中状态
         if let index = options.firstIndex(where: { $0.tag == selection }) {
@@ -595,6 +693,7 @@ struct SegmentedPickerWithGrayUnselected: UIViewRepresentable {
     }
     
     func updateUIView(_ uiView: UISegmentedControl, context: Context) {
+        applyChrome(to: uiView)
         // 更新选中状态
         if let index = options.firstIndex(where: { $0.tag == selection }) {
             if uiView.selectedSegmentIndex != index {
@@ -603,6 +702,17 @@ struct SegmentedPickerWithGrayUnselected: UIViewRepresentable {
         } else if uiView.selectedSegmentIndex != 0 {
             uiView.selectedSegmentIndex = 0
         }
+    }
+
+    /// 玻璃卡上的分段控件：未选中用 secondaryLabel，选中用 label + 系统填充
+    private func applyChrome(to control: UISegmentedControl) {
+        control.setTitleTextAttributes([
+            .foregroundColor: UIColor.secondaryLabel
+        ], for: .normal)
+        control.setTitleTextAttributes([
+            .foregroundColor: UIColor.label
+        ], for: .selected)
+        control.selectedSegmentTintColor = .secondarySystemGroupedBackground
     }
     
     func makeCoordinator() -> Coordinator {

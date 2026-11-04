@@ -7,6 +7,9 @@
 
 import SwiftUI
 import StoreKit
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
@@ -16,7 +19,10 @@ struct PaywallView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     @State private var isRestoring: Bool = false
-    @State private var isPurchasing: Set<String> = []
+    @State private var isPurchasing: Bool = false
+    @State private var selectedProductID: String = SubscriptionProductID.proYearly
+    @State private var showCreditPaywall: Bool = false
+    @State private var introEligibleProductIDs: Set<String> = []
 
     // 引导流程相关
     var isOnboarding: Bool = false
@@ -35,20 +41,23 @@ struct PaywallView: View {
                     featureList
                     pricingSection
 
-                    if isOnboarding {
+                    VStack(spacing: 12) {
+                        purchaseCTASection
+                        if isOnboarding, let onSkip = onSkip {
+                            continueFreeSection(onSkip: onSkip)
+                        }
+                    }
+
+                    if isSelectedSubscriptionPlan {
                         subscriptionTermsSection
                     }
 
-                    if !isOnboarding {
-                        restoreSection
-                    }
-
-                    if isOnboarding, let onSkip = onSkip {
-                        continueFreeSection(onSkip: onSkip)
-                        onboardingRestoreLink
-                        legalLinksSection
+                    if isOnboarding {
+                        onboardingFooter
                     } else {
-                        termsSection
+                        buyCreditsSecondaryLink
+                        restoreSection
+                        legalLinksSection
                     }
                 }
                 .padding(.horizontal, 20)
@@ -64,20 +73,24 @@ struct PaywallView: View {
                     }
                 }
             }
-            .background(
-                LinearGradient(
-                    colors: [
-                        Color.blue.opacity(0.12),
-                        Color.pink.opacity(0.08),
-                        Color(.systemBackground)
-                    ],
-                    startPoint: .top,
-                    endPoint: .bottom
+            .background {
+                FootprintAtmosphereBackground(
+                    accent: brandColorManager.currentBrandColor,
+                    secondaryAccent: FootprintTheme.Accent.secondary
                 )
-                .ignoresSafeArea()
-            )
+            }
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .sheet(isPresented: $showCreditPaywall) {
+                AICreditPaywallView()
+            }
             .task {
                 await purchaseManager.loadProducts()
+                syncSelectedProductIfNeeded()
+                await refreshIntroOfferEligibility()
+            }
+            .onChange(of: purchaseManager.products.count) { _, _ in
+                syncSelectedProductIfNeeded()
+                Task { await refreshIntroOfferEligibility() }
             }
         }
     }
@@ -106,10 +119,7 @@ struct PaywallView: View {
         }
         .frame(maxWidth: .infinity)
         .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
-        )
+        .footprintGlassCard(cornerRadius: 18, glow: brandColorManager.currentBrandColor)
     }
 
     private var freeTierSection: some View {
@@ -125,10 +135,7 @@ struct PaywallView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
-        )
+        .footprintGlassCard(cornerRadius: 14)
     }
 
     private var featureList: some View {
@@ -143,66 +150,92 @@ struct PaywallView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
-        )
+        .footprintGlassCard(cornerRadius: 14, glow: brandColorManager.currentBrandColor)
     }
 
     private var pricingSection: some View {
         VStack(spacing: 12) {
-            if isOnboarding {
-                Text("onboarding_pricing_section_title".localized)
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
+            Text(isOnboarding ? "onboarding_pricing_section_title".localized : "paywall_select_plan".localized)
+                .font(.headline)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             if hasLifetime {
                 lifetimeUnlockedCard
-            } else {
-                if purchaseManager.isLoading {
+            }
+
+            if purchaseManager.isLoading {
+                ProgressView("loading".localized)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+            } else if purchasableProducts.isEmpty && !hasLifetime {
+                if let message = purchaseManager.errorMessage {
+                    VStack(spacing: 12) {
+                        Text(message)
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+
+                        Button {
+                            Task {
+                                await purchaseManager.loadProducts()
+                            }
+                        } label: {
+                            Text("retry".localized)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                        }
+                        .buttonStyle(.bordered)
+                    }
+                    .padding()
+                } else {
                     ProgressView("loading".localized)
                         .frame(maxWidth: .infinity)
                         .padding()
-                } else if purchaseManager.products.isEmpty {
-                    if let message = purchaseManager.errorMessage {
-                        VStack(spacing: 12) {
-                            Text(message)
-                                .font(.footnote)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-
-                            Button {
-                                Task {
-                                    await purchaseManager.loadProducts()
-                                }
-                            } label: {
-                                Text("retry".localized)
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                            }
-                            .buttonStyle(.bordered)
-                        }
-                        .padding()
-                    } else {
-                        ProgressView("loading".localized)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                    }
-                } else {
-                    if let errorMessage = purchaseManager.errorMessage, !errorMessage.isEmpty {
-                        Text(errorMessage)
-                            .font(.footnote)
-                            .foregroundColor(.red)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                            .padding(.bottom, 8)
-                    }
-
-                    ForEach(sortedProducts(), id: \.id) { product in
-                        purchaseButton(for: product)
-                    }
                 }
+            } else {
+                if let errorMessage = purchaseManager.errorMessage, !errorMessage.isEmpty {
+                    Text(errorMessage)
+                        .font(.footnote)
+                        .foregroundColor(.red)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                        .padding(.bottom, 8)
+                }
+
+                ForEach(purchasableProducts, id: \.id) { product in
+                    planCard(for: product)
+                }
+            }
+        }
+    }
+
+    private var purchaseCTASection: some View {
+        VStack(spacing: 8) {
+            Button {
+                purchaseSelectedPlan()
+            } label: {
+                HStack(spacing: 8) {
+                    if isPurchasing {
+                        ProgressView()
+                            .tint(.white)
+                    }
+                    Text(primaryCTATitle)
+                        .font(.headline)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 48)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(brandColorManager.currentBrandColor)
+            .controlSize(.large)
+            .disabled(isPurchasing || selectedProduct == nil || isCurrentSelectedPlan || purchasableProducts.isEmpty)
+
+            if let caption = selectedPlanCaption {
+                Text(caption)
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
             }
         }
     }
@@ -250,16 +283,18 @@ struct PaywallView: View {
         .buttonStyle(.plain)
         .foregroundColor(.secondary)
         .frame(maxWidth: .infinity)
+        .frame(minHeight: 44)
     }
 
     private func continueFreeSection(onSkip: @escaping () -> Void) -> some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             Button {
                 onSkip()
             } label: {
                 Text("onboarding_continue_free".localized)
                     .font(.headline)
                     .frame(maxWidth: .infinity)
+                    .frame(minHeight: 48)
             }
             .buttonStyle(.bordered)
             .controlSize(.large)
@@ -271,24 +306,32 @@ struct PaywallView: View {
         }
     }
 
+    private var onboardingFooter: some View {
+        VStack(spacing: 10) {
+            onboardingRestoreLink
+            legalLinksSection
+        }
+        .padding(.top, 4)
+    }
+
+    private var buyCreditsSecondaryLink: some View {
+        Button {
+            showCreditPaywall = true
+        } label: {
+            Text("paywall_buy_credits_secondary".localized)
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+    }
+
     private var subscriptionTermsSection: some View {
         Text("subscription_auto_renew_note".localized)
             .font(.footnote)
             .foregroundColor(.secondary)
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity)
-    }
-
-    private var termsSection: some View {
-        VStack(spacing: 6) {
-            Text("subscription_auto_renew_note".localized)
-                .font(.footnote)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-
-            legalLinksSection
-        }
-        .padding(.top, 4)
     }
 
     private var legalLinksSection: some View {
@@ -329,111 +372,114 @@ struct PaywallView: View {
         }
     }
 
-    private func purchaseButton(for product: Product) -> some View {
-        let isPurchasingThis = isPurchasing.contains(product.id)
-        let isCurrentSubscription = entitlementManager.currentSubscriptionProductID == product.id && entitlementManager.isSubscriptionActive
-        let isRecommended = isOnboarding && product.id == SubscriptionProductID.proYearly
+    private func planCard(for product: Product) -> some View {
+        let isSelected = selectedProductID == product.id
+        let isCurrent = isCurrentPlan(product)
+        let isRecommended = product.id == SubscriptionProductID.proYearly
 
         return Button {
-            guard !isPurchasingThis else { return }
-            guard !isCurrentSubscription else { return }
-
-            isPurchasing.insert(product.id)
-
-            Task { @MainActor in
-                purchaseManager.errorMessage = nil
-                let transaction = await purchaseManager.purchase(product)
-
-                if let transaction = transaction {
-                    entitlementManager.updateEntitlement(from: transaction)
-                    try? await Task.sleep(nanoseconds: 300_000_000)
-
-                    if entitlementManager.isSubscriptionActive {
-                        completeActiveSubscriptionFlow()
-                    } else {
-                        entitlementManager.updateEntitlement()
-                    }
-                }
-
-                if transaction == nil && purchaseManager.errorMessage == nil {
-                    isPurchasing.remove(product.id)
-                } else {
-                    try? await Task.sleep(nanoseconds: 1_000_000_000)
-                    isPurchasing.remove(product.id)
-                }
-            }
+            guard !isCurrent else { return }
+            selectedProductID = product.id
+            #if canImport(UIKit)
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            #endif
         } label: {
-            HStack {
-                VStack(spacing: 6) {
-                    HStack {
-                        Text(product.displayName)
-                            .font(.headline)
-                        if isRecommended {
-                            Text("onboarding_recommended_plan".localized)
-                                .font(.caption2.weight(.semibold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(
-                                    Capsule()
-                                        .fill(brandColorManager.currentBrandColor)
-                                )
-                        }
-                        Spacer()
-                        if isCurrentSubscription {
-                            HStack(spacing: 4) {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.green)
-                                    .font(.subheadline)
-                                Text("paywall_current_subscription".localized)
-                                    .font(.caption)
-                                    .foregroundColor(.green)
-                            }
-                        } else {
-                            Text(product.displayPrice)
-                                .font(.headline)
-                        }
+            VStack(spacing: 6) {
+                HStack {
+                    Text(product.displayName)
+                        .font(.headline)
+                    if isRecommended {
+                        Text("onboarding_recommended_plan".localized)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(
+                                Capsule()
+                                    .fill(brandColorManager.currentBrandColor)
+                            )
                     }
-                    HStack {
-                        Text(subtitle(for: product))
+                    Spacer()
+                    if isCurrent {
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                                .font(.subheadline)
+                            Text("paywall_current_subscription".localized)
+                                .font(.caption)
+                                .foregroundColor(.green)
+                        }
+                    } else {
+                        Text(product.displayPrice)
+                            .font(.headline)
+                    }
+                }
+                HStack {
+                    Text(subtitle(for: product))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    if isCurrent, let expiryDate = entitlementManager.subscriptionExpiryDate {
+                        Text("paywall_expires_on".localized + formatDate(expiryDate))
                             .font(.caption)
                             .foregroundColor(.secondary)
-                        Spacer()
-                        if isCurrentSubscription {
-                            if let expiryDate = entitlementManager.subscriptionExpiryDate {
-                                Text("paywall_expires_on".localized + formatDate(expiryDate))
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            } else {
-                                Text("membership_status_lifetime_active".localized)
-                                    .font(.caption)
-                                    .foregroundColor(.green)
-                            }
-                        }
                     }
                 }
-
-                if isPurchasingThis {
-                    ProgressView()
-                        .scaleEffect(0.8)
+                if let extra = planExtraLine(for: product) {
+                    Text(extra)
+                        .font(.caption)
+                        .foregroundColor(brandColorManager.currentBrandColor)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             .padding()
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(isCurrentSubscription ?
+                    .fill(isCurrent ?
                           Color.green.opacity(colorScheme == .dark ? 0.2 : 0.1) :
-                            brandColorManager.currentBrandColor.opacity(colorScheme == .dark ? 0.25 : 0.15))
+                            brandColorManager.currentBrandColor.opacity(isSelected ? (colorScheme == .dark ? 0.28 : 0.18) : (colorScheme == .dark ? 0.16 : 0.1)))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(isRecommended ? brandColorManager.currentBrandColor.opacity(0.55) :
-                                (isCurrentSubscription ? Color.green.opacity(0.5) : Color.clear), lineWidth: 1.5)
+                    .stroke(
+                        isSelected ? brandColorManager.currentBrandColor.opacity(0.7) :
+                            (isCurrent ? Color.green.opacity(0.5) : Color.clear),
+                        lineWidth: isSelected ? 2 : 1.5
+                    )
             )
         }
         .buttonStyle(.plain)
-        .disabled(isPurchasingThis || isCurrentSubscription)
+        .disabled(isCurrent)
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+    }
+
+    private func purchaseSelectedPlan() {
+        guard let product = selectedProduct, !isPurchasing, !isCurrentSelectedPlan else { return }
+        isPurchasing = true
+
+        Task { @MainActor in
+            purchaseManager.errorMessage = nil
+            let transaction = await purchaseManager.purchase(product)
+
+            if let transaction = transaction {
+                entitlementManager.updateEntitlement(from: transaction)
+                try? await Task.sleep(nanoseconds: 300_000_000)
+
+                if entitlementManager.isSubscriptionActive {
+                    completeActiveSubscriptionFlow()
+                } else {
+                    entitlementManager.updateEntitlement()
+                }
+            }
+
+            if transaction == nil && purchaseManager.errorMessage == nil {
+                isPurchasing = false
+            } else {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                isPurchasing = false
+            }
+        }
     }
 
     private func completeActiveSubscriptionFlow() {
@@ -452,17 +498,155 @@ struct PaywallView: View {
         return formatter.string(from: date)
     }
 
-    private func sortedProducts() -> [Product] {
-        let subscriptions = purchaseManager.products
+    private var purchasableProducts: [Product] {
+        purchaseManager.products
             .filter { SubscriptionProductID.all.contains($0.id) }
-
-        if isOnboarding {
-            return subscriptions.sorted { lhs, rhs in
+            .filter { product in
+                if product.id == SubscriptionProductID.proLifetime && hasLifetime {
+                    return false
+                }
+                return true
+            }
+            .sorted { lhs, rhs in
                 planSortOrder(for: lhs.id) < planSortOrder(for: rhs.id)
             }
-        }
+    }
 
-        return subscriptions.sorted { $0.price < $1.price }
+    private var selectedProduct: Product? {
+        purchasableProducts.first { $0.id == selectedProductID } ?? purchasableProducts.first
+    }
+
+    private var isCurrentSelectedPlan: Bool {
+        guard let product = selectedProduct else { return false }
+        return isCurrentPlan(product)
+    }
+
+    private func isCurrentPlan(_ product: Product) -> Bool {
+        entitlementManager.currentSubscriptionProductID == product.id && entitlementManager.isSubscriptionActive
+    }
+
+    private var primaryCTATitle: String {
+        guard let product = selectedProduct else {
+            return "paywall_cta_unlock".localized
+        }
+        if isCurrentPlan(product) {
+            return "paywall_cta_current".localized
+        }
+        switch product.id {
+        case SubscriptionProductID.proYearly:
+            if isEligibleForIntroTrial(product) {
+                return "paywall_cta_start_trial".localized
+            }
+            return "paywall_cta_yearly".localized(with: product.displayPrice)
+        case SubscriptionProductID.proMonthly:
+            return "paywall_cta_monthly".localized(with: product.displayPrice)
+        case SubscriptionProductID.proLifetime:
+            return "paywall_cta_lifetime".localized(with: product.displayPrice)
+        default:
+            return "paywall_cta_unlock_price".localized(with: product.displayPrice)
+        }
+    }
+
+    private var selectedPlanCaption: String? {
+        guard let product = selectedProduct else { return nil }
+        if product.id == SubscriptionProductID.proLifetime {
+            return nil
+        }
+        if product.id == SubscriptionProductID.proYearly, isEligibleForIntroTrial(product) {
+            return "paywall_cta_trial_then_yearly".localized(with: product.displayPrice)
+        }
+        return nil
+    }
+
+    private var isSelectedSubscriptionPlan: Bool {
+        guard let id = selectedProduct?.id else { return false }
+        return id == SubscriptionProductID.proYearly || id == SubscriptionProductID.proMonthly
+    }
+
+    private func planExtraLine(for product: Product) -> String? {
+        if product.id == SubscriptionProductID.proLifetime {
+            return "paywall_ai_uses_credits".localized
+        }
+        if product.id == SubscriptionProductID.proYearly {
+            var parts: [String] = ["paywall_ai_uses_credits".localized]
+            if let monthly = monthlyEquivalentText(for: product) {
+                parts.append(monthly)
+            }
+            if let save = yearlySavingsPercent() {
+                parts.append("paywall_yearly_save".localized(with: save))
+            }
+            if let trial = trialText(for: product) {
+                parts.append(trial)
+            }
+            return parts.joined(separator: " · ")
+        }
+        var parts: [String] = ["paywall_ai_uses_credits".localized]
+        if let trial = trialText(for: product) {
+            parts.append(trial)
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    private func monthlyEquivalentText(for product: Product) -> String? {
+        guard product.id == SubscriptionProductID.proYearly else { return nil }
+        let perMonth = product.price / 12
+        let formatted = product.priceFormatStyle.format(perMonth)
+        return "paywall_yearly_monthly_equivalent".localized(with: formatted)
+    }
+
+    private func yearlySavingsPercent() -> Int? {
+        guard
+            let yearly = purchaseManager.products.first(where: { $0.id == SubscriptionProductID.proYearly }),
+            let monthly = purchaseManager.products.first(where: { $0.id == SubscriptionProductID.proMonthly })
+        else { return nil }
+
+        let yearIfMonthly = monthly.price * 12
+        guard yearIfMonthly > 0, yearly.price < yearIfMonthly else { return nil }
+        let ratio = NSDecimalNumber(decimal: yearly.price / yearIfMonthly).doubleValue
+        let percent = Int((1.0 - ratio) * 100.0)
+        return percent > 0 ? percent : nil
+    }
+
+    private func trialText(for product: Product) -> String? {
+        guard isEligibleForIntroTrial(product) else { return nil }
+        guard let intro = product.subscription?.introductoryOffer else { return nil }
+
+        let value = intro.period.value
+        switch intro.period.unit {
+        case .day:
+            return "paywall_trial_days".localized(with: value)
+        case .week:
+            return "paywall_trial_weeks".localized(with: value)
+        case .month:
+            return "paywall_trial_months".localized(with: value)
+        case .year:
+            return "paywall_trial_years".localized(with: value)
+        @unknown default:
+            return nil
+        }
+    }
+
+    private func isEligibleForIntroTrial(_ product: Product) -> Bool {
+        guard
+            let intro = product.subscription?.introductoryOffer,
+            intro.paymentMode == .freeTrial
+        else { return false }
+        return introEligibleProductIDs.contains(product.id)
+    }
+
+    private func refreshIntroOfferEligibility() async {
+        var eligible: Set<String> = []
+        for product in purchasableProducts {
+            guard
+                let subscription = product.subscription,
+                let intro = subscription.introductoryOffer,
+                intro.paymentMode == .freeTrial
+            else { continue }
+            if await subscription.isEligibleForIntroOffer {
+                eligible.insert(product.id)
+            }
+        }
+        introEligibleProductIDs = eligible
     }
 
     private func planSortOrder(for productID: String) -> Int {
@@ -485,7 +669,7 @@ struct PaywallView: View {
     }
 
     private var hasLifetime: Bool {
-        entitlementManager.currentEntitlement == .pro && entitlementManager.subscriptionExpiryDate == nil
+        entitlementManager.hasLifetimePurchase || entitlementManager.currentEntitlement == .proLifetime
     }
 
     private var lifetimeUnlockedCard: some View {
@@ -497,16 +681,29 @@ struct PaywallView: View {
                     .font(.headline)
                     .foregroundColor(.primary)
             }
-            Text("paywall_lifetime_sync_hint".localized)
+            Text(entitlementManager.hasLegacyLifetimeUnlimitedAI
+                 ? "paywall_lifetime_sync_hint".localized
+                 : "paywall_ai_uses_credits".localized)
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }
         .padding()
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
-        )
+        .footprintGlassCard(cornerRadius: 14, glow: .green)
+    }
+
+    private func syncSelectedProductIfNeeded() {
+        let available = purchasableProducts
+        guard !available.isEmpty else { return }
+
+        if let selected = available.first(where: { $0.id == selectedProductID }), !isCurrentPlan(selected) {
+            return
+        }
+        if let yearly = available.first(where: { $0.id == SubscriptionProductID.proYearly && !isCurrentPlan($0) }) {
+            selectedProductID = yearly.id
+            return
+        }
+        selectedProductID = available.first(where: { !isCurrentPlan($0) })?.id ?? available[0].id
     }
 }
 

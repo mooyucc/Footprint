@@ -20,62 +20,69 @@ struct TripShareLayoutSelectionView: View {
     
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                // 版面选择列表
-                ScrollView {
-                    VStack(spacing: 16) {
-                        ForEach(TripShareLayout.allCases) { layout in
-                            LayoutOptionCard(
-                                layout: layout,
-                                isSelected: selectedLayout == layout,
-                                isLocked: !allowedLayouts.contains(layout)
-                            ) {
-                                if allowedLayouts.contains(layout) {
-                                selectedLayout = layout
-                                } else {
-                                    showPaywall = true
+            ZStack {
+                FootprintAtmosphereBackground(
+                    accent: Color.footprintRed,
+                    secondaryAccent: FootprintTheme.Accent.secondary
+                )
+                VStack(spacing: 0) {
+                    // 版面选择列表
+                    ScrollView {
+                        VStack(spacing: 16) {
+                            ForEach(TripShareLayout.allCases) { layout in
+                                LayoutOptionCard(
+                                    layout: layout,
+                                    isSelected: selectedLayout == layout,
+                                    isLocked: !allowedLayouts.contains(layout)
+                                ) {
+                                    if allowedLayouts.contains(layout) {
+                                    selectedLayout = layout
+                                    } else {
+                                        showPaywall = true
+                                    }
                                 }
                             }
                         }
+                        .padding()
+                    }
+                    
+                    // 底部操作按钮
+                    VStack(spacing: 12) {
+                        Button {
+                            guard !isGenerating else { return }
+                            generateAndShare()
+                        } label: {
+                            HStack {
+                                if isGenerating {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                } else {
+                                    Image(systemName: "square.and.arrow.up")
+                                }
+                                Text(isGenerating ? "share_generating".localized : "share".localized)
+                            }
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(isGenerating ? Color.gray : Color.footprintRed)
+                            .cornerRadius(12)
+                        }
+                        .disabled(isGenerating)
+                        
+                        Button {
+                            dismiss()
+                        } label: {
+                            Text("cancel".localized)
+                                .font(.body)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     .padding()
+                    .background(.ultraThinMaterial)
                 }
-                
-                // 底部操作按钮
-                VStack(spacing: 12) {
-                    Button {
-                        guard !isGenerating else { return }
-                        generateAndShare()
-                    } label: {
-                        HStack {
-                            if isGenerating {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            } else {
-                                Image(systemName: "square.and.arrow.up")
-                            }
-                            Text(isGenerating ? "share_generating".localized : "share".localized)
-                        }
-                        .font(.headline)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(isGenerating ? Color.gray : Color.blue)
-                        .cornerRadius(12)
-                    }
-                    .disabled(isGenerating)
-                    
-                    Button {
-                        dismiss()
-                    } label: {
-                        Text("cancel".localized)
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .padding()
-                .background(Color(.systemBackground))
             }
+            .toolbarBackground(.hidden, for: .navigationBar)
             .navigationTitle("select_layout".localized)
             .navigationBarTitleDisplayMode(.inline)
         }
@@ -132,10 +139,12 @@ struct LayoutOptionCard: View {
                 // 图标
                 Image(systemName: layout.iconName)
                     .font(.title2)
-                    .foregroundColor(isLocked ? .secondary.opacity(0.4) : (isSelected ? .blue : .secondary))
+                    .foregroundStyle(isLocked ? .secondary.opacity(0.4) : (isSelected ? Color.footprintRed : .secondary))
                     .frame(width: 44, height: 44)
-                    .background(isSelected ? Color.blue.opacity(0.1) : Color(.secondarySystemBackground))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(isSelected ? Color.footprintRed.opacity(0.12) : Color.primary.opacity(0.06))
+                    )
                 
                 // 文字信息
                 VStack(alignment: .leading, spacing: 4) {
@@ -157,16 +166,21 @@ struct LayoutOptionCard: View {
                         .font(.title3)
                 } else if isSelected {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.blue)
+                        .foregroundStyle(Color.footprintRed)
                         .font(.title3)
                 }
             }
             .padding()
-            .background(isSelected ? Color.blue.opacity(0.05) : Color(.secondarySystemBackground))
-            .cornerRadius(16)
+            .footprintGlassCard(
+                cornerRadius: 16,
+                glow: isSelected && !isLocked ? Color.footprintRed : nil
+            )
             .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(isLocked ? Color.clear : (isSelected ? Color.blue : Color.clear), lineWidth: 2)
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(
+                        isLocked ? Color.clear : (isSelected ? Color.footprintRed : Color.clear),
+                        lineWidth: 2
+                    )
             )
         }
         .buttonStyle(.plain)
