@@ -3,7 +3,6 @@
 //  Footprint
 //
 //  O(1) change tracking for destination-derived stats (profile, badges, year views).
-//  Replaces per-render O(n) DestinationCollectionSignature in onChange(of:).
 //
 
 import Foundation
@@ -22,7 +21,8 @@ final class DestinationDataRevision: ObservableObject {
         let names: [Notification.Name] = [
             .destinationUpdated,
             .destinationDeleted,
-            .countryChanged
+            .countryChanged,
+            .tripUpdated
         ]
         for name in names {
             NotificationCenter.default.publisher(for: name)
@@ -38,17 +38,5 @@ final class DestinationDataRevision: ObservableObject {
 enum DestinationChangeNotifier {
     static func postUpdated() {
         NotificationCenter.default.post(name: .destinationUpdated, object: nil)
-    }
-
-    static func postDeleted(destinationId: UUID? = nil) {
-        if let destinationId {
-            NotificationCenter.default.post(
-                name: .destinationDeleted,
-                object: nil,
-                userInfo: ["destinationId": destinationId]
-            )
-        } else {
-            NotificationCenter.default.post(name: .destinationDeleted, object: nil)
-        }
     }
 }

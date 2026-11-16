@@ -30,7 +30,7 @@ struct YearFilteredDestinationView: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var shareItem: TripShareItem?
     @State private var showingLayoutSelection = false
-    @State private var selectedLayout: TripShareLayout = .list
+    @State private var selectedLayout: TripShareLayout = .extendedGrid
     
     init(year: Int) {
         self.year = year
@@ -285,19 +285,6 @@ struct YearFilteredDestinationView: View {
             try? modelContext.save()
             // 发送删除通知，通知徽章视图更新
             NotificationCenter.default.post(name: .destinationDeleted, object: nil, userInfo: ["destinationId": destinationId])
-        }
-    }
-    
-    private func deleteDestinations(at offsets: IndexSet) {
-        for index in offsets {
-            let destination = filteredDestinationsCache[index]
-            if let modelContext = destination.modelContext {
-                let destinationId = destination.id
-                modelContext.delete(destination)
-                try? modelContext.save()
-                // 发送删除通知，通知徽章视图更新
-                NotificationCenter.default.post(name: .destinationDeleted, object: nil, userInfo: ["destinationId": destinationId])
-            }
         }
     }
     
@@ -619,31 +606,6 @@ private struct DestinationRowCardBackground: View {
     }
 }
 
-// 独立的地区图标容器组件
-struct RegionIconView: View {
-    let isDomestic: Bool
-    let hasCountry: Bool
-    
-    var body: some View {
-        Group {
-            if isDomestic {
-                Image(systemName: "house.fill")
-                    .foregroundColor(.white.opacity(0.7))
-                    .font(.system(size: 18))
-                    .frame(width: 40, height: 40)
-                    .background(Color.black.opacity(0.4)) // 深灰色透明背景
-                    .clipShape(Circle())
-            } else if hasCountry {
-                Image(systemName: "airplane")
-                    .foregroundColor(.white.opacity(0.7))
-                    .font(.system(size: 18))
-                    .frame(width: 40, height: 40)
-                    .background(Color.black.opacity(0.4)) // 深灰色透明背景
-                    .clipShape(Circle())
-            }
-        }
-    }
-}
 
 struct EmptyYearStateView: View {
     let year: Int
@@ -670,72 +632,6 @@ struct EmptyYearStateView: View {
     }
 }
 
-// MARK: - 自定义 Segmented Picker（未选中文字为灰色）
-struct SegmentedPickerWithGrayUnselected: UIViewRepresentable {
-    @Binding var selection: String?
-    let options: [(tag: String?, label: String)]
-    
-    func makeUIView(context: Context) -> UISegmentedControl {
-        let segmentedControl = UISegmentedControl(items: options.map { $0.label })
-        applyChrome(to: segmentedControl)
-        
-        // 设置初始选中状态
-        if let index = options.firstIndex(where: { $0.tag == selection }) {
-            segmentedControl.selectedSegmentIndex = index
-        } else {
-            segmentedControl.selectedSegmentIndex = 0
-        }
-        
-        // 添加值变化监听
-        segmentedControl.addTarget(context.coordinator, action: #selector(Coordinator.valueChanged(_:)), for: .valueChanged)
-        
-        return segmentedControl
-    }
-    
-    func updateUIView(_ uiView: UISegmentedControl, context: Context) {
-        applyChrome(to: uiView)
-        // 更新选中状态
-        if let index = options.firstIndex(where: { $0.tag == selection }) {
-            if uiView.selectedSegmentIndex != index {
-                uiView.selectedSegmentIndex = index
-            }
-        } else if uiView.selectedSegmentIndex != 0 {
-            uiView.selectedSegmentIndex = 0
-        }
-    }
-
-    /// 玻璃卡上的分段控件：未选中用 secondaryLabel，选中用 label + 系统填充
-    private func applyChrome(to control: UISegmentedControl) {
-        control.setTitleTextAttributes([
-            .foregroundColor: UIColor.secondaryLabel
-        ], for: .normal)
-        control.setTitleTextAttributes([
-            .foregroundColor: UIColor.label
-        ], for: .selected)
-        control.selectedSegmentTintColor = .secondarySystemGroupedBackground
-    }
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator(selection: $selection, options: options)
-    }
-    
-    class Coordinator: NSObject {
-        @Binding var selection: String?
-        let options: [(tag: String?, label: String)]
-        
-        init(selection: Binding<String?>, options: [(tag: String?, label: String)]) {
-            _selection = selection
-            self.options = options
-        }
-        
-        @objc func valueChanged(_ sender: UISegmentedControl) {
-            let index = sender.selectedSegmentIndex
-            if index >= 0 && index < options.count {
-                selection = options[index].tag
-            }
-        }
-    }
-}
 
 #Preview {
     YearFilteredDestinationView(year: 2024)

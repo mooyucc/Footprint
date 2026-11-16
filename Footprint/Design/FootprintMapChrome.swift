@@ -75,39 +75,6 @@ struct FootprintMapGlassCapsuleModifier: ViewModifier {
     }
 }
 
-/// 圆角矩形条（天数筛选等略方的控件）
-struct FootprintMapGlassRoundedBarModifier: ViewModifier {
-    var cornerRadius: CGFloat = 10
-    var isDarkMap: Bool = false
-
-    func body(content: Content) -> some View {
-        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        if #available(iOS 26, *) {
-            content
-                .background {
-                    shape.fill(.clear)
-                        .glassEffect(.regular.interactive(), in: shape)
-                }
-                .contentShape(shape)
-                .shadow(color: .black.opacity(0.18), radius: 6, x: 0, y: 3)
-        } else {
-            content
-                .background {
-                    shape
-                        .fill(.ultraThinMaterial)
-                        .overlay(
-                            shape.stroke(
-                                Color.white.opacity(isDarkMap ? 0.22 : 0.35),
-                                lineWidth: 0.5
-                            )
-                        )
-                }
-                .contentShape(shape)
-                .shadow(color: .black.opacity(0.18), radius: 6, x: 0, y: 3)
-        }
-    }
-}
-
 /// 打卡等「品牌描边」圆形玻璃
 struct FootprintMapBrandGlassCircleModifier: ViewModifier {
     var diameter: CGFloat
@@ -176,11 +143,6 @@ extension View {
     /// 地图浮层胶囊条（提示条、搜索条）
     func footprintMapGlassCapsule(isDarkMap: Bool = false) -> some View {
         modifier(FootprintMapGlassCapsuleModifier(isDarkMap: isDarkMap))
-    }
-
-    /// 地图浮层圆角条（天数筛选）
-    func footprintMapGlassRoundedBar(cornerRadius: CGFloat = 10, isDarkMap: Bool = false) -> some View {
-        modifier(FootprintMapGlassRoundedBarModifier(cornerRadius: cornerRadius, isDarkMap: isDarkMap))
     }
 
     /// 打卡类品牌描边圆形玻璃

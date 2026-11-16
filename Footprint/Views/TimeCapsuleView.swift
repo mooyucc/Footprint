@@ -16,10 +16,9 @@ struct TimeCapsuleView: View {
 
     @EnvironmentObject var languageManager: LanguageManager
     @EnvironmentObject var brandColorManager: BrandColorManager
-    @StateObject private var countryManager = CountryManager.shared
-    @Query(sort: \TravelDestination.visitDate, order: .reverse) private var destinations: [TravelDestination]
-    @ObservedObject private var destinationRevision = DestinationDataRevision.shared
+    @ObservedObject private var tabSnapshots = TabListSnapshotStore.shared
     @ObservedObject private var profileCache = ProfileCacheStore.shared
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
 
@@ -71,10 +70,12 @@ struct TimeCapsuleView: View {
     }
 
     private var yearDestinations: [TravelDestination] {
-        guard resolvedYear > 0 else { return [] }
-        return destinations.filter {
-            Calendar.current.component(.year, from: $0.visitDate) == resolvedYear
-        }
+        guard resolvedYear > 0, tabSnapshots.loadedYear == resolvedYear else { return [] }
+        return tabSnapshots.yearDestinations
+    }
+
+    private var hasAnyDestinations: Bool {
+        !profileCache.destinationSnapshots.isEmpty || profileCache.displayStatistics.total > 0
     }
 
     private var selectedYearDestinationCount: Int {
@@ -161,25 +162,24 @@ struct TimeCapsuleView: View {
                 .presentationDragIndicator(.visible)
             }
             .onAppear {
-                refreshProfileCachesIfNeeded()
+                TabListSnapshotStore.shared.attach(modelContext: modelContext)
+                // 时间线年份来自 Profile 快照；按需加载，不在地图启动时全表扫
+                TabListSnapshotStore.shared.ensureProfileData()
                 syncTimelinePickerYear()
                 syncYearMenuIndex()
+                // 同年已缓存则跳过 fetch，避免每次切 Tab 主线程重查
+                tabSnapshots.loadYear(resolvedYear)
                 syncFocusedDestination()
-            }
-            .onChange(of: destinationRevision.revision) { _, newRevision in
-                scheduleProfileCacheRefresh(revision: newRevision)
-            }
-            .onChange(of: destinations.count) { _, _ in
-                scheduleProfileCacheRefresh(revision: destinationRevision.revision, force: true)
             }
             .onChange(of: profileCache.timelineYearItems.map(\.year)) { _, _ in
                 syncTimelinePickerYear()
                 syncYearMenuIndex()
             }
-            .onChange(of: resolvedYear) { _, _ in
+            .onChange(of: resolvedYear) { _, newYear in
                 stopAutoPlay()
                 focusedAmbientGlow = nil
                 syncYearMenuIndex()
+                tabSnapshots.loadYear(newYear)
                 syncFocusedDestination(forceFirst: true)
             }
             .onChange(of: yearDestinations.map(\.id)) { _, _ in
@@ -208,7 +208,7 @@ struct TimeCapsuleView: View {
         VStack(spacing: 12) {
             statusChrome
 
-            if destinations.isEmpty || years.isEmpty {
+            if !hasAnyDestinations || years.isEmpty {
                 FootprintEmptyText(text: "no_travel_records".localized)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             } else {
@@ -454,7 +454,7 @@ struct TimeCapsuleView: View {
 
     private var clickWheelSection: some View {
         Group {
-            if destinations.isEmpty || years.isEmpty {
+            if !hasAnyDestinations || years.isEmpty {
                 EmptyView()
             } else if isAutoPlaying {
                 autoPlayPauseButton
@@ -708,32 +708,4 @@ struct TimeCapsuleView: View {
         focusedDestinationID = first
     }
 
-    private func refreshProfileCachesIfNeeded() {
-        profileCache.refreshIfNeeded(
-            revision: destinationRevision.revision,
-            snapshots: makeProfileSnapshots(),
-            userCountry: countryManager.currentCountry
-        )
-    }
-
-    private func scheduleProfileCacheRefresh(revision: Int, force: Bool = false) {
-        profileCache.scheduleRefresh(
-            revision: revision,
-            snapshots: { [self] in makeProfileSnapshots() },
-            userCountry: { [self] in countryManager.currentCountry },
-            force: force
-        )
-    }
-
-    private func makeProfileSnapshots() -> [ProfileDestinationSnapshot] {
-        destinations.map {
-            ProfileDestinationSnapshot(
-                id: $0.id,
-                country: $0.country,
-                category: $0.category,
-                isFavorite: $0.isFavorite,
-                visitDate: $0.visitDate
-            )
-        }
-    }
 }

@@ -220,24 +220,6 @@ struct TripDataImporter {
         }
     }
     
-    /// 验证文件是否为有效的旅程数据
-    static func validateTripFile(at url: URL) -> Bool {
-        // 获取文件访问权限
-        let hasAccess = url.startAccessingSecurityScopedResource()
-        defer {
-            if hasAccess {
-                url.stopAccessingSecurityScopedResource()
-            }
-        }
-        
-        do {
-            let jsonData = try Data(contentsOf: url)
-            _ = try JSONDecoder().decode(TripExportData.self, from: jsonData)
-            return true
-        } catch {
-            return false
-        }
-    }
 }
 
 // MARK: - 导入目的地结果枚举

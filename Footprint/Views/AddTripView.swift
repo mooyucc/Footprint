@@ -14,7 +14,7 @@ struct AddTripView: View {
     @EnvironmentObject private var purchaseManager: PurchaseManager
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @Query private var allTrips: [TravelTrip]
+    @ObservedObject private var tabSnapshots = TabListSnapshotStore.shared
     
     @State private var name = ""
     @State private var desc = ""
@@ -137,7 +137,7 @@ struct AddTripView: View {
     }
     
     private func saveTrip() {
-        guard entitlementManager.canAddTripCard(currentCount: allTrips.count) else {
+        guard entitlementManager.canAddTripCard(currentCount: tabSnapshots.journeyTripCount) else {
             showPaywall = true
             return
         }
@@ -152,6 +152,7 @@ struct AddTripView: View {
         
         modelContext.insert(newTrip)
         try? modelContext.save()
+        NotificationCenter.default.post(name: .tripUpdated, object: nil)
         dismiss()
     }
 }

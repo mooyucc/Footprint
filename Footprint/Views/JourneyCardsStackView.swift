@@ -13,7 +13,7 @@ import MapKit
 
 /// 旅程列表的「压缩堆叠 + 滚轮拨动」卡片视图：拖拽切换焦点，点按直接选中。
 struct JourneyCardsStackView: View {
-    @Query(sort: \TravelTrip.startDate, order: .reverse) private var trips: [TravelTrip]
+    @ObservedObject private var tabSnapshots = TabListSnapshotStore.shared
     @EnvironmentObject private var languageManager: LanguageManager
     @EnvironmentObject private var brandColorManager: BrandColorManager
     @EnvironmentObject private var entitlementManager: EntitlementManager
@@ -52,7 +52,6 @@ struct JourneyCardsStackView: View {
     @State private var depthCoverLoadingTripId: UUID?
     @State private var depthCoverLoadTask: Task<Void, Never>?
     
-    private static let stackLimit = 24
     /// 只绘制焦点附近的卡片（上下各约 2～3 张），避免顶层叠卡过远过稀
     private static let visibleCardWindow: CGFloat = 2.5
     /// 旅程卡片固定高度（内容区 + padding(20)）
@@ -65,7 +64,11 @@ struct JourneyCardsStackView: View {
     private static let stackBottomClearance: CGFloat = 24
     
     private var displayTrips: [TravelTrip] {
-        Array(trips.prefix(Self.stackLimit))
+        tabSnapshots.journeyTrips
+    }
+    
+    private var tripCount: Int {
+        tabSnapshots.journeyTripCount
     }
     
     /// 每张卡的强调色（仅用于底光晕 / 装饰渗色，不再整卡铺渐变）
@@ -97,7 +100,7 @@ struct JourneyCardsStackView: View {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Menu {
                         Button {
-                            if entitlementManager.canAddTripCard(currentCount: trips.count) {
+                            if entitlementManager.canAddTripCard(currentCount: tripCount) {
                                 showingAddTrip = true
                             } else {
                                 showPaywall = true
@@ -154,11 +157,13 @@ struct JourneyCardsStackView: View {
                 }
             }
             .onAppear {
+                TabListSnapshotStore.shared.attach(modelContext: modelContext)
+                TabListSnapshotStore.shared.ensureJourneyTrips()
                 clampFocusedIndex()
                 scheduleRouteWarm(forFocusedIndex: focusedIndex, delay: 0.15)
                 scheduleDepthCoverLoad(forEffectiveFocus: effectiveFocus)
             }
-            .onChange(of: trips.count) { _, _ in
+            .onChange(of: displayTrips.count) { _, _ in
                 clampFocusedIndex()
                 scheduleDepthCoverLoad(forEffectiveFocus: effectiveFocus)
             }
@@ -176,14 +181,14 @@ struct JourneyCardsStackView: View {
                 depthCoverLoadTask = nil
             }
             .navigationDestination(item: $detailTripId) { tripId in
-                if let trip = trips.first(where: { $0.id == tripId }) {
+                if let trip = tabSnapshots.trip(id: tripId) {
                     TripDetailView(trip: trip)
                 } else {
                     Color.clear.onAppear { detailTripId = nil }
                 }
             }
             .sheet(item: $mapSheetItem) { item in
-                if let trip = trips.first(where: { $0.id == item.id }) {
+                if let trip = tabSnapshots.trip(id: item.id) {
                     JourneyTripRouteMapSheet(trip: trip)
                         .environmentObject(brandColorManager)
                 }
@@ -518,6 +523,7 @@ struct JourneyCardsStackView: View {
 
     private func importTripFromURL(_ url: URL) {
         importResult = TripDataImporter.importTrip(from: url, modelContext: modelContext)
+        NotificationCenter.default.post(name: .tripUpdated, object: nil)
         showingImportResult = true
         selectedURL = nil
     }
@@ -794,13 +800,23 @@ private struct JourneyTripCardContent: View {
     }
     
     private var secondaryLabel: Color {
-        isFocused
-            ? Color.white.opacity(0.62)
-            : FootprintChrome.secondaryLabel(colorScheme)
+        if isFocused {
+            return colorScheme == .dark
+                ? Color.white.opacity(0.62)
+                : FootprintChrome.secondaryLabel(.light)
+        }
+        return FootprintChrome.secondaryLabel(colorScheme)
     }
     
     private var primaryLabel: Color {
-        isFocused ? Color.white : Color.primary
+        if isFocused {
+            return colorScheme == .dark ? Color.white : Color.primary
+        }
+        return Color.primary
+    }
+    
+    private var focusedCardFill: Color {
+        colorScheme == .dark ? Color(white: 0.10) : Color.white.opacity(0.94)
     }
     
     var body: some View {
@@ -836,9 +852,19 @@ private struct JourneyTripCardContent: View {
                         } label: {
                             Image(systemName: Self.routeMapSymbol)
                                 .font(.system(size: 17, weight: .semibold))
-                                .foregroundStyle(Color.white.opacity(0.92))
+                                .foregroundStyle(
+                                    colorScheme == .dark
+                                        ? Color.white.opacity(0.92)
+                                        : Color.primary.opacity(0.88)
+                                )
                                 .frame(width: 40, height: 40)
-                                .background(Circle().fill(Color.white.opacity(0.10)))
+                                .background(
+                                    Circle().fill(
+                                        colorScheme == .dark
+                                            ? Color.white.opacity(0.10)
+                                            : Color.black.opacity(0.06)
+                                    )
+                                )
                                 .overlay(
                                     Circle()
                                         .strokeBorder(accent.opacity(0.85), lineWidth: 1.5)
@@ -891,7 +917,11 @@ private struct JourneyTripCardContent: View {
         .background {
             if isFocused {
                 RoundedRectangle(cornerRadius: Self.cardRadius, style: .continuous)
-                    .fill(Color(white: 0.10))
+                    .fill(focusedCardFill)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: Self.cardRadius, style: .continuous)
+                            .strokeBorder(FootprintChrome.cardStroke(colorScheme), lineWidth: 0.5)
+                    }
             }
         }
         .modifier(JourneyCardChromeModifier(
@@ -900,7 +930,9 @@ private struct JourneyTripCardContent: View {
             accent: accent
         ))
         .shadow(
-            color: isFocused ? Color.black.opacity(0.35) : .clear,
+            color: isFocused
+                ? Color.black.opacity(colorScheme == .dark ? 0.35 : 0.16)
+                : .clear,
             radius: isFocused ? 18 : 0,
             x: 0,
             y: isFocused ? 10 : 0
@@ -908,7 +940,7 @@ private struct JourneyTripCardContent: View {
     }
 }
 
-/// 焦点：深色实底已自绘；非焦点：沿用玻璃卡 + accent 底光晕
+/// 焦点：实底已自绘（深浅模式分色）；非焦点：沿用玻璃卡 + accent 底光晕
 private struct JourneyCardChromeModifier: ViewModifier {
     let isFocused: Bool
     let cornerRadius: CGFloat

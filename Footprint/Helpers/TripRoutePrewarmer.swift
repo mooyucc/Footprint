@@ -39,11 +39,6 @@ enum TripRoutePrewarmer {
         }
     }
     
-    static func cancelWarm(for tripId: UUID) {
-        warmTasks[tripId]?.cancel()
-        warmTasks.removeValue(forKey: tripId)
-    }
-
     /// 打开线路 Sheet 前同步预填（会话 store → RouteManager 段缓存）；不全则为部分段或 nil
     static func prefillRoutes(for trip: TravelTrip) -> [MKRoute?]? {
         guard let destinations = sortedDestinations(for: trip), destinations.count >= 2 else { return nil }

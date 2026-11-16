@@ -146,11 +146,6 @@ class LanguageManager: ObservableObject {
         return currentBundle
     }
     
-    // 废弃：保留loadLocalizedStrings方法以保持兼容性，但不再使用
-    private func loadLocalizedStrings() {
-        // 此方法已废弃，现在使用标准的NSLocalizedString机制
-        // 保留空实现以避免编译错误
-    }
     
     func setLanguage(_ language: Language) {
         currentLanguage = language

@@ -18,9 +18,9 @@ final class EntitlementManager: ObservableObject {
     @Published private(set) var isSubscriptionActive: Bool = false
     @Published private(set) var currentSubscriptionProductID: String?
     @Published private(set) var hasLifetimePurchase: Bool = false
-    /// 2026-08-31 前购买的终身版，继续享有无限 AI
+    /// 历史字段：曾用于老终身无限 AI；现已取消该兼容，恒为 false
     @Published private(set) var hasLegacyLifetimeUnlimitedAI: Bool = false
-    /// 本期开始于 2026-09-05 前的月/年订阅，本期结束前继续享有无限 AI
+    /// 历史字段：曾用于兼容订阅无限 AI；现已取消该兼容，恒为 false
     @Published private(set) var hasGrandfatheredSubscriptionUnlimitedAI: Bool = false
 
     private let purchaseManager = PurchaseManager.shared
@@ -73,9 +73,9 @@ final class EntitlementManager: ObservableObject {
         currentEntitlement.canUseLocalDataIO
     }
     
+    /// 正式版不再提供无限 AI（含原老终身/兼容订阅）；仅 Beta 测试构建走公平使用日上限。
     var canUseAIFeatures: Bool {
-        if BetaInfo.isBetaBuild { return true }
-        return hasLegacyLifetimeUnlimitedAI || hasGrandfatheredSubscriptionUnlimitedAI
+        BetaInfo.isBetaBuild
     }
 
     var maxPhotosPerDestination: Int {
@@ -92,14 +92,22 @@ final class EntitlementManager: ObservableObject {
         if BetaInfo.isBetaBuild || canUseFullShareLayouts {
             return TripShareLayout.allCases
         }
-        return [.list]
+        return [.extendedGrid]
     }
 
     func allowedDestinationShareLayouts() -> [DestinationShareLayout] {
         if BetaInfo.isBetaBuild || canUseFullShareLayouts {
             return DestinationShareLayout.allCases
         }
-        return [.classic]
+        return [.photoPoster]
+    }
+    
+    /// 免费版可用方形与竖图；故事比例需完整分享权益
+    func allowedDestinationShareAspectRatios() -> [DestinationShareAspectRatio] {
+        if BetaInfo.isBetaBuild || canUseFullShareLayouts {
+            return DestinationShareAspectRatio.allCases
+        }
+        return [.square11, .portrait34]
     }
 
     // MARK: - 权益更新
@@ -215,7 +223,7 @@ final class EntitlementManager: ObservableObject {
     }
 
     /// 订阅优先于终身：有有效月/年订阅则为 `.pro`；仅终身则为 `.proLifetime`。
-    /// 无限 AI 不随 `.pro` 附带，仅兼容旧终身与本期开始于政策日前的订阅。
+    /// AI 不随 Pro/终身附带，正式版一律按次计费。
     private func resolveEntitlement() async -> EntitlementSnapshot {
         var snapshot = EntitlementSnapshot()
 

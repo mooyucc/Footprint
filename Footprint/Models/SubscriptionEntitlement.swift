@@ -19,31 +19,31 @@ enum SubscriptionProductID {
     static let all: [String] = [proMonthly, proYearly, proLifetime]
 }
 
-/// 终身买断的无限 AI 兼容规则
+/// 终身买断的无限 AI 兼容规则（已取消：全体按次计费）
 enum LifetimeAIPolicy {
-    /// 购买日期早于该日（上海时区 0 点）的终身用户继续享有无限 AI
+    /// 保留截止日仅作历史文档；不再授予无限 AI
     static let unlimitedAICutoff: Date = {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Shanghai") ?? TimeZone(secondsFromGMT: 8 * 3600) ?? .gmt
         return calendar.date(from: DateComponents(year: 2026, month: 8, day: 31))!
     }()
 
-    static func includesUnlimitedAI(originalPurchaseDate: Date) -> Bool {
-        originalPurchaseDate < unlimitedAICutoff
+    static func includesUnlimitedAI(originalPurchaseDate _: Date) -> Bool {
+        false
     }
 }
 
-/// 月/年订阅的无限 AI 兼容规则：仅当前计费周期在政策日前开始的订阅，本期结束前仍不扣次
+/// 月/年订阅的无限 AI 兼容规则（已取消：全体按次计费）
 enum SubscriptionAIPolicy {
-    /// 本期购买日早于该日（上海时区 0 点）则本期仍含无限 AI；续订后按次数
+    /// 保留截止日仅作历史文档；不再授予无限 AI
     static let unlimitedAICutoff: Date = {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Shanghai") ?? TimeZone(secondsFromGMT: 8 * 3600) ?? .gmt
         return calendar.date(from: DateComponents(year: 2026, month: 9, day: 5))!
     }()
 
-    static func includesUnlimitedAI(periodPurchaseDate: Date) -> Bool {
-        periodPurchaseDate < unlimitedAICutoff
+    static func includesUnlimitedAI(periodPurchaseDate _: Date) -> Bool {
+        false
     }
 }
 
@@ -63,9 +63,9 @@ enum ProTierLimits {
 /// 应用内权益等级
 enum SubscriptionEntitlement: String, Codable {
     case free
-    /// 月/年订阅：记录类 Pro 权益；无限 AI 仅兼容本期开始于 2026-09-05 前的订阅
+    /// 月/年订阅：记录类 Pro 权益；AI 一律按次
     case pro
-    /// 终身买断：含记录/分享/导入导出；2026-08-31 起新购不含无限 AI（更早购买的由 EntitlementManager 兼容）
+    /// 终身买断：含记录/分享/导入导出；AI 一律按次
     case proLifetime
 
     var displayName: String {

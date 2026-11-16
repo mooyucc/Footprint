@@ -305,27 +305,34 @@ struct AIRecommendDestinationSheet: View {
     }
     
     private func performRecommend() {
+        guard !isLoading else { return }
+        
         isLoading = true
         errorMessage = nil
         result = ""
         
-        let isProUser = entitlementManager.canUseAIFeatures
-        if !isProUser {
-            if !aiCreditManager.consumeOne() {
-                isLoading = false
-                errorMessage = nil
-                phase = .hub
-                showCreditPaywall = true
-                return
-            }
+        switch aiCreditManager.gateAICall(isUnlimitedUser: entitlementManager.canUseAIFeatures) {
+        case .allowed:
+            break
+        case .insufficientCredits:
+            isLoading = false
+            errorMessage = nil
+            phase = .hub
+            showCreditPaywall = true
+            return
+        case .dailyLimitReached:
+            isLoading = false
+            errorMessage = "ai_daily_limit_reached_message".localized
+            return
         }
         
         Task {
             let text = await aiManager.recommendNextDestinations(from: destinations)
             await MainActor.run {
                 isLoading = false
-                if let text = text {
-                    result = text
+                let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                if !trimmed.isEmpty {
+                    result = trimmed
                 } else {
                     errorMessage = aiManager.errorMessage ?? "ai_error_unknown".localized
                 }

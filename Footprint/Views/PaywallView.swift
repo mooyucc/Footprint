@@ -681,10 +681,11 @@ struct PaywallView: View {
                     .font(.headline)
                     .foregroundColor(.primary)
             }
-            Text(entitlementManager.hasLegacyLifetimeUnlimitedAI
-                 ? "paywall_lifetime_sync_hint".localized
-                 : "paywall_ai_uses_credits".localized)
+            Text("paywall_ai_uses_credits".localized)
                 .font(.subheadline)
+                .foregroundColor(.secondary)
+            Text("paywall_lifetime_sync_hint".localized)
+                .font(.caption)
                 .foregroundColor(.secondary)
         }
         .padding()

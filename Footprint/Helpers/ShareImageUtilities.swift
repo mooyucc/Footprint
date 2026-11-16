@@ -2,10 +2,11 @@
 //  ShareImageUtilities.swift
 //  Footprint
 //
-//  分享图水印等后处理。
+//  分享图水印、文案与相册保存。
 //
 
 import UIKit
+import Photos
 
 enum ShareImageUtilities {
     /// 免费版在分享图右下角添加轻量水印
@@ -46,6 +47,61 @@ enum ShareImageUtilities {
             bgPath.fill()
 
             (text as NSString).draw(at: textOrigin, withAttributes: attributes)
+        }
+    }
+    
+    /// 图上短句默认值（备注首段 → 地点名）；默认偏短，贴近海报一句话
+    static func destinationOverlayCaption(for destination: TravelDestination, maxLength: Int = 40) -> String {
+        let note = destination.notes
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if !note.isEmpty {
+            return String(note.prefix(maxLength))
+        }
+        return String(destination.name.prefix(maxLength))
+    }
+    
+    /// 多渠道通用短文案（系统分享 / 复制）
+    static func destinationShareCaption(for destination: TravelDestination) -> String {
+        let dateFormatter = LanguageManager.shared.localizedDateFormatter(dateStyle: .medium, timeStyle: .none)
+        let dateText = dateFormatter.string(from: destination.visitDate)
+        
+        let locationParts = [destination.province, destination.country]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        let locationLine = locationParts.isEmpty
+            ? destination.name
+            : "\(destination.name) · \(locationParts.joined(separator: " · "))"
+        
+        var lines = [
+            "📍 \(locationLine)",
+            "🗓️ \(dateText)"
+        ]
+        
+        let note = destination.notes
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if !note.isEmpty {
+            lines.append(String(note.prefix(80)))
+        }
+        
+        lines.append("#MooFootprint")
+        return lines.joined(separator: "\n")
+    }
+    
+    /// 保存到系统相册（仅需写入权限）
+    static func saveToPhotoLibrary(_ image: UIImage) async -> Bool {
+        let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+        guard status == .authorized || status == .limited else {
+            return false
+        }
+        
+        return await withCheckedContinuation { continuation in
+            PHPhotoLibrary.shared().performChanges {
+                PHAssetChangeRequest.creationRequestForAsset(from: image)
+            } completionHandler: { success, _ in
+                continuation.resume(returning: success)
+            }
         }
     }
 }

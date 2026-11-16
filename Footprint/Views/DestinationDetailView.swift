@@ -16,7 +16,6 @@ struct DestinationDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     @EnvironmentObject private var entitlementManager: EntitlementManager
-    @EnvironmentObject private var aiCreditManager: AICreditManager
     @EnvironmentObject private var brandColorManager: BrandColorManager
     @State private var showingEditSheet = false
     @State private var shareItem: TripShareItem?
@@ -27,10 +26,11 @@ struct DestinationDetailView: View {
     @State private var videoData: Data?
     @State private var videoThumbnail: UIImage?
     @State private var showMediaViewer = false
+    @State private var cachedPhotoThumbnails: [UIImage?] = []
+    @Environment(\.presentMediaViewer) private var presentMediaViewer
     @State private var showingSelectTrip = false
-    @State private var showingAINotePreview = false
     @State private var showingShareLayoutSelection = false
-    @State private var selectedDestinationLayout: DestinationShareLayout = .classic
+    @State private var selectedDestinationLayout: DestinationShareLayout = .photoPoster
     
     // 媒体项类型：照片或视频
     enum MediaItem: Identifiable {
@@ -72,11 +72,20 @@ struct DestinationDetailView: View {
     
     var body: some View {
         GeometryReader { geometry in
-            ScrollView {
-                detailContent(geometry: geometry)
-            }
-            .safeAreaInset(edge: .bottom) {
-                Color.clear.frame(height: 20)
+            ScrollViewReader { scrollProxy in
+                ScrollView {
+                    detailContent(geometry: geometry)
+                }
+                .safeAreaInset(edge: .bottom) {
+                    Color.clear.frame(height: 20)
+                }
+                .onChange(of: selectedPhotoIndex) { _, newIndex in
+                    // 查看器翻页时把对应缩略图滚进可视区，关闭 zoom 才能落回正确格子
+                    guard showMediaViewer, mediaItems.indices.contains(newIndex) else { return }
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        scrollProxy.scrollTo(mediaScrollID(newIndex), anchor: .center)
+                    }
+                }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -95,15 +104,6 @@ struct DestinationDetailView: View {
                             Image(systemName: destination.isFavorite ? "heart.fill" : "heart")
                                 .foregroundColor(destination.isFavorite ? .red : .primary)
                         }
-                        
-                        Button {
-                            showingAINotePreview = true
-                        } label: {
-                            Image(systemName: "sparkles")
-                                .foregroundColor(.primary)
-                        }
-                        .disabled(!canUseAI)
-                        .opacity(canUseAI ? 1.0 : 0.5)
                         
                         Button {
                             showingSelectTrip = true
@@ -141,14 +141,14 @@ struct DestinationDetailView: View {
             .sheet(isPresented: $showingSelectTrip) {
                 SelectOrCreateTripView(destination: destination)
             }
-            .sheet(isPresented: $showingAINotePreview) {
-                AINotePreviewSheet(destination: destination)
-            }
+            // 无外层 presenter 时本地 fullScreenCover（列表/旅程等入口）
             .fullScreenCover(isPresented: $showMediaViewer) {
                 MediaFullscreenViewer(
-                    items: mediaItems.map { $0.fullscreenItem },
-                    currentIndex: $selectedPhotoIndex
+                    items: mediaItems.map(\.fullscreenItem),
+                    currentIndex: $selectedPhotoIndex,
+                    onClose: { showMediaViewer = false }
                 )
+                .presentationBackground(.clear)
             }
             .onAppear {
                 loadMediaItems()
@@ -175,6 +175,8 @@ struct DestinationDetailView: View {
             }
         }
         .appPageBackgroundGradient(for: colorScheme)
+        // 本地 cover 看图时禁止拖 sheet；地图入口由外层 MediaViewerSession 锁定
+        .interactiveDismissDisabled(showMediaViewer)
     }
     
     /// HealthUI 玻璃卡底（iOS 26 glassEffect + Material 降级）
@@ -185,12 +187,11 @@ struct DestinationDetailView: View {
     @ViewBuilder
     private func detailContent(geometry: GeometryProxy) -> some View {
         let contentWidth = geometry.size.width - 32  // 与 .padding(.horizontal, 16) 一致
-        let imageHeight = contentWidth * 2 / 3
         VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading, spacing: 16) {
                 headerSection
                 dateSection
-                mediaSection(imageHeight: imageHeight, contentWidth: contentWidth)
+                mediaSection(contentWidth: contentWidth)
                 tripCard
                 notesCard
             }
@@ -258,22 +259,34 @@ struct DestinationDetailView: View {
         }
     }
     
+    /// 相册式缩略图网格：点按进入全屏查看完整横/竖图
     @ViewBuilder
-    private func mediaSection(imageHeight: CGFloat, contentWidth: CGFloat) -> some View {
+    private func mediaSection(contentWidth: CGFloat) -> some View {
         Group {
             if !mediaItems.isEmpty {
-                let selectedIndex = min(selectedPhotoIndex, mediaItems.count - 1)
-                let selectedMedia = mediaItems[selectedIndex]
-                VStack(spacing: 10) {
-                    mainMediaView(selectedMedia: selectedMedia, imageHeight: imageHeight, contentWidth: contentWidth)
-                    if mediaItems.count > 1 {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 8) {
-                                ForEach(Array(mediaItems.enumerated()), id: \.element.id) { index, item in
-                                    mediaThumbnailView(for: item, index: index, isSelected: index == selectedIndex)
-                                        .onTapGesture {
-                                            selectedPhotoIndex = index
-                                        }
+                let columns = mediaGridColumns(for: mediaItems.count)
+                let spacing: CGFloat = 4
+                let columnCount = CGFloat(columns.count)
+                let cellSide = (contentWidth - spacing * (columnCount - 1)) / columnCount
+                
+                // 非 Lazy：保持全部缩略图存活，zoom 关闭时 source 始终可解析
+                Grid(horizontalSpacing: spacing, verticalSpacing: spacing) {
+                    let columnCount = columns.count
+                    let rows = stride(from: 0, to: mediaItems.count, by: columnCount).map { start in
+                        Array(mediaItems[start..<min(start + columnCount, mediaItems.count)])
+                    }
+                    ForEach(Array(rows.enumerated()), id: \.offset) { rowIndex, rowItems in
+                        GridRow {
+                            ForEach(Array(rowItems.enumerated()), id: \.element.id) { colIndex, item in
+                                let index = rowIndex * columnCount + colIndex
+                                mediaThumbnailCell(for: item, index: index, side: cellSide)
+                                    .accessibilityAddTraits(.isButton)
+                                    .accessibilityLabel(mediaAccessibilityLabel(item))
+                            }
+                            // 末行补齐空位，避免 Grid 拉伸异常
+                            if rowItems.count < columnCount {
+                                ForEach(0..<(columnCount - rowItems.count), id: \.self) { _ in
+                                    Color.clear.frame(width: cellSide, height: cellSide)
                                 }
                             }
                         }
@@ -284,7 +297,7 @@ struct DestinationDetailView: View {
                     Rectangle()
                         .fill(destination.normalizedCategory == "domestic" ? Color.red.opacity(0.2) : Color.blue.opacity(0.2))
                         .frame(width: contentWidth)
-                        .frame(height: imageHeight)
+                        .frame(height: contentWidth * 2 / 3)
                     VStack(spacing: 12) {
                         Image(systemName: "photo")
                             .font(.system(size: 60))
@@ -298,68 +311,22 @@ struct DestinationDetailView: View {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .stroke(Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.08), lineWidth: 1)
                 )
-                .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.25 : 0.1), radius: 12, x: 0, y: 5)
             }
         }
         .padding(.top, 8)
     }
     
-    @ViewBuilder
-    private func mainMediaView(selectedMedia: MediaItem, imageHeight: CGFloat, contentWidth: CGFloat) -> some View {
-        Group {
-            switch selectedMedia {
-            case .photo(let data, _):
-                if let image = UIImage(data: data) {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: contentWidth)
-                        .frame(height: imageHeight)
-                        .clipped()
-                }
-            case .video(_, let thumbnail):
-                ZStack {
-                    if let thumbnail = thumbnail {
-                        Image(uiImage: thumbnail)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: contentWidth)
-                            .frame(height: imageHeight)
-                            .clipped()
-                    } else {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.3))
-                            .frame(height: imageHeight)
-                    }
-                    ZStack {
-                        Circle()
-                            .fill(Color.black.opacity(0.6))
-                            .frame(width: 80, height: 80)
-                        Image(systemName: "play.circle.fill")
-                            .font(.system(size: 60))
-                            .foregroundColor(.white)
-                    }
-                    .allowsHitTesting(false)
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            }
+    private func mediaGridColumns(for count: Int) -> [GridItem] {
+        let columnCount: Int
+        switch count {
+        case 1: columnCount = 1
+        case 2, 3, 4: columnCount = 2
+        default: columnCount = 3
         }
-        .frame(width: contentWidth, height: imageHeight)
-        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .onTapGesture {
-            showMediaViewer = true
-        }
-        .accessibilityAddTraits(.isButton)
-        .accessibilityLabel(selectedMediaAccessibilityLabel(selectedMedia))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.08), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(colorScheme == .dark ? 0.25 : 0.1), radius: 14, x: 0, y: 6)
+        return Array(repeating: GridItem(.flexible(), spacing: 4), count: columnCount)
     }
     
-    private func selectedMediaAccessibilityLabel(_ media: MediaItem) -> String {
+    private func mediaAccessibilityLabel(_ media: MediaItem) -> String {
         switch media {
         case .photo:
             return "photo".localized
@@ -427,13 +394,6 @@ struct DestinationDetailView: View {
         }
     }
     
-    // 检查是否有权限使用AI功能
-    private var canUseAI: Bool {
-        if BetaInfo.isBetaBuild { return true }
-        if entitlementManager.canUseAIFeatures { return true }
-        return aiCreditManager.remaining > 0
-    }
-    
     // 分享地点图片
     private func shareDestination() {
         let destinationImage = ShareImageUtilities.applyingWatermarkIfNeeded(
@@ -471,6 +431,50 @@ struct DestinationDetailView: View {
         }
         
         mediaItems = items
+        preloadPhotoThumbnails(photoCount: photos.count)
+    }
+    
+    private func preloadPhotoThumbnails(photoCount: Int) {
+        guard photoCount > 0 else {
+            cachedPhotoThumbnails = []
+            return
+        }
+        let thumbDatas = destination.photoThumbnailDatas
+        let singleThumb = destination.photoThumbnailData
+        let photos = photosLocal
+        // 按详情网格实际格宽降采样主图，避免把 320px 缩略图拉满屏发糊
+        let columnCount = CGFloat(mediaGridColumns(for: max(mediaItems.count, photoCount)).count)
+        let screen = UIScreen.main
+        let contentWidth = max(screen.bounds.width - 32, 1)
+        let spacing: CGFloat = 4
+        let cellSide = (contentWidth - spacing * (columnCount - 1)) / columnCount
+        let maxPixelSize = max(cellSide * screen.scale, 320)
+        
+        Task.detached(priority: .userInitiated) {
+            var images: [UIImage?] = Array(repeating: nil, count: photoCount)
+            for index in 0..<photoCount {
+                if index < photos.count, !photos[index].isEmpty {
+                    let full = photos[index]
+                    images[index] = MediaImageDecoder.downsampledImage(data: full, maxPixelSize: maxPixelSize)
+                        ?? UIImage(data: full)
+                    continue
+                }
+                let data: Data?
+                if index < thumbDatas.count, !thumbDatas[index].isEmpty {
+                    data = thumbDatas[index]
+                } else if index == 0, let singleThumb, !singleThumb.isEmpty {
+                    data = singleThumb
+                } else {
+                    data = nil
+                }
+                if let data {
+                    images[index] = UIImage(data: data)
+                }
+            }
+            await MainActor.run {
+                cachedPhotoThumbnails = images
+            }
+        }
     }
     
     // 生成视频缩略图
@@ -512,58 +516,83 @@ struct DestinationDetailView: View {
         }
     }
     
-    // 媒体缩略图视图
     @ViewBuilder
-    private func mediaThumbnailView(for item: MediaItem, index: Int, isSelected: Bool) -> some View {
-        Group {
+    private func mediaThumbnailCell(for item: MediaItem, index: Int, side: CGFloat) -> some View {
+        let corner: CGFloat = mediaItems.count == 1 ? 18 : 10
+        ZStack {
             switch item {
-            case .photo(let data, _):
-                if let thumb = UIImage(data: data) {
+            case .photo(_, let photoIndex):
+                if let thumb = photoThumbnailImage(at: photoIndex) {
                     Image(uiImage: thumb)
                         .resizable()
                         .scaledToFill()
-                        .frame(width: 70, height: 70)
+                        .frame(width: side, height: side)
                         .clipped()
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
-                        )
-                        .cornerRadius(8)
+                } else {
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.25))
+                        .frame(width: side, height: side)
                 }
             case .video(_, let thumbnail):
-                ZStack {
+                Group {
                     if let thumbnail = thumbnail {
                         Image(uiImage: thumbnail)
                             .resizable()
                             .scaledToFill()
-                            .frame(width: 70, height: 70)
+                            .frame(width: side, height: side)
                             .clipped()
                     } else {
                         Rectangle()
                             .fill(Color.gray.opacity(0.3))
-                            .frame(width: 70, height: 70)
-                    }
-                    
-                    // 视频标识
-                    Image(systemName: "play.circle.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(.white)
-                        .background(Circle().fill(Color.black.opacity(0.5)))
-                    
-                    if isSelected {
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(Color.accentColor, lineWidth: 2)
+                            .frame(width: side, height: side)
                     }
                 }
-                .cornerRadius(8)
+                Image(systemName: "play.circle.fill")
+                    .font(.system(size: min(36, side * 0.28)))
+                    .symbolRenderingMode(.palette)
+                    .foregroundStyle(.white, .black.opacity(0.45))
             }
+            
         }
+        .frame(width: side, height: side)
+        .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: corner, style: .continuous)
+                .stroke(Color.primary.opacity(colorScheme == .dark ? 0.12 : 0.08), lineWidth: 1)
+        )
+        .id(mediaScrollID(index))
+        .onTapGesture {
+            openFullscreenMedia(at: index)
+        }
+    }
+    
+    private func openFullscreenMedia(at index: Int) {
+        selectedPhotoIndex = index
+        let items = mediaItems.map(\.fullscreenItem)
+        if let presentMediaViewer {
+            // 地图：提到 sheet 外层呈现，地点 sheet 保持不动
+            presentMediaViewer(items, index: index)
+        } else {
+            showMediaViewer = true
+        }
+    }
+    
+    private func mediaScrollID(_ index: Int) -> String {
+        "media_thumb_\(index)"
+    }
+    
+    /// 网格只用缓存缩略图，避免 body 刷新时反复解码
+    private func photoThumbnailImage(at index: Int) -> UIImage? {
+        if index < cachedPhotoThumbnails.count, let cached = cachedPhotoThumbnails[index] {
+            return cached
+        }
+        return nil
     }
     
 }
 
 // 详情页已移除拖拽排序能力，排序请前往编辑页处理
-
 
 #Preview {
     NavigationStack {

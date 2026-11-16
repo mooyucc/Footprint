@@ -30,14 +30,6 @@ enum MapDestinationFetcher {
         return "\(count)-\(Int(latest))"
     }
 
-    static func fetchMapChangeSignature(in context: ModelContext) -> String {
-        let descriptor = FetchDescriptor<TravelDestination>(
-            sortBy: [SortDescriptor(\.visitDate, order: .reverse)]
-        )
-        let list = (try? context.fetch(descriptor)) ?? []
-        return DestinationCollectionSignature.makeForMap(from: list)
-    }
-
     static func fetchAllSortedByVisitDate(in context: ModelContext, reverse: Bool = true) -> [TravelDestination] {
         let descriptor = FetchDescriptor<TravelDestination>(
             sortBy: [SortDescriptor(\.visitDate, order: reverse ? .reverse : .forward)]
@@ -76,51 +68,5 @@ enum MapDestinationFetcher {
         )
         descriptor.fetchLimit = limit
         return (try? context.fetch(descriptor)) ?? []
-    }
-
-    /// 在 Splash 期间把地点和旅程装进视图上下文（须为主上下文）。
-    /// 临时 `ModelContext` 的缓存不会留给 `@Query`，首次切 Tab 仍会在主线程冷读全表。
-    @MainActor
-    static func prewarmTabQueries(in context: ModelContext) async {
-        await Task.yield()
-
-        let destinationCount = fetchCount(in: context)
-        await materialize(count: destinationCount, batchSize: 40) { offset, limit in
-            var descriptor = FetchDescriptor<TravelDestination>(
-                sortBy: [SortDescriptor(\.visitDate, order: .reverse)]
-            )
-            descriptor.fetchOffset = offset
-            descriptor.fetchLimit = limit
-            _ = try? context.fetch(descriptor)
-        }
-
-        let tripCount = (try? context.fetchCount(FetchDescriptor<TravelTrip>())) ?? 0
-        await materialize(count: tripCount, batchSize: 20) { offset, limit in
-            var descriptor = FetchDescriptor<TravelTrip>(
-                sortBy: [SortDescriptor(\.startDate, order: .reverse)]
-            )
-            descriptor.fetchOffset = offset
-            descriptor.fetchLimit = limit
-            descriptor.relationshipKeyPathsForPrefetching = [\.destinations]
-            _ = try? context.fetch(descriptor)
-        }
-
-        print("📦 SwiftData 预热: \(destinationCount) 地点, \(tripCount) 旅程")
-    }
-
-    @MainActor
-    private static func materialize(
-        count: Int,
-        batchSize: Int,
-        fetch: (Int, Int) -> Void
-    ) async {
-        guard count > 0, batchSize > 0 else { return }
-        var offset = 0
-        while offset < count {
-            let limit = min(batchSize, count - offset)
-            fetch(offset, limit)
-            offset += limit
-            await Task.yield()
-        }
     }
 }

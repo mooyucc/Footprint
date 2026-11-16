@@ -272,6 +272,18 @@
 "all_destinations" = "Toutes les destinations";
 "no_destinations_found" = "Aucune destination trouvée";
 
+// All Destinations browse
+"destinations_browse_region" = "Région";
+"destinations_browse_year" = "Année";
+"destinations_browse_type" = "Type";
+"destinations_untagged_type" = "Sans type";
+"destinations_ring_other" = "Autres";
+"destinations_ring_center_label" = "Lieux";
+"destinations_clear_ring_filter" = "Effacer";
+"destinations_no_favorites" = "Aucun favori pour le moment";
+"destinations_group_unit_years" = "Années";
+"destinations_group_unit_types" = "Types";
+
 // Discover Map
 "map_mode_my_footprints" = "Ma carte";
 
@@ -525,18 +537,41 @@
 
 "trip_share_signature" = "✨ MooFootprint • Enregistrer chaque voyage";
 "trip_share_subtitle" = "Enregistrer de merveilleux voyages, partager de beaux moments";
-"trip_share_layout_list" = "Mise en page liste";
-"trip_share_layout_list_desc" = "Informations détaillées sur le voyage avec couverture, carte temporelle et itinéraire complet";
-"trip_share_layout_extended_grid" = "Vue en grille";
+"trip_share_layout_extended_grid" = "Mise en page voyage";
 "trip_share_layout_extended_grid_desc" = "Afficher toutes les photos de destination dans une mise en page en grille, prend en charge plus de 9 lieux";
+"trip_share_layout_timeline" = "Affiche itinéraire";
+"trip_share_layout_timeline_desc" = "Chronologie jour par jour avec cartes photo, idéale pour les posts longs";
 
 // Destination share image layouts
-"destination_share_layout_classic" = "Mise en page classique";
-"destination_share_layout_classic_desc" = "Disposition verticale traditionnelle, idéale pour les informations détaillées";
-"destination_share_layout_modern_poster" = "Affichette moderne";
-"destination_share_layout_modern_poster_desc" = "Style affiche minimaliste, adapté aux récits de lieux et à l’ambiance";
-"destination_share_layout_circle_poster" = "Affichette minimaliste";
-"destination_share_layout_circle_poster_desc" = "Style minimaliste : typographie et formes superposées (cercles et rectangles) ; met en valeur le titre, les blancs et l’équilibre de l’espace";
+"destination_share_title" = "Partager l’affiche";
+"destination_share_aspect_section" = "Format";
+"destination_share_style_section" = "Style";
+"destination_share_aspect_square" = "Carré";
+"destination_share_aspect_portrait" = "Fil";
+"destination_share_aspect_story" = "Story";
+"destination_share_layout_photo_poster" = "Check-in photo";
+"destination_share_layout_photo_poster_desc" = "Photo plein cadre avec infos du lieu — prête à publier";
+"destination_share_layout_gallery_side" = "Galerie latérale";
+"destination_share_layout_gallery_side_desc" = "Photo à gauche, texte à droite — carte galerie";
+"destination_share_layout_gallery_stack" = "Galerie empilée";
+"destination_share_layout_gallery_stack_desc" = "Photo en haut, texte en bas — carnet photo";
+"destination_share_cover_section" = "Photo de couverture";
+"destination_share_cover_option" = "Choisir la photo de couverture";
+"destination_share_edit_text" = "Modifier le texte";
+"destination_share_edit_text_hint" = "Touchez l’aperçu pour modifier le texte sur l’image";
+"destination_share_overlay_section" = "Texte sur l’image";
+"destination_share_overlay_placeholder" = "Une courte phrase";
+"destination_share_overlay_footer" = "Affiché sur l’affiche. Une seule phrase courte.";
+"destination_share_ai_generate" = "IA : une phrase";
+"destination_share_ai_generating" = "Génération…";
+"destination_share_caption_section" = "Légende de partage";
+"destination_share_caption_footer" = "Pour le partage/copie, non dessiné sur l’image.";
+"destination_share_caption_reset" = "Réinitialiser";
+"destination_share_save_photos" = "Enregistrer";
+"destination_share_copy_caption" = "Copier le texte";
+"destination_share_caption_copied" = "Texte copié";
+"destination_share_saved" = "Enregistré dans Photos";
+"destination_share_save_failed" = "Échec de l’enregistrement. Vérifiez l’accès Photos.";
 "share_generating" = "Génération…";
 
 // Travel Stats Share Image
@@ -657,6 +692,8 @@
 "country_badges" = "Badges de pays";
 "province_badges" = "Badges de province";
 "badges_progress" = "Progression";
+"badges_progress_countries" = "Pays";
+"badges_progress_provinces" = "Provinces";
 "badges_countries_unit" = "Pays";
 "badges_provinces_unit" = "Provinces";
 "badges_entry_countries_only" = "%d pays débloqués";
@@ -783,6 +820,7 @@
 "ai_credits_default_product_title_50" = "Crédits IA (50 appels)";
 "ai_credits_product_grant" = "Ajoute %d appels";
 "ai_credits_best_value" = "Meilleur prix";
+"ai_daily_limit_reached_message" = "Vous avez atteint la limite d’utilisation IA d’aujourd’hui. Réessayez demain. Cette limite d’usage équitable aide à garder le service stable.";
 
 // Multi-language empty states
 "no_notes" = "Pas encore de notes";

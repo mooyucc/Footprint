@@ -24,7 +24,6 @@ final class RouteSelectionHolder: ObservableObject {
 }
 
 struct MapView: View {
-    @Query(sort: \TravelTrip.startDate, order: .reverse) var trips: [TravelTrip]
     @Environment(\.modelContext) var modelContext
     @Environment(\.colorScheme) var colorScheme // 检测颜色模式
     @Environment(\.scenePhase) var scenePhase
@@ -37,7 +36,7 @@ struct MapView: View {
     
     // MapView 专注于"我的足迹"模式
     /// 嵌入 NavigationStack 时可传入绑定，用于在导航栏标题位显示「第几天」筛选
-    /// tripsOverride: 父视图传入时用于限制展示的行程列表（如分页）；nil 时使用 @Query 全量
+    /// tripsOverride: 旅程线路图由父视图传入；足迹 Tab 不传，避免启动时全量订阅 TravelTrip
     init(
         autoShowRouteCards: Bool = false,
         selectedTripIdBinding: Binding<UUID?>? = nil,
@@ -52,12 +51,12 @@ struct MapView: View {
         _tripRoutes = State(initialValue: prefilledTripRoutes ?? [:])
     }
     
-    /// 父视图传入的行程列表；nil 时使用 @Query 的 trips
+    /// 旅程线路图由父视图传入的行程；足迹 Tab 为 nil
     var tripsOverride: [TravelTrip]?
     
-    /// 实际使用的行程列表：有 override 时用 override（分页），否则用 @Query 全量
+    /// 线路图用传入列表；足迹 Tab 为空（不展示旅程，也不冷启动全表）
     var effectiveTrips: [TravelTrip] {
-        tripsOverride ?? trips
+        tripsOverride ?? []
     }
     
     /// 由父视图传入时用于导航栏标题位筛选；未传入时使用内部 state
@@ -94,7 +93,10 @@ struct MapView: View {
     @State var selectedDestination: TravelDestination?
     @State var showingAddDestination = false        // 普通“添加目的地”弹窗
     @State var showingQuickCheckIn = false          // “快速打卡”弹窗
-    @State var mapCameraPosition: MapCameraPosition = .automatic
+    /// 禁止默认 `.automatic` / `.userLocation`：前者框全部标注，后者不走 LocationManager.shared
+    @State var mapCameraPosition: MapCameraPosition = .region(MapView.startupFallbackRegion)
+    /// 拿到用户定位后重建 Map（与切 Tab 同效），避免首帧 drawable=0 / 相机更新被吞
+    @State var mapCameraBootstrapID = UUID()
     @State var visibleRegion: MKCoordinateRegion?
     let regionHolder = MapRegionHolder() // 相机 continuous 回调写入，避免每帧 @State 刷新
     @State var mapSelection: TravelDestination? // 地图的选择状态
@@ -107,6 +109,8 @@ struct MapView: View {
     // 详情弹窗（由父级统一展示，避免子视图被移除导致弹窗不出现）
     @State var detailDestinationForSheet: TravelDestination?
     @State var destinationDetailDetent: PresentationDetent = .fraction(0.25)
+    /// 地图层全屏看图（在地点 sheet 之外），非 nil 时禁止拖关闭 sheet
+    @State var mediaViewerSession: MediaViewerSession?
     
     // 反向地理编码优化：使用共享的 geocoder 实例，避免重复创建
     @State var geocoder: CLGeocoder?
@@ -122,6 +126,10 @@ struct MapView: View {
     @State var initialCameraPositionSet = false // 初始相机位置是否已设置
     @State var waitingForLocationToSetCamera = false // 是否正在等待位置来设置相机
     @State var isWaitingForUserLocate = false // 用户点击定位按钮后等待位置
+    @State var initialCameraSettleTask: Task<Void, Never>? // appear 后多次重试落到用户定位
+    /// 启动骨架：先出地图框架，约 1s 后再淡入标注与浮层
+    @State var isStartupContentVisible = false
+    @State var startupContentRevealTask: Task<Void, Never>?
     
     // 底部浮动按钮参数
     let tabBarHeight: CGFloat = 49
@@ -531,8 +539,11 @@ struct MapView: View {
     func commitVisibleRegionUpdate() {
         let region = regionHolder.pending
         visibleRegion = region
-        if let region, !autoShowRouteCards || selectedTripId == nil {
-            Task { await fetchDestinationsInRegion(region) }
+        if let region {
+            confirmInitialCameraIfNeeded(region: region)
+            if !autoShowRouteCards || selectedTripId == nil {
+                Task { await fetchDestinationsInRegion(region) }
+            }
         }
         scheduleClusterRecalculationIfNeeded()
         if waitingForMapToReachDestination {
@@ -575,15 +586,20 @@ struct MapView: View {
         ZStack {
             mapLayer
             dismissOverlay
-            previewCard
-            memoryBubbleOverlay
-            // destinationCalloutOverlay // 已移除：点击地点时只显示底部抽屉弹窗，不显示地点位置的标签卡片
+            if isStartupContentVisible || autoShowRouteCards {
+                previewCard
+                memoryBubbleOverlay
+            }
             if !autoShowRouteCards {
-                floatingButtons
+                if isStartupContentVisible {
+                    floatingButtons
+                        .transition(.opacity)
+                } else {
+                    mapStartupSkeletonOverlay
+                }
             }
             keyboardOverlay
         }
-        // 搜索功能已移至 searchBarOverlay，使用自定义覆盖层实现
     }
     
 }

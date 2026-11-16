@@ -207,7 +207,7 @@
 "journey_cards_focused_a11y" = "已選取";
 "journey_cards_destinations_count" = "%d 個地點";
 "journey_cards_total_mileage" = "總里程";
-"time_capsule_tab" = "回顧";
+"time_capsule_tab" = "年鑑";
 "profile" = "我的";
 "create_trip" = "添加旅程";
 "import_trip" = "導入旅程";
@@ -269,6 +269,18 @@
 "show_all_destinations" = "所有地點";
 "all_destinations" = "所有地點";
 "no_destinations_found" = "未找到地點";
+
+// All Destinations browse
+"destinations_browse_region" = "地區";
+"destinations_browse_year" = "年份";
+"destinations_browse_type" = "類型";
+"destinations_untagged_type" = "未分類";
+"destinations_ring_other" = "其他";
+"destinations_ring_center_label" = "地點";
+"destinations_clear_ring_filter" = "清除篩選";
+"destinations_no_favorites" = "還沒有收藏地點";
+"destinations_group_unit_years" = "個年份";
+"destinations_group_unit_types" = "種類型";
 
 // Discover Map
 "map_mode_my_footprints" = "足跡地圖";
@@ -416,6 +428,7 @@
 "ai_note_edit_button" = "編輯筆記";
 "ai_subscription_required_title" = "AI 次數已用完";
 "ai_subscription_required_message" = "購買呼叫次數即可繼續使用智慧筆記、旅程描述、目的地推薦等 AI 功能。";
+"ai_daily_limit_reached_message" = "今日 AI 使用已達上限，請明天再試。這是為保障服務穩定設置的公平使用限制。";
 "ai_upgrade_to_pro" = "升級到 Pro";
 
 // AI 調用次數（按次購買）
@@ -569,18 +582,41 @@
 
 "trip_share_signature" = "✨ 墨魚足跡 · 記錄每一步旅程";
 "trip_share_subtitle" = "記錄美好旅程，分享精彩瞬間";
-"trip_share_layout_list" = "清單版面";
-"trip_share_layout_list_desc" = "詳細展示旅程信息，包含封面、時間卡片和完整行程路線";
-"trip_share_layout_extended_grid" = "網格版面";
+"trip_share_layout_extended_grid" = "行程版面";
 "trip_share_layout_extended_grid_desc" = "以網格形式展示所有目的地照片，支持超過9個地點";
+"trip_share_layout_timeline" = "日程海報";
+"trip_share_layout_timeline_desc" = "按日時間軸與氛圍大圖卡，適合社群長圖分享";
 
 // Destination share image layouts
-"destination_share_layout_classic" = "經典版面";
-"destination_share_layout_classic_desc" = "傳統的垂直排版，適合展示詳細資訊";
-"destination_share_layout_modern_poster" = "現代海報";
-"destination_share_layout_modern_poster_desc" = "採用極簡海報風格的版面，適合展示地點故事與氛圍";
-"destination_share_layout_circle_poster" = "極簡海報";
-"destination_share_layout_circle_poster_desc" = "極簡風格下圓形與矩形疊加的版面，適合強調標題、留白與空間感";
+"destination_share_title" = "分享海報";
+"destination_share_aspect_section" = "尺寸";
+"destination_share_style_section" = "風格";
+"destination_share_aspect_square" = "方形";
+"destination_share_aspect_portrait" = "直式";
+"destination_share_aspect_story" = "限時動態";
+"destination_share_layout_photo_poster" = "大圖打卡";
+"destination_share_layout_photo_poster_desc" = "照片鋪滿，地點資訊清晰，最適合直接發社群媒體";
+"destination_share_layout_gallery_side" = "側欄畫廊";
+"destination_share_layout_gallery_side_desc" = "左圖右文，米白留白，適合精緻發文";
+"destination_share_layout_gallery_stack" = "上下畫廊";
+"destination_share_layout_gallery_stack_desc" = "上圖下文，攝影日記風格";
+"destination_share_cover_section" = "封面照片";
+"destination_share_cover_option" = "選擇封面照片";
+"destination_share_edit_text" = "編輯文字";
+"destination_share_edit_text_hint" = "點按預覽可編輯圖上文字";
+"destination_share_overlay_section" = "圖上文案";
+"destination_share_overlay_placeholder" = "一句短旁白";
+"destination_share_overlay_footer" = "會出現在預覽海報上，建議一句話，約十幾字。";
+"destination_share_ai_generate" = "AI 生成一句";
+"destination_share_ai_generating" = "正在生成…";
+"destination_share_caption_section" = "分享文案";
+"destination_share_caption_footer" = "用於系統分享或複製到社群，不會畫進圖片。";
+"destination_share_caption_reset" = "恢復預設";
+"destination_share_save_photos" = "儲存";
+"destination_share_copy_caption" = "複製文案";
+"destination_share_caption_copied" = "文案已複製";
+"destination_share_saved" = "已儲存到相簿";
+"destination_share_save_failed" = "儲存失敗，請檢查相簿權限";
 "share_generating" = "正在生成…";
 
 // Travel Stats Share Image
@@ -701,6 +737,8 @@
 "country_badges" = "國家勳章";
 "province_badges" = "省份勳章";
 "badges_progress" = "點亮進度";
+"badges_progress_countries" = "國家點亮";
+"badges_progress_provinces" = "省份點亮";
 "badges_countries_unit" = "個國家";
 "badges_provinces_unit" = "個省份";
 "badges_entry_countries_only" = "已點亮 %d 個國家";

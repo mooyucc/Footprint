@@ -135,22 +135,6 @@ struct ClusterAnnotation: Identifiable, Equatable {
     }
 }
 
-// MARK: - 滚动偏移信息
-struct ScrollOffsetInfo: Equatable {
-    let tripId: UUID
-    let offset: CGFloat
-}
-
-// MARK: - 滚动偏移偏好键
-/// PreferenceKey 用于传递滚动偏移信息
-struct ScrollOffsetPreferenceKey: PreferenceKey {
-    static var defaultValue: [ScrollOffsetInfo] = []
-    
-    static func reduce(value: inout [ScrollOffsetInfo], nextValue: () -> [ScrollOffsetInfo]) {
-        value.append(contentsOf: nextValue())
-    }
-}
-
 // MARK: - POI 加载任务持有者
 /// 任务持有者类：用于在SwiftUI View中存储DispatchWorkItem
 class POILoadingTaskHolder {

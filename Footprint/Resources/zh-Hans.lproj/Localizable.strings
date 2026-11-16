@@ -202,7 +202,7 @@
 "journey_cards_focused_a11y" = "已选中";
 "journey_cards_destinations_count" = "%d 个地点";
 "journey_cards_total_mileage" = "总里程";
-"time_capsule_tab" = "回顾";
+"time_capsule_tab" = "年鉴";
 "profile" = "我的";
 "create_trip" = "添加旅程";
 "import_trip" = "导入旅程";
@@ -264,6 +264,18 @@
 "show_all_destinations" = "所有地点";
 "all_destinations" = "所有地点";
 "no_destinations_found" = "未找到地点";
+
+// All Destinations browse
+"destinations_browse_region" = "地区";
+"destinations_browse_year" = "年份";
+"destinations_browse_type" = "类型";
+"destinations_untagged_type" = "未分类";
+"destinations_ring_other" = "其他";
+"destinations_ring_center_label" = "地点";
+"destinations_clear_ring_filter" = "清除筛选";
+"destinations_no_favorites" = "还没有收藏地点";
+"destinations_group_unit_years" = "个年份";
+"destinations_group_unit_types" = "种类型";
 
 // Discover Map (发现地图)
 "map_mode_my_footprints" = "足迹地图";
@@ -499,18 +511,41 @@
 "route_card_end_point" = "终点";
 "trip_share_signature" = "✨ 墨鱼足迹 · 记录每一步旅程";
 "trip_share_subtitle" = "记录美好旅程，分享精彩瞬间";
-"trip_share_layout_list" = "清单版面";
-"trip_share_layout_list_desc" = "详细展示旅程信息，包含封面、时间卡片和完整行程路线";
-"trip_share_layout_extended_grid" = "网格版面";
+"trip_share_layout_extended_grid" = "行程版面";
 "trip_share_layout_extended_grid_desc" = "以网格形式展示所有目的地照片，支持超过9个地点";
+"trip_share_layout_timeline" = "日程海报";
+"trip_share_layout_timeline_desc" = "按日时间轴与氛围大图卡，适合朋友圈与小红书长图分享";
 
 // Destination share image layouts
-"destination_share_layout_classic" = "经典版面";
-"destination_share_layout_classic_desc" = "传统的垂直布局，适合展示详细信息";
-"destination_share_layout_modern_poster" = "现代海报";
-"destination_share_layout_modern_poster_desc" = "采用极简海报风格的版面，适合展示地点故事与氛围";
-"destination_share_layout_circle_poster" = "极简海报";
-"destination_share_layout_circle_poster_desc" = "极简风格下圆形与矩形叠加的版面，适合强调标题、留白与空间感";
+"destination_share_title" = "分享海报";
+"destination_share_aspect_section" = "尺寸";
+"destination_share_style_section" = "版式";
+"destination_share_aspect_square" = "方形";
+"destination_share_aspect_portrait" = "竖图";
+"destination_share_aspect_story" = "故事";
+"destination_share_layout_photo_poster" = "大图打卡";
+"destination_share_layout_photo_poster_desc" = "照片铺满，地点信息清晰，最适合直接发社交媒体";
+"destination_share_layout_gallery_side" = "侧栏画廊";
+"destination_share_layout_gallery_side_desc" = "左图右文，米白留白，适合精致发帖";
+"destination_share_layout_gallery_stack" = "上下画廊";
+"destination_share_layout_gallery_stack_desc" = "上图下文，摄影日记风格";
+"destination_share_cover_section" = "封面照片";
+"destination_share_cover_option" = "选择封面照片";
+"destination_share_edit_text" = "编辑文字";
+"destination_share_edit_text_hint" = "点按预览可编辑图上文字";
+"destination_share_overlay_section" = "图上文案";
+"destination_share_overlay_placeholder" = "一句短旁白";
+"destination_share_overlay_footer" = "会出现在预览海报上，建议一句话，约十几字。";
+"destination_share_ai_generate" = "AI 生成一句";
+"destination_share_ai_generating" = "正在生成…";
+"destination_share_caption_section" = "分享配文";
+"destination_share_caption_footer" = "用于系统分享或复制到社交媒体，不会画进图片。";
+"destination_share_caption_reset" = "恢复默认";
+"destination_share_save_photos" = "保存";
+"destination_share_copy_caption" = "复制配文";
+"destination_share_caption_copied" = "配文已复制";
+"destination_share_saved" = "已保存到相册";
+"destination_share_save_failed" = "保存失败，请检查相册权限";
 "share_generating" = "正在生成…";
 
 // Travel Stats Share Image
@@ -645,6 +680,8 @@
 "country_badges" = "国家勋章";
 "province_badges" = "省份勋章";
 "badges_progress" = "点亮进度";
+"badges_progress_countries" = "国家点亮";
+"badges_progress_provinces" = "省份点亮";
 "badges_countries_unit" = "个国家";
 "badges_provinces_unit" = "个省份";
 "badges_entry_countries_only" = "已点亮 %d 个国家";
@@ -821,6 +858,7 @@
 "ai_download_full_version" = "前往App Store下载正式版";
 "ai_subscription_required_title" = "AI 次数已用完";
 "ai_subscription_required_message" = "购买调用次数即可继续使用智能笔记、旅程描述、目的地推荐等 AI 功能。";
+"ai_daily_limit_reached_message" = "今日 AI 使用已达上限，请明天再试。这是为保障服务稳定设置的公平使用限制。";
 "ai_upgrade_to_pro" = "升级到Pro";
 
 // AI 调用次数（按次购买）

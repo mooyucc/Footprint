@@ -22,6 +22,7 @@ extension MapView {
     func applySheets<Content: View>(to content: Content) -> some View {
         content
             .sheet(item: $detailDestinationForSheet, onDismiss: {
+                mediaViewerSession = nil
                 withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
                     selectedDestination = nil
                     mapSelection = nil
@@ -30,8 +31,28 @@ extension MapView {
                 NavigationStack {
                     DestinationDetailView(destination: destination)
                 }
+                .environment(\.presentMediaViewer, PresentMediaViewerAction { items, index in
+                    mediaViewerSession = MediaViewerSession(items: items, index: index)
+                })
+                // 看图在 sheet 外层 cover：detent 保持用户原样，只禁止拖关闭
                 .presentationDetents([.fraction(0.25), .medium, .large], selection: $destinationDetailDetent)
                 .presentationDragIndicator(.visible)
+                .interactiveDismissDisabled(mediaViewerSession != nil)
+            }
+            .fullScreenCover(item: $mediaViewerSession) { session in
+                MediaFullscreenViewer(
+                    items: session.items,
+                    currentIndex: Binding(
+                        get: { mediaViewerSession?.index ?? session.index },
+                        set: { newIndex in
+                            guard var current = mediaViewerSession else { return }
+                            current.index = newIndex
+                            mediaViewerSession = current
+                        }
+                    ),
+                    onClose: { mediaViewerSession = nil }
+                )
+                .presentationBackground(.clear)
             }
             .sheet(isPresented: $showingFootprintsDrawer) {
                 FootprintsDrawerView(
@@ -110,23 +131,21 @@ extension MapView {
                 handleViewDisappear()
             }
             .onChange(of: isAppReady) { oldValue, newValue in
-                // 当应用就绪状态从 false 变为 true 时（启动画面结束），执行延迟的初始化
-                if !oldValue && newValue && locationInitializationPending {
-                    print("✅ 启动画面已结束，定位服务已在启动画面期间启动，直接设置地图相机位置")
-                    locationInitializationPending = false
-                    // 定位服务已在启动画面期间启动，这里只需要设置地图相机位置
-                    setInitialMapCameraPosition()
+                // 当应用就绪状态从 false 变为 true 时（启动画面/引导结束），再落初始相机
+                if !oldValue && newValue {
+                    if locationInitializationPending || !Self.hasSettledInitialCameraThisLaunch {
+                        locationInitializationPending = false
+                        if !autoShowRouteCards {
+                            beginInitialCameraSettlement()
+                        }
+                    }
+                    if !autoShowRouteCards {
+                        scheduleStartupContentReveal()
+                    }
                 }
                 if !oldValue && newValue, !autoShowRouteCards {
+                    // 骨架期内先轻量备元数据；标注等内容可见后再刷区域
                     refreshDestinationMetadata(triggerChangeHandler: false)
-                    refetchVisibleDestinationsIfNeeded()
-                }
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .shouldPrepareGeocoder)) { _ in
-                // 在启动画面期间提前创建 Geocoder
-                if geocoder == nil {
-                    geocoder = CLGeocoder()
-                    print("📍 Geocoder 已在启动画面期间提前创建")
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { _ in
@@ -240,6 +259,11 @@ extension MapView {
             .onChange(of: locationManager.lastKnownLocation) { _, newValue in
                 handleLocationChange(newValue: newValue)
             }
+            // 坐标不变、仅精度变好时也要能落到初始相机
+            .onChange(of: locationManager.lastLocationAccuracy) { _, _ in
+                guard !initialCameraPositionSet || isWaitingForUserLocate else { return }
+                handleLocationChange(newValue: locationManager.lastKnownLocation)
+            }
     }
     
     // 处理地点删除通知
@@ -290,16 +314,9 @@ extension MapView {
             return
         }
         
-        // 如果正在等待位置来设置初始相机位置，现在设置它
-        if waitingForLocationToSetCamera && !initialCameraPositionSet {
-            // 等待精度稳定（<200米）再设置相机位置
-            if accuracy > 0 && accuracy < 200.0 {
-                setCameraToUserLocation(newLocation)
-                waitingForLocationToSetCamera = false
-                initialCameraPositionSet = true
-                print("📍 首次获取到位置，地图已定位到用户位置（精度: \(String(format: "%.1f", accuracy))米）")
-            }
-            // 注意：即使精度不够，也继续执行后续的反向地理编码逻辑
+        // 尚未落下初始相机：有可用定位就飞，不依赖 waiting 标志（避免 isAppReady 竞态漏设）
+        if !initialCameraPositionSet {
+            trySettleInitialCamera()
         }
         let distanceToLast: CLLocationDistance
         if let lastCoord = lastReverseGeocodeCoordinate {
@@ -378,87 +395,334 @@ extension MapView {
             assistiveMenuExpanded = false
         }
         // 线路 Sheet 使用 trip.destinations，无需全量地点 metadata 扫描
+        // 足迹 Tab：骨架期内不拉标注/聚类，等内容揭晓后再刷
         if !autoShowRouteCards {
             refreshDestinationMetadata(triggerChangeHandler: false)
-            refetchVisibleDestinationsIfNeeded()
-            scheduleClusterRecalculationIfNeeded()
+            if isStartupContentVisible {
+                if locationManager.lastKnownLocation != nil {
+                    refetchVisibleDestinationsIfNeeded()
+                }
+                scheduleClusterRecalculationIfNeeded()
+            }
         }
         
         syncWeatherManagerPauseState()
         
-        // 主 Tab 地图的定位启停由 ContentView（scenePhase + 选中 tab）统一管理，避免与 onDisappear 重复 stop/start。
-        // 旅程线路 Sheet 复用已有 lastKnownLocation 显示蓝点即可，不持续定位，避免无关 geocode 与耗电。
-        if mapViewInNavigationStack && !autoShowRouteCards {
+        // 主 Tab 由 ContentView 管持续定位；此处再催一包，避免 Splash 一次性定位失败后首帧无点
+        if !autoShowRouteCards {
             locationManager.startUpdatingLocation(mode: .mapBrowsing)
+            locationManager.requestLocation()
+        } else if mapViewInNavigationStack {
+            // 旅程线路 Sheet 复用已有 lastKnownLocation 显示蓝点即可
         }
         
-        // 如果应用还未就绪（启动画面还在显示），延迟设置地图相机位置
+        // 如果应用还未就绪（启动画面/引导还在），先记 pending，就绪后再落相机
         if !isAppReady {
-            print("⏳ 启动画面显示中，定位服务已在后台启动，等待启动画面结束...")
+            print("⏳ 应用未就绪，延迟设置初始地图相机...")
             locationInitializationPending = true
-            // 即使启动画面还在显示，也要处理路线卡片（如果在线路tab）
+            waitingForLocationToSetCamera = true
             if autoShowRouteCards {
                 handleAutoShowRouteCards()
             }
             return
         }
         
-        // 应用已就绪，处理路线卡片和地图相机位置
         if autoShowRouteCards {
-            // 在线路tab，优先处理路线卡片，让地图缩放到旅程范围
+            isStartupContentVisible = true
             handleAutoShowRouteCards()
         } else {
-            // 不在线路tab，设置初始地图相机位置（定位服务已在启动画面期间启动）
-        setInitialMapCameraPosition()
+            beginInitialCameraSettlement()
+            scheduleStartupContentReveal()
         }
     }
     
-    // 设置初始地图相机位置（优化：优先定位到用户位置）
-    func setInitialMapCameraPosition() {
-        // 如果已经设置过，不再重复设置
-        guard !initialCameraPositionSet else { return }
+    /// 本次进程是否已揭过启动内容（Tab 回来不再走骨架）
+    private static var hasRevealedStartupContentThisLaunch = false
+    /// 骨架展示时长后再淡入标注/浮层
+    private static let startupContentRevealDelayNs: UInt64 = 1_000_000_000
+    
+    /// 先出地图框架，约 1s 后再显示足迹内容
+    func scheduleStartupContentReveal() {
+        guard !autoShowRouteCards else {
+            isStartupContentVisible = true
+            return
+        }
+        if Self.hasRevealedStartupContentThisLaunch {
+            isStartupContentVisible = true
+            refetchVisibleDestinationsIfNeeded()
+            return
+        }
+        guard isAppReady else { return }
+        guard !isStartupContentVisible else { return }
         
-        // 检查定位服务是否已获取到位置
-        if let userLocation = locationManager.lastKnownLocation {
-            let accuracy = locationManager.lastLocationAccuracy ?? Double.greatestFiniteMagnitude
-            // 如果位置精度较好（<200米），直接定位到用户位置
-            if accuracy > 0 && accuracy < 200.0 {
-                setCameraToUserLocation(userLocation)
-                initialCameraPositionSet = true
-                print("📍 地图已定位到用户位置: (\(userLocation.latitude), \(userLocation.longitude))")
-            } else {
-                // 位置精度不够，等待更好的位置
-                waitingForLocationToSetCamera = true
-                mapCameraPosition = .automatic
-                print("⏳ 等待更精确的位置（当前精度: \(String(format: "%.1f", accuracy))米）")
+        startupContentRevealTask?.cancel()
+        startupContentRevealTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: Self.startupContentRevealDelayNs)
+            guard !Task.isCancelled else { return }
+            Self.hasRevealedStartupContentThisLaunch = true
+            withAnimation(.easeInOut(duration: 0.35)) {
+                isStartupContentVisible = true
             }
-        } else {
-            // 如果还没有位置，使用自动定位，并监听位置更新
-            waitingForLocationToSetCamera = true
-            mapCameraPosition = .automatic
-            print("⏳ 等待定位获取，使用自动定位模式")
-            
-            // 确保 Geocoder 已创建
-            if geocoder == nil {
-                geocoder = CLGeocoder()
+            refreshDestinationMetadata(triggerChangeHandler: false)
+            refetchVisibleDestinationsIfNeeded()
+            scheduleClusterRecalculationIfNeeded()
+            print("✨ 启动骨架结束，显示地图内容")
+        }
+    }
+    
+    /// LocationManager 已过滤后的 fix 即可用于首帧相机
+    private static let initialCameraAccuracyLimit: CLLocationAccuracy = 1000
+    /// 相机中心距目标小于此距离即视为落地成功（米）
+    private static let initialCameraConfirmDistance: CLLocationDistance = 2500
+    /// 落地后短时内若中心飘离超过此距离，视为被拉回 fallback，再锁一次
+    private static let initialCameraDriftDistance: CLLocationDistance = 50_000
+    /// 漂移守卫窗口
+    private static let initialCameraDriftGuardDuration: TimeInterval = 8
+    /// 本次进程是否已完成「启动飞到定位」；Tab 切换重建 MapView 不再重复飞
+    private static var hasSettledInitialCameraThisLaunch = false
+    /// 供定位按钮等判断是否仍走初始 settle
+    static var hasCompletedInitialCameraSettlement: Bool { hasSettledInitialCameraThisLaunch }
+    /// 已写入 mapCameraPosition、等待 Map 实际报到附近的目标坐标
+    private static var pendingInitialCameraCoordinate: CLLocationCoordinate2D?
+    /// 已确认落地的锚点（用于漂移守卫）
+    private static var settledInitialCameraCoordinate: CLLocationCoordinate2D?
+    private static var initialCameraDriftGuardUntil: Date?
+    /// 本轮 settle 是否已为用户坐标重建过 Map
+    private static var didRemountMapForInitialCamera = false
+    /// 离开足迹 Tab 时记住视野，回来时静默恢复（无飞行动画）
+    private static var lastFootprintCameraRegion: MKCoordinateRegion?
+    
+    /// 等待 GPS 时的回退视野（纯 `.region`，不框全部标注、不依赖 Map 内置定位）
+    static let startupFallbackRegion = MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 35.86, longitude: 104.19),
+        span: MKCoordinateSpan(latitudeDelta: 0.35, longitudeDelta: 0.35)
+    )
+    
+    private static func initialUserRegion(for location: CLLocationCoordinate2D) -> MKCoordinateRegion {
+        MKCoordinateRegion(
+            center: location,
+            span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
+        )
+    }
+    
+    /// 启动初始相机：仅冷启动飞一次；Tab 回来只恢复上次视野
+    func beginInitialCameraSettlement() {
+        guard !autoShowRouteCards else { return }
+        
+        if Self.hasSettledInitialCameraThisLaunch {
+            restoreFootprintCameraAfterTabReturn()
+            return
+        }
+        
+        waitingForLocationToSetCamera = true
+        if geocoder == nil {
+            geocoder = CLGeocoder()
+        }
+        
+        locationManager.startUpdatingLocation(mode: .mapBrowsing)
+        locationManager.requestLocation()
+        
+        // 已有可用定位：直接飞并重建 Map。无定位时不要反复写入 fallback，
+        // 否则晚到的用户坐标更新会被后续 begin/异步逻辑盖回中国视野。
+        if let userLocation = locationManager.lastKnownLocation,
+           shouldAcceptLocationForInitialCamera(accuracy: locationManager.lastLocationAccuracy) {
+            applyInitialCamera(to: userLocation, animated: false)
+        }
+        
+        // 下一 runloop 再设，避免 onAppear 当帧改 Map 相机无效
+        DispatchQueue.main.async {
+            self.trySettleInitialCamera()
+        }
+        
+        scheduleInitialCameraSettleRetries()
+    }
+    
+    /// 在 Map 尚未就绪时反复重试；已写入目标但未确认落地时也会重放相机
+    private func scheduleInitialCameraSettleRetries() {
+        initialCameraSettleTask?.cancel()
+        initialCameraSettleTask = Task { @MainActor in
+            let delays: [UInt64] = [
+                50_000_000,
+                200_000_000,
+                500_000_000,
+                1_000_000_000,
+                2_000_000_000,
+                3_500_000_000,
+                5_000_000_000,
+                8_000_000_000
+            ]
+            for (index, delayNs) in delays.enumerated() {
+                try? await Task.sleep(nanoseconds: delayNs)
+                guard !Task.isCancelled else { return }
+                guard !Self.hasSettledInitialCameraThisLaunch else { return }
+                if Self.pendingInitialCameraCoordinate != nil {
+                    // 仅在若干次仍未确认时重建，避免每帧拆掉 Map
+                    let forceRemount = (index == 2 || index == 4 || index == 6)
+                    self.reapplyPendingInitialCamera(forceRemount: forceRemount)
+                } else {
+                    self.locationManager.requestLocation()
+                    self.trySettleInitialCamera()
+                }
             }
         }
+    }
+    
+    /// Tab 切回足迹：静默恢复上次区域，不再飞向 GPS
+    private func restoreFootprintCameraAfterTabReturn() {
+        initialCameraPositionSet = true
+        waitingForLocationToSetCamera = false
+        Self.pendingInitialCameraCoordinate = nil
+        if let region = Self.lastFootprintCameraRegion {
+            mapCameraPosition = .region(region)
+        } else if let location = locationManager.lastKnownLocation {
+            mapCameraPosition = .region(Self.initialUserRegion(for: location))
+        }
+        refetchVisibleDestinationsIfNeeded()
+    }
+    
+    /// 有可用定位则落到用户附近；否则保持当前 fallback，不在重试里反复重置相机
+    @discardableResult
+    func trySettleInitialCamera() -> Bool {
+        guard !Self.hasSettledInitialCameraThisLaunch, !autoShowRouteCards else {
+            return Self.hasSettledInitialCameraThisLaunch
+        }
+        
+        if Self.pendingInitialCameraCoordinate != nil {
+            reapplyPendingInitialCamera(forceRemount: false)
+            return false
+        }
+        
+        if let userLocation = locationManager.lastKnownLocation,
+           shouldAcceptLocationForInitialCamera(accuracy: locationManager.lastLocationAccuracy) {
+            applyInitialCamera(to: userLocation, animated: false)
+            return false
+        }
+        
+        waitingForLocationToSetCamera = true
+        return false
+    }
+    
+    private func shouldAcceptLocationForInitialCamera(accuracy: CLLocationAccuracy?) -> Bool {
+        guard let accuracy else {
+            return locationManager.lastKnownLocation != nil
+        }
+        guard accuracy > 0 else { return false }
+        return accuracy < Self.initialCameraAccuracyLimit
+    }
+    
+    /// 写入目标相机并用重建 Map 锁定（切 Tab 能好就是因为重建）
+    func applyInitialCamera(to location: CLLocationCoordinate2D, animated: Bool) {
+        guard !Self.hasSettledInitialCameraThisLaunch else { return }
+        isWaitingForUserLocate = false
+        Self.pendingInitialCameraCoordinate = location
+        waitingForLocationToSetCamera = false
+        
+        let region = Self.initialUserRegion(for: location)
+        // 初始锁定不用动画：与 fallback 动画插值会把视野再拉回「区域」跨度
+        mapCameraPosition = .region(region)
+        remountMapForInitialCameraIfNeeded(force: !Self.didRemountMapForInitialCamera)
+        
+        let accuracy = locationManager.lastLocationAccuracy ?? -1
+        print("📍 初始相机已请求飞向用户: (\(location.latitude), \(location.longitude)), 精度=\(String(format: "%.1f", accuracy))米（待 Map 确认）")
+        
+        if let visible = visibleRegion ?? regionHolder.pending {
+            confirmInitialCameraIfNeeded(region: visible)
+        }
+        
+        // animated 参数保留以兼容调用方；初始路径强制无动画
+        _ = animated
+    }
+    
+    private func reapplyPendingInitialCamera(forceRemount: Bool) {
+        guard !Self.hasSettledInitialCameraThisLaunch,
+              let location = Self.pendingInitialCameraCoordinate else { return }
+        mapCameraPosition = .region(Self.initialUserRegion(for: location))
+        if forceRemount {
+            remountMapForInitialCameraIfNeeded(force: true)
+        }
+        if let visible = visibleRegion ?? regionHolder.pending {
+            confirmInitialCameraIfNeeded(region: visible)
+        }
+    }
+    
+    private func remountMapForInitialCameraIfNeeded(force: Bool) {
+        guard force || !Self.didRemountMapForInitialCamera else { return }
+        Self.didRemountMapForInitialCamera = true
+        mapCameraBootstrapID = UUID()
+        print("📍 初始相机：重建 Map 以锁定用户位置")
+    }
+    
+    /// Map 相机回调确认已落到用户附近后再标记成功并停重试
+    func confirmInitialCameraIfNeeded(region: MKCoordinateRegion) {
+        guard !Self.hasSettledInitialCameraThisLaunch,
+              let target = Self.pendingInitialCameraCoordinate else { return }
+        
+        let center = region.center
+        let distance = CLLocation(latitude: center.latitude, longitude: center.longitude)
+            .distance(from: CLLocation(latitude: target.latitude, longitude: target.longitude))
+        guard distance <= Self.initialCameraConfirmDistance else { return }
+        
+        markInitialCameraSettled(at: target)
+    }
+    
+    /// 确认后又被拉回远处（常见于 fallback 重入 / 零尺寸 Map 复位）时再锁一次
+    func guardInitialCameraAgainstDrift(region: MKCoordinateRegion) {
+        guard Self.hasSettledInitialCameraThisLaunch,
+              let anchor = Self.settledInitialCameraCoordinate,
+              let guardUntil = Self.initialCameraDriftGuardUntil,
+              Date() < guardUntil else { return }
+        
+        let center = region.center
+        let distance = CLLocation(latitude: center.latitude, longitude: center.longitude)
+            .distance(from: CLLocation(latitude: anchor.latitude, longitude: anchor.longitude))
+        guard distance > Self.initialCameraDriftDistance else { return }
+        
+        print("⚠️ 初始相机漂移 \(Int(distance))m，重新锁定用户位置")
+        mapCameraPosition = .region(Self.initialUserRegion(for: anchor))
+        mapCameraBootstrapID = UUID()
+        Self.initialCameraDriftGuardUntil = Date().addingTimeInterval(Self.initialCameraDriftGuardDuration)
+    }
+    
+    private func markInitialCameraSettled(at location: CLLocationCoordinate2D) {
+        guard !Self.hasSettledInitialCameraThisLaunch else { return }
+        Self.hasSettledInitialCameraThisLaunch = true
+        Self.pendingInitialCameraCoordinate = nil
+        Self.settledInitialCameraCoordinate = location
+        Self.initialCameraDriftGuardUntil = Date().addingTimeInterval(Self.initialCameraDriftGuardDuration)
+        waitingForLocationToSetCamera = false
+        initialCameraPositionSet = true
+        initialCameraSettleTask?.cancel()
+        initialCameraSettleTask = nil
+        
+        // 最终再写一次并重建，确保确认帧之后不会停在被吞掉的状态
+        mapCameraPosition = .region(Self.initialUserRegion(for: location))
+        mapCameraBootstrapID = UUID()
+        
+        print("📍 地图已定位到用户位置: (\(location.latitude), \(location.longitude))")
+        refetchVisibleDestinationsIfNeeded()
     }
     
     // 设置地图相机到用户位置
     func setCameraToUserLocation(_ location: CLLocationCoordinate2D) {
-        let region = MKCoordinateRegion(
-            center: location,
-            span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05) // 约5公里范围
-        )
-        
         withAnimation(.easeInOut(duration: 0.5)) {
-            mapCameraPosition = .region(region)
+            mapCameraPosition = .region(Self.initialUserRegion(for: location))
         }
     }
     
     // 处理视图消失
     func handleViewDisappear() {
+        if !autoShowRouteCards, let region = visibleRegion ?? regionHolder.pending {
+            Self.lastFootprintCameraRegion = region
+        }
+        // 未确认的初始飞跃下次 appear 用 lastKnownLocation 重来，避免残留 pending
+        if !Self.hasSettledInitialCameraThisLaunch {
+            Self.pendingInitialCameraCoordinate = nil
+            Self.didRemountMapForInitialCamera = false
+        }
+        startupContentRevealTask?.cancel()
+        startupContentRevealTask = nil
+        initialCameraSettleTask?.cancel()
+        initialCameraSettleTask = nil
         regionHolder.cancelDebounce()
         regionFetchTask?.cancel()
         regionFetchTask = nil

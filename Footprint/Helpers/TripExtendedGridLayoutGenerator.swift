@@ -44,7 +44,7 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
             // 标题区域高度（drawHeader 已包含到时间卡片的间距20pt）
             currentY += headerHeight
             
-            // 行程概要 + 旅行统计（与清单版面、StatsImageGenerator 一致）
+            // 行程概要：开始 / 结束 / 时长
             let statsH = TripImageGenerator.drawTripShareModernStatsBlock(
                 trip: trip,
                 at: CGPoint(x: 20, y: currentY),
@@ -115,7 +115,7 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
         var headerHeight: CGFloat = titleSize + 20 // 标题高度 + 到时间卡片的间距（20pt）
         height += headerHeight // 标题区域高度（已包含到统计区的间距）
         
-        // 日期三列 + 旅行统计 2×2
+        // 日期三列
         height += TripImageGenerator.tripShareModernStatsBlockHeight(contentWidth: contentWidth) + 4
         
         // 扩展网格区域（按天分段，每天内每 9 个一组多行九宫格）
@@ -500,136 +500,6 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
         nameString.draw(in: textRect)
     }
     
-    private func drawGridItem(destination: TravelDestination, index: Int, in rect: CGRect, context: CGContext) {
-        // 绘制圆角矩形背景
-        let path = UIBezierPath(roundedRect: rect, cornerRadius: 12)
-        context.saveGState()
-        context.addPath(path.cgPath)
-        context.clip()
-        
-        // 绘制图片或默认背景
-        if let photoData = destination.photoData,
-           let photoImage = UIImage(data: photoData) {
-            // 绘制图片，保持宽高比
-            let imageAspectRatio = photoImage.size.width / photoImage.size.height
-            let rectAspectRatio = rect.width / rect.height
-            
-            var drawRect = rect
-            if imageAspectRatio > rectAspectRatio {
-                // 图片更宽，以高度为准
-                let scaledWidth = rect.height * imageAspectRatio
-                drawRect = CGRect(x: rect.midX - scaledWidth/2, y: rect.minY, width: scaledWidth, height: rect.height)
-            } else {
-                // 图片更高，以宽度为准
-                let scaledHeight = rect.width / imageAspectRatio
-                drawRect = CGRect(x: rect.minX, y: rect.midY - scaledHeight/2, width: rect.width, height: scaledHeight)
-            }
-            
-            photoImage.draw(in: drawRect)
-        } else {
-            // 使用 ImageMooyu 作为默认图片
-            if let defaultImage = UIImage(named: "ImageMooyu") {
-                // 使用原始渲染模式，确保颜色正确显示
-                let originalImage = defaultImage.withRenderingMode(.alwaysOriginal)
-                
-                // 绘制图片，保持宽高比
-                let imageAspectRatio = defaultImage.size.width / defaultImage.size.height
-                let rectAspectRatio = rect.width / rect.height
-                
-                var drawRect: CGRect
-                if imageAspectRatio > rectAspectRatio {
-                    // 图片更宽，以高度为准
-                    let scaledWidth = rect.height * imageAspectRatio
-                    drawRect = CGRect(
-                        x: rect.midX - scaledWidth/2,
-                        y: rect.minY,
-                        width: scaledWidth,
-                        height: rect.height
-                    )
-                } else {
-                    // 图片更高，以宽度为准
-                    let scaledHeight = rect.width / imageAspectRatio
-                    drawRect = CGRect(
-                        x: rect.minX,
-                        y: rect.midY - scaledHeight/2,
-                        width: rect.width,
-                        height: scaledHeight
-                    )
-                }
-                
-                originalImage.draw(in: drawRect)
-            }
-        }
-        
-        context.restoreGState()
-        
-        // 绘制序号标签（左上角）
-        let badgeSize: CGFloat = 28
-        let badgeRect = CGRect(x: rect.minX + 8, y: rect.minY + 8, width: badgeSize, height: badgeSize)
-        context.setFillColor(UIColor.white.withAlphaComponent(0.7).cgColor)
-        context.fillEllipse(in: badgeRect)
-        
-        let numberAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 14, weight: .bold),
-            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0)
-        ]
-        let numberString = NSAttributedString(string: "\(index)", attributes: numberAttributes)
-        let numberSize = numberString.size()
-        numberString.draw(at: CGPoint(x: badgeRect.midX - numberSize.width/2, y: badgeRect.midY - numberSize.height/2))
-        
-        // 绘制目的地名称（底部，带半透明背景）
-        let namePadding: CGFloat = 8
-        let availableWidth = rect.width - namePadding * 2 // 可用文本宽度
-        
-        let nameAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 12, weight: .semibold),
-            .foregroundColor: UIColor.white,
-            .paragraphStyle: {
-                let style = NSMutableParagraphStyle()
-                style.lineBreakMode = .byTruncatingTail // 超出部分用省略号截断
-                return style
-            }()
-        ]
-        let nameString = NSAttributedString(string: destination.name, attributes: nameAttributes)
-        
-        // 计算文本在有限宽度内的实际大小（支持截断）
-        let nameRect = nameString.boundingRect(
-            with: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
-            options: [.usesLineFragmentOrigin, .usesFontLeading],
-            context: nil
-        )
-        let nameHeight = ceil(nameRect.height)
-        
-        let nameBackgroundRect = CGRect(
-            x: rect.minX,
-            y: rect.maxY - nameHeight - namePadding * 2,
-            width: rect.width,
-            height: nameHeight + namePadding * 2
-        )
-        
-        // 绘制半透明背景（带圆角，半径与地点照片一致为12）
-        let cornerRadius: CGFloat = 12
-        // 使用 UIBezierPath 的 roundedRect 方法，只给底部两个角添加圆角
-        let backgroundPath = UIBezierPath(
-            roundedRect: nameBackgroundRect,
-            byRoundingCorners: [.bottomLeft, .bottomRight],
-            cornerRadii: CGSize(width: cornerRadius, height: cornerRadius)
-        )
-        
-        context.setFillColor(UIColor.black.withAlphaComponent(0.4).cgColor)
-        context.addPath(backgroundPath.cgPath)
-        context.fillPath()
-        
-        // 绘制文字（在指定矩形内绘制，自动处理截断）
-        let textRect = CGRect(
-            x: rect.minX + namePadding,
-            y: nameBackgroundRect.midY - nameHeight / 2,
-            width: availableWidth,
-            height: nameHeight
-        )
-        nameString.draw(in: textRect)
-    }
-    
     private func drawEmptyState(at point: CGPoint, width: CGFloat, context: CGContext) {
         let emptyAttributes: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: 16),
@@ -699,7 +569,3 @@ struct ExtendedGridLayoutGenerator: TripLayoutGenerator {
         subtitleString.draw(at: CGPoint(x: point.x - subtitleSize.width/2, y: point.y + 25))
     }
 }
-
-// MARK: - 地点分享版面生成器
-
-/// 经典版面生成器（原有样式）

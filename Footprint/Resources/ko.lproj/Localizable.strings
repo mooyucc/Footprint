@@ -272,6 +272,18 @@
 "all_destinations" = "모든 장소";
 "no_destinations_found" = "장소를 찾을 수 없습니다";
 
+// All Destinations browse
+"destinations_browse_region" = "지역";
+"destinations_browse_year" = "연도";
+"destinations_browse_type" = "유형";
+"destinations_untagged_type" = "미분류";
+"destinations_ring_other" = "기타";
+"destinations_ring_center_label" = "장소";
+"destinations_clear_ring_filter" = "해제";
+"destinations_no_favorites" = "즐겨찾기가 없습니다";
+"destinations_group_unit_years" = "개 연도";
+"destinations_group_unit_types" = "개 유형";
+
 // Discover Map
 "map_mode_my_footprints" = "나의 지도";
 
@@ -535,18 +547,41 @@
 
 "trip_share_signature" = "✨ 모어풋프린트 • 모든 여행 기록";
 "trip_share_subtitle" = "아름다운 여행을 기록하고 멋진 순간을 공유하세요";
-"trip_share_layout_list" = "목록 레이아웃";
-"trip_share_layout_list_desc" = "커버, 시간 카드 및 전체 여행 경로를 포함한 상세한 여행 정보";
-"trip_share_layout_extended_grid" = "그리드 보기";
+"trip_share_layout_extended_grid" = "여행 레이아웃";
 "trip_share_layout_extended_grid_desc" = "그리드 레이아웃으로 모든 목적지 사진 표시, 9개 이상의 장소 지원";
+"trip_share_layout_timeline" = "일정 포스터";
+"trip_share_layout_timeline_desc" = "일별 타임라인과 포토 카드, SNS 세로형 공유에 적합";
 
 // Destination share image layouts
-"destination_share_layout_classic" = "클래식";
-"destination_share_layout_classic_desc" = "전통적인 세로 레이아웃으로 상세 정보 표시에 적합합니다";
-"destination_share_layout_modern_poster" = "모던 포스터";
-"destination_share_layout_modern_poster_desc" = "미니멀 포스터 스타일로 장소 이야기와 분위기 표현에 적합합니다";
-"destination_share_layout_circle_poster" = "미니멀 스타일 포스터";
-"destination_share_layout_circle_poster_desc" = "미니멀 스타일 레이아웃으로 원과 사각형을 겹친 타이포그래피, 제목과 여백·공간의 균형을 강조합니다";
+"destination_share_title" = "포스터 공유";
+"destination_share_aspect_section" = "크기";
+"destination_share_style_section" = "스타일";
+"destination_share_aspect_square" = "정사각";
+"destination_share_aspect_portrait" = "피드";
+"destination_share_aspect_story" = "스토리";
+"destination_share_layout_photo_poster" = "포토 체크인";
+"destination_share_layout_photo_poster_desc" = "사진 전체 + 장소 정보, SNS 공유에 적합";
+"destination_share_layout_gallery_side" = "사이드 갤러리";
+"destination_share_layout_gallery_side_desc" = "왼쪽 사진 + 오른쪽 문구 갤러리 카드";
+"destination_share_layout_gallery_stack" = "스택 갤러리";
+"destination_share_layout_gallery_stack_desc" = "위 사진 + 아래 문구 포토 다이어리 스타일";
+"destination_share_cover_section" = "커버 사진";
+"destination_share_cover_option" = "커버 사진 선택";
+"destination_share_edit_text" = "텍스트 편집";
+"destination_share_edit_text_hint" = "미리보기를 눌러 이미지 위 텍스트 편집";
+"destination_share_overlay_section" = "이미지 문구";
+"destination_share_overlay_placeholder" = "짧은 한 문장";
+"destination_share_overlay_footer" = "포스터에 표시됩니다. 짧은 한 문장이 좋습니다.";
+"destination_share_ai_generate" = "AI 한 문장";
+"destination_share_ai_generating" = "생성 중…";
+"destination_share_caption_section" = "공유 캡션";
+"destination_share_caption_footer" = "공유·복사용이며 이미지에는 그려지지 않습니다.";
+"destination_share_caption_reset" = "초기화";
+"destination_share_save_photos" = "저장";
+"destination_share_copy_caption" = "캡션 복사";
+"destination_share_caption_copied" = "캡션이 복사되었습니다";
+"destination_share_saved" = "사진에 저장됨";
+"destination_share_save_failed" = "저장 실패. 사진 권한을 확인하세요";
 "share_generating" = "생성 중…";
 
 // Travel Stats Share Image
@@ -667,6 +702,8 @@
 "country_badges" = "국가 배지";
 "province_badges" = "지역 배지";
 "badges_progress" = "진행률";
+"badges_progress_countries" = "국가 해금";
+"badges_progress_provinces" = "지역 해금";
 "badges_countries_unit" = "개 국가";
 "badges_provinces_unit" = "개 지역";
 "badges_entry_countries_only" = "%d개 국가 해금";
@@ -793,6 +830,7 @@
 "ai_credits_default_product_title_50" = "AI 호출 (50회)";
 "ai_credits_product_grant" = "구매 시 %d회 추가";
 "ai_credits_best_value" = "더 알뜰";
+"ai_daily_limit_reached_message" = "오늘의 AI 사용 한도에 도달했습니다. 내일 다시 시도해 주세요. 서비스 안정성을 위한 공정 사용 제한입니다.";
 
 // Multi-language empty states
 "no_notes" = "아직 노트가 없습니다";

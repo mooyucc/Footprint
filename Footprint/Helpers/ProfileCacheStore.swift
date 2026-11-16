@@ -4,18 +4,38 @@
 //
 //  Profile tab stats cache: survives Tab recreation + cold start via disk snapshot.
 //  Refresh when DestinationDataRevision / destination count changes; never overwrite
-//  a non-empty cache with a transient empty @Query.
+//  a non-empty cache with a transient empty fetch.
 //
 
 import Foundation
 import Combine
 
-struct ProfileDestinationSnapshot: Sendable {
+struct ProfileDestinationSnapshot: Sendable, Codable, Equatable {
     let id: UUID
+    let name: String
     let country: String
+    let province: String
     let category: String
     let isFavorite: Bool
     let visitDate: Date
+
+    init(
+        id: UUID,
+        name: String = "",
+        country: String,
+        province: String = "",
+        category: String,
+        isFavorite: Bool,
+        visitDate: Date
+    ) {
+        self.id = id
+        self.name = name
+        self.country = country
+        self.province = province
+        self.category = category
+        self.isFavorite = isFavorite
+        self.visitDate = visitDate
+    }
 }
 
 struct ProfileStatistics: Sendable, Equatable, Codable {
@@ -35,8 +55,10 @@ final class ProfileCacheStore: ObservableObject {
     @Published private(set) var statistics: ProfileStatistics?
     @Published private(set) var favoriteIDs: [UUID] = []
     @Published private(set) var timelineYearItems: [(year: Int, count: Int)] = []
+    /// 轻量地点快照（无照片），供勋章 / 年份逻辑使用
+    @Published private(set) var destinationSnapshots: [ProfileDestinationSnapshot] = []
 
-    /// 上次成功应用的会话 revision；磁盘恢复后为 -1，迫使首次非空 @Query 重算校验
+    /// 上次成功应用的会话 revision；磁盘恢复后为 -1，迫使首次非空 fetch 重算校验
     private(set) var handledRevision: Int = -1
     /// 上次成功应用的地点数量（用于冷启动指纹与空结果保护）
     private(set) var handledDestinationCount: Int = -1
@@ -53,7 +75,25 @@ final class ProfileCacheStore: ObservableObject {
         statistics ?? .zero
     }
 
-    /// 仅在尚无缓存或 revision 变化时重算；`force` 用于 @Query count 变化（含确认清空）
+    /// TabListSnapshotStore 入口：写入轻量快照并按需重算统计
+    func applySnapshots(
+        _ snapshots: [ProfileDestinationSnapshot],
+        revision: Int,
+        userCountry: CountryManager.Country,
+        force: Bool = false
+    ) {
+        if !snapshots.isEmpty || force || destinationSnapshots.isEmpty {
+            destinationSnapshots = snapshots
+        }
+        refreshIfNeeded(
+            revision: revision,
+            snapshots: snapshots,
+            userCountry: userCountry,
+            force: force
+        )
+    }
+
+    /// 仅在尚无缓存或 revision 变化时重算；`force` 用于 count 变化（含确认清空）
     func refreshIfNeeded(
         revision: Int,
         snapshots: [ProfileDestinationSnapshot],
@@ -68,7 +108,7 @@ final class ProfileCacheStore: ObservableObject {
             userCountry.displayName,
             userCountry.englishName
         )
-        // force + 空 snapshots = @Query 已确认 0 条，允许清空；否则空结果不覆盖非空缓存
+        // force + 空 snapshots = 已确认 0 条，允许清空；否则空结果不覆盖非空缓存
         refresh(
             revision: revision,
             snapshots: snapshots,
@@ -77,7 +117,7 @@ final class ProfileCacheStore: ObservableObject {
         )
     }
 
-    /// debounce：等待 SwiftData @Query 同步后再重算
+    /// debounce：等待写入落库后再重算（兼容旧调用点）
     func scheduleRefresh(
         revision: Int,
         snapshots: @escaping @MainActor () -> [ProfileDestinationSnapshot],
@@ -88,9 +128,9 @@ final class ProfileCacheStore: ObservableObject {
         debounceTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 150_000_000)
             guard !Task.isCancelled else { return }
-            refreshIfNeeded(
+            applySnapshots(
+                snapshots(),
                 revision: revision,
-                snapshots: snapshots(),
                 userCountry: userCountry(),
                 force: force
             )
@@ -103,7 +143,7 @@ final class ProfileCacheStore: ObservableObject {
         domesticKeys: (String, String, String),
         allowEmptyOverwrite: Bool
     ) {
-        // 冷启动竞态：@Query 尚未就绪时 snapshots 为空，绝不能覆盖磁盘/内存里的非空结果
+        // 冷启动竞态：尚未就绪时 snapshots 为空，绝不能覆盖磁盘/内存里的非空结果
         if snapshots.isEmpty, !allowEmptyOverwrite, let existing = statistics, existing.total > 0 {
             return
         }
@@ -125,11 +165,15 @@ final class ProfileCacheStore: ObservableObject {
             self.timelineYearItems = computed.timelineYearItems
             self.handledRevision = revision
             self.handledDestinationCount = snapshots.count
+            if !snapshots.isEmpty || allowEmptyOverwrite {
+                self.destinationSnapshots = snapshots
+            }
             self.saveToDisk(
                 statistics: computed.statistics,
                 favoriteIDs: computed.favoriteIDs,
                 timelineYearItems: computed.timelineYearItems,
-                destinationCount: snapshots.count
+                destinationCount: snapshots.count,
+                destinations: snapshots
             )
         }
     }
@@ -141,6 +185,7 @@ final class ProfileCacheStore: ObservableObject {
         var statistics: ProfileStatistics
         var favoriteIDs: [UUID]
         var timelineYearItems: [PersistedYearItem]
+        var destinations: [ProfileDestinationSnapshot]?
     }
 
     private struct PersistedYearItem: Codable {
@@ -168,25 +213,28 @@ final class ProfileCacheStore: ObservableObject {
         statistics = payload.statistics
         favoriteIDs = payload.favoriteIDs
         timelineYearItems = payload.timelineYearItems.map { (year: $0.year, count: $0.count) }
+        destinationSnapshots = payload.destinations ?? []
         handledDestinationCount = payload.destinationCount
-        // handledRevision 保持 -1，等本会话 @Query 校验后再对齐
+        // handledRevision 保持 -1，等本会话 fetch 校验后再对齐
     }
 
     private func saveToDisk(
         statistics: ProfileStatistics,
         favoriteIDs: [UUID],
         timelineYearItems: [(year: Int, count: Int)],
-        destinationCount: Int
+        destinationCount: Int,
+        destinations: [ProfileDestinationSnapshot]
     ) {
         let payload = PersistedPayload(
             destinationCount: destinationCount,
             statistics: statistics,
             favoriteIDs: favoriteIDs,
-            timelineYearItems: timelineYearItems.map { PersistedYearItem(year: $0.year, count: $0.count) }
+            timelineYearItems: timelineYearItems.map { PersistedYearItem(year: $0.year, count: $0.count) },
+            destinations: destinations
         )
         let url = Self.fileURL
+        guard let data = try? JSONEncoder().encode(payload) else { return }
         persistQueue.async {
-            guard let data = try? JSONEncoder().encode(payload) else { return }
             try? data.write(to: url, options: [.atomic])
         }
     }

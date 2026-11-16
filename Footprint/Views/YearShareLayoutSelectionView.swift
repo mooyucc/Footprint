@@ -29,7 +29,7 @@ struct YearShareLayoutSelectionView: View {
                 VStack(spacing: 0) {
                     ScrollView {
                         VStack(spacing: 16) {
-                            ForEach(TripShareLayout.allCases) { layout in
+                            ForEach(TripShareLayout.allCases.filter(\.supportsYearShare)) { layout in
                                 LayoutOptionCard(
                                     layout: layout,
                                     isSelected: selectedLayout == layout,
@@ -122,7 +122,7 @@ struct YearShareLayoutSelectionView: View {
     }
 
     private var allowedLayouts: [TripShareLayout] {
-        entitlementManager.allowedTripShareLayouts()
+        entitlementManager.allowedTripShareLayouts().filter(\.supportsYearShare)
     }
 }
 
@@ -130,7 +130,7 @@ struct YearShareLayoutSelectionView: View {
     YearShareLayoutSelectionView(
         year: 2025,
         destinations: [],
-        selectedLayout: .constant(.list)
+        selectedLayout: .constant(.extendedGrid)
     )
 }
 

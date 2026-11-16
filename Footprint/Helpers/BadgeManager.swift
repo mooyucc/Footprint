@@ -30,36 +30,48 @@ class BadgeManager: ObservableObject {
     
     /// 从目的地列表中提取所有去过的国家（标准化后的 ISO 代码）
     func getVisitedCountries(from destinations: [TravelDestination]) -> Set<String> {
+        getVisitedCountries(fromCountries: destinations.map(\.country))
+    }
+
+    /// 从轻量快照提取去过的国家
+    func getVisitedCountries(from snapshots: [ProfileDestinationSnapshot]) -> Set<String> {
+        getVisitedCountries(fromCountries: snapshots.map(\.country))
+    }
+
+    func getVisitedCountries(fromCountries countries: [String]) -> Set<String> {
         var visitedCountries = Set<String>()
-        
-        for destination in destinations {
-            let normalized = normalizeCountryName(destination.country)
+        for country in countries {
+            let normalized = normalizeCountryName(country)
             if !normalized.isEmpty {
                 visitedCountries.insert(normalized)
             }
         }
-        
         return visitedCountries
     }
     
     /// 从目的地列表中提取所有去过的省份（仅限中国）
     func getVisitedProvinces(from destinations: [TravelDestination]) -> Set<String> {
+        getVisitedProvinces(pairs: destinations.map { ($0.country, $0.province) })
+    }
+
+    /// 从轻量快照提取去过的省份
+    func getVisitedProvinces(from snapshots: [ProfileDestinationSnapshot]) -> Set<String> {
+        getVisitedProvinces(pairs: snapshots.map { ($0.country, $0.province) })
+    }
+
+    func getVisitedProvinces(pairs: [(country: String, province: String)]) -> Set<String> {
         var visitedProvinces = Set<String>()
-        
-        for destination in destinations {
-            // 只处理中国的省份
-            let isChina = destination.country == "中国" || 
-                         destination.country == "CN" || 
-                         destination.country == "China"
-            
-            if isChina && !destination.province.isEmpty {
-                let normalized = normalizeProvinceName(destination.province)
+        for pair in pairs {
+            let isChina = pair.country == "中国" ||
+                pair.country == "CN" ||
+                pair.country == "China"
+            if isChina && !pair.province.isEmpty {
+                let normalized = normalizeProvinceName(pair.province)
                 if !normalized.isEmpty {
                     visitedProvinces.insert(normalized)
                 }
             }
         }
-        
         return visitedProvinces
     }
     

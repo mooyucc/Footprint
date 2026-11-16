@@ -27,6 +27,8 @@ struct AINotePreviewSheet: View {
     @State private var isEditing = false
     @FocusState private var isFocused: Bool
     @State private var showCreditPaywall = false
+    /// 防止 SwiftUI onAppear 重复触发导致连环 API 调用
+    @State private var didAutoStart = false
     
     var body: some View {
         NavigationStack {
@@ -49,9 +51,11 @@ struct AINotePreviewSheet: View {
                 } else if !generatedNotes.isEmpty {
                     notePreviewView
                 } else {
-                    // 自动开始生成
+                    // 自动开始生成（仅一次）
                     Color.clear
                         .onAppear {
+                            guard !didAutoStart else { return }
+                            didAutoStart = true
                             generateNotes()
                         }
                 }
@@ -175,28 +179,36 @@ struct AINotePreviewSheet: View {
     }
     
     private func generateNotes() {
+        guard !isLoading else { return }
+        
         isLoading = true
         errorMessage = nil
         generatedNotes = ""
         
-        let isProUser = entitlementManager.canUseAIFeatures
-        if !isProUser {
-            if !aiCreditManager.consumeOne() {
-                isLoading = false
-                errorMessage = nil
-                showCreditPaywall = true
-                return
-            }
+        switch aiCreditManager.gateAICall(isUnlimitedUser: entitlementManager.canUseAIFeatures) {
+        case .allowed:
+            break
+        case .insufficientCredits:
+            isLoading = false
+            errorMessage = "ai_subscription_required_message".localized
+            showCreditPaywall = true
+            return
+        case .dailyLimitReached:
+            isLoading = false
+            errorMessage = "ai_daily_limit_reached_message".localized
+            return
         }
         
         Task {
             let notes = await aiManager.generateNotesFor(destination: destination)
             await MainActor.run {
                 isLoading = false
-                if let notes = notes {
-                    generatedNotes = notes
-                    editedNotes = notes
+                let trimmed = notes?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                if !trimmed.isEmpty {
+                    generatedNotes = trimmed
+                    editedNotes = trimmed
                 } else {
+                    // 空结果视为失败，避免回到 onAppear 空态死循环
                     errorMessage = aiManager.errorMessage ?? "ai_error_unknown".localized
                 }
             }
@@ -243,6 +255,8 @@ struct AINotePreviewSheetForQuickAdd: View {
     @State private var isEditing = false
     @FocusState private var isFocused: Bool
     @State private var showCreditPaywall = false
+    /// 防止 SwiftUI onAppear 重复触发导致连环 API 调用
+    @State private var didAutoStart = false
     
     var body: some View {
         NavigationStack {
@@ -265,9 +279,11 @@ struct AINotePreviewSheetForQuickAdd: View {
                 } else if !generatedNotes.isEmpty {
                     notePreviewView
                 } else {
-                    // 自动开始生成
+                    // 自动开始生成（仅一次）
                     Color.clear
                         .onAppear {
+                            guard !didAutoStart else { return }
+                            didAutoStart = true
                             generateNotes()
                         }
                 }
@@ -391,28 +407,36 @@ struct AINotePreviewSheetForQuickAdd: View {
     }
     
     private func generateNotes() {
+        guard !isLoading else { return }
+        
         isLoading = true
         errorMessage = nil
         generatedNotes = ""
         
-        let isProUser = entitlementManager.canUseAIFeatures
-        if !isProUser {
-            if !aiCreditManager.consumeOne() {
-                isLoading = false
-                errorMessage = nil
-                showCreditPaywall = true
-                return
-            }
+        switch aiCreditManager.gateAICall(isUnlimitedUser: entitlementManager.canUseAIFeatures) {
+        case .allowed:
+            break
+        case .insufficientCredits:
+            isLoading = false
+            errorMessage = "ai_subscription_required_message".localized
+            showCreditPaywall = true
+            return
+        case .dailyLimitReached:
+            isLoading = false
+            errorMessage = "ai_daily_limit_reached_message".localized
+            return
         }
         
         Task {
             let notes = await aiManager.generateNotesFor(destination: tempDestination)
             await MainActor.run {
                 isLoading = false
-                if let notes = notes {
-                    generatedNotes = notes
-                    editedNotes = notes
+                let trimmed = notes?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                if !trimmed.isEmpty {
+                    generatedNotes = trimmed
+                    editedNotes = trimmed
                 } else {
+                    // 空结果视为失败，避免回到 onAppear 空态死循环
                     errorMessage = aiManager.errorMessage ?? "ai_error_unknown".localized
                 }
             }

@@ -24,17 +24,24 @@ extension MapView {
                 tripConnections
                 if autoShowRouteCards {
                     routeTripDestinationMarkers
-                } else {
+                } else if isStartupContentVisible {
+                    // 骨架期不画标注，先出地图框架，约 1s 后再淡入内容
                     clusterMarkers
                 }
-                memoryBubbleDestinationMarker
+                if isStartupContentVisible || autoShowRouteCards {
+                    memoryBubbleDestinationMarker
+                }
                 userLocationMarker
             }
+            .id(mapCameraBootstrapID)
             .mapStyle(currentMapStyle.toMapKitStyle())
             .onMapCameraChange(frequency: .continuous) { context in
                 guard isMapTabActive || autoShowRouteCards else { return }
                 // 只写非 Observable 持有者，避免每帧触发 MapView body 重绘
                 regionHolder.pending = context.region
+                // 初始定位确认不等 debounce，避免首飞成功被拖到 0.3s 后才停重试
+                confirmInitialCameraIfNeeded(region: context.region)
+                guardInitialCameraAgainstDrift(region: context.region)
                 regionHolder.scheduleDebouncedCommit {
                     commitVisibleRegionUpdate()
                 }

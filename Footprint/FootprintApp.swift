@@ -18,11 +18,9 @@ struct FootprintApp: App {
     @StateObject private var countryManager = CountryManager.shared
     @StateObject private var brandColorManager = BrandColorManager.shared
     @StateObject private var appearanceManager = AppearanceManager.shared
-    @State private var showSplash: Bool = BetaInfo.isBetaBuild ? false : true  // 控制启动画面显示
-    @State private var initializationCompleted = false  // 初始化是否完成
-    @State private var showOnboarding = !FirstLaunchManager.shared.hasCompletedOnboarding  // 控制引导流程显示
+    @State private var showSplash: Bool = BetaInfo.isBetaBuild ? false : true
+    @State private var showOnboarding = !FirstLaunchManager.shared.hasCompletedOnboarding
     #if BETA
-    // 首次启动日期会在访问 isExpired 时自动初始化（通过 expiryDate -> firstLaunchDate）
     @State private var showBetaReminder = !BetaInfo.isExpired
     @State private var showBetaExpiredReminder = BetaInfo.isExpired
     #endif
@@ -49,7 +47,7 @@ struct FootprintApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                // 主内容视图：仅在开机画面结束后构建，避免启动时 @Query 在主线程加载大量地点/行程导致动画卡顿
+                // Splash 期间不挂主界面，保证品牌动画不抢帧；关掉后再出骨架→内容
                 if showSplash {
                     Color.white
                         .ignoresSafeArea()
@@ -68,20 +66,19 @@ struct FootprintApp: App {
                         .onChange(of: appearanceManager.currentMode) { _, _ in
                             appearanceManager.syncInterfaceStyle()
                         }
-                        .environment(\.isAppReady, isAppReady)  // 传递应用就绪状态
+                        .environment(\.isAppReady, isAppReady)
                 }
                 
-                // 启动画面（覆盖在主内容之上）
                 if showSplash {
                     SplashScreenView(isPresented: $showSplash)
-                        .environmentObject(brandColorManager)  // 传递 BrandColorManager 环境对象
-                        .zIndex(999)  // 确保在最上层
+                        .environmentObject(brandColorManager)
+                        .zIndex(999)
                         .transition(.opacity)
                         .onAppear {
                             startBackgroundInitialization()
                         }
                         .onReceive(NotificationCenter.default.publisher(for: .splashScreenDismissed)) { _ in
-                            // 启动画面关闭后，检查是否需要显示引导流程
+                            startDeferredStorageMigration()
                             if !FirstLaunchManager.shared.hasCompletedOnboarding {
                                 withAnimation(.easeInOut(duration: 0.3)) {
                                     showOnboarding = true
@@ -90,7 +87,6 @@ struct FootprintApp: App {
                         }
                 }
                 
-                // 引导流程（覆盖在所有内容之上，但低于Beta提醒）
                 if showOnboarding {
                     OnboardingCoordinatorView(isPresented: $showOnboarding)
                         .environmentObject(languageManager)
@@ -100,7 +96,7 @@ struct FootprintApp: App {
                         .environmentObject(purchaseManager)
                         .environmentObject(entitlementManager)
                         .environmentObject(userProfileManager)
-                        .zIndex(998)  // 低于启动画面和Beta提醒
+                        .zIndex(998)
                         .transition(.opacity)
                 }
                 
@@ -133,6 +129,7 @@ struct FootprintApp: App {
             .onAppear {
                 if !showSplash {
                     startBackgroundInitialization()
+                    startDeferredStorageMigration()
                 }
             }
         }
@@ -140,9 +137,8 @@ struct FootprintApp: App {
     }
 }
 
-// 环境键：用于控制 MapView 是否应该延迟初始化定位和地理编码
 private struct IsAppReadyKey: EnvironmentKey {
-    static let defaultValue: Bool = true  // 默认值：已就绪（向后兼容）
+    static let defaultValue: Bool = true
 }
 
 private struct IsMapTabActiveKey: EnvironmentKey {
@@ -161,7 +157,6 @@ extension EnvironmentValues {
     }
 }
 
-// MARK: - 后台初始化逻辑
 extension FootprintApp {
     #if BETA
     private var isAppReady: Bool {
@@ -174,39 +169,30 @@ extension FootprintApp {
     #endif
     
     private static var didStartInitialization = false
+    private static var didStartStorageMigration = false
 
+    /// Splash 期间只做轻量工作，不建 Map、不打库
     private func startBackgroundInitialization() {
         guard !Self.didStartInitialization else { return }
         Self.didStartInitialization = true
-        print("🚀 开始后台初始化工作...")
+        print("🚀 开始轻量初始化（与启动动画并行）...")
         
-        // 在主线程启动定位服务（定位服务需要在主线程）
         DispatchQueue.main.async {
-            // 1. 提前启动定位服务
-            let locationManager = LocationManager.shared
             aiCreditManager.grantFreeTrialIfNeeded()
-            locationManager.requestLocation()
-            print("📍 启动画面期间仅请求一次性定位（持续定位在进入地图 Tab 后启动）")
-            
-            // 2. 提前创建 Geocoder（通过通知通知 MapView）
-            // Geocoder 需要在 MapView 中创建，因为需要 @State 变量
-            // 这里通过通知告知 MapView 可以提前创建
-            NotificationCenter.default.post(name: .shouldPrepareGeocoder, object: nil)
-
-            // 3. 触达 Profile 磁盘快照，Splash 结束前即可给「我的」首帧数字
+            LocationManager.shared.requestLocation()
+            print("📍 启动画面期间仅请求一次性定位")
             _ = ProfileCacheStore.shared
         }
+    }
+    
+    private func startDeferredStorageMigration() {
+        guard !Self.didStartStorageMigration else { return }
+        Self.didStartStorageMigration = true
         
-        // 预热必须走视图主上下文；临时 context 的对象缓存不会留给各 Tab 的 @Query
         let container = sharedModelContainer
-        Task { @MainActor in
-            await MapDestinationFetcher.prewarmTabQueries(in: container.mainContext)
-            NotificationCenter.default.post(name: .appInitializationCompleted, object: nil)
-            // 旧内联多图/封面迁到外部存储：不阻塞 Splash，空闲时分批重写
-            Task(priority: .utility) { @MainActor in
-                try? await Task.sleep(nanoseconds: 1_200_000_000)
-                await PhotoExternalStorageMigrator.migrateIfNeeded(in: container.mainContext)
-            }
+        Task(priority: .utility) { @MainActor in
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            await PhotoExternalStorageMigrator.migrateIfNeeded(in: container.mainContext)
         }
     }
     
@@ -224,9 +210,4 @@ extension FootprintApp {
         }
     }
     #endif
-}
-
-// MARK: - 通知名称扩展
-extension Notification.Name {
-    static let shouldPrepareGeocoder = Notification.Name("shouldPrepareGeocoder")
 }

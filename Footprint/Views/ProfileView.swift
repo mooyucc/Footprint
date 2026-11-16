@@ -12,18 +12,14 @@ import UIKit
 struct ProfileView: View {
     @EnvironmentObject var userProfileManager: UserProfileManager
     @EnvironmentObject var brandColorManager: BrandColorManager
-    @StateObject private var countryManager = CountryManager.shared
-    @Query private var destinations: [TravelDestination]
+    @ObservedObject private var tabSnapshots = TabListSnapshotStore.shared
     @State private var showSettings = false
-    @State private var showShareSheet = false
-    @State private var shareImage: UIImage?
-    @State private var pendingShare = false
+    @State private var statsForShare: TravelStats?
     @State private var refreshID = UUID()
     @State private var showAllDestinations = false
-    @State private var badgeSelectedType: BadgeType = .country
     @State private var selectedBadgeDetail: ProfileBadgeDetail?
-    @ObservedObject private var destinationRevision = DestinationDataRevision.shared
     @ObservedObject private var profileCache = ProfileCacheStore.shared
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) var colorScheme
     
     /// 「我的」页徽章弹窗数据
@@ -47,8 +43,11 @@ struct ProfileView: View {
     }
     
     var favoriteDestinations: [TravelDestination] {
-        let byID = Dictionary(uniqueKeysWithValues: destinations.map { ($0.id, $0) })
-        return profileCache.favoriteIDs.compactMap { byID[$0] }
+        tabSnapshots.favoriteDestinations
+    }
+
+    private var destinationSnapshots: [ProfileDestinationSnapshot] {
+        profileCache.destinationSnapshots
     }
     
     var body: some View {
@@ -59,7 +58,11 @@ struct ProfileView: View {
             ) {
                 statisticsCard
                 
-                badgesEntryCard
+                countryBadgesCard
+                
+                if isBadgeCountryChina {
+                    provinceBadgesCard
+                }
                 
                 if !favoriteDestinations.isEmpty {
                     favoritesCard
@@ -86,10 +89,8 @@ struct ProfileView: View {
             .sheet(isPresented: $showSettings) {
                 SettingsView()
             }
-            .sheet(isPresented: $showShareSheet) {
-                if let image = shareImage {
-                    SystemShareSheet(items: [image])
-                }
+            .sheet(item: $statsForShare) { stats in
+                StatsSharePreviewView(stats: stats)
             }
             .sheet(isPresented: $showAllDestinations) {
                 AllDestinationsListView()
@@ -109,20 +110,8 @@ struct ProfileView: View {
                 )
             }
             .onAppear {
-                refreshProfileCachesIfNeeded()
-            }
-            .onChange(of: destinationRevision.revision) { _, newRevision in
-                scheduleProfileCacheRefresh(revision: newRevision)
-            }
-            .onChange(of: destinations.count) { _, _ in
-                // 冷启动 @Query 从空到有数据时 revision 不会 bump，需强制重算
-                scheduleProfileCacheRefresh(revision: destinationRevision.revision, force: true)
-            }
-            .onChange(of: shareImage) { newImage in
-                if newImage != nil && pendingShare {
-                    showShareSheet = true
-                    pendingShare = false
-                }
+                TabListSnapshotStore.shared.attach(modelContext: modelContext)
+                TabListSnapshotStore.shared.ensureProfileData()
             }
             .onReceive(NotificationCenter.default.publisher(for: .languageChanged)) { _ in
                 refreshID = UUID()
@@ -157,7 +146,7 @@ struct ProfileView: View {
                 .accessibilityLabel("show_all_destinations".localized)
 
                 Button {
-                    generateAndShareStatsImage()
+                    presentStatsSharePreview()
                 } label: {
                     Image(systemName: "square.and.arrow.up")
                         .font(.subheadline.weight(.semibold))
@@ -215,12 +204,12 @@ struct ProfileView: View {
     }
     
     private var isBadgeCountryChina: Bool {
-        countryManager.currentCountry == .china
+        CountryManager.shared.currentCountry == .china
     }
     
     private var unlockedCountryBadges: [CountryBadge] {
         let badgeManager = BadgeManager.shared
-        let visited = badgeManager.getVisitedCountries(from: destinations)
+        let visited = badgeManager.getVisitedCountries(from: destinationSnapshots)
         return CountryManager.Country.allCases.compactMap { country in
             guard badgeManager.isCountryBadgeUnlocked(country: country, visitedCountries: visited) else {
                 return nil
@@ -232,7 +221,7 @@ struct ProfileView: View {
     private var unlockedProvinceBadges: [ProvinceBadge] {
         guard isBadgeCountryChina else { return [] }
         let badgeManager = BadgeManager.shared
-        let visited = badgeManager.getVisitedProvinces(from: destinations)
+        let visited = badgeManager.getVisitedProvinces(from: destinationSnapshots)
         return BadgeDataProvider.getAllProvinceBadges().filter { badge in
             badgeManager.isProvinceBadgeUnlocked(
                 provinceName: badge.provinceName,
@@ -241,88 +230,62 @@ struct ProfileView: View {
         }
     }
     
-    private var currentBadgeOverlapItems: [BadgeOverlapItem] {
-        if badgeSelectedType == .country {
-            return unlockedCountryBadges.map { badge in
-                BadgeOverlapItem(
-                    id: badge.id,
-                    imageName: badge.imageName,
-                    title: badge.displayName,
-                    shortTitle: badge.displayName
-                )
-            }
-        } else {
-            return unlockedProvinceBadges.map { badge in
-                BadgeOverlapItem(
-                    id: badge.id,
-                    imageName: badge.imageName,
-                    title: badge.provinceName,
-                    shortTitle: badge.displayName
-                )
-            }
+    private var countryBadgeOverlapItems: [BadgeOverlapItem] {
+        unlockedCountryBadges.map { badge in
+            BadgeOverlapItem(
+                id: badge.id,
+                imageName: badge.imageName,
+                title: badge.displayName,
+                shortTitle: badge.displayName
+            )
         }
     }
     
-    private var badgeProgressUnlocked: Int {
-        badgeSelectedType == .country
-            ? unlockedCountryBadges.count
-            : unlockedProvinceBadges.count
-    }
-    
-    private var badgeProgressTotal: Int {
-        badgeSelectedType == .country
-            ? BadgeDataProvider.getAllCountryBadges().count
-            : BadgeDataProvider.getAllProvinceBadges().count
-    }
-    
-    private var badgeUnitLabel: String {
-        badgeSelectedType == .country
-            ? "badges_countries_unit".localized
-            : "badges_provinces_unit".localized
-    }
-    
-    private var badgeEmptyText: String {
-        badgeSelectedType == .country
-            ? "badges_no_countries_yet".localized
-            : "badges_no_provinces_yet".localized
-    }
-    
-    private var badgeCrossHint: (text: String, switchTo: BadgeType)? {
-        guard isBadgeCountryChina else { return nil }
-        if badgeSelectedType == .country {
-            let count = unlockedProvinceBadges.count
-            guard count > 0 else { return nil }
-            return ("badges_domestic_provinces_hint".localized(with: count), .province)
-        } else {
-            let count = unlockedCountryBadges.count
-            guard count > 0 else { return nil }
-            return ("badges_global_countries_hint".localized(with: count), .country)
+    private var provinceBadgeOverlapItems: [BadgeOverlapItem] {
+        unlockedProvinceBadges.map { badge in
+            BadgeOverlapItem(
+                id: badge.id,
+                imageName: badge.imageName,
+                title: badge.provinceName,
+                shortTitle: badge.displayName
+            )
         }
     }
     
-    private var badgesEntryCard: some View {
+    private var countryBadgesCard: some View {
         BadgeProgressSummaryCard(
-            items: currentBadgeOverlapItems,
-            unlocked: badgeProgressUnlocked,
-            total: badgeProgressTotal,
-            unitLabel: badgeUnitLabel,
-            emptyText: badgeEmptyText,
-            crossHintText: badgeCrossHint?.text,
+            items: countryBadgeOverlapItems,
+            unlocked: unlockedCountryBadges.count,
+            total: BadgeDataProvider.getAllCountryBadges().count,
+            unitLabel: "badges_countries_unit".localized,
+            emptyText: "badges_no_countries_yet".localized,
+            title: "badges_progress_countries".localized,
             accent: Color.footprintRed,
+            usesProvinceTickets: false,
             onSelectItem: { item in
-                openBadgeDetail(for: item)
-            },
-            onCrossHintTap: {
-                guard let hint = badgeCrossHint else { return }
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                    badgeSelectedType = hint.switchTo
-                }
+                openBadgeDetail(for: item, type: .country)
             }
         )
     }
     
-    private func openBadgeDetail(for item: BadgeOverlapItem) {
-        if badgeSelectedType == .country {
+    private var provinceBadgesCard: some View {
+        BadgeProgressSummaryCard(
+            items: provinceBadgeOverlapItems,
+            unlocked: unlockedProvinceBadges.count,
+            total: BadgeDataProvider.getAllProvinceBadges().count,
+            unitLabel: "badges_provinces_unit".localized,
+            emptyText: "badges_no_provinces_yet".localized,
+            title: "badges_progress_provinces".localized,
+            accent: Color.footprintRed,
+            usesProvinceTickets: true,
+            onSelectItem: { item in
+                openBadgeDetail(for: item, type: .province)
+            }
+        )
+    }
+    
+    private func openBadgeDetail(for item: BadgeOverlapItem, type: BadgeType) {
+        if type == .country {
             guard let badge = unlockedCountryBadges.first(where: { $0.id == item.id }) else { return }
             let matched = destinationsForCountry(badge.country)
             selectedBadgeDetail = ProfileBadgeDetail(
@@ -348,25 +311,11 @@ struct ProfileView: View {
     }
     
     private func destinationsForCountry(_ country: CountryManager.Country) -> [TravelDestination] {
-        let codes = [country.rawValue, country.displayName, country.englishName]
-        return destinations.filter { destination in
-            codes.contains { code in
-                destination.country == code ||
-                destination.country.localizedCaseInsensitiveContains(code)
-            }
-        }
+        tabSnapshots.destinations(matchingCountry: country)
     }
     
     private func destinationsForProvince(_ provinceName: String) -> [TravelDestination] {
-        let badgeManager = BadgeManager.shared
-        let normalized = badgeManager.normalizeProvinceName(provinceName)
-        return destinations.filter { destination in
-            let isChina = destination.country == "中国" ||
-                destination.country == "CN" ||
-                destination.country == "China"
-            guard isChina else { return false }
-            return badgeManager.normalizeProvinceName(destination.province) == normalized
-        }
+        tabSnapshots.destinations(matchingProvince: provinceName)
     }
     
     private func yearRangeString(for destinations: [TravelDestination]) -> String? {
@@ -400,58 +349,35 @@ struct ProfileView: View {
             }
         }
     }
-    
-    /// 仅在 revision 变化或尚无缓存时重算（磁盘快照 + 会话内跨 Tab 保留）
-    private func refreshProfileCachesIfNeeded() {
-        profileCache.refreshIfNeeded(
-            revision: destinationRevision.revision,
-            snapshots: makeProfileSnapshots(),
-            userCountry: countryManager.currentCountry
-        )
-    }
 
-    /// debounce：等待 SwiftData @Query 同步后再重算
-    private func scheduleProfileCacheRefresh(revision: Int, force: Bool = false) {
-        profileCache.scheduleRefresh(
-            revision: revision,
-            snapshots: { [self] in makeProfileSnapshots() },
-            userCountry: { [self] in countryManager.currentCountry },
-            force: force
-        )
-    }
-
-    private func makeProfileSnapshots() -> [ProfileDestinationSnapshot] {
-        destinations.map {
-            ProfileDestinationSnapshot(
-                id: $0.id,
-                country: $0.country,
-                category: $0.category,
-                isFavorite: $0.isFavorite,
-                visitDate: $0.visitDate
-            )
-        }
-    }
-
-    // MARK: - 生成并分享统计图片
-    private func generateAndShareStatsImage() {
-        let yearlyData = profileCache.timelineYearItems
-
-        let stats = TravelStats(
+    // MARK: - 统计分享预览
+    private func presentStatsSharePreview() {
+        statsForShare = TravelStats(
             totalDestinations: statistics.total,
             domesticDestinations: statistics.domestic,
             internationalDestinations: statistics.international,
             countries: statistics.countries,
-            yearlyData: yearlyData,
+            countryData: countryShareData(),
+            yearlyData: profileCache.timelineYearItems,
             userName: userProfileManager.displayName
         )
-        
-        // 生成图片
-        if let image = StatsImageGenerator.generateStatsImage(stats: stats) {
-            // 设置待分享标志
-            pendingShare = true
-            // 设置图片，onChange 会自动触发分享面板显示
-            shareImage = image
+    }
+    
+    /// 按本地化国家名聚合地点数（供分享构成环）
+    private func countryShareData() -> [(name: String, count: Int)] {
+        var counts: [String: Int] = [:]
+        for snapshot in profileCache.destinationSnapshots {
+            let name = snapshot.country.isEmpty
+                ? "—"
+                : CountryManager.shared.getLocalizedCountryName(from: snapshot.country)
+            counts[name, default: 0] += 1
         }
+        return counts
+            .map { (name: $0.key, count: $0.value) }
+            .sorted {
+                if $0.count != $1.count { return $0.count > $1.count }
+                return $0.name.localizedStandardCompare($1.name) == .orderedAscending
+            }
     }
 }
 

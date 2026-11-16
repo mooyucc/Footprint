@@ -10,17 +10,18 @@ import UIKit
 
 // MARK: - 年份图片生成器
 struct YearImageGenerator {
-    /// 生成年份记录分享图片（使用默认清单版面，保持向后兼容）
+    /// 生成年份记录分享图片（使用默认行程版面，保持向后兼容）
     static func generateYearImage(year: Int, destinations: [TravelDestination]) -> UIImage? {
-        return generateYearImage(year: year, destinations: destinations, layout: .list)
+        return generateYearImage(year: year, destinations: destinations, layout: .extendedGrid)
     }
     
     /// 根据版面类型生成年份记录分享图片（复用 TripShareLayout 枚举）
     static func generateYearImage(year: Int, destinations: [TravelDestination], layout: TripShareLayout) -> UIImage? {
         switch layout {
-        case .list:
-            return YearListLayoutGenerator().generateImage(year: year, destinations: destinations)
         case .extendedGrid:
+            return YearExtendedGridLayoutGenerator().generateImage(year: year, destinations: destinations)
+        case .timeline:
+            // 日程海报仅适用于旅程；年份分享回退行程版面
             return YearExtendedGridLayoutGenerator().generateImage(year: year, destinations: destinations)
         }
     }
@@ -28,7 +29,7 @@ struct YearImageGenerator {
     // MARK: - 背景渐变（共享方法）
     /// 使用 AppColorScheme 统一方法
     static func drawGradientBackground(in rect: CGRect, context: CGContext) {
-        AppColorScheme.drawGradientBackground(in: rect, context: context)
+        AppColorScheme.drawGradientBackground(in: rect, context: context, colorScheme: .light)
     }
     
     // MARK: - 绘制标题（共享方法）

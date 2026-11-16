@@ -114,6 +114,7 @@ struct EditTripView: View {
                 Task {
                     if let data = try? await newValue?.loadTransferable(type: Data.self) {
                         trip.coverPhotoData = data
+                        NotificationCenter.default.post(name: .tripUpdated, object: nil)
                     }
                 }
             }
@@ -129,8 +130,13 @@ struct EditTripView: View {
     }
     
     private func applyEditedTextToTrip() {
+        let nameChanged = trip.name != editedName
+        let descChanged = trip.desc != editedDesc
         trip.name = editedName
         trip.desc = editedDesc
+        if nameChanged || descChanged {
+            NotificationCenter.default.post(name: .tripUpdated, object: nil)
+        }
     }
 }
 

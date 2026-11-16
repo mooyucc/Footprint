@@ -265,6 +265,18 @@
 "all_destinations" = "All Destinations";
 "no_destinations_found" = "No destinations found";
 
+// All Destinations browse
+"destinations_browse_region" = "Region";
+"destinations_browse_year" = "Year";
+"destinations_browse_type" = "Type";
+"destinations_untagged_type" = "Untagged";
+"destinations_ring_other" = "Other";
+"destinations_ring_center_label" = "Places";
+"destinations_clear_ring_filter" = "Clear";
+"destinations_no_favorites" = "No favorites yet";
+"destinations_group_unit_years" = "Years";
+"destinations_group_unit_types" = "Types";
+
 // Discover Map
 "map_mode_my_footprints" = "My map";
 
@@ -438,6 +450,7 @@
 "ai_download_full_version" = "Download Full Version from App Store";
 "ai_subscription_required_title" = "You're out of AI calls";
 "ai_subscription_required_message" = "Buy more call credits to keep using smart notes, trip descriptions, destination recommendations, and other AI features.";
+"ai_daily_limit_reached_message" = "You've reached today's AI usage limit. Please try again tomorrow. This fair-use limit helps keep the service stable.";
 "ai_upgrade_to_pro" = "Upgrade to Pro";
 "footprints_action_menu" = "Quick Actions";
 "search_places" = "Search places";
@@ -570,18 +583,41 @@
 "route_card_end_point" = "End";
 "trip_share_signature" = "✨ MooFootprint • Record Every Journey";
 "trip_share_subtitle" = "Record wonderful journeys, share beautiful moments";
-"trip_share_layout_list" = "List Layout";
-"trip_share_layout_list_desc" = "Detailed journey information with cover, time card and complete route";
-"trip_share_layout_extended_grid" = "Grid View";
+"trip_share_layout_extended_grid" = "Trip Layout";
 "trip_share_layout_extended_grid_desc" = "Display all destination photos in a grid layout, supports more than 9 locations";
+"trip_share_layout_timeline" = "Timeline Poster";
+"trip_share_layout_timeline_desc" = "Day-by-day timeline with photo cards, ideal for social long posts";
 
 // Destination share image layouts
-"destination_share_layout_classic" = "Classic Layout";
-"destination_share_layout_classic_desc" = "Traditional vertical layout, ideal for detailed information";
-"destination_share_layout_modern_poster" = "Modern Poster";
-"destination_share_layout_modern_poster_desc" = "Minimalist poster style for place stories and atmosphere";
-"destination_share_layout_circle_poster" = "Minimalist Poster";
-"destination_share_layout_circle_poster_desc" = "Minimalist-style layout with overlapping circles and rectangles; emphasizes titles, whitespace, and spatial balance";
+"destination_share_title" = "Share Poster";
+"destination_share_aspect_section" = "Size";
+"destination_share_style_section" = "Template";
+"destination_share_aspect_square" = "Square";
+"destination_share_aspect_portrait" = "Feed";
+"destination_share_aspect_story" = "Story";
+"destination_share_layout_photo_poster" = "Photo Check-in";
+"destination_share_layout_photo_poster_desc" = "Full-bleed photo with clear place info — ready to post";
+"destination_share_layout_gallery_side" = "Side Gallery";
+"destination_share_layout_gallery_side_desc" = "Photo left, caption right — clean gallery card";
+"destination_share_layout_gallery_stack" = "Stack Gallery";
+"destination_share_layout_gallery_stack_desc" = "Photo on top, caption below — photo diary style";
+"destination_share_cover_section" = "Cover Photo";
+"destination_share_cover_option" = "Select cover photo";
+"destination_share_edit_text" = "Edit Text";
+"destination_share_edit_text_hint" = "Tap the preview to edit on-image text";
+"destination_share_overlay_section" = "On Image";
+"destination_share_overlay_placeholder" = "One short line";
+"destination_share_overlay_footer" = "Appears on the poster. Keep it to one short sentence.";
+"destination_share_ai_generate" = "AI One-Liner";
+"destination_share_ai_generating" = "Generating…";
+"destination_share_caption_section" = "Share Caption";
+"destination_share_caption_footer" = "Used when sharing or copying. Not drawn on the image.";
+"destination_share_caption_reset" = "Reset";
+"destination_share_save_photos" = "Save";
+"destination_share_copy_caption" = "Copy Caption";
+"destination_share_caption_copied" = "Caption copied";
+"destination_share_saved" = "Saved to Photos";
+"destination_share_save_failed" = "Couldn’t save. Check Photos permission.";
 "share_generating" = "Generating…";
 
 // Travel Stats Share Image
@@ -717,6 +753,8 @@
 "country_badges" = "Country Badges";
 "province_badges" = "Province Badges";
 "badges_progress" = "Progress";
+"badges_progress_countries" = "Countries";
+"badges_progress_provinces" = "Provinces";
 "badges_countries_unit" = "Countries";
 "badges_provinces_unit" = "Provinces";
 "badges_entry_countries_only" = "%d countries unlocked";

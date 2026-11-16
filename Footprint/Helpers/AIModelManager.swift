@@ -163,6 +163,39 @@ final class AIModelManager: ObservableObject {
         }
     }
     
+    /// 为目的地分享海报生成图上短句
+    func generateShareOverlayCaption(for destination: TravelDestination, maxLength: Int = 40) async -> String? {
+        isLoading = true
+        errorMessage = nil
+        
+        defer {
+            isLoading = false
+        }
+        
+        do {
+            let images = destination.photoDatas ?? []
+            let trimmedNotes = destination.notes.trimmingCharacters(in: .whitespacesAndNewlines)
+            let existingNotes: String? = trimmedNotes.isEmpty ? nil : trimmedNotes
+            
+            let caption = try await service.generateShareOverlayCaption(
+                from: images,
+                location: destination.name,
+                province: destination.province,
+                country: destination.country,
+                date: destination.visitDate,
+                existingNotes: existingNotes,
+                maxLength: maxLength
+            )
+            print("✅ [AIModelManager] 海报短句生成成功，长度: \(caption.count)")
+            return caption
+        } catch {
+            let errorMsg = error.localizedDescription
+            errorMessage = errorMsg
+            print("❌ [AIModelManager] 海报短句生成失败: \(errorMsg)")
+            return nil
+        }
+    }
+    
     /// 根据已记录的目的地推荐下一站旅行目的地
     func recommendNextDestinations(from destinations: [TravelDestination]) async -> String? {
         isLoading = true

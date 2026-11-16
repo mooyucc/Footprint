@@ -47,30 +47,6 @@ struct CoordinateConverter {
         return CLLocationCoordinate2D(latitude: mgLat, longitude: mgLon)
     }
     
-    /// 将GCJ02坐标转换为WGS84坐标
-    /// - Parameter gcj: GCJ02坐标
-    /// - Returns: WGS84坐标
-    static func gcj02ToWGS84(_ gcj: CLLocationCoordinate2D) -> CLLocationCoordinate2D {
-        if isOutOfChina(gcj) {
-            return gcj
-        }
-        
-        var dLat = transformLat(gcj.longitude - 105.0, gcj.latitude - 35.0)
-        var dLon = transformLon(gcj.longitude - 105.0, gcj.latitude - 35.0)
-        
-        let radLat = gcj.latitude / 180.0 * .pi
-        var magic = sin(radLat)
-        magic = 1 - ee * magic * magic
-        let sqrtMagic = sqrt(magic)
-        dLat = (dLat * 180.0) / ((a * (1 - ee)) / (magic * sqrtMagic) * .pi)
-        dLon = (dLon * 180.0) / (a / sqrtMagic * cos(radLat) * .pi)
-        
-        let mgLat = gcj.latitude + dLat
-        let mgLon = gcj.longitude + dLon
-        
-        return CLLocationCoordinate2D(latitude: gcj.latitude * 2 - mgLat, longitude: gcj.longitude * 2 - mgLon)
-    }
-    
     // MARK: - 辅助方法
     
     /// 判断坐标是否在中国境外（用于决定是否对 WGS84 做 GCJ-02 偏移）

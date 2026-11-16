@@ -99,6 +99,18 @@
 "show_all_destinations" = "सभी स्थान";
 "all_destinations" = "सभी गंतव्य";
 "no_destinations_found" = "कोई गंतव्य नहीं मिला";
+
+// All Destinations browse
+"destinations_browse_region" = "क्षेत्र";
+"destinations_browse_year" = "वर्ष";
+"destinations_browse_type" = "प्रकार";
+"destinations_untagged_type" = "अवर्गीकृत";
+"destinations_ring_other" = "अन्य";
+"destinations_ring_center_label" = "स्थान";
+"destinations_clear_ring_filter" = "साफ़ करें";
+"destinations_no_favorites" = "अभी कोई पसंदीदा नहीं";
+"destinations_group_unit_years" = "वर्ष";
+"destinations_group_unit_types" = "प्रकार";
 "no_destinations_added" = "अभी कोई गंतव्य नहीं जोड़ा गया";
 
 // Discover Map
@@ -165,12 +177,35 @@
 "destinations_count" = "गंतव्य";
 
 // Destination share image layouts
-"destination_share_layout_classic" = "क्लासिक लेआउट";
-"destination_share_layout_classic_desc" = "पारंपरिक लंबवत लेआउट, विस्तृत जानकारी के लिए उपयुक्त";
-"destination_share_layout_modern_poster" = "आधुनिक पोस्टर";
-"destination_share_layout_modern_poster_desc" = "न्यूनतम पोस्टर शैली, स्थान की कहानियों और माहौल के लिए उपयुक्त";
-"destination_share_layout_circle_poster" = "मिनिमलिस्ट शैली पोस्टर";
-"destination_share_layout_circle_poster_desc" = "मिनिमलिस्ट शैली का लेआउट — ओवरलैपिंग वृत्त और आयत के साथ टाइपोग्राफी; शीर्षक, खाली जगह और दृश्य संतुलन पर जोर";
+"destination_share_title" = "पोस्टर साझा करें";
+"destination_share_aspect_section" = "आकार";
+"destination_share_style_section" = "स्टाइल";
+"destination_share_aspect_square" = "वर्ग";
+"destination_share_aspect_portrait" = "फ़ीड";
+"destination_share_aspect_story" = "स्टोरी";
+"destination_share_layout_photo_poster" = "फ़ोटो चेक-इन";
+"destination_share_layout_photo_poster_desc" = "पूरी फ़ोटो + जगह की जानकारी, पोस्ट करने के लिए तैयार";
+"destination_share_layout_gallery_side" = "साइड गैलरी";
+"destination_share_layout_gallery_side_desc" = "बाएँ फ़ोटो, दाएँ टेक्स्ट — गैलरी कार्ड";
+"destination_share_layout_gallery_stack" = "स्टैक गैलरी";
+"destination_share_layout_gallery_stack_desc" = "ऊपर फ़ोटो, नीचे टेक्स्ट — फ़ोटो डायरी";
+"destination_share_cover_section" = "कवर फ़ोटो";
+"destination_share_cover_option" = "कवर फ़ोटो चुनें";
+"destination_share_edit_text" = "टेक्स्ट संपादित करें";
+"destination_share_edit_text_hint" = "छवि पर टेक्स्ट बदलने के लिए पूर्वावलोकन टैप करें";
+"destination_share_overlay_section" = "छवि पर टेक्स्ट";
+"destination_share_overlay_placeholder" = "एक छोटी पंक्ति";
+"destination_share_overlay_footer" = "पोस्टर पर दिखेगा। एक छोटी पंक्ति बेहतर है।";
+"destination_share_ai_generate" = "AI एक पंक्ति";
+"destination_share_ai_generating" = "बनाया जा रहा है…";
+"destination_share_caption_section" = "शेयर कैप्शन";
+"destination_share_caption_footer" = "शेयर/कॉपी के लिए; छवि पर नहीं खींचा जाता।";
+"destination_share_caption_reset" = "रीसेट";
+"destination_share_save_photos" = "सेव";
+"destination_share_copy_caption" = "कैप्शन कॉपी";
+"destination_share_caption_copied" = "कैप्शन कॉपी हो गया";
+"destination_share_saved" = "फ़ोटो में सेव हो गया";
+"destination_share_save_failed" = "सेव नहीं हुआ। फ़ोटो अनुमति जाँचें।";
 "share_generating" = "बना रहे हैं…";
 
 "paywall_select_plan" = "योजना चुनें";
@@ -210,6 +245,8 @@
 "badges" = "बैज";
 "badges_entry_subtitle" = "अनलॉक किए गए देश और क्षेत्र";
 "badges_progress" = "प्रगति";
+"badges_progress_countries" = "देश";
+"badges_progress_provinces" = "प्रांत";
 "badges_countries_unit" = "देश";
 "badges_provinces_unit" = "प्रांत";
 "badges_entry_countries_only" = "%d देश अनलॉक";
@@ -239,3 +276,4 @@
 "enable_icloud_sync" = "अपनी फ़ुटप्रिंट यादें सुरक्षित रखने के लिए सिस्टम सेटिंग्स में iCloud चालू करें";
 "sync_description_logged_in" = "डिवाइस iCloud में साइन इन होने पर यात्रा डेटा अपने आप सिंक होता है।";
 "login_sync_description" = "डिस्प्ले नाम और अवतार सेट करें";
+"ai_daily_limit_reached_message" = "आप आज की AI उपयोग सीमा तक पहुँच गए हैं। कृपया कल फिर कोशिश करें। यह निष्पक्ष-उपयोग सीमा सेवा को स्थिर रखने में मदद करती है।";

@@ -18,7 +18,13 @@ protocol TripLayoutGenerator {
 
 // MARK: - 地点分享版面生成器协议
 protocol DestinationLayoutGenerator {
-    func generateImage(from destination: TravelDestination) -> UIImage?
+    func generateImage(
+        from destination: TravelDestination,
+        canvasSize: CGSize,
+        scale: CGFloat,
+        coverPhotoIndex: Int,
+        overlayCaption: String?
+    ) -> UIImage?
 }
 
 // MARK: - Array 扩展（用于分组）
@@ -33,35 +39,65 @@ extension Array {
 
 // MARK: - 图片生成器主类
 struct TripImageGenerator {
-    /// 生成旅程图片（使用默认清单版面，保持向后兼容）
+    /// 生成旅程图片（使用默认行程版面，保持向后兼容）
     static func generateTripImage(from trip: TravelTrip) -> UIImage? {
-        return ListLayoutGenerator().generateImage(from: trip)
+        return ExtendedGridLayoutGenerator().generateImage(from: trip)
     }
     
     /// 根据版面类型生成图片
     static func generateTripImage(from trip: TravelTrip, layout: TripShareLayout) -> UIImage? {
         switch layout {
-        case .list:
-            return ListLayoutGenerator().generateImage(from: trip)
         case .extendedGrid:
             return ExtendedGridLayoutGenerator().generateImage(from: trip)
+        case .timeline:
+            return TimelineLayoutGenerator().generateImage(from: trip)
         }
     }
     
-    /// 生成地点分享图片（使用默认经典版面，保持向后兼容）
+    /// 生成地点分享图片（默认大图打卡 + 3:4）
     static func generateDestinationImage(from destination: TravelDestination) -> UIImage? {
-        return generateDestinationImage(from: destination, layout: .classic)
+        return generateDestinationImage(
+            from: destination,
+            layout: .photoPoster,
+            aspectRatio: .portrait34
+        )
     }
     
-    /// 根据版面类型生成地点分享图片
-    static func generateDestinationImage(from destination: TravelDestination, layout: DestinationShareLayout) -> UIImage? {
+    /// 根据版面与画布比例生成地点分享图片
+    static func generateDestinationImage(
+        from destination: TravelDestination,
+        layout: DestinationShareLayout,
+        aspectRatio: DestinationShareAspectRatio = .portrait34,
+        scale: CGFloat = 2,
+        coverPhotoIndex: Int = 0,
+        overlayCaption: String? = nil
+    ) -> UIImage? {
+        let canvasSize = aspectRatio.canvasSize
         switch layout {
-        case .classic:
-            return ClassicDestinationLayoutGenerator().generateImage(from: destination)
-        case .modernPoster:
-            return ModernStatsDestinationLayoutGenerator().generateImage(from: destination)
-        case .circlePoster:
-            return CirclePosterDestinationLayoutGenerator().generateImage(from: destination)
+        case .photoPoster:
+            return PhotoPosterDestinationLayoutGenerator().generateImage(
+                from: destination,
+                canvasSize: canvasSize,
+                scale: scale,
+                coverPhotoIndex: coverPhotoIndex,
+                overlayCaption: overlayCaption
+            )
+        case .gallerySide:
+            return GallerySideDestinationLayoutGenerator().generateImage(
+                from: destination,
+                canvasSize: canvasSize,
+                scale: scale,
+                coverPhotoIndex: coverPhotoIndex,
+                overlayCaption: overlayCaption
+            )
+        case .galleryStack:
+            return GalleryStackDestinationLayoutGenerator().generateImage(
+                from: destination,
+                canvasSize: canvasSize,
+                scale: scale,
+                coverPhotoIndex: coverPhotoIndex,
+                overlayCaption: overlayCaption
+            )
         }
     }
     
@@ -366,7 +402,7 @@ struct TripImageGenerator {
     /// 绘制三色线性渐变背景（符合App配色标准）
     /// 使用 AppColorScheme 统一方法
     static func drawGradientBackground(in rect: CGRect, context: CGContext) {
-        AppColorScheme.drawGradientBackground(in: rect, context: context)
+        AppColorScheme.drawGradientBackground(in: rect, context: context, colorScheme: .light)
     }
     
     // MARK: - 旅程分享（现代 UI：渐变上直接排版，与 StatsImageGenerator / 风格指南一致）
@@ -376,34 +412,22 @@ struct TripImageGenerator {
         UIColor(BrandColorManager.shared.currentBrandColor)
     }
     
-    /// 用于高度预估：日期三列 + 间距 + 「旅行统计」标题下仅两格（点亮的地方、去过的国家）
-    static func tripShareModernStatsBlockHeight(contentWidth: CGFloat) -> CGFloat {
-        let dateStripHeight: CGFloat = 124
-        let midGap: CGFloat = 16
-        return dateStripHeight + midGap + tripShareTravelStatisticsGridHeight(contentWidth: contentWidth)
+    /// 用于高度预估：日期三列（开始 / 结束 / 时长）
+    static func tripShareModernStatsBlockHeight(contentWidth _: CGFloat) -> CGFloat {
+        124
     }
     
-    private static func tripShareTravelStatisticsGridHeight(contentWidth: CGFloat) -> CGFloat {
-        let headerRow: CGFloat = 56
-        let colGap: CGFloat = 12
-        let cellW = (contentWidth - colGap) / 2
-        let cellH = max(128, min(172, cellW * 0.40 + 80))
-        return headerRow + cellH + 4
-    }
-    
-    /// 绘制：三列「开始 / 结束 / 时长」+ 仅「点亮的地方」「去过的国家」两格，无白底大卡片
+    /// 绘制：三列「开始 / 结束 / 时长」，无白底大卡片
     static func drawTripShareModernStatsBlock(trip: TravelTrip, at origin: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
-        var y = origin.y
-        y += drawTripShareDateStrip(trip: trip, at: CGPoint(x: origin.x, y: y), width: width, context: context)
-        y += 16
-        y += drawTripShareTravelStatisticsGrid(trip: trip, at: CGPoint(x: origin.x, y: y), width: width, context: context)
-        return y - origin.y
+        drawTripShareDateStrip(trip: trip, at: origin, width: width, context: context)
     }
     
     private static func drawTripShareDateStrip(trip: TravelTrip, at origin: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
         let brand = tripShareBrandUIColor
         let colGap: CGFloat = 12
-        let colW = (width - 2 * colGap) / 3
+        // 时长列窄且靠右；剩余宽度平分给开始/结束，便于日期单行显示
+        let durationColW: CGFloat = 72
+        let dateColW = (width - durationColW - 2 * colGap) / 2
         let df = LanguageManager.shared.localizedDateFormatter(dateStyle: .medium)
         let startStr = df.string(from: trip.startDate)
         let endStr = df.string(from: trip.endDate)
@@ -413,30 +437,31 @@ struct TripImageGenerator {
         var bottoms: [CGFloat] = [origin.y, origin.y, origin.y]
         
         for col in 0..<3 {
-            let x = origin.x + CGFloat(col) * (colW + colGap)
+            let isDuration = col == 2
+            let colW = isDuration ? durationColW : dateColW
+            let x: CGFloat = isDuration
+                ? origin.x + width - durationColW
+                : origin.x + CGFloat(col) * (dateColW + colGap)
             var y = origin.y
             
             let iconName: String
             let labelKey: String
-            let isDuration: Bool
             switch col {
             case 0:
                 iconName = "calendar.badge.plus"
                 labelKey = "trip_share_start"
-                isDuration = false
             case 1:
                 iconName = "calendar"
                 labelKey = "trip_share_end"
-                isDuration = false
             default:
                 iconName = "clock"
                 labelKey = "trip_share_duration"
-                isDuration = true
             }
             
             if let img = UIImage(systemName: iconName) {
+                let iconX = isDuration ? x + (colW - iconSide) / 2 : x
                 img.withTintColor(brand, renderingMode: .alwaysOriginal)
-                    .draw(in: CGRect(x: x, y: y, width: iconSide, height: iconSide))
+                    .draw(in: CGRect(x: iconX, y: y, width: iconSide, height: iconSide))
             }
             y += iconSide + 10
             
@@ -447,8 +472,9 @@ struct TripImageGenerator {
                     .kern: -0.9 as CGFloat
                 ]
                 let vs = NSAttributedString(string: "\(days)", attributes: valueAttrs)
-                vs.draw(at: CGPoint(x: x, y: y))
-                y += vs.size().height + 8
+                let vsSize = vs.size()
+                vs.draw(at: CGPoint(x: x + (colW - vsSize.width) / 2, y: y))
+                y += vsSize.height + 8
             } else {
                 let dateStr = col == 0 ? startStr : endStr
                 let valueAttrs: [NSAttributedString.Key: Any] = [
@@ -475,7 +501,8 @@ struct TripImageGenerator {
                 options: [.usesLineFragmentOrigin, .usesFontLeading],
                 context: nil
             )
-            ls.draw(in: CGRect(x: x, y: y, width: colW, height: ceil(lb.height)))
+            let labelX = isDuration ? x + (colW - lb.width) / 2 : x
+            ls.draw(in: CGRect(x: labelX, y: y, width: ceil(lb.width), height: ceil(lb.height)))
             y += ceil(lb.height)
             bottoms[col] = y
         }
@@ -483,80 +510,15 @@ struct TripImageGenerator {
         return max(bottoms[0], bottoms[1], bottoms[2]) - origin.y
     }
     
-    private static func drawTripShareTravelStatisticsGrid(trip: TravelTrip, at origin: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
-        let sorted = trip.destinations?.sorted { $0.visitDate < $1.visitDate } ?? []
-        let total = sorted.count
-        let countries = Set(sorted.map { $0.country }.filter { !$0.isEmpty }).count
-        
-        let brand = tripShareBrandUIColor
-        var y = origin.y
-        
-        if let icon = UIImage(systemName: "chart.bar.fill") {
-            let iconSide: CGFloat = 30
-            let iconRect = CGRect(x: origin.x, y: y, width: iconSide, height: iconSide)
-            icon.withTintColor(brand, renderingMode: .alwaysOriginal).draw(in: iconRect)
-        }
-        let titleAttrs: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 20, weight: .semibold),
-            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0)
-        ]
-        let title = NSAttributedString(string: "travel_statistics".localized, attributes: titleAttrs)
-        title.draw(at: CGPoint(x: origin.x + 40, y: y + 6))
-        y += 56
-        
-        let colGap: CGFloat = 12
-        let cellW = (width - colGap) / 2
-        let cellH = max(128, min(172, cellW * 0.40 + 80))
-        
-        /// 与 App 一致：`total_destinations` / `countries_visited`（简中即「点亮的地方」「去过的国家」）
-        let items: [(String, Int, String)] = [
-            ("flag.fill", total, "total_destinations"),
-            ("globe.asia.australia.fill", countries, "countries_visited")
-        ]
-        
-        for (col, item) in items.enumerated() {
-            let cellX = origin.x + CGFloat(col) * (cellW + colGap)
-            let rect = CGRect(x: cellX, y: y, width: cellW, height: cellH)
-            drawTripShareStatCell(iconName: item.0, value: item.1, label: item.2.localized, brandColor: brand, in: rect)
-        }
-        
-        return 56 + cellH + 4
-    }
-    
-    private static func drawTripShareStatCell(iconName: String, value: Int, label: String, brandColor: UIColor, in rect: CGRect) {
-        var y = rect.minY
-        let iconSide: CGFloat = 30
-        if let iconImage = UIImage(systemName: iconName) {
-            let iconRect = CGRect(x: rect.minX, y: y, width: iconSide, height: iconSide)
-            iconImage.withTintColor(brandColor, renderingMode: .alwaysOriginal).draw(in: iconRect)
-        }
-        y += iconSide + 12
-        
-        let valueFontSize = min(50, max(34, rect.width * 0.20))
-        let valueAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.monospacedDigitSystemFont(ofSize: valueFontSize, weight: .black),
-            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0),
-            .kern: -1.0 as CGFloat
-        ]
-        let valueString = NSAttributedString(string: "\(value)", attributes: valueAttributes)
-        valueString.draw(at: CGPoint(x: rect.minX, y: y))
-        y += valueString.size().height + 8
-        
-        let labelAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 14, weight: .regular),
-            .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0)
-        ]
-        let labelString = NSAttributedString(string: label, attributes: labelAttributes)
-        let bounding = labelString.boundingRect(
-            with: CGSize(width: rect.width, height: CGFloat.greatestFiniteMagnitude),
-            options: [.usesLineFragmentOrigin, .usesFontLeading],
-            context: nil
-        )
-        labelString.draw(in: CGRect(x: rect.minX, y: y, width: rect.width, height: ceil(bounding.height)))
-    }
-    
     /// 绘制用户头像和用户名
-    static func drawUserInfo(at point: CGPoint, avatarSize: CGFloat, context: CGContext) -> CGFloat {
+    /// `userNameFontSize` / `userNameSpacing` 默认保持旅程、年份分享卡的现有比例。
+    static func drawUserInfo(
+        at point: CGPoint,
+        avatarSize: CGFloat,
+        context: CGContext,
+        userNameFontSize: CGFloat = 16,
+        userNameSpacing: CGFloat = 12
+    ) -> CGFloat {
         let profile = UserProfileManager.shared
         let userName = profile.displayName
         let avatarImage = profile.userAvatarImage
@@ -615,11 +577,11 @@ struct TripImageGenerator {
         
         // 绘制用户名
         let userNameAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 16, weight: .medium),
+            .font: UIFont.systemFont(ofSize: userNameFontSize, weight: .medium),
             .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0)
         ]
         let userNameString = NSAttributedString(string: userName, attributes: userNameAttributes)
-        let userNameX = point.x + avatarSize + 12 // 头像右侧12点间距
+        let userNameX = point.x + avatarSize + userNameSpacing
         let userNameY = point.y + (avatarSize - userNameString.size().height) / 2 // 垂直居中
         userNameString.draw(at: CGPoint(x: userNameX, y: userNameY))
         
@@ -764,65 +726,6 @@ struct TripImageGenerator {
         notesString.draw(in: notesDrawRect)
         
         return ceil(notesRect.height)
-    }
-    
-    private static func drawDestinationTitleWithSubtitle(title: String, subtitle: String, at point: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
-        // 获取品牌颜色
-        let brandColor = BrandColorManager.shared.currentBrandColor
-        let brandUIColor = UIColor(brandColor)
-        
-        // 绘制主标题（参考图样式：大号字体）
-        let titleAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 42, weight: .bold),
-            .foregroundColor: UIColor(red: 0.15, green: 0.15, blue: 0.15, alpha: 1.0)
-        ]
-        
-        let titleString = NSAttributedString(string: title, attributes: titleAttributes)
-        let titleSize = titleString.size()
-        
-        // 在文字下方绘制半透明品牌色高亮
-        // 高亮高度约为字体高度的 40%，位置在文字垂直中心
-        let highlightHeight = titleSize.height * 0.4
-        let highlightY = point.y + titleSize.height * 0.45 // 从文字中心偏上一点开始，覆盖中间部分
-        let highlightWidth = titleSize.width + 24 // 稍微超出文字宽度（左右各12点）
-        let highlightX = point.x - 12 // 向左偏移12点，使高亮超出文字
-        
-        // 设置半透明品牌色（透明度约 0.25，更接近图片效果）
-        var red: CGFloat = 0
-        var green: CGFloat = 0
-        var blue: CGFloat = 0
-        var alpha: CGFloat = 0
-        brandUIColor.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
-        
-        let highlightColor = UIColor(red: red, green: green, blue: blue, alpha: 0.25)
-        context.setFillColor(highlightColor.cgColor)
-        
-        // 绘制圆角矩形高亮
-        let highlightRect = CGRect(
-            x: highlightX,
-            y: highlightY,
-            width: highlightWidth,
-            height: highlightHeight
-        )
-        let highlightPath = UIBezierPath(roundedRect: highlightRect, cornerRadius: 4)
-        context.addPath(highlightPath.cgPath)
-        context.fillPath()
-        
-        // 绘制标题文字（在高亮之上）
-        titleString.draw(at: point)
-        
-        // 绘制副标题（国家信息，稍小字体）
-        let subtitleAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 22, weight: .regular),
-            .foregroundColor: UIColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1.0)
-        ]
-        
-        let subtitleString = NSAttributedString(string: subtitle, attributes: subtitleAttributes)
-        let subtitleSize = subtitleString.size()
-        subtitleString.draw(at: CGPoint(x: point.x, y: point.y + titleSize.height + 8))
-        
-        // 返回总高度：标题高度 + 间距 + 副标题高度
-        return titleSize.height + 8 + subtitleSize.height
     }
     
     private static func drawDestinationDateSimple(for destination: TravelDestination, at point: CGPoint, width: CGFloat, context: CGContext) {
@@ -1231,45 +1134,6 @@ struct TripImageGenerator {
         context.restoreGState()
     }
     
-    private static func drawDestinationNotes(_ notes: String, at point: CGPoint, width: CGFloat, context: CGContext) -> CGFloat {
-        // 绘制笔记标题（参考图样式：更优雅的标题）
-        let titleAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 20, weight: .semibold),
-            .foregroundColor: UIColor(red: 0.2, green: 0.2, blue: 0.2, alpha: 1.0)
-        ]
-        let titleString = NSAttributedString(string: "travel_notes".localized, attributes: titleAttributes)
-        titleString.draw(at: point)
-        
-        // 绘制笔记内容（参考图样式：更舒适的字体和行距）
-        let notesAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 17, weight: .regular),
-            .foregroundColor: UIColor(red: 0.35, green: 0.35, blue: 0.35, alpha: 1.0),
-            .paragraphStyle: {
-                let style = NSMutableParagraphStyle()
-                style.lineSpacing = 6 // 增加行距，提升可读性
-                style.lineBreakMode = .byWordWrapping
-                return style
-            }()
-        ]
-        let notesString = NSAttributedString(string: notes, attributes: notesAttributes)
-        let notesRect = notesString.boundingRect(
-            with: CGSize(width: width, height: CGFloat.greatestFiniteMagnitude),
-            options: [.usesLineFragmentOrigin, .usesFontLeading],
-            context: nil
-        )
-        
-        let notesDrawRect = CGRect(
-            x: point.x,
-            y: point.y + 28,
-            width: width,
-            height: ceil(notesRect.height)
-        )
-        
-        notesString.draw(in: notesDrawRect)
-        
-        return 28 + ceil(notesRect.height)
-    }
-    
     static func drawSignature(at point: CGPoint, width: CGFloat, context: CGContext) {
         // 获取品牌图标：优先使用 assets 中的 AppIconLine，其次回退到 AppIcon
         let appIcon: UIImage? = {
@@ -1333,18 +1197,23 @@ struct TripImageGenerator {
     }
     
     /// 地点分享：极简海报同款底栏（左品牌两行 + 居中 AppIconLine + 右英文两行）
+    /// 字号随画布宽度缩放（基准宽 390）
     static func drawDestinationShareCircleStyleBrandRow(
         topY: CGFloat,
         canvasWidth: CGFloat,
         horizontalPadding: CGFloat,
         context: CGContext
     ) -> CGFloat {
+        let scale = max(canvasWidth / 390.0, 1.0)
+        let fontSize = 6 * scale
+        let lineGap = 2 * scale
+        
         let brandMainAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 6, weight: .regular),
+            .font: UIFont.systemFont(ofSize: fontSize, weight: .regular),
             .foregroundColor: UIColor(white: 0.25, alpha: 1.0)
         ]
         let brandSubAttributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 6, weight: .regular),
+            .font: UIFont.systemFont(ofSize: fontSize, weight: .regular),
             .foregroundColor: UIColor(white: 0.45, alpha: 1.0)
         ]
         
@@ -1363,11 +1232,11 @@ struct TripImageGenerator {
         let brandSubLine1Size = brandSubLine1.size()
         let brandSubLine2Size = brandSubLine2.size()
         
-        let leftBlockHeight = brandMainLine1Size.height + 2 + brandMainLine2Size.height
-        let rightBlockHeight = brandSubLine1Size.height + 2 + brandSubLine2Size.height
+        let leftBlockHeight = brandMainLine1Size.height + lineGap + brandMainLine2Size.height
+        let rightBlockHeight = brandSubLine1Size.height + lineGap + brandSubLine2Size.height
         let rowVisualHeight = max(leftBlockHeight, rightBlockHeight)
         
-        let iconSize: CGFloat = 14
+        let iconSize: CGFloat = 14 * scale
         if let icon = UIImage(named: "AppIconLine") {
             let iconX = canvasWidth / 2.0 - iconSize / 2.0
             let iconY = topY + (rowVisualHeight - iconSize) / 2.0
@@ -1382,15 +1251,12 @@ struct TripImageGenerator {
         
         let brandMainX = horizontalPadding
         brandMainLine1.draw(at: CGPoint(x: brandMainX, y: topY))
-        brandMainLine2.draw(at: CGPoint(x: brandMainX, y: topY + brandMainLine1Size.height + 2))
+        brandMainLine2.draw(at: CGPoint(x: brandMainX, y: topY + brandMainLine1Size.height + lineGap))
         
-        // 右侧两行各自右对齐到内容右缘
         let rightEdgeX = canvasWidth - horizontalPadding
         brandSubLine1.draw(at: CGPoint(x: rightEdgeX - brandSubLine1Size.width, y: topY))
-        brandSubLine2.draw(at: CGPoint(x: rightEdgeX - brandSubLine2Size.width, y: topY + brandSubLine1Size.height + 2))
+        brandSubLine2.draw(at: CGPoint(x: rightEdgeX - brandSubLine2Size.width, y: topY + brandSubLine1Size.height + lineGap))
         
         return rowVisualHeight
     }
 }
-
-// MARK: - 清单版面生成器

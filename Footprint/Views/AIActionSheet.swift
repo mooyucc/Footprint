@@ -28,6 +28,8 @@ struct AIActionSheet: View {
     @State private var isEditing = false
     @FocusState private var isFocused: Bool
     @State private var showCreditPaywall = false
+    /// 防止 SwiftUI onAppear 重复触发导致连环 API 调用
+    @State private var didAutoStart = false
     
     init(destination: TravelDestination? = nil, trip: TravelTrip? = nil, action: AIAssistantView.AIAction) {
         self.destination = destination
@@ -51,9 +53,11 @@ struct AIActionSheet: View {
                 } else if !result.isEmpty {
                     resultView
                 } else {
-                    // 执行AI操作
+                    // 执行AI操作（仅自动启动一次）
                     Color.clear
                         .onAppear {
+                            guard !didAutoStart else { return }
+                            didAutoStart = true
                             performAction()
                         }
                 }
@@ -244,71 +248,69 @@ struct AIActionSheet: View {
     }
     
     private func performAction() {
+        guard !isLoading else { return }
+        
         isLoading = true
         errorMessage = nil
         result = ""
         
-        let isProUser = entitlementManager.canUseAIFeatures
-        if !isProUser {
-            if !aiCreditManager.consumeOne() {
-                isLoading = false
-                errorMessage = nil
-                // 这里不直接显示购买界面，由上层决定入口；目前仅提示不足
-                showCreditPaywall = true
-                return
-            }
+        switch aiCreditManager.gateAICall(isUnlimitedUser: entitlementManager.canUseAIFeatures) {
+        case .allowed:
+            break
+        case .insufficientCredits:
+            isLoading = false
+            errorMessage = "ai_subscription_required_message".localized
+            showCreditPaywall = true
+            return
+        case .dailyLimitReached:
+            isLoading = false
+            errorMessage = "ai_daily_limit_reached_message".localized
+            return
         }
         
         Task {
             switch action {
             case .generateNotes:
-                if let destination = destination {
-                    let notes = await aiManager.generateNotesFor(destination: destination)
+                guard let destination = destination else {
                     await MainActor.run {
                         isLoading = false
-                        if let notes = notes {
-                            result = notes
-                        } else {
-                            errorMessage = aiManager.errorMessage ?? "ai_error_unknown".localized
-                        }
+                        errorMessage = "ai_error_unknown".localized
+                    }
+                    return
+                }
+                let notes = await aiManager.generateNotesFor(destination: destination)
+                await MainActor.run {
+                    isLoading = false
+                    let trimmed = notes?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    if !trimmed.isEmpty {
+                        result = trimmed
+                    } else {
+                        // 空结果视为失败，进入错误页，避免回到 onAppear 空态死循环
+                        errorMessage = aiManager.errorMessage ?? "ai_error_unknown".localized
                     }
                 }
                 
             case .generateDescription:
-                if let trip = trip {
-                    let description = await aiManager.generateDescriptionFor(trip: trip)
+                guard let trip = trip else {
                     await MainActor.run {
                         isLoading = false
-                        if let description = description {
-                            result = description
-                            editedResult = description
-                        } else {
-                            errorMessage = aiManager.errorMessage ?? "ai_error_unknown".localized
-                        }
+                        errorMessage = "ai_error_unknown".localized
+                    }
+                    return
+                }
+                let description = await aiManager.generateDescriptionFor(trip: trip)
+                await MainActor.run {
+                    isLoading = false
+                    let trimmed = description?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    if !trimmed.isEmpty {
+                        result = trimmed
+                        editedResult = trimmed
+                    } else {
+                        errorMessage = aiManager.errorMessage ?? "ai_error_unknown".localized
                     }
                 }
             }
         }
-    }
-    
-    private func formatAnalysisResult(_ analysis: ImageAnalysisResult) -> String {
-        var text = ""
-        
-        if let sceneType = analysis.sceneType {
-            text += "场景类型：\(sceneType)\n\n"
-        }
-        
-        text += "描述：\(analysis.description)\n\n"
-        
-        if !analysis.mainSubjects.isEmpty {
-            text += "主要物体：\(analysis.mainSubjects.joined(separator: "、"))\n\n"
-        }
-        
-        if !analysis.suggestedTags.isEmpty {
-            text += "建议标签：\(analysis.suggestedTags.joined(separator: "、"))"
-        }
-        
-        return text
     }
     
     private func saveDescription() {

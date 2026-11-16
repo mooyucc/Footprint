@@ -20,6 +20,15 @@ class DeepSeekProvider: AIServiceProtocol {
     private let baseURL = "https://api.deepseek.com/v1"
     private let requestTimeout: TimeInterval = 30.0
     
+    /// Prompt 体积上限，避免 Vision OCR / 长笔记把单次输入撑到数十万 token
+    private enum PromptBudget {
+        static let visionOCRChars = 200
+        static let noteSnippetChars = 120
+        static let existingNotesChars = 500
+        static let maxTripDestinations = 30
+        static let maxTripPhotoDestinations = 15
+    }
+    
     // DeepSeek 模型配置（deepseek-chat 已于 2026-07-24 退役，改用 v4-flash）
     private let chatModel = "deepseek-v4-flash"
     // 注意：DeepSeek API 当前可能不支持多模态（图片），使用文本模型
@@ -142,8 +151,11 @@ class DeepSeekProvider: AIServiceProtocol {
             promptText += "\n\n\(langConfig.styleGuidanceLabel)\(separator)\(styleGuidance)。"
         }
         
-        // 检查用户是否已输入笔记文字
-        let trimmedExistingNotes = existingNotes?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        // 检查用户是否已输入笔记文字（截断后写入 prompt）
+        let trimmedExistingNotes = truncateForPrompt(
+            existingNotes ?? "",
+            maxLength: PromptBudget.existingNotesChars
+        )
         let hasExistingNotes = !trimmedExistingNotes.isEmpty
         
         if hasExistingNotes {
@@ -260,7 +272,7 @@ class DeepSeekProvider: AIServiceProtocol {
         // 根据身份标签动态设置身份，如果没有则使用默认身份（根据语言）
         let identity = !trimmedPersona.isEmpty ? trimmedPersona : langConfig.defaultIdentity
         
-        // 构建目的地信息（包含笔记）
+        // 构建目的地信息（包含笔记）；限制数量与笔记长度，控制输入 token
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = currentLanguage == .english ? "MMMM d, yyyy" : "yyyy-MM-dd"
         let localeId = currentLanguage == .chinese || currentLanguage == .chineseTraditional ? "zh_CN" : 
@@ -272,23 +284,25 @@ class DeepSeekProvider: AIServiceProtocol {
         dateFormatter.locale = Locale(identifier: localeId)
         
         let separator = currentLanguage == .english ? ": " : "："
-        // 收集所有目的地的季节信息
-        let seasons = destinations.map { getSeasonString(from: $0.visitDate, language: currentLanguage) }
+        let cappedDestinations = Array(destinations.prefix(PromptBudget.maxTripDestinations))
+        // 收集目的地的季节信息
+        let seasons = cappedDestinations.map { getSeasonString(from: $0.visitDate, language: currentLanguage) }
         let uniqueSeasons = Set(seasons)
         
-        var destinationsInfo = destinations.map { dest in
+        var destinationsInfo = cappedDestinations.map { dest in
             // 只显示地点和国家，不显示具体日期
             var info = "- \(dest.name) (\(dest.country))"
-            // 如果有笔记，添加到信息中
-            if !dest.notes.isEmpty {
-                info += "\n  \(langConfig.noteLabel)\(separator)\(dest.notes)"
+            // 如果有笔记，添加到信息中（截断）
+            let note = dest.notes.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !note.isEmpty {
+                info += "\n  \(langConfig.noteLabel)\(separator)\(truncateForPrompt(note, maxLength: PromptBudget.noteSnippetChars))"
             }
             return info
         }.joined(separator: "\n\n")
         
-        // 收集所有目的地的照片
+        // 收集目的地的照片（限制有照片的目的地数量）
         var allImages: [(destination: String, images: [Data])] = []
-        for destination in destinations {
+        for destination in cappedDestinations where allImages.count < PromptBudget.maxTripPhotoDestinations {
             if !destination.photoDatas.isEmpty {
                 allImages.append((destination: destination.name, images: destination.photoDatas))
             }
@@ -336,8 +350,11 @@ class DeepSeekProvider: AIServiceProtocol {
             promptText += "\n\n\(langConfig.styleGuidanceLabel)\(separator)\(styleGuidance)。"
         }
         
-        // 检查用户是否已输入旅程描述
-        let trimmedExistingDescription = existingDescription?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        // 检查用户是否已输入旅程描述（截断后写入 prompt）
+        let trimmedExistingDescription = truncateForPrompt(
+            existingDescription ?? "",
+            maxLength: PromptBudget.existingNotesChars
+        )
         let hasExistingDescription = !trimmedExistingDescription.isEmpty
         
         if hasExistingDescription {
@@ -554,6 +571,80 @@ class DeepSeekProvider: AIServiceProtocol {
         let messages: [ChatMessage] = [.user([.text(prompt)])]
         let response = try await callChatAPI(messages: messages, model: chatModel)
         return response.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    func generateShareOverlayCaption(
+        from images: [Data],
+        location: String,
+        province: String,
+        country: String,
+        date: Date,
+        existingNotes: String?,
+        maxLength: Int
+    ) async throws -> String {
+        print("🤖 [DeepSeek] 开始生成海报短句，地点: \(location)")
+        
+        let lang = currentLanguage
+        let isChineseFamily = (lang == .chinese || lang == .chineseTraditional || lang == .japanese || lang == .korean)
+        let season = getSeasonString(from: date, language: lang)
+        let note = existingNotes?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let hasNote = !(note?.isEmpty ?? true)
+        
+        var photoHint: String?
+        if let first = images.first {
+            photoHint = await analyzeImageWithVision(first)
+        }
+        
+        let locationLine = [location, province, country]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: lang == .english ? ", " : "，")
+        
+        let prompt: String
+        if isChineseFamily {
+            let noteBlock = hasNote ? "\n用户备注：\(note!)" : ""
+            let photoBlock = photoHint.map { "\n照片意境：\($0)" } ?? ""
+            prompt = """
+            你在为旅行海报写「图上短句」。只输出一句，像摄影明信片旁的诗意旁白。
+            
+            参考信息（不要把地点名、日期写进句子）：
+            - 地点背景：\(locationLine)
+            - 季节：\(season)\(noteBlock)\(photoBlock)
+            
+            硬性要求：
+            1. 只输出一句，不要引号、标题、标签、换行或解释
+            2. 中文/日文/韩文严格控制在 12～22 字以内（OVERLAY_MAX）
+            3. 不要出现地点名、日期、emoji、hashtag
+            4. 语气克制、留白，像附图旁那句短旁白
+            5. \(LanguageConfig.forLanguage(lang).outputLanguageInstruction)
+            """
+        } else {
+            let noteBlock = hasNote ? "\nUser notes: \(note!)" : ""
+            let photoBlock = photoHint.map { "\nPhoto mood: \($0)" } ?? ""
+            prompt = """
+            Write one short poetic caption for a travel poster (text beside a photo).
+            
+            Context (do NOT put place names or dates into the sentence):
+            - Place: \(locationLine)
+            - Season: \(season)\(noteBlock)\(photoBlock)
+            
+            Rules:
+            1. Output ONLY one sentence — no quotes, titles, hashtags, line breaks, or explanation
+            2. Keep it within 8–12 words (OVERLAY_MAX), max \(maxLength) characters
+            3. No place names, dates, emoji, or hashtags
+            4. Quiet, evocative tone — like a postcard line
+            5. \(LanguageConfig.forLanguage(lang).outputLanguageInstruction)
+            """
+        }
+        
+        let messages: [ChatMessage] = [.user([.text(prompt)])]
+        let response = try await callChatAPI(messages: messages, model: chatModel)
+        let cleaned = response
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\"“”‘’"))
+            .replacingOccurrences(of: "\n", with: " ")
+        return limitTextToLength(cleaned, maxLength: maxLength)
     }
     
     // MARK: - Private Methods
@@ -812,7 +903,9 @@ class DeepSeekProvider: AIServiceProtocol {
         }.joined()
         
         let maxTokens: Int
-        if promptText.contains("300字") {
+        if promptText.contains("OVERLAY_MAX") {
+            maxTokens = 80   // 海报短句
+        } else if promptText.contains("300字") {
             maxTokens = 600  // 旅程描述：300字
         } else if promptText.contains("144字") {
             maxTokens = 300  // 笔记：144字
@@ -895,7 +988,11 @@ class DeepSeekProvider: AIServiceProtocol {
                     }
                     
                     if !recognizedStrings.isEmpty {
-                        descriptions.append("文字：\(recognizedStrings.joined(separator: " "))")
+                        let ocr = self.truncateForPrompt(
+                            recognizedStrings.joined(separator: " "),
+                            maxLength: PromptBudget.visionOCRChars
+                        )
+                        descriptions.append("文字：\(ocr)")
                     }
                 }
             }
@@ -953,7 +1050,11 @@ class DeepSeekProvider: AIServiceProtocol {
                 guard let observations = request.results as? [VNRecognizedTextObservation] else { return }
                 let strings = observations.compactMap { $0.topCandidates(1).first?.string }
                 if !strings.isEmpty {
-                    descriptions.append("文字：\(strings.joined(separator: " "))")
+                    let ocr = self.truncateForPrompt(
+                        strings.joined(separator: " "),
+                        maxLength: PromptBudget.visionOCRChars
+                    )
+                    descriptions.append("文字：\(ocr)")
                 }
             }
             textRequest.recognitionLanguages = ["zh-Hans", "en"]
@@ -986,6 +1087,13 @@ class DeepSeekProvider: AIServiceProtocol {
                 continuation.resume(returning: nil)
             }
         }
+    }
+    
+    /// 截断写入 prompt 的辅助文本（OCR / 笔记摘要），避免单次请求输入失控
+    private func truncateForPrompt(_ text: String, maxLength: Int) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > maxLength else { return trimmed }
+        return String(trimmed.prefix(maxLength)) + "…"
     }
     
     /// 限制文本长度在指定字符数以内

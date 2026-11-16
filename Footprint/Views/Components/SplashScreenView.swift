@@ -7,28 +7,22 @@
 
 import SwiftUI
 
-/// 启动画面视图：用于提升用户体验并错开反向地理编码的高峰
+/// 启动画面：只播品牌动画，不在动画期间挂载主界面 / 打库，避免卡帧
 struct SplashScreenView: View {
     @Binding var isPresented: Bool
     
-    // 动画状态变量
     @State private var showBars = false
     @State private var showSquid = false
     @State private var showText = false
     
-    // 动画和初始化时间控制
-    private let minDisplayTime: TimeInterval = 1.2  // 最短展示，保证动画播完
-    private let maxDisplayTime: TimeInterval = 8.0  // 上限：覆盖两百余地点的主上下文预热，避免画面关掉后首次切 Tab 仍在冷读
-    @State private var animationStartTime: Date?
-    /// 本会话是否已触发关闭（静态，避免「通知」与「5s 定时器」重复执行导致二次打印）
+    /// 动画播完再关（色块 → 墨鱼 → 文字）
+    private let displayDuration: TimeInterval = 1.6
+    private let fadeOutDuration: TimeInterval = 0.3
     private static var hasTriggeredDismissThisSession = false
-    /// 收到「初始化完成」后至少再保留的展示时间，确保动画已完整播放再关闭
-    private let minRemainingAfterNotification: TimeInterval = 0.25
     
     var body: some View {
-        GeometryReader { geometry in
+        GeometryReader { _ in
             ZStack {
-                // 整体背景固定白色（品牌要求深色模式下也保持白底）
                 Color.white
                     .ignoresSafeArea(.all)
                 
@@ -36,40 +30,35 @@ struct SplashScreenView: View {
                     Spacer()
                     
                     ZStack {
-                        // 1. 背景色块 (Background Bars) - 三条彩色矩形条
                         Group {
-                            // 绿色条（上）
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(Color(red: 0.8, green: 0.87, blue: 0.45)) // 近似浅绿色
+                                .fill(Color(red: 0.8, green: 0.87, blue: 0.45))
                                 .frame(width: 260, height: 70)
                                 .rotationEffect(.degrees(-5))
                                 .offset(
                                     x: -10,
-                                    y: showBars ? -40 : -90  // 平滑下落动画
+                                    y: showBars ? -40 : -90
                                 )
                                 .opacity(showBars ? 1 : 0)
                             
-                            // 黄色条（中）
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(Color(red: 0.98, green: 0.91, blue: 0.51)) // 近似黄色
+                                .fill(Color(red: 0.98, green: 0.91, blue: 0.51))
                                 .frame(width: 270, height: 70)
                                 .offset(y: 0)
                                 .opacity(showBars ? 0.8 : 0)
-                                .scaleEffect(showBars ? 1 : 0.5) // 缩放动画
+                                .scaleEffect(showBars ? 1 : 0.5)
                             
-                            // 蓝色条（下）
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(Color(red: 0.58, green: 0.9, blue: 0.83)) // 近似青色
+                                .fill(Color(red: 0.58, green: 0.9, blue: 0.83))
                                 .frame(width: 260, height: 70)
                                 .rotationEffect(.degrees(3))
                                 .offset(
                                     x: 10,
-                                    y: showBars ? 40 : 90  // 平滑上升动画
+                                    y: showBars ? 40 : 90
                                 )
                                 .opacity(showBars ? 1 : 0)
                         }
                         
-                        // 2. 墨鱼图标 (Squid Icon) - 使用项目中的图片资源
                         Image("LoginMooyu")
                             .resizable()
                             .interpolation(.high)
@@ -80,9 +69,8 @@ struct SplashScreenView: View {
                             .opacity(showSquid ? 1 : 0)
                             .offset(y: showSquid ? 0 : 20)
                     }
-                    .frame(height: 280) // 限制logo区域高度
+                    .frame(height: 280)
                     
-                    // 3. 文字 (Text) - 使用项目中的图片资源
                     Image("LoginText")
                         .resizable()
                         .interpolation(.high)
@@ -99,80 +87,55 @@ struct SplashScreenView: View {
             }
         }
         .onAppear {
-            Self.hasTriggeredDismissThisSession = false  // 每次展示时重置，便于再次显示（如 Beta 提醒后）
-            animationStartTime = Date()
+            Self.hasTriggeredDismissThisSession = false
             performAnimation()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .appInitializationCompleted)) { _ in
-            handleInitializationComplete()
         }
     }
     
-    // 执行动画序列
-    func performAnimation() {
-        // 步骤1：色块滑入 - 使用更平滑的spring动画
+    private func performAnimation() {
         withAnimation(.spring(response: 0.8, dampingFraction: 0.75)) {
             showBars = true
         }
         
-        // 步骤2：墨鱼出现 - 使用更平滑的spring动画
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
             withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
                 showSquid = true
             }
         }
         
-        // 步骤3：文字浮现 - 使用平滑的spring动画
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.95) {
             withAnimation(.spring(response: 0.7, dampingFraction: 0.75)) {
                 showText = true
             }
         }
         
-        // 设置最大等待时间，避免等待太久
-        DispatchQueue.main.asyncAfter(deadline: .now() + maxDisplayTime) {
-            handleInitializationComplete()
+        DispatchQueue.main.asyncAfter(deadline: .now() + displayDuration) {
+            dismissSplash()
         }
     }
     
-    // 处理初始化完成
-    private func handleInitializationComplete() {
+    private func dismissSplash() {
         guard !Self.hasTriggeredDismissThisSession else { return }
         Self.hasTriggeredDismissThisSession = true
         
-        guard let startTime = animationStartTime else { return }
+        withAnimation(.easeInOut(duration: fadeOutDuration)) {
+            showBars = false
+            showSquid = false
+            showText = false
+        }
         
-        let elapsedTime = Date().timeIntervalSince(startTime)
-        // 至少再保留 minDisplayTime，且收到通知后至少再保留 minRemainingAfterNotification，避免动画未播完就关闭
-        let remainingTime = max(minRemainingAfterNotification, max(0, minDisplayTime - elapsedTime))
-        
-        // 确保至少显示最小时间
-        DispatchQueue.main.asyncAfter(deadline: .now() + remainingTime) {
-            withAnimation(.easeInOut(duration: 0.3)) {
-                showBars = false
-                showSquid = false
-                showText = false
-            }
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                isPresented = false
-                print("✅ 启动画面：初始化完成，关闭启动画面（总耗时：\(String(format: "%.2f", elapsedTime + remainingTime + 0.3))秒）")
-                
-                // 通知启动画面已关闭
-                NotificationCenter.default.post(name: .splashScreenDismissed, object: nil)
-            }
+        DispatchQueue.main.asyncAfter(deadline: .now() + fadeOutDuration) {
+            isPresented = false
+            print("✅ 启动画面：动画结束，进入主界面骨架")
+            NotificationCenter.default.post(name: .splashScreenDismissed, object: nil)
         }
     }
 }
 
-// MARK: - 通知名称扩展
 extension Notification.Name {
-    static let appInitializationCompleted = Notification.Name("appInitializationCompleted")
     static let splashScreenDismissed = Notification.Name("splashScreenDismissed")
 }
 
 #Preview {
     SplashScreenView(isPresented: .constant(true))
 }
-
-

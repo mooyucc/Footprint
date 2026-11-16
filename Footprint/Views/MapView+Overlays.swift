@@ -182,6 +182,37 @@ extension MapView {
         return (dayDests, routeSlice)
     }
     
+    /// 启动骨架：Tab/地图结构先可见，内容稍后淡入（对齐常见 App 灰框架体验）
+    var mapStartupSkeletonOverlay: some View {
+        ZStack {
+            VStack {
+                HStack {
+                    Capsule()
+                        .fill(Color.primary.opacity(0.08))
+                        .frame(width: 44, height: 44)
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 12)
+                Spacer()
+            }
+            
+            VStack {
+                Spacer()
+                HStack {
+                    Spacer()
+                    Circle()
+                        .fill(Color.primary.opacity(0.10))
+                        .frame(width: 58, height: 58)
+                        .padding(.trailing, 18)
+                        .padding(.bottom, 28)
+                }
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+    
     // 清除聚合缓存（用于旅程切换等）
     var floatingButtons: some View {
         ZStack {
@@ -193,7 +224,7 @@ extension MapView {
                 }
             }
             
-            // iOS 26标准搜索栏覆盖层
+            // 地图浮层搜索栏
             if showSearchBar {
                 VStack {
                     searchBarOverlay
@@ -479,20 +510,20 @@ extension MapView {
     }
     
     
-    // iOS 26标准搜索栏覆盖层
+    // 地图浮层搜索栏：单层系统风格（避免外层 Material + 内层 glass 双层嵌套）
     var searchBarOverlay: some View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
-                // 搜索输入框
-                HStack(spacing: 5) {
+                HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass")
-                        .foregroundColor(.secondary)
-                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .font(.system(size: 16, weight: .medium))
                     
                     TextField(searchPlaceholderText, text: $searchText)
-                        .textFieldStyle(PlainTextFieldStyle())
-                        .font(.system(size: 16))
+                        .textFieldStyle(.plain)
+                        .font(.body)
                         .focused($isSearchFocused)
+                        .submitLabel(.search)
                         .onSubmit {
                             performSearch()
                         }
@@ -503,33 +534,46 @@ extension MapView {
                                 performSearch()
                             }
                         }
+                    
+                    if !searchText.isEmpty {
+                        Button {
+                            searchText = ""
+                            searchResults = []
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundStyle(.tertiary)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
                 .frame(minHeight: 44)
-                .footprintMapGlassCapsule(isDarkMap: isDarkMapStyle)
+                .background {
+                    Capsule(style: .continuous)
+                        .fill(Color(.tertiarySystemFill))
+                }
                 
-                // 关闭按钮
-                Button {
+                Button("cancel".localized) {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         showSearchBar = false
                         searchText = ""
                         searchResults = []
                         isSearchFocused = false
                     }
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 18)) // 进一步缩小图标：从24改为18
-                        .foregroundColor(.secondary)
                 }
+                .font(.body)
+                .foregroundStyle(.primary)
+                .buttonStyle(.plain)
+                .frame(minHeight: 44)
             }
             .padding(.horizontal, 16)
-            .padding(.top, 12)
-            .padding(.bottom, 12)
-            .background(.regularMaterial)
+            .padding(.vertical, 10)
             
-            // 搜索结果列表
             if !searchResults.isEmpty {
+                Divider()
+                
                 ScrollView {
                     VStack(spacing: 0) {
                         ForEach(Array(searchResults.prefix(10).enumerated()), id: \.offset) { index, result in
@@ -549,12 +593,14 @@ extension MapView {
                     .padding(.vertical, 8)
                 }
                 .frame(maxHeight: 400)
-                .background(.regularMaterial)
             }
         }
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 44, style: .continuous))
-        .shadow(color: .black.opacity(0.1), radius: 20, x: 0, y: 5)
+        .background {
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(.regularMaterial)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .shadow(color: .black.opacity(0.12), radius: 16, x: 0, y: 4)
         .padding(.horizontal, 16)
         .padding(.top, 8)
     }

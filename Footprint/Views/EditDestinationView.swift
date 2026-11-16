@@ -8,9 +8,6 @@
 import SwiftUI
 import SwiftData
 import PhotosUI
-import MapKit
-import CoreLocation
-import Contacts
 // import removed: UniformTypeIdentifiers (不再需要拖拽)
 
 struct EditDestinationView: View {
@@ -40,12 +37,6 @@ struct EditDestinationView: View {
     }
     @State private var photoItems: [PhotoItem] = []
     @State private var videoData: Data?
-    @State private var searchText = ""
-    @State private var searchResults: [MKMapItem] = []
-    @State private var selectedLocation: MKMapItem?
-    @State private var isSearching = false
-    @State private var latitude: Double = 0.0
-    @State private var longitude: Double = 0.0
     @State private var selectedTrip: TravelTrip?
     @State private var showDeleteConfirmation = false
     
@@ -53,9 +44,6 @@ struct EditDestinationView: View {
     private var maxPhotos: Int {
         entitlementManager.maxPhotosPerDestination
     }
-    
-    // 城市数据管理器实例
-    private let cityDataManager = CityDataManager.shared
     
     init(destination: TravelDestination) {
         self.destination = destination
@@ -107,93 +95,6 @@ struct EditDestinationView: View {
                                 }
                             }
                         }
-                    }
-                }
-                
-                Section("location_info".localized) {
-                    HStack {
-                        TextField("search_place".localized, text: $searchText)
-                            .textFieldStyle(.roundedBorder)
-                        
-                        Button("search".localized) {
-                            searchLocation()
-                        }
-                        .disabled(searchText.isEmpty)
-                    }
-                    
-                    NavigationLink {
-                        MapCoordinatePickerView(
-                            initialCoordinate: CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
-                        ) { item in
-                            // 从地图选点回填
-                            self.selectedLocation = item
-                            self.latitude = item.placemark.coordinate.latitude
-                            self.longitude = item.placemark.coordinate.longitude
-                            if let countryName = item.placemark.country, !countryName.isEmpty {
-                                self.country = countryName
-                            }
-                            // 自动填充省份（对于中国直辖市，会将其名称作为省份）
-                            self.province = CountryManager.extractProvince(
-                                administrativeArea: item.placemark.administrativeArea,
-                                locality: item.placemark.locality,
-                                country: self.country,
-                                isoCountryCode: item.placemark.isoCountryCode
-                            )
-                            // 名称不强制覆盖，保留用户原名称
-                        }
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "mappin.and.ellipse")
-                            Text("select_point_on_map".localized)
-                        }
-                    }
-                    
-                    if isSearching {
-                        ProgressView()
-                    }
-                    
-                    ForEach(searchResults, id: \.self) { item in
-                        Button {
-                            selectLocation(item)
-                        } label: {
-                            VStack(alignment: .leading) {
-                                Text(item.name ?? "unknown_place".localized)
-                                    .foregroundColor(.primary)
-                                if let address = item.placemark.title {
-                                    Text(address)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                        }
-                    }
-                    
-                    if let location = selectedLocation {
-                        HStack {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
-                            VStack(alignment: .leading) {
-                                Text("selected".localized + (location.name ?? ""))
-                                    .font(.caption)
-                                Text("latitude_longitude".localized(with: location.placemark.coordinate.latitude, location.placemark.coordinate.longitude))
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    } else {
-                        HStack {
-                            Image(systemName: "location.fill")
-                                .foregroundColor(.blue)
-                            VStack(alignment: .leading) {
-                                Text("current_location".localized)
-                                    .font(.caption)
-                                Text("latitude_longitude".localized(with: latitude, longitude))
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        .padding(.vertical, 4)
                     }
                 }
                 
@@ -355,230 +256,11 @@ struct EditDestinationView: View {
             }
         }
         videoData = destination.videoData
-        latitude = destination.latitude
-        longitude = destination.longitude
         selectedTrip = destination.trip
     }
     
-    private func searchLocation() {
-        isSearching = true
-        searchResults = []
-        
-        // 🎯 优化策略：根据分类选择不同的搜索方式
-        if category == "domestic" {
-            // 国内搜索：优先使用高德地图数据（通过 MKLocalSearch）
-            searchDomesticWithLocalData()
-        } else {
-            // 国外搜索：优先使用 Apple 国际数据（通过网络 API）
-            searchInternationalWithAppleData()
-        }
-    }
-    
-    // 🇨🇳 国内搜索：使用高德地图数据（通过 MKLocalSearch）
-    private func searchDomesticWithLocalData() {
-        print("🇨🇳 [编辑] 使用高德地图数据搜索国内地点: \(searchText)")
-        
-        let searchRequest = MKLocalSearch.Request()
-        searchRequest.naturalLanguageQuery = searchText
-        
-        // 设置搜索区域为中国（提高搜索准确性）
-        let chinaRegion = MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: 35.8617, longitude: 104.1954), // 中国中心点
-            span: MKCoordinateSpan(latitudeDelta: 50.0, longitudeDelta: 60.0) // 覆盖中国全境
-        )
-        searchRequest.region = chinaRegion
-        
-        // 设置结果类型
-        if #available(iOS 13.0, *) {
-            searchRequest.resultTypes = [.address, .pointOfInterest]
-        }
-        
-        let search = MKLocalSearch(request: searchRequest)
-        search.start { response, error in
-            DispatchQueue.main.async {
-                self.isSearching = false
-                
-                if let error = error {
-                    print("❌ [编辑] 高德地图搜索错误: \(error.localizedDescription)")
-                    // 如果高德搜索失败，尝试 CLGeocoder
-                    self.fallbackToCLGeocoderForChina()
-                    return
-                }
-                
-                if let response = response {
-                    self.searchResults = response.mapItems
-                    print("✅ [编辑] 高德地图找到 \(response.mapItems.count) 个国内地点")
-                } else {
-                    print("⚠️ [编辑] 高德地图未找到结果，尝试备用搜索")
-                    self.fallbackToCLGeocoderForChina()
-                }
-            }
-        }
-    }
-    
-    // 备用国内搜索：使用 CLGeocoder
-    private func fallbackToCLGeocoderForChina() {
-        print("🔄 [编辑] 备用搜索：使用 CLGeocoder 搜索国内地点")
-        
-        let domesticQuery = searchText.contains("中国") ? searchText : "\(searchText), 中国"
-        
-        let geocoder = CLGeocoder()
-        geocoder.geocodeAddressString(domesticQuery) { placemarks, error in
-            DispatchQueue.main.async {
-                if let placemarks = placemarks, !placemarks.isEmpty {
-                    // 过滤出中国的地点
-                    let chinesePlaces = placemarks.filter { placemark in
-                        placemark.isoCountryCode == "CN" || 
-                        placemark.country == "中国" || 
-                        placemark.country == "China"
-                    }
-                    
-                    if !chinesePlaces.isEmpty {
-                        let mapItems = chinesePlaces.compactMap { placemark -> MKMapItem? in
-                            guard let location = placemark.location else { return nil }
-                            return MKMapItem(placemark: MKPlacemark(placemark: placemark))
-                        }
-                        
-                        self.searchResults = mapItems
-                        print("✅ [编辑] CLGeocoder 找到 \(mapItems.count) 个国内地点")
-                    } else {
-                        self.searchResults = []
-                        print("❌ [编辑] 未找到国内地点")
-                    }
-                } else {
-                    self.searchResults = []
-                    print("❌ [编辑] CLGeocoder 搜索失败")
-                }
-            }
-        }
-    }
-    
-    // 🌍 国外搜索：优先使用 Apple 国际数据（通过网络 API）
-    private func searchInternationalWithAppleData() {
-        print("🌍 [编辑] 使用 Apple 国际数据搜索国外地点: \(searchText)")
-        
-        // 🔑 策略1：先检查预设城市库（快速响应）
-        if let cityInfo = cityDataManager.findCity(by: searchText) {
-            print("✅ [编辑] 从预设城市库找到: \(cityInfo.localizedName), \(cityInfo.localizedCountry)")
-            
-            // 创建 MKPlacemark 和 MKMapItem
-            let coordinate = CLLocationCoordinate2D(latitude: cityInfo.latitude, longitude: cityInfo.longitude)
-            let placemark = MKPlacemark(coordinate: coordinate, addressDictionary: [
-                CNPostalAddressCountryKey: cityInfo.localizedCountry,
-                CNPostalAddressCityKey: cityInfo.localizedName
-            ])
-            let mapItem = MKMapItem(placemark: placemark)
-            mapItem.name = cityInfo.localizedName
-            
-            DispatchQueue.main.async {
-                self.searchResults = [mapItem]
-                self.isSearching = false
-                print("✅ [编辑] 使用预设坐标: (\(cityInfo.latitude), \(cityInfo.longitude))")
-            }
-            return
-        }
-        
-        // 🔑 策略2：使用 Apple 国际数据 API
-        print("🔍 [编辑] 预设库中未找到，尝试使用 Apple 国际数据...")
-        searchWithAppleInternationalAPI()
-    }
-    
-    // 使用 Apple 国际数据 API 搜索
-    private func searchWithAppleInternationalAPI() {
-        let geocoder = CLGeocoder()
-        geocoder.geocodeAddressString(searchText) { placemarks, error in
-            DispatchQueue.main.async {
-                self.isSearching = false
-                
-                if let error = error {
-                    print("❌ [编辑] Apple 国际数据 API 错误: \(error.localizedDescription)")
-                    // 如果 Apple API 失败，尝试 MKLocalSearch
-                    self.fallbackToMKLocalSearch()
-                    return
-                }
-                
-                if let placemarks = placemarks, !placemarks.isEmpty {
-                    print("📍 [编辑] Apple 国际数据 API 返回 \(placemarks.count) 个原始结果")
-                    
-                    // 将所有地点转换为 MKMapItem
-                    let allMapItems = placemarks.compactMap { placemark -> MKMapItem? in
-                        guard let location = placemark.location else { return nil }
-                        return MKMapItem(placemark: MKPlacemark(placemark: placemark))
-                    }
-                    
-                    // 优先显示非中国的地点
-                    let internationalItems = allMapItems.filter { item in
-                        item.placemark.isoCountryCode != "CN" &&
-                        item.placemark.country != "中国" &&
-                        item.placemark.country != "China"
-                    }
-                    
-                    print("🔍 [编辑] 过滤后的国外地点数量: \(internationalItems.count)")
-                    
-                    let finalResults = internationalItems.isEmpty ? allMapItems : internationalItems
-                    
-                    self.searchResults = finalResults
-                    print("✅ [编辑] Apple 国际数据最终显示 \(finalResults.count) 个地点")
-                } else {
-                    print("⚠️ [编辑] Apple 国际数据 API 未找到结果")
-                    self.fallbackToMKLocalSearch()
-                }
-            }
-        }
-    }
-    
-    // 备用搜索方法：使用 MKLocalSearch
-    private func fallbackToMKLocalSearch() {
-        print("🔄 [编辑] 备用搜索：使用 MKLocalSearch")
-        
-        let searchRequest = MKLocalSearch.Request()
-        searchRequest.naturalLanguageQuery = searchText
-        
-        // 不设置 region，让系统根据查询内容自动匹配
-        // 设置结果类型（仅包括 address 和 pointOfInterest）
-        if #available(iOS 13.0, *) {
-            searchRequest.resultTypes = [.address, .pointOfInterest]
-        }
-        
-        searchRequest.pointOfInterestFilter = nil
-        
-        let search = MKLocalSearch(request: searchRequest)
-        search.start { response, error in
-            DispatchQueue.main.async {
-                self.isSearching = false
-                
-                if let error = error {
-                    print("❌ [编辑] MKLocalSearch 搜索错误: \(error.localizedDescription)")
-                    return
-                }
-                
-                if let response = response {
-                    self.searchResults = response.mapItems
-                    print("✅ [编辑] MKLocalSearch 搜索到 \(response.mapItems.count) 个结果")
-                }
-            }
-        }
-    }
-    
-    private func selectLocation(_ item: MKMapItem) {
-        selectedLocation = item
-        latitude = item.placemark.coordinate.latitude
-        longitude = item.placemark.coordinate.longitude
-        // 自动填充国家
-        country = item.placemark.country ?? ""
-        // 自动填充省份（对于中国直辖市，会将其名称作为省份）
-        province = CountryManager.extractProvince(
-            administrativeArea: item.placemark.administrativeArea,
-            locality: item.placemark.locality,
-            country: country,
-            isoCountryCode: item.placemark.isoCountryCode
-        )
-        searchResults = []
-        searchText = ""
-    }
-    
     private func saveChanges() {
-        // 更新目的地信息
+        // 更新目的地信息（坐标保持创建时的值，编辑页不再修改）
         destination.name = name
         destination.country = country
         destination.province = province
@@ -595,12 +277,6 @@ struct EditDestinationView: View {
         destination.photoThumbnailData = thumbnailsToSave.first
         destination.videoData = videoData
         destination.trip = selectedTrip
-        
-        // 如果选择了新位置，更新坐标
-        if let location = selectedLocation {
-            destination.latitude = location.placemark.coordinate.latitude
-            destination.longitude = location.placemark.coordinate.longitude
-        }
         
         // 显式保存更改，确保数据已同步
         try? modelContext.save()

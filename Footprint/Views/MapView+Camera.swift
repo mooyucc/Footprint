@@ -551,6 +551,20 @@ extension MapView {
     
     // 将地图定位到当前位置
     func centerMapOnCurrentLocation() {
+        // 冷启动尚未锁定时并入初始 settle，避免与 withAnimation 抢相机后又被拉回 fallback
+        if !MapView.hasCompletedInitialCameraSettlement, !autoShowRouteCards {
+            locationManager.startUpdatingLocation(mode: .mapBrowsing)
+            locationManager.requestLocation()
+            if let userLocation = locationManager.lastKnownLocation {
+                applyInitialCamera(to: userLocation, animated: false)
+                print("📍 定位按钮：并入初始相机锁定")
+            } else {
+                waitingForLocationToSetCamera = true
+                print("⏳ 定位按钮：等待初始定位…")
+            }
+            return
+        }
+        
         if let userLocation = locationManager.lastKnownLocation {
             locationManager.startUpdatingLocation(mode: .mapBrowsing)
             setCameraToUserLocation(userLocation)

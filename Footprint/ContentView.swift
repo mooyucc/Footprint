@@ -12,9 +12,10 @@ import UIKit
 
 struct ContentView: View {
     @State private var selectedTab = 0
-    /// 已实例化的 Tab 索引；默认仅加载地图 Tab，避免启动时多个 Tab 同时 @Query 全量数据
+    /// 已实例化的 Tab 索引；默认仅加载地图 Tab，避免启动时多个 Tab 同时冷启动
     @State private var loadedTabs: Set<Int> = [0]
     @State private var tabPreloadTask: Task<Void, Never>?
+    @State private var tabUIPreloadTask: Task<Void, Never>?
     @State private var reviewPromptTask: Task<Void, Never>?
     @EnvironmentObject var languageManager: LanguageManager
     @EnvironmentObject var brandColorManager: BrandColorManager
@@ -22,6 +23,7 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.modelContext) private var modelContext
     @Environment(\.requestReview) private var requestReview
+    @Environment(\.isAppReady) private var isAppReady
     
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -85,11 +87,22 @@ struct ContentView: View {
             if selectedTab == 0 {
                 LocationManager.shared.startUpdatingLocation(mode: .mapBrowsing)
             }
-            scheduleDeferredTabPreloading()
+            // 只绑定上下文；数据/其它 Tab 等骨架期后再预热，避免抢开机动画与地图首帧
+            TabListSnapshotStore.shared.attach(modelContext: modelContext)
+            if isAppReady {
+                scheduleDeferredTabPreloading()
+            }
             AppReviewPromptManager.shared.seedDestinationCount(currentDestinationCount())
+        }
+        .onChange(of: isAppReady) { _, ready in
+            // 主界面可见后再预热其它 Tab 数据与 UI（对齐骨架约 1s）
+            if ready {
+                scheduleDeferredTabPreloading()
+            }
         }
         .onDisappear {
             tabPreloadTask?.cancel()
+            tabUIPreloadTask?.cancel()
             reviewPromptTask?.cancel()
         }
         .onReceive(NotificationCenter.default.publisher(for: .destinationUpdated)) { _ in
@@ -127,9 +140,12 @@ struct ContentView: View {
             if newPhase == .background {
                 locationManager.stopUpdatingLocation()
                 print("📍 App 进入后台，停止实时定位")
-            } else if newPhase == .active && selectedTab == 0 {
-                locationManager.startUpdatingLocation(mode: .mapBrowsing)
-                print("📍 App 回到前台且在地图 tab，重新启动实时定位")
+            } else if newPhase == .active {
+                TabListSnapshotStore.shared.refreshIfStaleOnForeground()
+                if selectedTab == 0 {
+                    locationManager.startUpdatingLocation(mode: .mapBrowsing)
+                    print("📍 App 回到前台且在地图 tab，重新启动实时定位")
+                }
             }
         }
     }
@@ -169,18 +185,42 @@ struct ContentView: View {
         }
     }
 
-    /// 地图 Tab 稳定后分批挂载其余 Tab，避免用户首次切换时集中初始化 @Query 与统计缓存
+    /// 主界面骨架约 1s 后再备其它 Tab 数据并预挂载，不抢开机动画与地图首帧
     private func scheduleDeferredTabPreloading() {
+        guard isAppReady else { return }
         tabPreloadTask?.cancel()
-        tabPreloadTask = Task(priority: .userInitiated) { @MainActor in
-            // 留出地图首帧、相机与启动定位的窗口。数据已在 Splash 预热，这里只建视图。
-            try? await Task.sleep(nanoseconds: 350_000_000)
+        tabPreloadTask = Task(priority: .utility) { @MainActor in
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
             guard !Task.isCancelled else { return }
+            guard scenePhase == .active, isAppReady else { return }
+
+            let snapshots = TabListSnapshotStore.shared
+            snapshots.ensureJourneyTrips()
+            try? await Task.sleep(nanoseconds: 100_000_000)
+            guard !Task.isCancelled else { return }
+
+            snapshots.ensureProfileData()
+            try? await Task.sleep(nanoseconds: 100_000_000)
+            guard !Task.isCancelled else { return }
+
+            if let year = ProfileCacheStore.shared.timelineYearItems.first?.year {
+                snapshots.loadYear(year)
+            }
+
+            scheduleOtherTabsUIPreload(delayNanoseconds: 120_000_000)
+        }
+    }
+
+    /// 分批预挂载非地图 Tab，减轻首切卡顿（不取消数据预热任务）
+    private func scheduleOtherTabsUIPreload(delayNanoseconds: UInt64 = 120_000_000) {
+        tabUIPreloadTask?.cancel()
+        tabUIPreloadTask = Task(priority: .userInitiated) { @MainActor in
+            try? await Task.sleep(nanoseconds: delayNanoseconds)
+            guard !Task.isCancelled else { return }
+            guard scenePhase == .active else { return }
 
             for index in 1...3 where !loadedTabs.contains(index) {
                 loadedTabs.insert(index)
-                // 等 SwiftUI 把该 Tab 的内容写进对应控制器，再强制加载视图。
-                // TabView 默认要等第一次选中才执行 body / @Query。
                 try? await Task.sleep(nanoseconds: 80_000_000)
                 guard !Task.isCancelled else { return }
                 loadTabViewIfNeeded(at: index)
@@ -190,7 +230,7 @@ struct ContentView: View {
         }
     }
 
-    /// 系统 Tab 会懒加载未选中页。数据已在主上下文后，趁地图页空闲把其余页的视图建出来。
+    /// 系统 Tab 懒加载未选中页；预挂载时强制 loadView，提前跑各 Tab onAppear
     private func loadTabViewIfNeeded(at index: Int) {
         guard let controllers = Self.tabBarControllerInKeyWindows()?.viewControllers,
               controllers.indices.contains(index) else { return }
@@ -230,7 +270,7 @@ struct ContentView: View {
         }
         return nil
     }
-    
+
     private func configureTabBarAppearance(for scheme: ColorScheme, brandColor: Color) {
         // 使用品牌颜色作为选中颜色，确保所有 tab 一致
         let selectedColor: UIColor = UIColor(brandColor)

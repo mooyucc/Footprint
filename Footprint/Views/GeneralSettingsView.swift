@@ -203,18 +203,6 @@ struct GeneralSettingsView: View {
     private var currentMapStyle: MapStyle {
         MapStyle(rawValue: mapStyleRawValue) ?? .muted
     }
-    
-    /// 获取外观模式的图标
-    private func modeIcon(for mode: AppearanceManager.AppearanceMode) -> String {
-        switch mode {
-        case .system:
-            return "circle.lefthalf.filled"
-        case .dark:
-            return "moon.fill"
-        case .light:
-            return "sun.max.fill"
-        }
-    }
 }
 
 // 通用设置行标签，确保文本使用系统主色而图标保留品牌色
