@@ -181,6 +181,7 @@ struct TripDataImporter {
                 existingDestination.photoDatas = destInfo.photoDatas ?? []
                 existingDestination.photoThumbnailDatas = destInfo.photoThumbnailDatas ?? []
                 existingDestination.videoData = destInfo.videoData
+                existingDestination.updateHasPhotosFlag()
                 existingDestination.category = destInfo.category
                 existingDestination.isFavorite = destInfo.isFavorite
                 

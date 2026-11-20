@@ -12,6 +12,8 @@ import UIKit
 enum ProvinceTicketDiskCache {
     /// 本会话写入或命中缓存时的地点版本。版本变了就不用旧文件。
     private static var appliedRevision: Int?
+    /// 本进程是否已算过票面。冷启动不读盘，以便封面随机换一批。
+    private static var hasComputedThisLaunch = false
 
     static func fingerprint(of snapshots: [ProfileDestinationSnapshot]) -> String {
         let lines = snapshots
@@ -24,6 +26,8 @@ enum ProvinceTicketDiskCache {
     }
 
     static func load(fingerprint: String) -> [String: ProvinceTicketReady]? {
+        // 冷启动跳过磁盘，走 ProvinceTicketPicker 随机；同进程内首次算完后才读盘复用。
+        guard hasComputedThisLaunch else { return nil }
         let revision = DestinationDataRevision.shared.revision
         if let appliedRevision, appliedRevision != revision {
             return nil
@@ -42,6 +46,7 @@ enum ProvinceTicketDiskCache {
 
     static func save(fingerprint: String, items: [String: ProvinceTicketReady]) {
         guard !items.isEmpty else { return }
+        hasComputedThisLaunch = true
         appliedRevision = DestinationDataRevision.shared.revision
         let payload = Payload(
             fingerprint: fingerprint,

@@ -1,6 +1,15 @@
 "paywall_current_subscription" = "वर्तमान सदस्यता";
 "paywall_expires_on" = "समाप्ति समय: ";
-"paywall_feature_ai" = "AI सहायक (नोट्स, यात्रा विवरण, फोटो विश्लेषण, सुझाव; क्रेडिट से)";
+"paywall_feature_ai" = "AI सहायक क्रेडिट से अलग खरीद (Pro में शामिल नहीं)";
+"paywall_feature_ai_aside" = "AI क्रेडिट से अलग (Pro से स्वतंत्र)";
+"paywall_feature_photos" = "प्रत्येक गंतव्य पर अधिकतम %d फ़ोटो";
+"paywall_feature_share_layouts" = "बिना वॉटरमार्क के पूरे शेयर लेआउट";
+"paywall_lifetime_plan_subtitle" = "एक बार खरीद · कभी-कभार यात्रा और लंबे समय तक देखने के लिए";
+"paywall_lifetime_extra" = "मासिक शुल्क नहीं · AI अलग";
+"paywall_subscription_extra" = "व्यस्त यात्रा वर्ष के लिए · AI अलग";
+"share_pro_banner_title" = "बेहतर शेयर के लिए Pro लें";
+"share_pro_banner_subtitle" = "वॉटरमार्क हटाएँ और पूरे लेआउट खोलें";
+"share_pro_paywall_context" = "Pro में अपग्रेड करें: वॉटरमार्क हटाएँ और पूरे शेयर लेआउट खोलें।";
 "ai_assistant_title" = "AI सहायक";
 "ai_assistant_welcome" = "AI को आपकी यात्रा दर्ज करने में मदद करने दें";
 "ai_assistant_subtitle" = "नोट्स, विवरण और टैग बुद्धिमानी से बनाएँ, ताकि आपकी यात्रा की यादें समृद्ध हों";
@@ -37,20 +46,33 @@
 
 // Onboarding
 "onboarding_identity_tag_title" = "पहचान टैग";
-"onboarding_identity_tag_description" = "एक पहचान टैग चुनें या अपना खुद का दर्ज करें ताकि AI आपकी शैली में उत्तर दे सके।";
+"onboarding_identity_tag_description" = "पहचान टैग चुनें या अपना लिखें, ताकि एक थीम रंग सुझाया जा सके।";
 "onboarding_personality_tag_title" = "व्यक्तित्व प्रकार";
 "onboarding_personality_tag_description" = "अपना व्यक्तित्व प्रकार चुनें ताकि AI का उत्तर आपकी शैली से मेल खाए।";
 "onboarding_user_attributes_title" = "उपयोगकर्ता विशेषताएं";
 "onboarding_user_attributes_description" = "अपना लिंग, आयु समूह और राशि चिन्ह चुनें ताकि AI आपको बेहतर समझ सके और अधिक व्यक्तिगत उत्तर दे सके।";
 "onboarding_user_attributes_description_short" = "अपना लिंग और आयु समूह चुनें ताकि AI आपको बेहतर समझ सके और अधिक व्यक्तिगत उत्तर दे सके।";
 "onboarding_constellation_title" = "राशि चिन्ह";
-"onboarding_constellation_description" = "अपना राशि चिन्ह चुनें ताकि AI का उत्तर आपकी व्यक्तित्व से मेल खाए।";
+"onboarding_constellation_description" = "राशि चुनें तो एक और थीम रंग दिखेगा। छोड़ना भी ठीक है।";
 "gender_title" = "लिंग";
 "gender_description" = "अपना लिंग चुनें ताकि AI अधिक व्यक्तिगत उत्तर दे सके।";
 "age_group_title" = "आयु समूह";
 "age_group_description" = "अपना आयु समूह चुनें ताकि AI आपकी आवश्यकताओं को बेहतर समझ सके।";
 "constellation_title" = "राशि चिन्ह";
-"constellation_description" = "अपना राशि चिन्ह चुनें ताकि AI का उत्तर आपकी व्यक्तित्व से मेल खाए।";
+"constellation_description" = "राशि चुनें तो एक और थीम रंग दिखेगा।";
+"onboarding_theme_color_title" = "आपका थीम रंग";
+"onboarding_theme_color_description" = "पहचान मुख्य रंग सुझाती है। राशि चुनने पर दूसरा रंग भी दिखता है। «यह रंग इस्तेमाल करें» दबाने तक मौजूदा रंग बना रहता है।";
+"onboarding_theme_color_empty" = "कस्टम पहचान या बिना राशि के, मौजूदा थीम रंग बना रहता है।";
+"onboarding_theme_color_use" = "यह रंग इस्तेमाल करें";
+"onboarding_theme_color_pick" = "खुद चुनें";
+"profile_theme_color_description" = "कोई रंग चुनने से थीम रंग तुरंत बदल जाता है। पहचान और राशि को अभी भी सहेजना होगा।";
+"theme_source_persona" = "पहचान";
+"theme_source_constellation" = "राशि";
+"theme_color_in_use" = "उपयोग में";
+"theme_color_reset_hint" = "बाद में सेटिंग्स › सामान्य › दिखावट में डिफ़ॉल्ट पर टैप करके ऐप के मूल थीम रंग पर वापस जा सकते हैं।";
+"theme_source_default" = "डिफ़ॉल्ट";
+"theme_default_name" = "App";
+"theme_source_custom" = "कस्टम";
 
 // Profile Options - Persona
 "persona_option_traveler" = "यात्री";
@@ -94,7 +116,8 @@
 
 // Profile - Identity Tag & MBTI
 "identity_tag" = "पहचान टैग";
-"identity_tag_description" = "एक पहचान टैग चुनें या अपना खुद का दर्ज करें ताकि AI आपकी शैली में उत्तर दे सके।";
+"identity_tag_description" = "पहचान टैग चुनें या अपना लिखें, ताकि एक थीम रंग सुझाया जा सके।";
+"account_profile_section" = "प्रोफ़ाइल";
 "identity_tag_placeholder" = "यात्री, खाने के शौकीन, डिज़ाइनर…";
 "show_all_destinations" = "सभी स्थान";
 "all_destinations" = "सभी गंतव्य";
@@ -193,9 +216,10 @@
 "destination_share_cover_option" = "कवर फ़ोटो चुनें";
 "destination_share_edit_text" = "टेक्स्ट संपादित करें";
 "destination_share_edit_text_hint" = "छवि पर टेक्स्ट बदलने के लिए पूर्वावलोकन टैप करें";
-"destination_share_overlay_section" = "छवि पर टेक्स्ट";
+"destination_share_title_label" = "शीर्षक";
+"destination_share_overlay_section" = "उपशीर्षक";
 "destination_share_overlay_placeholder" = "एक छोटी पंक्ति";
-"destination_share_overlay_footer" = "पोस्टर पर दिखेगा। एक छोटी पंक्ति बेहतर है।";
+"destination_share_overlay_footer" = "शीर्षक स्थान का नाम है। उपशीर्षक पोस्टर पर दिखेगा — एक छोटी पंक्ति बेहतर है।";
 "destination_share_ai_generate" = "AI एक पंक्ति";
 "destination_share_ai_generating" = "बनाया जा रहा है…";
 "destination_share_caption_section" = "शेयर कैप्शन";

@@ -18,14 +18,34 @@ import ImageIO
 import Contacts
 
 extension MapView {
+    @ViewBuilder
     var mapLayer: some View {
+        // 始终挂真 Map：无定位时首帧为上海，定位到后再跳到用户位置
+        interactiveMap
+    }
+
+    /// 初始锁定完成前忽略 Map 写回，避免首帧把手机位置盖掉
+    var lockedMapCameraPosition: Binding<MapCameraPosition> {
+        Binding(
+            get: { mapCameraPosition },
+            set: { newValue in
+                let keepProgrammaticCamera = !autoShowRouteCards
+                    && !Self.hasCompletedInitialCameraSettlement
+                    && isInitialMapVisible
+                if keepProgrammaticCamera { return }
+                mapCameraPosition = newValue
+            }
+        )
+    }
+
+    var interactiveMap: some View {
         MapReader { proxy in
-            Map(position: $mapCameraPosition, selection: $mapSelection) {
+            Map(position: lockedMapCameraPosition, selection: $mapSelection) {
                 tripConnections
                 if autoShowRouteCards {
                     routeTripDestinationMarkers
                 } else if isStartupContentVisible {
-                    // 骨架期不画标注，先出地图框架，约 1s 后再淡入内容
+                    // 揭晓前不画标注，先让 Map / 瓦片格子露出
                     clusterMarkers
                 }
                 if isStartupContentVisible || autoShowRouteCards {
@@ -100,6 +120,7 @@ extension MapView {
         
         if state == .serious || state == .critical {
             showSoapBubbles = false
+            selectedBubbleDestination = nil
             assistiveMenuExpanded = false
         }
 

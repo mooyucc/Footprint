@@ -192,32 +192,7 @@ struct OnboardingConstellationView: View {
                 }
                 .padding(.horizontal, 20)
                 
-                // 页面指示器（显示基本设置的6个步骤）
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(Color(.systemGray4))
-                        .frame(width: 8, height: 8)
-                    
-                    Circle()
-                        .fill(Color(.systemGray4))
-                        .frame(width: 8, height: 8)
-                    
-                    Circle()
-                        .fill(Color(.systemGray4))
-                        .frame(width: 8, height: 8)
-                    
-                    Circle()
-                        .fill(Color(.systemGray4))
-                        .frame(width: 8, height: 8)
-                    
-                    Circle()
-                        .fill(Color(.systemGray4))
-                        .frame(width: 8, height: 8)
-                    
-                    Circle()
-                        .fill(brandColorManager.currentBrandColor)
-                        .frame(width: 8, height: 8)
-                }
+                OnboardingStepDots(count: 5, activeIndex: 3, activeColor: brandColorManager.currentBrandColor)
                 .padding(.bottom, 20)
             }
             .padding(.top, 20)
@@ -231,7 +206,7 @@ struct OnboardingConstellationView: View {
         .onAppear {
             // 如果已有保存的星座，恢复选择
             if !userProfileManager.constellation.isEmpty {
-                selectedConstellation = userProfileManager.constellation
+                selectedConstellation = UserProfileOptions.constellationLocalizedValue(for: userProfileManager.constellation)
             }
         }
     }

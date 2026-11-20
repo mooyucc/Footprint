@@ -18,17 +18,13 @@ struct AIAssistantView: View {
     @EnvironmentObject private var brandColorManager: BrandColorManager
     @EnvironmentObject private var entitlementManager: EntitlementManager
     @EnvironmentObject private var aiCreditManager: AICreditManager
+    @Environment(\.modelContext) private var modelContext
     
-    @Query private var destinations: [TravelDestination]
-    @Query private var trips: [TravelTrip]
-    
-    @StateObject private var aiManager = AIModelManager.shared
     @State private var selectedDestination: TravelDestination?
     @State private var selectedTrip: TravelTrip?
     @State private var showingDestinationPicker = false
     @State private var showingTripPicker = false
     @State private var pendingAction: AIAction?
-    @State private var showPaywall = false
     @State private var showCreditPaywall = false
     
     // 检查是否为Beta版本
@@ -41,6 +37,14 @@ struct AIAssistantView: View {
         if isBetaBuild { return true }
         if entitlementManager.canUseAIFeatures { return true }
         return aiCreditManager.remaining > 0
+    }
+
+    private var hasDestinations: Bool {
+        ((try? modelContext.fetchCount(FetchDescriptor<TravelDestination>())) ?? 0) > 0
+    }
+
+    private var hasTrips: Bool {
+        ((try? modelContext.fetchCount(FetchDescriptor<TravelTrip>())) ?? 0) > 0
     }
     
     var body: some View {
@@ -58,6 +62,8 @@ struct AIAssistantView: View {
                     subscriptionRequiredView
                 } else {
                     // 已订阅或测试版：显示AI功能列表
+                    let destinationsAvailable = hasDestinations
+                    let tripsAvailable = hasTrips
                     VStack(spacing: 16) {
                         // 智能笔记生成
                         aiFunctionCard(
@@ -65,7 +71,7 @@ struct AIAssistantView: View {
                             title: "ai_function_notes_title".localized,
                             description: "ai_function_notes_desc".localized,
                             color: .blue,
-                            isAvailable: !destinations.isEmpty
+                            isAvailable: destinationsAvailable
                         ) {
                             showDestinationSelector(for: .generateNotes)
                         }
@@ -76,7 +82,7 @@ struct AIAssistantView: View {
                             title: "ai_function_trip_desc_title".localized,
                             description: "ai_function_trip_desc_desc".localized,
                             color: .purple,
-                            isAvailable: !trips.isEmpty
+                            isAvailable: tripsAvailable
                         ) {
                             showTripSelector(for: .generateDescription)
                         }
@@ -87,7 +93,7 @@ struct AIAssistantView: View {
                             title: "ai_function_recommend_title".localized,
                             description: "ai_function_recommend_desc".localized,
                             color: .green,
-                            isAvailable: !destinations.isEmpty
+                            isAvailable: destinationsAvailable
                         ) {
                             showRecommendDestination()
                         }
@@ -108,14 +114,14 @@ struct AIAssistantView: View {
                 }
             }
             .sheet(isPresented: $showingDestinationPicker) {
-                DestinationPickerView(destinations: destinations) { destination in
+                DestinationPickerView { destination in
                     selectedDestination = destination
                     currentAction = pendingAction ?? .generateNotes
                     showingDestinationPicker = false
                 }
             }
             .sheet(isPresented: $showingTripPicker) {
-                TripPickerView(trips: trips) { trip in
+                TripPickerView { trip in
                     selectedTrip = trip
                     currentAction = pendingAction ?? .generateDescription
                     showingTripPicker = false
@@ -127,14 +133,11 @@ struct AIAssistantView: View {
             .sheet(item: $selectedTrip) { trip in
                 AIActionSheet(trip: trip, action: currentAction)
             }
-            .sheet(isPresented: $showPaywall) {
-                PaywallView()
-            }
             .sheet(isPresented: $showCreditPaywall) {
                 AICreditPaywallView()
             }
             .sheet(isPresented: $showingRecommendSheet) {
-                AIRecommendDestinationSheet(destinations: destinations)
+                AIRecommendDestinationSheet()
             }
         }
     }
@@ -326,28 +329,15 @@ struct AIAssistantView: View {
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
             
-            VStack(spacing: 12) {
-                Button {
-                    showCreditPaywall = true
-                } label: {
-                    Label("ai_buy_per_use_button".localized, systemImage: "sparkles")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(brandColorManager.currentBrandColor)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
-                }
-                
-                Button {
-                    showPaywall = true
-                } label: {
-                    Label("ai_upgrade_to_pro".localized, systemImage: "star.fill")
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                }
-                .buttonStyle(.bordered)
-                .tint(brandColorManager.currentBrandColor)
-                .controlSize(.large)
+            Button {
+                showCreditPaywall = true
+            } label: {
+                Label("ai_buy_per_use_button".localized, systemImage: "sparkles")
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(brandColorManager.currentBrandColor)
+                    .foregroundColor(.white)
+                    .cornerRadius(12)
             }
             .padding(.horizontal, 8)
         }

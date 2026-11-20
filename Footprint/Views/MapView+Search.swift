@@ -63,21 +63,18 @@ extension MapView {
             span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
         )
         
-        withAnimation(.easeInOut(duration: 0.8)) {
+        withAnimation(.easeInOut(duration: 0.4)) {
             mapCameraPosition = .region(region)
         }
         
-        // 显示POI预览卡片（与点击地图POI的行为一致）
-        // 延迟一点显示，等待地图移动动画开始
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                self.selectedPOI = mapItem
-                self.showingPOIPreview = true
-            }
+        // 地点卡片与地图同时出现
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+            selectedPOI = mapItem
+            showingPOIPreview = true
         }
         
         // 关闭搜索栏，但保留搜索结果和搜索文本（用户关闭POI卡片后可以重新打开搜索栏查看其他结果）
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+        withAnimation(.spring(response: 0.25, dampingFraction: 1.0)) {
             showSearchBar = false
             isSearchFocused = false
             // 注意：不清空 searchText 和 searchResults，这样用户重新打开搜索栏时还能看到结果

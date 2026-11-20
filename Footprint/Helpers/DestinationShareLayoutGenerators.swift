@@ -105,7 +105,7 @@ struct PhotoPosterDestinationLayoutGenerator: DestinationLayoutGenerator {
             dateAttr.draw(at: CGPoint(x: padding, y: cursorY))
             cursorY -= canvasSize.height * 0.018
             
-            // 地点副标题（省 / 国家）
+            // 地点注脚（省 / 国家）
             let locationLine = Self.locationSubtitle(for: destination)
             if !locationLine.isEmpty {
                 let locFont = UIFont.systemFont(ofSize: canvasSize.width * 0.034, weight: .regular)
@@ -127,11 +127,39 @@ struct PhotoPosterDestinationLayoutGenerator: DestinationLayoutGenerator {
                 cursorY -= canvasSize.height * 0.014
             }
             
-            // 主标题：可编辑图上短句，空则回退地点名
-            let titleText = DestinationGalleryCardStyle.primaryCaption(
-                destination: destination,
-                overlayCaption: overlayCaption
-            )
+            // 副标题：可编辑 / AI 短句（明显小于标题）
+            let subtitleText = DestinationGalleryCardStyle.subtitleCaption(overlayCaption: overlayCaption)
+            if !subtitleText.isEmpty {
+                let subtitleFont = UIFont.systemFont(ofSize: canvasSize.width * 0.036, weight: .medium)
+                let subtitleStyle = NSMutableParagraphStyle()
+                subtitleStyle.lineBreakMode = .byWordWrapping
+                subtitleStyle.lineSpacing = 2
+                let subtitleAttr = NSAttributedString(
+                    string: subtitleText,
+                    attributes: [
+                        .font: subtitleFont,
+                        .foregroundColor: UIColor.white.withAlphaComponent(0.92),
+                        .paragraphStyle: subtitleStyle
+                    ]
+                )
+                let maxSubtitleHeight = subtitleFont.lineHeight * 3
+                let subtitleRect = subtitleAttr.boundingRect(
+                    with: CGSize(width: contentWidth, height: maxSubtitleHeight),
+                    options: [.usesLineFragmentOrigin, .usesFontLeading],
+                    context: nil
+                )
+                let subtitleHeight = min(ceil(subtitleRect.height), maxSubtitleHeight)
+                cursorY -= subtitleHeight
+                cg.saveGState()
+                cg.addRect(CGRect(x: padding, y: cursorY, width: contentWidth, height: subtitleHeight))
+                cg.clip()
+                subtitleAttr.draw(in: CGRect(x: padding, y: cursorY, width: contentWidth, height: subtitleHeight))
+                cg.restoreGState()
+                cursorY -= canvasSize.height * 0.012
+            }
+            
+            // 主标题：地点名
+            let titleText = DestinationGalleryCardStyle.titleText(for: destination)
             let titleFontSize = canvasSize.width * 0.078
             let titleFont = UIFont.systemFont(ofSize: titleFontSize, weight: .bold)
             let titleStyle = NSMutableParagraphStyle()
@@ -146,7 +174,7 @@ struct PhotoPosterDestinationLayoutGenerator: DestinationLayoutGenerator {
                     .kern: -0.5
                 ]
             )
-            let maxTitleHeight = titleFont.lineHeight * 3
+            let maxTitleHeight = titleFont.lineHeight * 2
             let titleRect = titleAttr.boundingRect(
                 with: CGSize(width: contentWidth, height: maxTitleHeight),
                 options: [.usesLineFragmentOrigin, .usesFontLeading],
@@ -244,27 +272,21 @@ enum DestinationGalleryCardStyle {
     static let photoBorder = UIColor(white: 0.82, alpha: 1)
     
     static func serifFont(size: CGFloat, weight: UIFont.Weight = .regular) -> UIFont {
-        let base = UIFont.systemFont(ofSize: size, weight: weight)
-        if let descriptor = base.fontDescriptor.withDesign(.serif) {
-            return UIFont(descriptor: descriptor, size: size)
-        }
-        return base
+        FootprintType.Share.caption(size: size, weight: weight)
     }
     
     static func monoFont(size: CGFloat) -> UIFont {
-        let base = UIFont.systemFont(ofSize: size, weight: .regular)
-        if let descriptor = base.fontDescriptor.withDesign(.monospaced) {
-            return UIFont(descriptor: descriptor, size: size)
-        }
-        return UIFont.monospacedSystemFont(ofSize: size, weight: .regular)
+        FootprintType.Share.meta(size: size)
     }
     
-    /// 图上主文案：优先用户编辑短句，其次默认备注/地点名（控制在一句以内）
-    static func primaryCaption(destination: TravelDestination, overlayCaption: String?) -> String {
-        if let overlay = overlayCaption?.trimmingCharacters(in: .whitespacesAndNewlines), !overlay.isEmpty {
-            return String(overlay.prefix(40))
-        }
-        return ShareImageUtilities.destinationOverlayCaption(for: destination, maxLength: 40)
+    /// 图上主标题：地点名
+    static func titleText(for destination: TravelDestination) -> String {
+        destination.name.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    /// 图上副标题：用户编辑 / AI 短句（传入时已按编辑上限截断，此处不再另加字数上限）
+    static func subtitleCaption(overlayCaption: String?) -> String {
+        overlayCaption?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }
     
     static func locationLine(for destination: TravelDestination) -> String {
@@ -340,33 +362,60 @@ struct GallerySideDestinationLayoutGenerator: DestinationLayoutGenerator {
             let textX = photoRect.maxX + gap
             let textWidth = max(40, w - textX - margin)
             
-            let caption = DestinationGalleryCardStyle.primaryCaption(
-                destination: destination,
-                overlayCaption: overlayCaption
-            )
-            let captionFont = DestinationGalleryCardStyle.serifFont(size: w * 0.036)
-            let captionStyle = NSMutableParagraphStyle()
-            captionStyle.lineSpacing = 5
-            captionStyle.lineBreakMode = .byWordWrapping
-            let captionAttr = NSAttributedString(string: caption, attributes: [
-                .font: captionFont,
+            let title = DestinationGalleryCardStyle.titleText(for: destination)
+            let titleFont = DestinationGalleryCardStyle.serifFont(size: w * 0.042, weight: .semibold)
+            let titleStyle = NSMutableParagraphStyle()
+            titleStyle.lineSpacing = 3
+            titleStyle.lineBreakMode = .byWordWrapping
+            let titleAttr = NSAttributedString(string: title, attributes: [
+                .font: titleFont,
                 .foregroundColor: DestinationGalleryCardStyle.primaryText,
-                .paragraphStyle: captionStyle
+                .paragraphStyle: titleStyle
             ])
-            let maxCaptionHeight = captionFont.lineHeight * 4
-            let captionBounds = captionAttr.boundingRect(
-                with: CGSize(width: textWidth, height: maxCaptionHeight),
+            let maxTitleHeight = titleFont.lineHeight * 2
+            let titleBounds = titleAttr.boundingRect(
+                with: CGSize(width: textWidth, height: maxTitleHeight),
                 options: [.usesLineFragmentOrigin, .usesFontLeading],
                 context: nil
             )
-            let captionHeight = min(ceil(captionBounds.height), maxCaptionHeight)
+            let titleHeight = min(ceil(titleBounds.height), maxTitleHeight)
             
-            // 主文约在照片垂直中部（文案位置不动）
-            let captionY = max(
-                photoRect.minY + photoHeight * 0.28,
-                photoRect.midY - captionHeight * 0.55
+            let subtitle = DestinationGalleryCardStyle.subtitleCaption(overlayCaption: overlayCaption)
+            let subtitleFont = DestinationGalleryCardStyle.serifFont(size: w * 0.02)
+            let subtitleStyle = NSMutableParagraphStyle()
+            subtitleStyle.lineSpacing = 3
+            subtitleStyle.lineBreakMode = .byWordWrapping
+            let subtitleAttr: NSAttributedString? = subtitle.isEmpty ? nil : NSAttributedString(
+                string: subtitle,
+                attributes: [
+                    .font: subtitleFont,
+                    .foregroundColor: DestinationGalleryCardStyle.primaryText.withAlphaComponent(0.78),
+                    .paragraphStyle: subtitleStyle
+                ]
             )
-            captionAttr.draw(in: CGRect(x: textX, y: captionY, width: textWidth, height: captionHeight))
+            let maxSubtitleHeight = subtitleFont.lineHeight * 4
+            let subtitleHeight: CGFloat = {
+                guard let subtitleAttr else { return 0 }
+                let bounds = subtitleAttr.boundingRect(
+                    with: CGSize(width: textWidth, height: maxSubtitleHeight),
+                    options: [.usesLineFragmentOrigin, .usesFontLeading],
+                    context: nil
+                )
+                return min(ceil(bounds.height), maxSubtitleHeight)
+            }()
+            let titleSubtitleGap: CGFloat = subtitleAttr == nil ? 0 : w * 0.018
+            let textBlockHeight = titleHeight + titleSubtitleGap + subtitleHeight
+            
+            // 标题+副标题约在照片垂直中部
+            var textY = max(
+                photoRect.minY + photoHeight * 0.28,
+                photoRect.midY - textBlockHeight * 0.55
+            )
+            titleAttr.draw(in: CGRect(x: textX, y: textY, width: textWidth, height: titleHeight))
+            textY += titleHeight + titleSubtitleGap
+            if let subtitleAttr {
+                subtitleAttr.draw(in: CGRect(x: textX, y: textY, width: textWidth, height: subtitleHeight))
+            }
             
             // 地点 + 日期贴画布底边（右下）
             let metaFont = DestinationGalleryCardStyle.monoFont(size: w * 0.024)
@@ -400,10 +449,10 @@ struct GallerySideDestinationLayoutGenerator: DestinationLayoutGenerator {
             let metaBlockHeight = (locAttr == nil ? 0 : locHeight + metaLineGap) + dateHeight
             var metaY = h - margin - metaBlockHeight
             
-            // 避免与主文重叠
-            let captionBottom = captionY + captionHeight + w * 0.03
-            if metaY < captionBottom {
-                metaY = captionBottom
+            // 避免与标题/副标题重叠
+            let textBottom = textY + subtitleHeight + w * 0.03
+            if metaY < textBottom {
+                metaY = textBottom
             }
             
             if let locAttr {
@@ -450,28 +499,49 @@ struct GalleryStackDestinationLayoutGenerator: DestinationLayoutGenerator {
             var textY = photoRect.maxY + w * 0.04
             let textWidth = photoWidth
             
-            let caption = DestinationGalleryCardStyle.primaryCaption(
-                destination: destination,
-                overlayCaption: overlayCaption
-            )
-            let captionFont = DestinationGalleryCardStyle.serifFont(size: w * 0.038)
-            let captionStyle = NSMutableParagraphStyle()
-            captionStyle.lineSpacing = 6
-            captionStyle.lineBreakMode = .byWordWrapping
-            let captionAttr = NSAttributedString(string: caption, attributes: [
-                .font: captionFont,
+            let title = DestinationGalleryCardStyle.titleText(for: destination)
+            let titleFont = DestinationGalleryCardStyle.serifFont(size: w * 0.044, weight: .semibold)
+            let titleStyle = NSMutableParagraphStyle()
+            titleStyle.lineSpacing = 4
+            titleStyle.lineBreakMode = .byWordWrapping
+            let titleAttr = NSAttributedString(string: title, attributes: [
+                .font: titleFont,
                 .foregroundColor: DestinationGalleryCardStyle.primaryText,
-                .paragraphStyle: captionStyle
+                .paragraphStyle: titleStyle
             ])
-            let maxCaptionHeight = captionFont.lineHeight * 4
-            let captionBounds = captionAttr.boundingRect(
-                with: CGSize(width: textWidth, height: maxCaptionHeight),
+            let maxTitleHeight = titleFont.lineHeight * 2
+            let titleBounds = titleAttr.boundingRect(
+                with: CGSize(width: textWidth, height: maxTitleHeight),
                 options: [.usesLineFragmentOrigin, .usesFontLeading],
                 context: nil
             )
-            let captionHeight = min(ceil(captionBounds.height), maxCaptionHeight)
-            captionAttr.draw(in: CGRect(x: margin, y: textY, width: textWidth, height: captionHeight))
-            textY += captionHeight + w * 0.028
+            let titleHeight = min(ceil(titleBounds.height), maxTitleHeight)
+            titleAttr.draw(in: CGRect(x: margin, y: textY, width: textWidth, height: titleHeight))
+            textY += titleHeight
+            
+            let subtitle = DestinationGalleryCardStyle.subtitleCaption(overlayCaption: overlayCaption)
+            if !subtitle.isEmpty {
+                textY += w * 0.016
+                let subtitleFont = DestinationGalleryCardStyle.serifFont(size: w * 0.02)
+                let subtitleStyle = NSMutableParagraphStyle()
+                subtitleStyle.lineSpacing = 4
+                subtitleStyle.lineBreakMode = .byWordWrapping
+                let subtitleAttr = NSAttributedString(string: subtitle, attributes: [
+                    .font: subtitleFont,
+                    .foregroundColor: DestinationGalleryCardStyle.primaryText.withAlphaComponent(0.78),
+                    .paragraphStyle: subtitleStyle
+                ])
+                let maxSubtitleHeight = subtitleFont.lineHeight * 4
+                let subtitleBounds = subtitleAttr.boundingRect(
+                    with: CGSize(width: textWidth, height: maxSubtitleHeight),
+                    options: [.usesLineFragmentOrigin, .usesFontLeading],
+                    context: nil
+                )
+                let subtitleHeight = min(ceil(subtitleBounds.height), maxSubtitleHeight)
+                subtitleAttr.draw(in: CGRect(x: margin, y: textY, width: textWidth, height: subtitleHeight))
+                textY += subtitleHeight
+            }
+            textY += w * 0.028
             
             let metaFont = DestinationGalleryCardStyle.monoFont(size: w * 0.024)
             let location = DestinationGalleryCardStyle.locationLine(for: destination)

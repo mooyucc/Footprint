@@ -29,6 +29,11 @@ struct YearShareLayoutSelectionView: View {
                 VStack(spacing: 0) {
                     ScrollView {
                         VStack(spacing: 16) {
+                            if showsProUpgradeBanner {
+                                ShareProUpgradeBanner {
+                                    showPaywall = true
+                                }
+                            }
                             ForEach(TripShareLayout.allCases.filter(\.supportsYearShare)) { layout in
                                 LayoutOptionCard(
                                     layout: layout,
@@ -91,10 +96,14 @@ struct YearShareLayoutSelectionView: View {
             }
         }
         .sheet(isPresented: $showPaywall) {
-            PaywallView()
+            PaywallView(contextMessage: "share_pro_paywall_context".localized)
                 .environmentObject(purchaseManager)
                 .environmentObject(entitlementManager)
         }
+    }
+
+    private var showsProUpgradeBanner: Bool {
+        !BetaInfo.isBetaBuild && !entitlementManager.canUseFullShareLayouts
     }
     
     private func generateAndShare() {

@@ -20,19 +20,24 @@ struct PaywallView: View {
 
     @State private var isRestoring: Bool = false
     @State private var isPurchasing: Bool = false
-    @State private var selectedProductID: String = SubscriptionProductID.proYearly
-    @State private var showCreditPaywall: Bool = false
+    @State private var selectedProductID: String = SubscriptionProductID.proLifetime
     @State private var introEligibleProductIDs: Set<String> = []
 
     // 引导流程相关
     var isOnboarding: Bool = false
     var onSkip: (() -> Void)? = nil
+    /// 从具体限制场景传入（如地点上限、分享锁定），展示在标题下方
+    var contextMessage: String? = nil
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
                     heroSection
+
+                    if let contextMessage, !contextMessage.isEmpty, !isOnboarding {
+                        contextBanner(contextMessage)
+                    }
 
                     if isOnboarding {
                         freeTierSection
@@ -55,7 +60,6 @@ struct PaywallView: View {
                     if isOnboarding {
                         onboardingFooter
                     } else {
-                        buyCreditsSecondaryLink
                         restoreSection
                         legalLinksSection
                     }
@@ -80,9 +84,6 @@ struct PaywallView: View {
                 )
             }
             .toolbarBackground(.hidden, for: .navigationBar)
-            .sheet(isPresented: $showCreditPaywall) {
-                AICreditPaywallView()
-            }
             .task {
                 await purchaseManager.loadProducts()
                 syncSelectedProductIfNeeded()
@@ -103,7 +104,7 @@ struct PaywallView: View {
 
     private var heroSection: some View {
         VStack(spacing: 12) {
-            Image(systemName: isOnboarding ? "map.fill" : "sparkles.rectangle.stack")
+            Image(systemName: isOnboarding ? "photo.on.rectangle.angled" : "books.vertical.fill")
                 .symbolRenderingMode(.hierarchical)
                 .font(.system(size: 48, weight: .semibold))
                 .foregroundStyle(brandColorManager.currentBrandColor)
@@ -138,15 +139,32 @@ struct PaywallView: View {
         .footprintGlassCard(cornerRadius: 14)
     }
 
+    private func contextBanner(_ message: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "info.circle.fill")
+                .font(.title3)
+                .foregroundStyle(brandColorManager.currentBrandColor)
+            Text(message)
+                .font(.subheadline)
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .footprintGlassCard(cornerRadius: 14, glow: brandColorManager.currentBrandColor)
+    }
+
     private var featureList: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text(isOnboarding ? "onboarding_pro_feature_title".localized : "paywall_feature_title".localized)
                 .font(.headline)
 
-            featureRow(icon: "sparkles", title: "paywall_feature_ai".localized)
             featureRow(icon: "infinity", title: "paywall_feature_unlimited".localized)
+            featureRow(icon: "photo.on.rectangle.angled", title: "paywall_feature_photos".localized(with: ProTierLimits.maxPhotosPerDestination))
             featureRow(icon: "square.grid.3x3.square.badge.ellipsis", title: "paywall_feature_share_layouts".localized)
             featureRow(icon: "tray.and.arrow.down.fill", title: "paywall_feature_import_export".localized)
+            featureRow(icon: "sparkles", title: "paywall_feature_ai_aside".localized)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
@@ -314,18 +332,6 @@ struct PaywallView: View {
         .padding(.top, 4)
     }
 
-    private var buyCreditsSecondaryLink: some View {
-        Button {
-            showCreditPaywall = true
-        } label: {
-            Text("paywall_buy_credits_secondary".localized)
-                .font(.headline)
-                .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.bordered)
-        .controlSize(.large)
-    }
-
     private var subscriptionTermsSection: some View {
         Text("subscription_auto_renew_note".localized)
             .font(.footnote)
@@ -375,7 +381,7 @@ struct PaywallView: View {
     private func planCard(for product: Product) -> some View {
         let isSelected = selectedProductID == product.id
         let isCurrent = isCurrentPlan(product)
-        let isRecommended = product.id == SubscriptionProductID.proYearly
+        let isRecommended = product.id == SubscriptionProductID.proLifetime
 
         return Button {
             guard !isCurrent else { return }
@@ -565,10 +571,10 @@ struct PaywallView: View {
 
     private func planExtraLine(for product: Product) -> String? {
         if product.id == SubscriptionProductID.proLifetime {
-            return "paywall_ai_uses_credits".localized
+            return "paywall_lifetime_extra".localized
         }
         if product.id == SubscriptionProductID.proYearly {
-            var parts: [String] = ["paywall_ai_uses_credits".localized]
+            var parts: [String] = ["paywall_subscription_extra".localized]
             if let monthly = monthlyEquivalentText(for: product) {
                 parts.append(monthly)
             }
@@ -580,7 +586,7 @@ struct PaywallView: View {
             }
             return parts.joined(separator: " · ")
         }
-        var parts: [String] = ["paywall_ai_uses_credits".localized]
+        var parts: [String] = ["paywall_subscription_extra".localized]
         if let trial = trialText(for: product) {
             parts.append(trial)
         }
@@ -651,16 +657,16 @@ struct PaywallView: View {
 
     private func planSortOrder(for productID: String) -> Int {
         switch productID {
-        case SubscriptionProductID.proYearly: return 0
-        case SubscriptionProductID.proMonthly: return 1
-        case SubscriptionProductID.proLifetime: return 2
+        case SubscriptionProductID.proLifetime: return 0
+        case SubscriptionProductID.proYearly: return 1
+        case SubscriptionProductID.proMonthly: return 2
         default: return 3
         }
     }
 
     private func subtitle(for product: Product) -> String {
         if product.id == SubscriptionProductID.proLifetime {
-            return "one_time_purchase".localized
+            return "paywall_lifetime_plan_subtitle".localized
         }
         if let unit = product.subscription?.subscriptionPeriod.unit {
             return unit.title
@@ -698,6 +704,10 @@ struct PaywallView: View {
         guard !available.isEmpty else { return }
 
         if let selected = available.first(where: { $0.id == selectedProductID }), !isCurrentPlan(selected) {
+            return
+        }
+        if let lifetime = available.first(where: { $0.id == SubscriptionProductID.proLifetime && !isCurrentPlan($0) }) {
+            selectedProductID = lifetime.id
             return
         }
         if let yearly = available.first(where: { $0.id == SubscriptionProductID.proYearly && !isCurrentPlan($0) }) {

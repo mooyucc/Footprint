@@ -46,6 +46,25 @@ struct SettingsView: View {
         }
         return "membership_status_lifetime_active".localized
     }
+
+    /// 账户行副标题：身份与星座用间隔号连成一行。「不愿透露」不展示。
+    private var accountSubtitle: String? {
+        let parts = [accountPersonaText, accountConstellationText].compactMap { $0 }
+        guard !parts.isEmpty else { return nil }
+        return parts.joined(separator: " · ")
+    }
+
+    private var accountPersonaText: String? {
+        let stored = userProfileManager.personaTag
+        guard !stored.isEmpty, stored != "prefer_not_to_say", stored != "不愿透露" else { return nil }
+        return UserProfileOptions.personaLocalizedValue(for: stored)
+    }
+
+    private var accountConstellationText: String? {
+        let stored = userProfileManager.constellation
+        guard !stored.isEmpty, stored != "prefer_not_to_say", stored != "不愿透露" else { return nil }
+        return UserProfileOptions.constellationLocalizedValue(for: stored)
+    }
     
     var body: some View {
         NavigationStack {
@@ -75,48 +94,17 @@ struct SettingsView: View {
                             .frame(width: 50, height: 50)
                             .clipShape(Circle())
                             
-                            VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: 2) {
                                 Text(userProfileManager.displayName)
-                                    .font(.title2)
-                                    .fontWeight(.bold)
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundColor(.primary)
+                                    .lineLimit(1)
                                 
-                                VStack(alignment: .leading, spacing: 6) {
-                                    HStack(spacing: 6) {
-                                        if !userProfileManager.personaTag.isEmpty {
-                                            Label(
-                                                UserProfileOptions.personaLocalizedValue(for: userProfileManager.personaTag),
-                                                systemImage: "person.crop.circle.badge.questionmark"
-                                            )
-                                            .font(.caption2)
-                                            .foregroundColor(.primary)
-                                            .padding(.horizontal, 8)
-                                            .padding(.vertical, 4)
-                                            .footprintCapsuleChrome()
-                                        }
-                                        
-                                        if !userProfileManager.mbtiType.isEmpty {
-                                            Label(userProfileManager.mbtiType, systemImage: "brain.head.profile")
-                                                .font(.caption2)
-                                                .foregroundColor(.primary)
-                                                .padding(.horizontal, 8)
-                                                .padding(.vertical, 4)
-                                                .footprintCapsuleChrome()
-                                        }
-                                    }
-                                    
-                                    if !userProfileManager.constellation.isEmpty {
-                                        HStack(spacing: 6) {
-                                            Label(
-                                                UserProfileOptions.constellationLocalizedValue(for: userProfileManager.constellation),
-                                                systemImage: "sparkles"
-                                            )
-                                            .font(.caption2)
-                                            .foregroundColor(.primary)
-                                            .padding(.horizontal, 8)
-                                            .padding(.vertical, 4)
-                                            .footprintCapsuleChrome()
-                                        }
-                                    }
+                                if let accountSubtitle {
+                                    Text(accountSubtitle)
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                        .lineLimit(1)
                                 }
                             }
                             
@@ -267,17 +255,11 @@ struct SettingsView: View {
                     currentName: userProfileManager.customUserName,
                     currentAvatarData: userProfileManager.userAvatarData,
                     currentPersona: userProfileManager.personaTag,
-                    currentMbti: userProfileManager.mbtiType,
-                    currentGender: userProfileManager.gender,
-                    currentAgeGroup: userProfileManager.ageGroup,
                     currentConstellation: userProfileManager.constellation,
-                    onSave: { newName, imageData, persona, mbti, gender, ageGroup, constellation in
+                    onSave: { newName, imageData, persona, constellation in
                         userProfileManager.setCustomUserName(newName)
                         userProfileManager.setUserAvatar(imageData)
                         userProfileManager.setPersonaTag(persona)
-                        userProfileManager.setMbtiType(mbti)
-                        userProfileManager.setGender(gender)
-                        userProfileManager.setAgeGroup(ageGroup)
                         userProfileManager.setConstellation(constellation)
                         showingEditProfile = false
                     },
@@ -305,6 +287,7 @@ struct SettingsView: View {
                     .environmentObject(languageManager)
                     .environmentObject(countryManager)
                     .environmentObject(brandColorManager)
+                    .environmentObject(userProfileManager)
             }
             .sheet(isPresented: $showingDataSettings) {
                 DataSettingsView()

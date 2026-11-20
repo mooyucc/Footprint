@@ -1,5 +1,5 @@
-"paywall_title" = "Pro freischalten";
-"paywall_subtitle" = "Unbegrenzte Einträge, Datenverwaltung und weitere Pro-Funktionen freischalten. KI nutzt Anrufguthaben.";
+"paywall_title" = "Bewahre deine Reisememories";
+"paywall_subtitle" = "Unterwegs festhalten, später wieder ansehen. Pro einmal freischalten fürs unbegrenzte Archiv. KI separat.";
 "paywall_button_upgrade" = "Abo-Plan ansehen";
 "paywall_button_restore" = "Käufe wiederherstellen";
 
@@ -21,22 +21,30 @@
 "paywall_expires_on" = "Läuft ab: ";
 "paywall_terms_privacy" = "Mit dem Kauf stimmst du den Nutzungsbedingungen und der Datenschutzrichtlinie zu. Automatische Verlängerung; jederzeit in den Systemabos kündbar.";
 "paywall_feature_title" = "Pro-Funktionen";
-"paywall_feature_ai" = "KI-Assistent: Notizen, Reisebeschreibungen, Fotoanalyse, Zielvorschläge (nutzt Anrufguthaben)";
+"paywall_feature_ai" = "KI-Assistent separat per Anrufguthaben (nicht in Pro enthalten)";
 "paywall_feature_unlimited" = "Unbegrenzte Ziele und Reisekarten";
-"paywall_feature_share_layouts" = "Alle Share-Layouts";
+"paywall_feature_photos" = "Bis zu %d Fotos pro Ziel";
+"paywall_feature_share_layouts" = "Alle Share-Layouts ohne Wasserzeichen";
 "paywall_feature_import_export" = "Lokaler Datenimport/-export";
+"paywall_feature_ai_aside" = "KI separat per Anrufguthaben";
+"paywall_lifetime_plan_subtitle" = "Einmalkauf · Ideal für gelegentliche Reisen & langes Wiedersehen";
+"paywall_lifetime_extra" = "Keine Monatsgebühr · KI separat";
+"paywall_subscription_extra" = "Gut für ein reiseintensives Jahr · KI separat";
+"share_pro_banner_title" = "Mit Pro schöner teilen";
+"share_pro_banner_subtitle" = "Wasserzeichen entfernen und alle Layouts freischalten";
+"share_pro_paywall_context" = "Upgrade auf Pro: ohne Wasserzeichen und mit allen Share-Layouts.";
 "paywall_feature_link_maps" = "Reisen mit der System-Karten-App verknüpfen";
 "paywall_banner_title" = "Upgrade auf Pro, um die Datenverwaltung freizuschalten";
 "paywall_emotional_message_part1" = "Lass „MooFootprint“ noch mehr Spaß machen und länger begleiten! Wir brauchen deine Unterstützung, um gemeinsam mehr spannende Geschichten zu schaffen.";
 "paywall_emotional_message_part2" = "Unterstütze uns! ✨";
-"paywall_select_plan" = "Plan wählen";
+"paywall_select_plan" = "Plan wählen (Einmalkauf empfohlen)";
 "paywall_cta_unlock" = "Pro freischalten";
 "paywall_cta_unlock_price" = "Pro freischalten · %@";
 "paywall_cta_yearly" = "Pro freischalten · %@ / Jahr";
 "paywall_cta_start_trial" = "Kostenlose Testversion starten";
 "paywall_cta_trial_then_yearly" = "Danach %@ pro Jahr. Jederzeit kündbar.";
 "paywall_cta_monthly" = "Pro freischalten · %@ / Monat";
-"paywall_cta_lifetime" = "Lebenslang kaufen · %@";
+"paywall_cta_lifetime" = "Lebenslanges Pro · %@";
 "paywall_cta_current" = "Aktueller Plan";
 "paywall_lifetime_no_ai" = "KI nutzt Testguthaben oder bezahlte Anrufe";
 "paywall_ai_uses_credits" = "KI nutzt Testguthaben oder bezahlte Anrufe";
@@ -437,7 +445,7 @@
 "ai_credits_product_subtitle" = "Jeder Kauf gewährt %@.";
 "ai_credits_product_unavailable" = "Produktinformationen konnten nicht geladen werden. Bitte später erneut versuchen.";
 "ai_credits_usage_title" = "Folgende Aktionen verbrauchen KI-Anrufe:";
-"ai_credits_usage_desc" = "Jede KI-Reisenotiz verbraucht 1 Anruf;\nJede Reisebeschreibung oder Aktualisierung verbraucht 1 Anruf;\nJede KI-Reiseempfehlung verbraucht 1 Anruf.\nDein Guthaben verfällt nicht und kann jederzeit genutzt werden.";
+"ai_credits_usage_desc" = "Jede KI-Reisenotiz verbraucht 1 Anruf;\nJede Reisebeschreibung oder Aktualisierung verbraucht 1 Anruf;\nJede KI-Reiseempfehlung verbraucht 1 Anruf;\nJede Share-Poster-Kurzzeile verbraucht 1 Anruf.\nDein Guthaben verfällt nicht und kann jederzeit genutzt werden.";
 "ai_credits_restore_button" = "Käufe wiederherstellen";
 "ai_credits_restore_tip" = "Verbrauchtes KI-Anrufguthaben kann nicht über „Käufe wiederherstellen“ zurückgeholt werden. Bitte nutze gekauftes Guthaben auf dem aktuellen Gerät.";
 "ai_buy_per_use_button" = "KI-Anrufe nach Nutzung kaufen";
@@ -605,9 +613,10 @@
 "destination_share_cover_option" = "Titelbild wählen";
 "destination_share_edit_text" = "Text bearbeiten";
 "destination_share_edit_text_hint" = "Vorschau tippen, um Text auf dem Bild zu bearbeiten";
-"destination_share_overlay_section" = "Text auf dem Bild";
+"destination_share_title_label" = "Titel";
+"destination_share_overlay_section" = "Untertitel";
 "destination_share_overlay_placeholder" = "Ein kurzer Satz";
-"destination_share_overlay_footer" = "Erscheint auf dem Poster. Am besten ein kurzer Satz.";
+"destination_share_overlay_footer" = "Titel ist der Ortsname. Untertitel erscheint auf dem Poster — am besten ein kurzer Satz.";
 "destination_share_ai_generate" = "KI-Satz";
 "destination_share_ai_generating" = "Wird erzeugt…";
 "destination_share_caption_section" = "Teilen-Text";
@@ -793,14 +802,14 @@
 "onboarding_page1_country_title" = "Land";
 "onboarding_page1_country_description" = "Lege dein Land fest, um Inland- und Auslandsreisen zu unterscheiden";
 "onboarding_identity_tag_title" = "Identitäts-Tag";
-"onboarding_identity_tag_description" = "Wähle ein Identitäts-Tag oder gib ein eigenes ein, damit die KI in deinem Stil antwortet.";
+"onboarding_identity_tag_description" = "Wähle ein Identitäts-Tag oder gib ein eigenes ein, um eine Themenfarbe vorzuschlagen.";
 "onboarding_personality_tag_title" = "Persönlichkeitstyp";
 "onboarding_personality_tag_description" = "Wähle deinen Persönlichkeitstyp, damit die KI in einem passenden Stil antwortet.";
 "onboarding_user_attributes_title" = "Nutzerattribute";
 "onboarding_user_attributes_description" = "Wähle Geschlecht, Altersgruppe und Sternzeichen, damit die KI dich besser versteht und persönlicher antwortet.";
 "onboarding_user_attributes_description_short" = "Wähle Geschlecht und Altersgruppe, damit die KI dich besser versteht und persönlicher antwortet.";
 "onboarding_constellation_title" = "Sternzeichen";
-"onboarding_constellation_description" = "Wähle dein Sternzeichen, damit die KI in einem zu dir passenden Stil antwortet.";
+"onboarding_constellation_description" = "Wähle ein Sternzeichen, um eine zweite Themenfarbe zu sehen. Du kannst das auch überspringen.";
 "onboarding_page2_title" = "Erscheinungsbild";
 "onboarding_page2_appearance_title" = "Erscheinungsmodus";
 "onboarding_page2_appearance_description" = "Wähle den Erscheinungsmodus der App. „System“ folgt automatisch den Systemeinstellungen";
@@ -822,13 +831,14 @@
 "onboarding_free_ai_trial" = "%d kostenlose KI-Testnutzungen";
 "onboarding_pro_feature_title" = "Upgrade auf Pro für";
 "onboarding_pricing_section_title" = "Abo wählen";
-"onboarding_recommended_plan" = "Empfohlen";
+"onboarding_recommended_plan" = "Einmalkauf";
 "onboarding_continue_free" = "Kostenlos fortfahren";
 "onboarding_continue_free_hint" = "Jederzeit im Profil upgraden.";
 
 // Profile - Identity Tag & MBTI
 "identity_tag" = "Identitäts-Tag";
-"identity_tag_description" = "Wähle ein Identitäts-Tag oder gib ein eigenes ein, damit die KI in deinem Stil antwortet.";
+"identity_tag_description" = "Wähle ein Identitäts-Tag oder gib ein eigenes ein, um eine Themenfarbe vorzuschlagen.";
+"account_profile_section" = "Profil";
 "identity_tag_placeholder" = "Reisender, Foodie, Designer…";
 "mbti_title" = "MBTI";
 "mbti_description" = "Wähle deinen Persönlichkeitstyp für passendere Antworten.";
@@ -837,7 +847,20 @@
 "age_group_title" = "Altersgruppe";
 "age_group_description" = "Wähle deine Altersgruppe, damit die KI deine Bedürfnisse besser versteht.";
 "constellation_title" = "Sternzeichen";
-"constellation_description" = "Wähle dein Sternzeichen, damit die KI in einem zu dir passenden Stil antwortet.";
+"constellation_description" = "Wähle ein Sternzeichen, um eine zweite Themenfarbe zu sehen.";
+"onboarding_theme_color_title" = "Deine Themenfarbe";
+"onboarding_theme_color_description" = "Die Identität schlägt die Hauptfarbe vor. Ein Sternzeichen zeigt eine zweite Farbe. Die aktuelle Farbe bleibt, bis du „Diese Farbe verwenden“ tippst.";
+"onboarding_theme_color_empty" = "Bei einer eigenen Identität oder ohne Sternzeichen bleibt die aktuelle Themenfarbe.";
+"onboarding_theme_color_use" = "Diese Farbe verwenden";
+"onboarding_theme_color_pick" = "Selbst wählen";
+"profile_theme_color_description" = "Eine Farbe auswählen ersetzt die Themenfarbe sofort. Identität und Sternzeichen müssen noch gespeichert werden.";
+"theme_source_persona" = "Identität";
+"theme_source_constellation" = "Sternzeichen";
+"theme_color_in_use" = "In Verwendung";
+"theme_color_reset_hint" = "Unter Einstellungen › Allgemein › Erscheinungsbild kannst du jederzeit auf Standard tippen und zur Standardfarbe der App zurückwechseln.";
+"theme_source_default" = "Standard";
+"theme_default_name" = "App";
+"theme_source_custom" = "Eigene";
 
 // Profile Options - Persona
 "persona_option_traveler" = "Reisender";

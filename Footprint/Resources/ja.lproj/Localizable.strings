@@ -6,8 +6,8 @@
 */
 
 // Paywall
-"paywall_title" = "Proをアンロック";
-"paywall_subtitle" = "無制限の記録やデータ管理などのPro機能をアンロック。AIは回数制です。";
+"paywall_title" = "旅の記憶を残そう";
+"paywall_subtitle" = "旅のときは記録、普段は見返す。Proを一度買えばアーカイブ無制限。AIは回数課金です。";
 "paywall_button_upgrade" = "購読プランを表示";
 "paywall_button_restore" = "購入を復元";
 
@@ -20,7 +20,7 @@
 "membership_status_view_restore" = "特典を表示 / 購入を復元";
 "membership_section" = "メンバーシップ";
 "membership_status_free" = "無料";
-"membership_status_free_hint" = "アップグレードで Pro 機能を解除";
+"membership_status_free_hint" = "アップグレードして旅のアーカイブを残す";
 
 // Paywall lifetime unlocked
 "paywall_lifetime_unlocked" = "生涯アクセスがアンロックされました。再度購入する必要はありません。";
@@ -29,22 +29,30 @@
 "paywall_expires_on" = "有効期限: ";
 "paywall_terms_privacy" = "購入することで、利用規約とプライバシーポリシーに同意したことになります。自動更新。システムの購読設定でいつでもキャンセルできます。";
 "paywall_feature_title" = "Pro機能";
-"paywall_feature_ai" = "AIアシスタント（スマートノート、旅の説明、写真分析、旅行先おすすめ。回数制）";
+"paywall_feature_ai" = "AIアシスタントは回数課金（Proとは別）";
 "paywall_feature_unlimited" = "無制限の目的地と旅行カード";
-"paywall_feature_share_layouts" = "完全な共有レイアウト";
+"paywall_feature_photos" = "目的地ごとに最大%d枚の写真";
+"paywall_feature_share_layouts" = "完全な共有レイアウト、透かしなし";
 "paywall_feature_import_export" = "ローカルデータのインポート/エクスポート";
+"paywall_feature_ai_aside" = "AIは回数課金（Proとは別）";
+"paywall_lifetime_plan_subtitle" = "買い切り · たまに旅行し、長く見返す人向け";
+"paywall_lifetime_extra" = "月額なし · AIは別売り";
+"paywall_subscription_extra" = "旅行が多い年向け · AIは別売り";
+"share_pro_banner_title" = "Proでシェアをもっと美しく";
+"share_pro_banner_subtitle" = "透かしを外し、全レイアウトを解放";
+"share_pro_paywall_context" = "Proにアップグレード：透かしなし＆全共有レイアウト。";
 "paywall_feature_link_maps" = "旅行をシステムのマップアプリにリンク";
 "paywall_banner_title" = "Proにアップグレードしてデータ管理をアンロック";
 "paywall_emotional_message_part1" = "「MooFootprint」をもっと楽しく、長続きさせましょう！一緒にもっと面白いストーリーを作るために、あなたのサポートが必要です。";
 "paywall_emotional_message_part2" = "私たちをサポートしてください！ ✨";
-"paywall_select_plan" = "プランを選択";
+"paywall_select_plan" = "プランを選択（買い切り推奨）";
 "paywall_cta_unlock" = "Proをアンロック";
 "paywall_cta_unlock_price" = "%@ で Pro をアンロック";
 "paywall_cta_yearly" = "%@ /年で Pro をアンロック";
 "paywall_cta_start_trial" = "無料トライアルを開始";
 "paywall_cta_trial_then_yearly" = "終了後は %@ /年で自動更新。いつでもキャンセルできます。";
 "paywall_cta_monthly" = "%@ /月で Pro をアンロック";
-"paywall_cta_lifetime" = "%@ で生涯版を購入";
+"paywall_cta_lifetime" = "%@ で生涯 Pro を買い切り";
 "paywall_cta_current" = "現在のプラン";
 "paywall_lifetime_no_ai" = "AIは体験回数または都度購入";
 "paywall_ai_uses_credits" = "AIは体験回数または都度購入";
@@ -574,9 +582,10 @@
 "destination_share_cover_option" = "カバー写真を選択";
 "destination_share_edit_text" = "テキストを編集";
 "destination_share_edit_text_hint" = "プレビューをタップして画像上の文字を編集";
-"destination_share_overlay_section" = "画像上の文言";
+"destination_share_title_label" = "タイトル";
+"destination_share_overlay_section" = "サブタイトル";
 "destination_share_overlay_placeholder" = "短い一言";
-"destination_share_overlay_footer" = "ポスターに表示されます。短い一文がおすすめです。";
+"destination_share_overlay_footer" = "タイトルは地名。サブタイトルがポスターに表示されます。短い一文がおすすめです。";
 "destination_share_ai_generate" = "AIで一文生成";
 "destination_share_ai_generating" = "生成中…";
 "destination_share_caption_section" = "共有キャプション";
@@ -747,14 +756,14 @@
 "onboarding_page1_country_title" = "国";
 "onboarding_page1_country_description" = "あなたの国を設定して、国内旅行と海外旅行を区別します";
 "onboarding_identity_tag_title" = "アイデンティティタグ";
-"onboarding_identity_tag_description" = "アイデンティティタグを選択または入力して、AIがあなたのスタイルに合わせて応答できるようにします。";
+"onboarding_identity_tag_description" = "アイデンティティタグを選ぶか入力して、専用のテーマカラーを提案します。";
 "onboarding_personality_tag_title" = "性格タイプ";
 "onboarding_personality_tag_description" = "性格タイプを選択して、AIの応答があなたのスタイルに合うようにします。";
 "onboarding_user_attributes_title" = "ユーザー属性";
 "onboarding_user_attributes_description" = "性別、年齢層、星座を選択して、AIがあなたをよりよく理解し、よりパーソナライズされた応答を提供できるようにします。";
 "onboarding_user_attributes_description_short" = "性別と年齢層を選択して、AIがあなたをよりよく理解し、よりパーソナライズされた応答を提供できるようにします。";
 "onboarding_constellation_title" = "星座";
-"onboarding_constellation_description" = "星座を選択して、AIの応答があなたの個性に合うようにします。";
+"onboarding_constellation_description" = "星座を選ぶと、もう1色のテーマカラーを見られます。答えたくない場合はそのままで構いません。";
 "onboarding_page2_title" = "外観";
 "onboarding_page2_appearance_title" = "外観モード";
 "onboarding_page2_appearance_description" = "アプリの外観モードを選択します。システムに従うと、システム設定に基づいて自動的に切り替わります";
@@ -776,13 +785,14 @@
 "onboarding_free_ai_trial" = "AI体験 %d 回プレゼント";
 "onboarding_pro_feature_title" = "Proでさらに解放";
 "onboarding_pricing_section_title" = "サブスクリプションを選択";
-"onboarding_recommended_plan" = "おすすめ";
+"onboarding_recommended_plan" = "買い切りおすすめ";
 "onboarding_continue_free" = "無料で始める";
 "onboarding_continue_free_hint" = "「マイページ」からいつでもアップグレードできます。";
 
 // Profile - Identity Tag & MBTI
 "identity_tag" = "アイデンティティタグ";
-"identity_tag_description" = "アイデンティティタグを選択するか、独自に入力して、AIがあなたのスタイルに合わせて応答できるようにします。";
+"identity_tag_description" = "アイデンティティタグを選ぶか入力して、専用のテーマカラーを提案します。";
+"account_profile_section" = "プロフィール";
 "identity_tag_placeholder" = "旅行者、美食家、デザイナー…";
 "mbti_title" = "MBTI";
 "gender_title" = "性別";
@@ -790,7 +800,20 @@
 "age_group_title" = "年齢層";
 "age_group_description" = "年齢層を選択して、AIがあなたのニーズをよりよく理解できるようにします。";
 "constellation_title" = "星座";
-"constellation_description" = "星座を選択して、AIの応答があなたの個性に合うようにします。";
+"constellation_description" = "星座を選ぶと、もう1色のテーマカラーを見られます。";
+"onboarding_theme_color_title" = "専用テーマカラー";
+"onboarding_theme_color_description" = "アイデンティティの色がメインです。星座を選ぶと、もう1色を見られます。「この色を使う」をタップするまで、今の色は変わりません。";
+"onboarding_theme_color_empty" = "カスタムのアイデンティティ、または星座未選択のときは、今のテーマカラーをそのまま使います。";
+"onboarding_theme_color_use" = "この色を使う";
+"onboarding_theme_color_pick" = "自分で選ぶ";
+"profile_theme_color_description" = "色を選ぶと、テーマカラーはすぐに替わります。アイデンティティと星座は右上の保存が必要です。";
+"theme_source_persona" = "アイデンティティ";
+"theme_source_constellation" = "星座";
+"theme_color_in_use" = "使用中";
+"theme_color_reset_hint" = "あとから「設定 › 一般 › 外観」で「デフォルト」をタップすると、App のデフォルトテーマカラーに戻せます。";
+"theme_source_default" = "デフォルト";
+"theme_default_name" = "App";
+"theme_source_custom" = "カスタム";
 
 // Profile Options - Persona
 "persona_option_traveler" = "旅行者";

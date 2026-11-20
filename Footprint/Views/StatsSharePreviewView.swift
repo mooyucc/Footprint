@@ -34,6 +34,14 @@ struct StatsSharePreviewView: View {
                 VStack(spacing: 0) {
                     previewSection
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                    if showsProUpgradeBanner {
+                        ShareProUpgradeBanner {
+                            showPaywall = true
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 8)
+                    }
                     
                     bottomActions
                 }
@@ -63,7 +71,7 @@ struct StatsSharePreviewView: View {
             SystemShareSheet(items: Self.activityItems(from: item))
         }
         .sheet(isPresented: $showPaywall) {
-            PaywallView()
+            PaywallView(contextMessage: "share_pro_paywall_context".localized)
                 .environmentObject(purchaseManager)
                 .environmentObject(entitlementManager)
         }
@@ -75,6 +83,10 @@ struct StatsSharePreviewView: View {
         }
     }
     
+    private var showsProUpgradeBanner: Bool {
+        !BetaInfo.isBetaBuild && entitlementManager.shouldApplyShareWatermark
+    }
+
     // MARK: - Sections
     
     @ViewBuilder

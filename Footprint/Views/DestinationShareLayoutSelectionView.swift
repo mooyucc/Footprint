@@ -11,8 +11,10 @@ struct DestinationShareLayoutSelectionView: View {
     
     @State private var selectedAspect: DestinationShareAspectRatio = .square11
     @State private var selectedCoverIndex: Int = 0
-    /// 画在海报上的短句
+    /// 画在海报上的副标题短句
     @State private var overlayText: String = ""
+    /// 副标题允许为空，故用标记避免 onAppear 反复从备注回填
+    @State private var didSeedOverlay = false
     /// 系统分享 / 复制用的配文
     @State private var shareCaptionText: String = ""
     @State private var showTextEditor = false
@@ -25,7 +27,15 @@ struct DestinationShareLayoutSelectionView: View {
     @State private var previewTask: Task<Void, Never>?
     @State private var captionPreviewTask: Task<Void, Never>?
     
-    private let overlayMaxLength = 40
+    /// 海报短句编辑上限。中日韩 30 字；英文及法、西、德按最多 20 个词留出字符空间。
+    private var overlayMaxLength: Int {
+        switch LanguageManager.shared.currentLanguage {
+        case .chinese, .chineseTraditional, .japanese, .korean:
+            return 30
+        case .english, .french, .spanish, .german:
+            return 160
+        }
+    }
     
     private var availablePhotoDatas: [Data] {
         DestinationSharePhotoSource.photoDatas(from: destination)
@@ -48,6 +58,12 @@ struct DestinationShareLayoutSelectionView: View {
                     ScrollView {
                         VStack(spacing: 20) {
                             previewSection
+                            
+                            if showsProUpgradeBanner {
+                                ShareProUpgradeBanner {
+                                    showPaywall = true
+                                }
+                            }
                             
                             if availablePhotoDatas.count > 1 {
                                 coverPhotoSection
@@ -89,7 +105,7 @@ struct DestinationShareLayoutSelectionView: View {
             SystemShareSheet(items: Self.activityItems(from: item))
         }
         .sheet(isPresented: $showPaywall) {
-            PaywallView()
+            PaywallView(contextMessage: "share_pro_paywall_context".localized)
                 .environmentObject(purchaseManager)
                 .environmentObject(entitlementManager)
         }
@@ -98,7 +114,10 @@ struct DestinationShareLayoutSelectionView: View {
                 destination: destination,
                 overlayText: $overlayText,
                 overlayMaxLength: overlayMaxLength,
-                defaultOverlay: ShareImageUtilities.destinationOverlayCaption(for: destination)
+                defaultOverlay: ShareImageUtilities.destinationOverlayCaption(
+                    for: destination,
+                    maxLength: overlayMaxLength
+                )
             )
             .environmentObject(entitlementManager)
             .environmentObject(purchaseManager)
@@ -111,8 +130,12 @@ struct DestinationShareLayoutSelectionView: View {
                 selectedAspect = allowedAspects.first ?? .square11
             }
             syncLayoutForCurrentAspect()
-            if overlayText.isEmpty {
-                overlayText = ShareImageUtilities.destinationOverlayCaption(for: destination)
+            if !didSeedOverlay {
+                overlayText = ShareImageUtilities.destinationOverlayCaption(
+                    for: destination,
+                    maxLength: overlayMaxLength
+                )
+                didSeedOverlay = true
             }
             if shareCaptionText.isEmpty {
                 shareCaptionText = ShareImageUtilities.destinationShareCaption(for: destination)
@@ -352,6 +375,10 @@ struct DestinationShareLayoutSelectionView: View {
     private var allowedAspects: [DestinationShareAspectRatio] {
         entitlementManager.allowedDestinationShareAspectRatios()
     }
+
+    private var showsProUpgradeBanner: Bool {
+        !BetaInfo.isBetaBuild && !entitlementManager.canUseFullShareLayouts
+    }
     
     // MARK: - Preview / Export
     
@@ -516,7 +543,7 @@ struct DestinationShareLayoutSelectionView: View {
     }
 }
 
-/// 修图式文字编辑：仅编辑图上短句；可选用 AI 生成一句；分享配文仍用自动生成文案
+/// 修图式文字编辑：标题为地点名（只读）；副标题可编辑 / AI 生成；分享配文仍用自动生成文案
 struct DestinationShareTextEditorSheet: View {
     let destination: TravelDestination
     @Binding var overlayText: String
@@ -542,6 +569,13 @@ struct DestinationShareTextEditorSheet: View {
         NavigationStack {
             Form {
                 Section {
+                    Text(destination.name)
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(.primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityLabel("destination_share_title_label".localized)
+                        .accessibilityValue(destination.name)
+                    
                     TextField(
                         "destination_share_overlay_placeholder".localized,
                         text: $overlayText,

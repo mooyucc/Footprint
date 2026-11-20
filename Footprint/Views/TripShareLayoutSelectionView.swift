@@ -36,6 +36,11 @@ struct TripShareLayoutSelectionView: View {
                     ScrollView {
                         VStack(spacing: 20) {
                             previewSection
+                            if showsProUpgradeBanner {
+                                ShareProUpgradeBanner {
+                                    showPaywall = true
+                                }
+                            }
                             styleSection
                         }
                         .padding()
@@ -70,7 +75,7 @@ struct TripShareLayoutSelectionView: View {
             SystemShareSheet(items: Self.activityItems(from: item))
         }
         .sheet(isPresented: $showPaywall) {
-            PaywallView()
+            PaywallView(contextMessage: "share_pro_paywall_context".localized)
                 .environmentObject(purchaseManager)
                 .environmentObject(entitlementManager)
         }
@@ -188,6 +193,10 @@ struct TripShareLayoutSelectionView: View {
 
     private var allowedLayouts: [TripShareLayout] {
         entitlementManager.allowedTripShareLayouts()
+    }
+
+    private var showsProUpgradeBanner: Bool {
+        !BetaInfo.isBetaBuild && !entitlementManager.canUseFullShareLayouts
     }
 
     // MARK: - Preview / Export

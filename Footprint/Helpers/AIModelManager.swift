@@ -164,7 +164,7 @@ final class AIModelManager: ObservableObject {
     }
     
     /// 为目的地分享海报生成图上短句
-    func generateShareOverlayCaption(for destination: TravelDestination, maxLength: Int = 40) async -> String? {
+    func generateShareOverlayCaption(for destination: TravelDestination, maxLength: Int = 160) async -> String? {
         isLoading = true
         errorMessage = nil
         

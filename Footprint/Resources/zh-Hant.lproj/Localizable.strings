@@ -1,6 +1,6 @@
-"paywall_title" = "解鎖 Pro";
-"paywall_subtitle" = "解鎖無限記錄、數據管理等 Pro 功能。AI 按次數使用。";
-"paywall_button_upgrade" = "查看訂閱方案";
+"paywall_title" = "留下你的旅行記憶";
+"paywall_subtitle" = "旅行時記錄，平時翻看。一次買斷 Pro，檔案不封頂、分享更體面。AI 按次數另購。";
+"paywall_button_upgrade" = "查看 Pro 方案";
 "paywall_button_restore" = "恢復購買";
 
 // Membership status card
@@ -12,7 +12,7 @@
 "membership_status_view_restore" = "查看權益 / 恢復購買";
 "membership_section" = "會員與訂閱";
 "membership_status_free" = "免費版";
-"membership_status_free_hint" = "升級解鎖 Pro 功能";
+"membership_status_free_hint" = "升級留下完整旅行檔案";
 
 // Paywall lifetime unlocked
 "paywall_lifetime_unlocked" = "已解鎖終身版權益，無需再次購買。";
@@ -20,26 +20,34 @@
 "paywall_current_subscription" = "當前訂閱";
 "paywall_expires_on" = "到期時間：";
 "paywall_terms_privacy" = "購買即表示同意《服務條款》和《隱私政策》。自動續訂，可在系統訂閱中隨時取消。";
-"paywall_feature_title" = "Pro 功能";
-"paywall_feature_ai" = "AI 助手（筆記、旅程描述、照片分析、目的地推薦；按次數使用）";
-"paywall_feature_unlimited" = "無限目的地與旅程卡片";
-"paywall_feature_share_layouts" = "完整版旅程分享圖片版面";
-"paywall_feature_import_export" = "本地數據導入/導出";
+"paywall_feature_title" = "Pro 為你解鎖";
+"paywall_feature_ai" = "AI 助手按次數另購（與 Pro 獨立）";
+"paywall_feature_ai_aside" = "AI 按次數另購，與 Pro 獨立";
+"paywall_feature_unlimited" = "無限地點與旅程，旅行記憶持續累積";
+"paywall_feature_photos" = "每個地點最多 %d 張照片";
+"paywall_feature_share_layouts" = "完整分享版面，匯出無浮水印";
+"paywall_feature_import_export" = "本地備份導入/導出，資料可帶走";
+"share_pro_banner_title" = "升級 Pro，分享更體面";
+"share_pro_banner_subtitle" = "去浮水印，解鎖完整版面與故事比例";
+"share_pro_paywall_context" = "升級 Pro：分享圖去浮水印，並解鎖完整版面。";
 "paywall_feature_link_maps" = "旅程鏈接系統地圖應用";
 "paywall_banner_title" = "升級 Pro 解鎖數據管理功能";
-"paywall_emotional_message_part1" = "讓「墨魚足跡」更好玩、更長久！我們需要你的加入，一起創造更多有趣的故事～";
-"paywall_emotional_message_part2" = "快來支持我們吧！ ✨";
-"paywall_select_plan" = "選擇方案";
+"paywall_emotional_message_part1" = "旅行不必天天記，但回憶值得好好留。支持墨魚足跡，讓足跡檔案陪你更久。";
+"paywall_emotional_message_part2" = "一次買斷，隨時回來翻看。";
+"paywall_select_plan" = "選擇方案（推薦一次買斷）";
 "paywall_cta_unlock" = "解鎖 Pro";
 "paywall_cta_unlock_price" = "以 %@ 解鎖 Pro";
 "paywall_cta_yearly" = "以 %@ 解鎖 Pro（年付）";
 "paywall_cta_start_trial" = "開始免費試用";
 "paywall_cta_trial_then_yearly" = "試用結束後以 %@ 按年續訂，可隨時取消";
 "paywall_cta_monthly" = "以 %@ 解鎖 Pro（月付）";
-"paywall_cta_lifetime" = "以 %@ 購買終身版";
+"paywall_cta_lifetime" = "以 %@ 一次買斷終身 Pro";
 "paywall_cta_current" = "目前方案";
 "paywall_lifetime_no_ai" = "AI 使用體驗次數或按次購買";
 "paywall_ai_uses_credits" = "AI 使用體驗次數或按次購買";
+"paywall_lifetime_plan_subtitle" = "一次買斷 · 適合偶爾旅行、長期回看";
+"paywall_lifetime_extra" = "不用按月付；AI 按次數另購";
+"paywall_subscription_extra" = "適合今年旅行較多；AI 按次數另購";
 "paywall_subscription_includes_ai" = "含無限 AI 助手";
 "paywall_lifetime_ai_hint" = "AI 使用體驗次數或按次購買。";
 "paywall_yearly_monthly_equivalent" = "相當於每月 %@";
@@ -444,7 +452,7 @@
 "ai_credits_product_subtitle" = "每次購買可獲得 %@。";
 "ai_credits_product_unavailable" = "暫時無法獲取商品信息，請稍後重試。";
 "ai_credits_usage_title" = "以下操作會消耗 AI 調用次數：";
-"ai_credits_usage_desc" = "每次生成 AI 旅行筆記會消耗 1 次調用；\n每次生成或更新 AI 旅程描述會消耗 1 次調用；\n每次使用 AI 旅行推薦功能會消耗 1 次調用；調用次數長期有效，不會自動過期。";
+"ai_credits_usage_desc" = "每次生成 AI 旅行筆記會消耗 1 次調用；\n每次生成或更新 AI 旅程描述會消耗 1 次調用；\n每次使用 AI 旅行推薦功能會消耗 1 次調用；\n每次生成分享海報短句會消耗 1 次調用。\n調用次數長期有效，不會自動過期。";
 "ai_credits_restore_button" = "恢復購買";
 "ai_credits_restore_tip" = "消耗型 AI 調用次數不會通過「恢復購買」找回，請在當前設備上使用完已購買的次數。";
 "ai_buy_per_use_button" = "按次購買 AI 調用";
@@ -604,9 +612,10 @@
 "destination_share_cover_option" = "選擇封面照片";
 "destination_share_edit_text" = "編輯文字";
 "destination_share_edit_text_hint" = "點按預覽可編輯圖上文字";
-"destination_share_overlay_section" = "圖上文案";
+"destination_share_title_label" = "標題";
+"destination_share_overlay_section" = "副標題";
 "destination_share_overlay_placeholder" = "一句短旁白";
-"destination_share_overlay_footer" = "會出現在預覽海報上，建議一句話，約十幾字。";
+"destination_share_overlay_footer" = "標題為地點名；副標題會出現在預覽海報上，建議一句話。";
 "destination_share_ai_generate" = "AI 生成一句";
 "destination_share_ai_generating" = "正在生成…";
 "destination_share_caption_section" = "分享文案";
@@ -777,14 +786,14 @@
 "onboarding_page1_country_title" = "所在國家";
 "onboarding_page1_country_description" = "設置你的國家，以區分國內和國際旅行";
 "onboarding_identity_tag_title" = "身份標籤";
-"onboarding_identity_tag_description" = "選擇或填寫一個身份標籤，讓 AI 更貼近您的風格回答。";
+"onboarding_identity_tag_description" = "選擇或填寫一個身份標籤，用來推薦專屬主題色。";
 "onboarding_personality_tag_title" = "性格標籤";
 "onboarding_personality_tag_description" = "選擇性格類型，讓 AI 的回答更貼合您的風格。";
 "onboarding_user_attributes_title" = "用戶屬性";
 "onboarding_user_attributes_description" = "選擇您的性別、年齡段和星座，幫助 AI 更好地了解您，提供更個人化的回答。";
 "onboarding_user_attributes_description_short" = "選擇您的性別和年齡段，幫助 AI 更好地了解您，提供更個人化的回答。";
 "onboarding_constellation_title" = "星座";
-"onboarding_constellation_description" = "選擇您的星座，讓 AI 的回答更貼近您的個性。";
+"onboarding_constellation_description" = "選擇星座後，可以再看一枚星座主題色。不願透露也可以。";
 "onboarding_page2_title" = "外觀";
 "onboarding_page2_appearance_title" = "外觀模式";
 "onboarding_page2_appearance_description" = "選擇應用的外觀模式。跟隨系統將根據系統設置自動切換";
@@ -796,23 +805,24 @@
 "onboarding_next" = "下一步";
 "onboarding_complete" = "開始使用";
 "onboarding_paywall_nav_title" = "選擇方案";
-"onboarding_paywall_title" = "歡迎使用墨魚足跡";
-"onboarding_paywall_subtitle" = "免費版即可開始記錄旅程；升級 Pro 解鎖無限記錄與數據管理。";
+"onboarding_paywall_title" = "留下你的旅行記憶";
+"onboarding_paywall_subtitle" = "免費即可開始記錄與回看；想認真留檔時，一次買斷 Pro 最省心。";
 "onboarding_free_tier_title" = "免費版包含";
 "onboarding_free_destinations" = "最多 %d 個打卡地點";
 "onboarding_free_trips" = "最多 %d 個旅程";
 "onboarding_free_photos" = "每地點最多 %d 張照片";
 "onboarding_free_share" = "基礎分享版面（分享圖含水印）";
 "onboarding_free_ai_trial" = "贈送 %d 次 AI 體驗";
-"onboarding_pro_feature_title" = "升級 Pro 額外解鎖";
-"onboarding_pricing_section_title" = "選擇訂閱方案";
-"onboarding_recommended_plan" = "推薦";
+"onboarding_pro_feature_title" = "Pro 額外解鎖";
+"onboarding_pricing_section_title" = "選擇方案";
+"onboarding_recommended_plan" = "推薦買斷";
 "onboarding_continue_free" = "免費開始使用";
 "onboarding_continue_free_hint" = "可隨時在「我的」升級。";
 
 // Profile - Identity Tag & MBTI
 "identity_tag" = "身份標籤";
-"identity_tag_description" = "選擇或填寫一個身份標籤，讓 AI 更貼近你的風格回覆。";
+"identity_tag_description" = "選擇或填寫一個身份標籤，用來推薦專屬主題色。";
+"account_profile_section" = "個人資料";
 "identity_tag_placeholder" = "旅行家、美食家、設計師…";
 "mbti_title" = "MBTI";
 "mbti_description" = "選擇你的性格類型以獲得更貼合的回答。";
@@ -821,7 +831,20 @@
 "age_group_title" = "年齡段";
 "age_group_description" = "選擇您的年齡段，幫助 AI 更好地理解您的需求。";
 "constellation_title" = "星座";
-"constellation_description" = "選擇您的星座，讓 AI 的回答更貼近您的個性。";
+"constellation_description" = "選擇星座後，可以再看一枚星座主題色。";
+"onboarding_theme_color_title" = "專屬主題色";
+"onboarding_theme_color_description" = "身份色是主推薦，選了星座還可以看一枚星座色。點「使用這個顏色」才會換上，已經選過的顏色會保留。";
+"onboarding_theme_color_empty" = "自訂身份或未選擇星座時，繼續使用現在的主題色。";
+"onboarding_theme_color_use" = "使用這個顏色";
+"onboarding_theme_color_pick" = "自己選";
+"profile_theme_color_description" = "選擇一項會立刻替換現在的主題色。身份和星座仍要點右上角儲存。";
+"theme_source_persona" = "身份";
+"theme_source_constellation" = "星座";
+"theme_color_in_use" = "使用中";
+"theme_color_reset_hint" = "之後可以在「設置 › 一般 › 外觀」裡點「預設」，改回 App 預設主題色。";
+"theme_source_default" = "預設";
+"theme_default_name" = "App";
+"theme_source_custom" = "自訂";
 
 // Profile Options - Persona
 "persona_option_traveler" = "旅行家";

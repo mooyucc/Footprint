@@ -25,6 +25,7 @@ struct TripDetailView: View {
     @State private var showingLayoutSelection = false // 控制版面选择视图显示
     @State private var selectedLayout: TripShareLayout = .extendedGrid
     @State private var showingAIDescription = false
+    @State private var showAICreditPaywall = false
     /// 缓存封面 UIImage，避免滚动每帧 Data→UIImage 解码造成抖动
     @State private var cachedCoverImage: UIImage?
     @EnvironmentObject var languageManager: LanguageManager
@@ -596,14 +597,17 @@ struct TripDetailView: View {
                     .accessibilityLabel(Text("share".localized))
                     
                     Button {
-                        showingAIDescription = true
+                        if canUseAI {
+                            showingAIDescription = true
+                        } else {
+                            showAICreditPaywall = true
+                        }
                     } label: {
                         Image(systemName: "sparkles")
                             .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(Color(uiColor: canUseAI ? .label : .tertiaryLabel))
+                            .foregroundStyle(Color(uiColor: .label))
                             .symbolRenderingMode(.monochrome)
                     }
-                    .disabled(!canUseAI)
                     .buttonStyle(.plain)
                     .accessibilityLabel(Text("ai_function_trip_desc_title".localized))
                     
@@ -684,6 +688,10 @@ struct TripDetailView: View {
         }
         .sheet(isPresented: $showingAIDescription) {
             AIActionSheet(trip: trip, action: .generateDescription)
+        }
+        .sheet(isPresented: $showAICreditPaywall) {
+            AICreditPaywallView()
+                .environmentObject(aiCreditManager)
         }
         .alert("delete_trip".localized, isPresented: $showingDeleteAlert) {
             Button("cancel".localized, role: .cancel) { }

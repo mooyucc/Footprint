@@ -119,13 +119,13 @@ struct MapDestinationCalloutAnnotationView: View {
     private var nameAndCategoryRow: some View {
         HStack(spacing: 5) {
             Text(destination.name)
-                .font(.system(size: 13, weight: .semibold)) // 进一步缩小字体：从16改为13
+                .font(FootprintType.Map.title)
                 .foregroundColor(.primary)
                 .lineLimit(1)
             
             // 显示时间日期（替代原来的"国内"）
             Text(formatVisitDate(destination.visitDate))
-                .font(.system(size: 10, weight: .medium)) // 进一步缩小字体：从12改为10
+                .font(FootprintType.Map.date)
                 .foregroundColor(.secondary)
                 .padding(.horizontal, 5) // 进一步缩小内边距
                 .padding(.vertical, 2) // 进一步缩小内边距
@@ -147,14 +147,14 @@ struct MapDestinationCalloutAnnotationView: View {
         Group {
             if !destination.notes.isEmpty {
                 Text(destination.notes)
-                    .font(.system(size: 11, weight: .regular)) // 进一步缩小字体：从13改为11
+                    .font(FootprintType.Map.note)
                     .foregroundColor(.secondary)
                     .lineLimit(2) // 固定显示两行
                     .truncationMode(.tail) // 超出部分用"..."省略
                     .multilineTextAlignment(.leading)
             } else {
                 Text("no_notes".localized)
-                    .font(.system(size: 11, weight: .regular)) // 缩小字体
+                    .font(FootprintType.Map.note)
                     .foregroundStyle(.tertiary)
                     .lineLimit(2)
             }
@@ -289,13 +289,13 @@ struct MapDestinationCalloutView: View {
     private var nameAndCategoryRow: some View {
         HStack(spacing: 5) {
             Text(destination.name)
-                .font(.system(size: 13, weight: .semibold)) // 进一步缩小字体：从14改为13
+                .font(FootprintType.Map.title)
                 .foregroundColor(.primary)
                 .lineLimit(1)
             
             // 显示时间日期（替代原来的"国内"）
             Text(formatVisitDate(destination.visitDate))
-                .font(.system(size: 10, weight: .medium)) // 进一步缩小字体：从11改为10
+                .font(FootprintType.Map.date)
                 .foregroundColor(.secondary)
                 .padding(.horizontal, 5) // 进一步缩小内边距
                 .padding(.vertical, 2) // 进一步缩小内边距
@@ -317,7 +317,7 @@ struct MapDestinationCalloutView: View {
         Group {
             if !destination.notes.isEmpty {
                 Text(destination.notes)
-                    .font(.system(size: 11, weight: .regular)) // 进一步缩小字体：从12改为11
+                    .font(FootprintType.Map.note)
                     .foregroundColor(.secondary)
                     .lineLimit(2, reservesSpace: false) // 只显示两行，不保留额外空间
                     .truncationMode(.tail) // 超出部分用"..."省略
@@ -325,7 +325,7 @@ struct MapDestinationCalloutView: View {
                     .fixedSize(horizontal: false, vertical: true) // 允许垂直扩展，但限制水平宽度
             } else {
                 Text("no_notes".localized)
-                    .font(.system(size: 11, weight: .regular)) // 进一步缩小字体
+                    .font(FootprintType.Map.note)
                     .foregroundStyle(.tertiary)
                     .lineLimit(2)
             }
@@ -484,7 +484,7 @@ struct ClusterCalloutAnnotationView: View {
                     if !noteDestination.notes.isEmpty {
                         // 显示笔记内容
                         Text(noteDestination.notes)
-                            .font(.system(size: 13, weight: .regular)) // 字体13pt
+                            .font(FootprintType.Map.clusterNote) // 字体13pt
                             .foregroundColor(.primary) // 黑色
                             .lineLimit(2) // 固定显示两行
                             .truncationMode(.tail)
@@ -493,13 +493,13 @@ struct ClusterCalloutAnnotationView: View {
                     } else {
                         // 如果没有笔记，显示"暂无笔记"
                         Text("no_notes".localized)
-                            .font(.system(size: 13, weight: .regular))
+                            .font(FootprintType.Map.clusterNote)
                             .foregroundColor(.primary) // 黑色
                             .lineLimit(2)
                     }
                 } else {
                     Text("no_notes".localized)
-                        .font(.system(size: 13, weight: .regular))
+                        .font(FootprintType.Map.clusterNote)
                         .foregroundColor(.primary) // 黑色
                         .lineLimit(2)
                 }

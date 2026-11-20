@@ -1,6 +1,6 @@
-"paywall_title" = "解锁 Pro";
-"paywall_subtitle" = "解锁无限记录、数据管理等 Pro 功能。AI 按次数使用。";
-"paywall_button_upgrade" = "查看订阅方案";
+"paywall_title" = "留下你的旅行记忆";
+"paywall_subtitle" = "旅行时记录，平时翻看。一次买断 Pro，档案不封顶、分享更体面。AI 按次数另购。";
+"paywall_button_upgrade" = "查看 Pro 方案";
 "paywall_button_restore" = "恢复购买";
 
 // Membership status card
@@ -12,7 +12,7 @@
 "membership_status_view_restore" = "查看权益 / 恢复购买";
 "membership_section" = "会员与订阅";
 "membership_status_free" = "免费版";
-"membership_status_free_hint" = "升级解锁 Pro 功能";
+"membership_status_free_hint" = "升级留下完整旅行档案";
 
 // Paywall lifetime unlocked
 "paywall_lifetime_unlocked" = "已解锁终身版权益，无需再次购买。";
@@ -20,26 +20,34 @@
 "paywall_current_subscription" = "当前订阅";
 "paywall_expires_on" = "到期时间：";
 "paywall_terms_privacy" = "购买即表示同意《服务条款》和《隐私政策》。自动续订，可在系统订阅中随时取消。";
-"paywall_feature_title" = "Pro 功能";
-"paywall_feature_ai" = "AI 助手（笔记、旅程描述、照片分析、目的地推荐；按次数使用）";
-"paywall_feature_unlimited" = "无限目的地与旅程卡片";
-"paywall_feature_share_layouts" = "完整版旅程分享图片版面";
-"paywall_feature_import_export" = "本地数据导入/导出";
+"paywall_feature_title" = "Pro 为你解锁";
+"paywall_feature_ai" = "AI 助手按次数另购（与 Pro 独立）";
+"paywall_feature_ai_aside" = "AI 按次数另购，与 Pro 独立";
+"paywall_feature_unlimited" = "无限地点与旅程，旅行记忆持续累积";
+"paywall_feature_photos" = "每个地点最多 %d 张照片";
+"paywall_feature_share_layouts" = "完整分享版面，导出无水印";
+"paywall_feature_import_export" = "本地备份导入/导出，数据可带走";
+"share_pro_banner_title" = "升级 Pro，分享更体面";
+"share_pro_banner_subtitle" = "去水印，解锁完整版面与故事比例";
+"share_pro_paywall_context" = "升级 Pro：分享图去水印，并解锁完整版面。";
 "paywall_feature_link_maps" = "旅程链接系统地图应用";
 "paywall_banner_title" = "升级 Pro 解锁数据管理功能";
-"paywall_emotional_message_part1" = "让「墨鱼足迹」更好玩、更长久！我们需要你的加入，一起创造更多有趣的故事～";
-"paywall_emotional_message_part2" = "快来支持我们吧！ ✨";
-"paywall_select_plan" = "选择方案";
+"paywall_emotional_message_part1" = "旅行不必天天记，但回忆值得好好留。支持墨鱼足迹，让足迹档案陪你更久。";
+"paywall_emotional_message_part2" = "一次买断，随时回来翻看。";
+"paywall_select_plan" = "选择方案（推荐一次买断）";
 "paywall_cta_unlock" = "解锁 Pro";
 "paywall_cta_unlock_price" = "以 %@ 解锁 Pro";
 "paywall_cta_yearly" = "以 %@ 解锁 Pro（年付）";
 "paywall_cta_start_trial" = "开始免费试用";
 "paywall_cta_trial_then_yearly" = "试用结束后以 %@ 按年续订，可随时取消";
 "paywall_cta_monthly" = "以 %@ 解锁 Pro（月付）";
-"paywall_cta_lifetime" = "以 %@ 购买终身版";
+"paywall_cta_lifetime" = "以 %@ 一次买断终身 Pro";
 "paywall_cta_current" = "当前方案";
 "paywall_lifetime_no_ai" = "AI 使用体验次数或按次购买";
 "paywall_ai_uses_credits" = "AI 使用体验次数或按次购买";
+"paywall_lifetime_plan_subtitle" = "一次买断 · 适合偶尔旅行、长期回看";
+"paywall_lifetime_extra" = "不用按月付；AI 按次数另购";
+"paywall_subscription_extra" = "适合今年旅行较多；AI 按次数另购";
 "paywall_subscription_includes_ai" = "含无限 AI 助手";
 "paywall_lifetime_ai_hint" = "AI 使用体验次数或按次购买。";
 "paywall_yearly_monthly_equivalent" = "相当于每月 %@";
@@ -533,9 +541,10 @@
 "destination_share_cover_option" = "选择封面照片";
 "destination_share_edit_text" = "编辑文字";
 "destination_share_edit_text_hint" = "点按预览可编辑图上文字";
-"destination_share_overlay_section" = "图上文案";
+"destination_share_title_label" = "标题";
+"destination_share_overlay_section" = "副标题";
 "destination_share_overlay_placeholder" = "一句短旁白";
-"destination_share_overlay_footer" = "会出现在预览海报上，建议一句话，约十几字。";
+"destination_share_overlay_footer" = "标题为地点名；副标题会出现在预览海报上，建议一句话。";
 "destination_share_ai_generate" = "AI 生成一句";
 "destination_share_ai_generating" = "正在生成…";
 "destination_share_caption_section" = "分享配文";
@@ -720,14 +729,14 @@
 "onboarding_page1_country_title" = "所在国家";
 "onboarding_page1_country_description" = "设置你的国家，以区分国内和国际旅行";
 "onboarding_identity_tag_title" = "身份标签";
-"onboarding_identity_tag_description" = "选择或填写一个身份标签，让 AI 更贴近您的风格回答。";
+"onboarding_identity_tag_description" = "选择或填写一个身份标签，用来推荐专属主题色。";
 "onboarding_personality_tag_title" = "性格标签";
 "onboarding_personality_tag_description" = "选择性格类型，让 AI 的回答更贴合您的风格。";
 "onboarding_user_attributes_title" = "用户属性";
 "onboarding_user_attributes_description" = "选择您的性别、年龄段和星座，帮助 AI 更好地了解您，提供更个性化的回答。";
 "onboarding_user_attributes_description_short" = "选择您的性别和年龄段，帮助 AI 更好地了解您，提供更个性化的回答。";
 "onboarding_constellation_title" = "星座";
-"onboarding_constellation_description" = "选择您的星座，让 AI 的回答更贴近您的个性。";
+"onboarding_constellation_description" = "选择星座后，可以再看一枚星座主题色。不愿透露也可以。";
 "onboarding_page2_title" = "外观";
 "onboarding_page2_appearance_title" = "外观模式";
 "onboarding_page2_appearance_description" = "选择应用的外观模式。跟随系统将根据系统设置自动切换";
@@ -739,17 +748,17 @@
 "onboarding_next" = "下一步";
 "onboarding_complete" = "开始使用";
 "onboarding_paywall_nav_title" = "选择方案";
-"onboarding_paywall_title" = "欢迎使用墨鱼足迹";
-"onboarding_paywall_subtitle" = "免费版即可开始记录旅程；升级 Pro 解锁无限记录与数据管理。";
+"onboarding_paywall_title" = "留下你的旅行记忆";
+"onboarding_paywall_subtitle" = "免费即可开始记录与回看；想认真留档时，一次买断 Pro 最省心。";
 "onboarding_free_tier_title" = "免费版包含";
 "onboarding_free_destinations" = "最多 %d 个打卡地点";
 "onboarding_free_trips" = "最多 %d 个旅程";
 "onboarding_free_photos" = "每地点最多 %d 张照片";
 "onboarding_free_share" = "基础分享版面（分享图含水印）";
 "onboarding_free_ai_trial" = "赠送 %d 次 AI 体验";
-"onboarding_pro_feature_title" = "升级 Pro 额外解锁";
-"onboarding_pricing_section_title" = "选择订阅方案";
-"onboarding_recommended_plan" = "推荐";
+"onboarding_pro_feature_title" = "Pro 额外解锁";
+"onboarding_pricing_section_title" = "选择方案";
+"onboarding_recommended_plan" = "推荐买断";
 "onboarding_continue_free" = "免费开始使用";
 "onboarding_continue_free_hint" = "可随时在「我的」升级。";
 
@@ -800,7 +809,8 @@
 
 // Profile - Identity Tag & MBTI
 "identity_tag" = "身份标签";
-"identity_tag_description" = "选择或填写一个身份标签，让 AI 更贴近你的风格回复。";
+"identity_tag_description" = "选择或填写一个身份标签，用来推荐专属主题色。";
+"account_profile_section" = "个人资料";
 "identity_tag_placeholder" = "旅行家、美食家、设计师…";
 "mbti_title" = "MBTI";
 "mbti_description" = "选择你的性格类型以获得更贴合的回答。";
@@ -809,7 +819,20 @@
 "age_group_title" = "年龄段";
 "age_group_description" = "选择您的年龄段，帮助 AI 更好地理解您的需求。";
 "constellation_title" = "星座";
-"constellation_description" = "选择您的星座，让 AI 的回答更贴近您的个性。";
+"constellation_description" = "选择星座后，可以再看一枚星座主题色。";
+"onboarding_theme_color_title" = "专属主题色";
+"onboarding_theme_color_description" = "身份色是主推荐，选了星座还可以看一枚星座色。点「使用这个颜色」才会换上，已经选过的颜色会保留。";
+"onboarding_theme_color_empty" = "自定义身份或未选择星座时，继续使用现在的主题色。";
+"onboarding_theme_color_use" = "使用这个颜色";
+"onboarding_theme_color_pick" = "自己选";
+"profile_theme_color_description" = "选择一项会立刻替换现在的主题色。身份和星座仍要点右上角保存。";
+"theme_source_persona" = "身份";
+"theme_source_constellation" = "星座";
+"theme_color_in_use" = "使用中";
+"theme_color_reset_hint" = "之后可以在「设置 › 通用 › 外观」里点「默认」，改回 App 默认主题色。";
+"theme_source_default" = "默认";
+"theme_default_name" = "App";
+"theme_source_custom" = "自定义";
 
 // Profile Options - Persona
 "persona_option_traveler" = "旅行家";
@@ -874,7 +897,7 @@
 "ai_credits_product_subtitle" = "每次购买可获得 %@。";
 "ai_credits_product_unavailable" = "暂时无法获取商品信息，请稍后重试。";
 "ai_credits_usage_title" = "以下操作会消耗 AI 调用次数：";
-"ai_credits_usage_desc" = "每次生成 AI 旅行笔记会消耗 1 次调用；\n每次生成或更新 AI 旅程描述会消耗 1 次调用；\n每次使用 AI 旅行推荐功能会消耗 1 次调用；调用次数长期有效，不会自动过期。";
+"ai_credits_usage_desc" = "每次生成 AI 旅行笔记会消耗 1 次调用；\n每次生成或更新 AI 旅程描述会消耗 1 次调用；\n每次使用 AI 旅行推荐功能会消耗 1 次调用；\n每次生成分享海报短句会消耗 1 次调用。\n调用次数长期有效，不会自动过期。";
 "ai_credits_restore_button" = "恢复购买";
 "ai_credits_restore_tip" = "消耗型 AI 调用次数不会通过“恢复购买”找回，请在当前设备上使用完已购买的次数。";
 "ai_buy_per_use_button" = "按次购买 AI 调用";

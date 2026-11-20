@@ -50,15 +50,13 @@ enum ShareImageUtilities {
         }
     }
     
-    /// 图上短句默认值（备注首段 → 地点名）；默认偏短，贴近海报一句话
-    static func destinationOverlayCaption(for destination: TravelDestination, maxLength: Int = 40) -> String {
+    /// 图上副标题默认值：从备注抽一句；无备注则空（标题已单独用地点名）
+    static func destinationOverlayCaption(for destination: TravelDestination, maxLength: Int = 30) -> String {
         let note = destination.notes
             .replacingOccurrences(of: "\n", with: " ")
             .trimmingCharacters(in: .whitespacesAndNewlines)
-        if !note.isEmpty {
-            return String(note.prefix(maxLength))
-        }
-        return String(destination.name.prefix(maxLength))
+        guard !note.isEmpty else { return "" }
+        return String(note.prefix(maxLength))
     }
     
     /// 多渠道通用短文案（系统分享 / 复制）

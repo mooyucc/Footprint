@@ -149,7 +149,7 @@ struct FloatingAssistiveMenu: View {
                     }
                 }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(FloatingMenuPressButtonStyle())
         .accessibilityHint(menuTitle)
     }
     
@@ -526,5 +526,19 @@ struct MetaballNeckShape: Shape {
         )
         path.closeSubpath()
         return path
+    }
+}
+
+/// 主按钮按下缩放。减少动态效果时不位移，触感仍由按钮动作触发。
+private struct FloatingMenuPressButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+            .animation(
+                reduceMotion ? nil : .timingCurve(0.23, 1, 0.32, 1, duration: 0.16),
+                value: configuration.isPressed
+            )
     }
 }

@@ -219,32 +219,7 @@ struct OnboardingIdentityTagView: View {
                 .disabled(selectedPersonaOption == UserProfileOptions.localizedPersona(for: "custom") && finalPersona.isEmpty)
                 .opacity(selectedPersonaOption == UserProfileOptions.localizedPersona(for: "custom") && finalPersona.isEmpty ? 0.6 : 1.0)
                 
-                // 页面指示器（显示基本设置的6个步骤）
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(Color(.systemGray4))
-                        .frame(width: 8, height: 8)
-                    
-                    Circle()
-                        .fill(Color(.systemGray4))
-                        .frame(width: 8, height: 8)
-                    
-                    Circle()
-                        .fill(brandColorManager.currentBrandColor)
-                        .frame(width: 8, height: 8)
-                    
-                    Circle()
-                        .fill(Color(.systemGray4))
-                        .frame(width: 8, height: 8)
-                    
-                    Circle()
-                        .fill(Color(.systemGray4))
-                        .frame(width: 8, height: 8)
-                    
-                    Circle()
-                        .fill(Color(.systemGray4))
-                        .frame(width: 8, height: 8)
-                }
+                OnboardingStepDots(count: 5, activeIndex: 2, activeColor: brandColorManager.currentBrandColor)
                 .padding(.bottom, 20)
             }
             .padding(.top, 20)
@@ -259,10 +234,10 @@ struct OnboardingIdentityTagView: View {
             // 如果已有保存的身份标签，恢复选择
             if !userProfileManager.personaTag.isEmpty {
                 let savedTag = userProfileManager.personaTag
-                if personaOptions.contains(savedTag) {
-                    selectedPersonaOption = savedTag
+                if UserProfileOptions.personaKeys.contains(savedTag) {
+                    selectedPersonaOption = UserProfileOptions.localizedPersona(for: savedTag)
                 } else {
-                    selectedPersonaOption = "自定义"
+                    selectedPersonaOption = UserProfileOptions.localizedPersona(for: "custom")
                     customPersona = savedTag
                 }
             }

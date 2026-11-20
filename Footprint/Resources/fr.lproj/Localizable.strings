@@ -6,8 +6,8 @@
 */
 
 // Paywall
-"paywall_title" = "Débloquer Pro";
-"paywall_subtitle" = "Débloquez les enregistrements illimités, la gestion des données et d'autres fonctionnalités Pro. L'IA utilise des crédits.";
+"paywall_title" = "Gardez vos souvenirs de voyage";
+"paywall_subtitle" = "Notez en voyage, revivez plus tard. Débloquez Pro une fois pour une archive illimitée. L’IA se vend à part.";
 "paywall_button_upgrade" = "Voir le plan d'abonnement";
 "paywall_button_restore" = "Restaurer les achats";
 
@@ -29,22 +29,30 @@
 "paywall_expires_on" = "Expire le : ";
 "paywall_terms_privacy" = "En achetant, vous acceptez les Conditions d'utilisation et la Politique de confidentialité. Renouvellement automatique; annulez à tout moment dans les abonnements système.";
 "paywall_feature_title" = "Fonctionnalités Pro";
-"paywall_feature_ai" = "Assistant IA (notes, descriptions, analyse photo, recommandations ; au crédit)";
+"paywall_feature_ai" = "Assistant IA vendu à part (crédits, hors Pro)";
 "paywall_feature_unlimited" = "Destinations et cartes de voyage illimitées";
-"paywall_feature_share_layouts" = "Mises en page de partage complètes";
+"paywall_feature_photos" = "Jusqu’à %d photos par destination";
+"paywall_feature_share_layouts" = "Mises en page complètes sans filigrane";
 "paywall_feature_import_export" = "Importation/exportation de données locales";
+"paywall_feature_ai_aside" = "IA vendue à part (crédits)";
+"paywall_lifetime_plan_subtitle" = "Achat unique · Idéal pour voyages occasionnels et archives";
+"paywall_lifetime_extra" = "Sans abonnement mensuel · IA à part";
+"paywall_subscription_extra" = "Idéal pour une année très voyageuse · IA à part";
+"share_pro_banner_title" = "Passez à Pro pour de meilleurs partages";
+"share_pro_banner_subtitle" = "Sans filigrane, mises en page complètes";
+"share_pro_paywall_context" = "Passez à Pro : sans filigrane et avec toutes les mises en page.";
 "paywall_feature_link_maps" = "Lier les voyages à l'app Cartes du système";
 "paywall_banner_title" = "Passer à Pro pour débloquer la gestion des données";
 "paywall_emotional_message_part1" = "Rendons \"MooFootprint\" plus amusant et durable ! Nous avons besoin de votre soutien pour créer ensemble des histoires plus intéressantes.";
 "paywall_emotional_message_part2" = "Venez nous soutenir ! ✨";
-"paywall_select_plan" = "Choisir une formule";
+"paywall_select_plan" = "Choisir une formule (achat unique recommandé)";
 "paywall_cta_unlock" = "Débloquer Pro";
 "paywall_cta_unlock_price" = "Débloquer Pro · %@";
 "paywall_cta_yearly" = "Débloquer Pro · %@ / an";
 "paywall_cta_start_trial" = "Commencer l'essai gratuit";
 "paywall_cta_trial_then_yearly" = "Puis %@ / an. Annulable à tout moment.";
 "paywall_cta_monthly" = "Débloquer Pro · %@ / mois";
-"paywall_cta_lifetime" = "Acheter l'accès à vie · %@";
+"paywall_cta_lifetime" = "Pro à vie · %@";
 "paywall_cta_current" = "Formule actuelle";
 "paywall_lifetime_no_ai" = "L'IA utilise des essais ou des appels achetés";
 "paywall_ai_uses_credits" = "L'IA utilise des essais ou des appels achetés";
@@ -559,9 +567,10 @@
 "destination_share_cover_option" = "Choisir la photo de couverture";
 "destination_share_edit_text" = "Modifier le texte";
 "destination_share_edit_text_hint" = "Touchez l’aperçu pour modifier le texte sur l’image";
-"destination_share_overlay_section" = "Texte sur l’image";
+"destination_share_title_label" = "Titre";
+"destination_share_overlay_section" = "Sous-titre";
 "destination_share_overlay_placeholder" = "Une courte phrase";
-"destination_share_overlay_footer" = "Affiché sur l’affiche. Une seule phrase courte.";
+"destination_share_overlay_footer" = "Le titre est le nom du lieu. Le sous-titre apparaît sur l’affiche — une seule phrase courte.";
 "destination_share_ai_generate" = "IA : une phrase";
 "destination_share_ai_generating" = "Génération…";
 "destination_share_caption_section" = "Légende de partage";
@@ -732,14 +741,14 @@
 "onboarding_page1_country_title" = "Pays";
 "onboarding_page1_country_description" = "Définissez votre pays pour distinguer les voyages nationaux et internationaux";
 "onboarding_identity_tag_title" = "Étiquette d'Identité";
-"onboarding_identity_tag_description" = "Choisissez une étiquette d'identité ou entrez la vôtre pour aider l'IA à répondre dans votre style.";
+"onboarding_identity_tag_description" = "Choisissez une étiquette d'identité ou saisissez la vôtre pour proposer une couleur de thème.";
 "onboarding_personality_tag_title" = "Type de Personnalité";
 "onboarding_personality_tag_description" = "Sélectionnez votre type de personnalité pour que l'IA réponde dans un style qui vous correspond.";
 "onboarding_user_attributes_title" = "Attributs Utilisateur";
 "onboarding_user_attributes_description" = "Sélectionnez votre sexe, groupe d'âge et signe astrologique pour aider l'IA à mieux vous connaître et fournir des réponses plus personnalisées.";
 "onboarding_user_attributes_description_short" = "Sélectionnez votre sexe et groupe d'âge pour aider l'IA à mieux vous connaître et fournir des réponses plus personnalisées.";
 "onboarding_constellation_title" = "Signe Astrologique";
-"onboarding_constellation_description" = "Sélectionnez votre signe astrologique pour aider l'IA à répondre dans un style qui correspond à votre personnalité.";
+"onboarding_constellation_description" = "Choisissez un signe pour voir une deuxième couleur de thème. Vous pouvez aussi passer.";
 "onboarding_page2_title" = "Apparence";
 "onboarding_page2_appearance_title" = "Mode d'Apparence";
 "onboarding_page2_appearance_description" = "Choisissez le mode d'apparence de l'application. Suivre le système basculera automatiquement en fonction des paramètres du système";
@@ -761,13 +770,14 @@
 "onboarding_free_ai_trial" = "%d essais IA offerts";
 "onboarding_pro_feature_title" = "Passez à Pro pour";
 "onboarding_pricing_section_title" = "Choisir un abonnement";
-"onboarding_recommended_plan" = "Recommandé";
+"onboarding_recommended_plan" = "Achat unique";
 "onboarding_continue_free" = "Continuer gratuitement";
 "onboarding_continue_free_hint" = "Passez à Pro à tout moment dans Profil.";
 
 // Profile - Identity Tag & MBTI
 "identity_tag" = "Étiquette d'Identité";
-"identity_tag_description" = "Choisissez une étiquette d'identité ou entrez la vôtre pour aider l'IA à répondre dans votre style.";
+"identity_tag_description" = "Choisissez une étiquette d'identité ou saisissez la vôtre pour proposer une couleur de thème.";
+"account_profile_section" = "Profil";
 "identity_tag_placeholder" = "Voyageur, gourmet, designer…";
 "mbti_title" = "MBTI";
 "gender_title" = "Sexe";
@@ -775,7 +785,20 @@
 "age_group_title" = "Groupe d'Âge";
 "age_group_description" = "Sélectionnez votre groupe d'âge pour aider l'IA à mieux comprendre vos besoins.";
 "constellation_title" = "Signe Astrologique";
-"constellation_description" = "Sélectionnez votre signe astrologique pour aider l'IA à répondre dans un style qui correspond à votre personnalité.";
+"constellation_description" = "Choisissez un signe pour voir une deuxième couleur de thème.";
+"onboarding_theme_color_title" = "Votre couleur de thème";
+"onboarding_theme_color_description" = "L'identité propose la couleur principale. Un signe en ajoute une deuxième. La couleur actuelle reste tant que vous n'appuyez pas sur Utiliser cette couleur.";
+"onboarding_theme_color_empty" = "Avec une identité personnalisée ou sans signe, la couleur de thème actuelle est conservée.";
+"onboarding_theme_color_use" = "Utiliser cette couleur";
+"onboarding_theme_color_pick" = "Choisir moi-même";
+"profile_theme_color_description" = "Choisir une couleur remplace tout de suite la couleur de thème. L'identité et le signe doivent encore être enregistrés.";
+"theme_source_persona" = "Identité";
+"theme_source_constellation" = "Signe";
+"theme_color_in_use" = "En cours";
+"theme_color_reset_hint" = "Vous pouvez revenir à la couleur par défaut dans Paramètres › Général › Apparence en touchant Défaut.";
+"theme_source_default" = "Défaut";
+"theme_default_name" = "App";
+"theme_source_custom" = "Personnalisé";
 
 // Profile Options - Persona
 "persona_option_traveler" = "Voyageur";

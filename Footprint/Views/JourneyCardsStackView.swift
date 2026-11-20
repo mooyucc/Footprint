@@ -31,6 +31,10 @@ struct JourneyCardsStackView: View {
     @State private var focusedIndex: Int = 0
     /// 点击最前卡片时进入 `TripDetailView`
     @State private var detailTripId: UUID?
+    /// 仅打开详情瞬间挂 zoom source，返回后延时卸掉，避免浏览时露出透明框
+    @State private var zoomSourceTripId: UUID?
+    /// 与年鉴年份文件夹同款：从卡片位置 zoom 进详情、返回时收回原位
+    @Namespace private var tripZoomNamespace
     /// 从卡片打开全屏路线地图 sheet（MapView 路线卡片模式）
     @State private var mapSheetItem: MapTripSheetItem?
     /// 拖拽过程中的累积垂直位移（与 `pitch` 共同决定「有效焦点」小数）
@@ -130,7 +134,7 @@ struct JourneyCardsStackView: View {
                 AddTripView()
             }
             .sheet(isPresented: $showPaywall) {
-                PaywallView()
+                PaywallView(contextMessage: "limit_trip_reached_message".localized)
                     .environmentObject(purchaseManager)
                     .environmentObject(entitlementManager)
             }
@@ -183,8 +187,21 @@ struct JourneyCardsStackView: View {
             .navigationDestination(item: $detailTripId) { tripId in
                 if let trip = tabSnapshots.trip(id: tripId) {
                     TripDetailView(trip: trip)
+                        .navigationTransition(.zoom(sourceID: tripId, in: tripZoomNamespace))
                 } else {
-                    Color.clear.onAppear { detailTripId = nil }
+                    Color.clear.onAppear {
+                        detailTripId = nil
+                        zoomSourceTripId = nil
+                    }
+                }
+            }
+            .onChange(of: detailTripId) { _, tripId in
+                // 返回时 source 需留到 zoom 收回结束，再卸掉
+                guard tripId == nil else { return }
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 450_000_000)
+                    guard detailTripId == nil else { return }
+                    zoomSourceTripId = nil
                 }
             }
             .sheet(item: $mapSheetItem) { item in
@@ -426,7 +443,9 @@ struct JourneyCardsStackView: View {
     @ViewBuilder
     private func journeyCard(for trip: TravelTrip, index: Int, cardWidth: CGFloat, effectiveFocus: CGFloat) -> some View {
         let distance = abs(CGFloat(index) - effectiveFocus)
-        let scale = cardScale(distance: distance)
+        // 吸附焦点卡不做 1.05 放大，zoom source 与卡面几何始终一致（对齐年鉴）
+        let isZoomAnchor = index == focusedIndex
+        let scale = cardScale(distance: distance, suppressFocusBoost: isZoomAnchor)
         let z = Double(900) - distance
         let maxIdx = max(displayTrips.count - 1, 0)
         let clampedFocus = min(max(effectiveFocus, 0), CGFloat(maxIdx))
@@ -438,6 +457,8 @@ struct JourneyCardsStackView: View {
             accent: cardAccents[index % cardAccents.count],
             isFocused: isFocused,
             brandAccent: brandColorManager.currentBrandColor,
+            // 详情打开时关掉投影，避免收回时黑边/阴影底板错位
+            showsShadow: isFocused && detailTripId == nil,
             onMapTap: {
                 mapSheetItem = MapTripSheetItem(id: trip.id)
             }
@@ -450,6 +471,18 @@ struct JourneyCardsStackView: View {
             handleCardTap(trip: trip, index: index, isFocused: isFocused)
         }
         .offset(y: CGFloat(index - focusedIndex) * Self.pitch + dragOffset)
+        // 仅打开中的那张挂 source；底板填色与卡面一致，减轻深色黑边
+        .modifier(
+            JourneyCardZoomSourceModifier(
+                enabled: zoomSourceTripId == trip.id,
+                tripId: trip.id,
+                namespace: tripZoomNamespace,
+                cornerRadius: FootprintTheme.Radius.card,
+                sourceFill: colorScheme == .dark
+                    ? Color(white: 0.10)
+                    : Color.white.opacity(0.94)
+            )
+        )
         .zIndex(z)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel(for: trip, focused: isFocused, cardNumber: index + 1))
@@ -457,12 +490,13 @@ struct JourneyCardsStackView: View {
     }
     
     /// 按距焦点距离连续缩放；近焦点时平滑略放大，避免 `isFocused` 硬切 1.05 造成「跳出」
-    private func cardScale(distance: CGFloat) -> CGFloat {
+    private func cardScale(distance: CGFloat, suppressFocusBoost: Bool = false) -> CGFloat {
         let t = distance
         let linear = 1.0 - 0.052 * t
         let curved = linear * (1.0 - 0.08 * min(t, 4))
         // 焦点附近 smoothstep：distance 0→1 时 boost 从 1.05→1.0
         let focusBoost: CGFloat = {
+            if suppressFocusBoost { return 1.0 }
             let edge = min(max(t, 0), 1)
             let s = edge * edge * (3 - 2 * edge)
             return 1.05 - 0.05 * s
@@ -477,6 +511,7 @@ struct JourneyCardsStackView: View {
     /// 最前一张：进详情；其余：仅滚轮聚焦到该张
     private func handleCardTap(trip: TravelTrip, index: Int, isFocused: Bool) {
         if isFocused {
+            zoomSourceTripId = trip.id
             detailTripId = trip.id
             return
         }
@@ -773,6 +808,8 @@ private struct JourneyTripCardContent: View {
     let accent: Color
     let isFocused: Bool
     let brandAccent: Color
+    /// 进详情时关掉，避免 zoom 收回时投影当黑边露出来
+    var showsShadow: Bool = true
     let onMapTap: () -> Void
     
     private static let routeMapSymbol = "point.topright.arrow.triangle.backward.to.point.bottomleft.scurvepath"
@@ -930,12 +967,12 @@ private struct JourneyTripCardContent: View {
             accent: accent
         ))
         .shadow(
-            color: isFocused
+            color: showsShadow
                 ? Color.black.opacity(colorScheme == .dark ? 0.35 : 0.16)
                 : .clear,
-            radius: isFocused ? 18 : 0,
+            radius: showsShadow ? 18 : 0,
             x: 0,
-            y: isFocused ? 10 : 0
+            y: showsShadow ? 10 : 0
         )
     }
 }
@@ -954,6 +991,31 @@ private struct JourneyCardChromeModifier: ViewModifier {
         } else {
             content
                 .footprintGlassCard(cornerRadius: cornerRadius, glow: accent.opacity(0.55))
+        }
+    }
+}
+
+/// 仅打开详情的那张卡启用 zoom source；底板填色与卡面一致，避免深色黑边。
+private struct JourneyCardZoomSourceModifier: ViewModifier {
+    let enabled: Bool
+    let tripId: UUID
+    var namespace: Namespace.ID
+    let cornerRadius: CGFloat
+    let sourceFill: Color
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if enabled {
+            content
+                .matchedTransitionSource(id: tripId, in: namespace) { source in
+                    source
+                        .background(sourceFill)
+                        .clipShape(
+                            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        )
+                }
+        } else {
+            content
         }
     }
 }

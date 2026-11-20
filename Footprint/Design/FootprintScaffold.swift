@@ -61,7 +61,7 @@ struct FootprintSectionCard<Content: View>: View {
         VStack(alignment: .leading, spacing: contentSpacing) {
             if let title {
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(FootprintType.cardKicker)
                     .foregroundStyle(FootprintChrome.secondaryLabel(colorScheme))
             }
             content()
@@ -92,16 +92,16 @@ struct FootprintNavRow: View {
                 .foregroundStyle(tint)
                 .frame(width: 28, height: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.body.weight(.medium)).foregroundStyle(.primary)
+                Text(title).font(FootprintType.row).foregroundStyle(.primary)
                 if let subtitle {
                     Text(subtitle)
-                        .font(.caption)
+                        .font(FootprintType.caption)
                         .foregroundStyle(FootprintChrome.secondaryLabel(colorScheme))
                 }
             }
             Spacer(minLength: 0)
             Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
+                .font(FootprintType.caption.weight(.semibold))
                 .foregroundStyle(FootprintChrome.tertiaryLabel(colorScheme))
         }
         .contentShape(Rectangle())
@@ -113,7 +113,7 @@ struct FootprintEmptyText: View {
     let text: String
     var body: some View {
         Text(text)
-            .font(.subheadline)
+            .font(FootprintType.secondary)
             .foregroundStyle(FootprintChrome.secondaryLabel(colorScheme))
     }
 }
@@ -132,7 +132,7 @@ struct FootprintFilterChipRow: View {
                     selection = option.tag
                 } label: {
                     Text(option.label)
-                        .font(.subheadline.weight(.semibold))
+                        .font(FootprintType.chip)
                         .foregroundStyle(isSelected ? Color.white : Color.primary)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)

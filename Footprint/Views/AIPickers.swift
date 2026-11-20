@@ -10,16 +10,17 @@ import SwiftData
 import StoreKit
 
 struct DestinationPickerView: View {
-    let destinations: [TravelDestination]
     let onSelect: (TravelDestination) -> Void
-    
+
+    @Query(sort: \TravelDestination.visitDate, order: .reverse) private var destinations: [TravelDestination]
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         NavigationStack {
             List {
-                ForEach(destinations.sorted(by: { $0.visitDate > $1.visitDate })) { destination in
+                ForEach(destinations) { destination in
                     Button {
                         onSelect(destination)
                     } label: {
@@ -48,7 +49,7 @@ struct DestinationPickerView: View {
                                         .clipShape(Capsule())
                                 }
                                 
-                                if !destination.photoDatas.isEmpty {
+                                if destination.hasPhotos {
                                     Image(systemName: "photo.fill")
                                         .foregroundColor(.blue)
                                 }
@@ -72,6 +73,9 @@ struct DestinationPickerView: View {
                 }
             }
         }
+        .task {
+            await DestinationPhotoFlagBackfill.backfillIfNeeded(in: modelContext)
+        }
     }
     
     private func hasNotes(_ destination: TravelDestination) -> Bool {
@@ -87,16 +91,16 @@ struct DestinationPickerView: View {
 
 
 struct TripPickerView: View {
-    let trips: [TravelTrip]
     let onSelect: (TravelTrip) -> Void
-    
+
+    @Query(sort: \TravelTrip.startDate, order: .reverse) private var trips: [TravelTrip]
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         NavigationStack {
             List {
-                ForEach(trips.sorted(by: { $0.startDate > $1.startDate })) { trip in
+                ForEach(trips) { trip in
                     Button {
                         onSelect(trip)
                     } label: {
@@ -152,6 +156,48 @@ struct TripPickerView: View {
         let startText = start.localizedFormatted(dateStyle: .medium, timeStyle: .none)
         let endText = end.localizedFormatted(dateStyle: .medium, timeStyle: .none)
         return "\(startText) - \(endText)"
+    }
+}
+
+// MARK: - Photo flag backfill
+
+/// 旧数据没有 hasPhotos。第一次打开地点选择器时补一次，之后列表不再读图片二进制。
+private enum DestinationPhotoFlagBackfill {
+    private static let completionKey = "destinationHasPhotosBackfill.v1"
+
+    static func backfillIfNeeded(in context: ModelContext) async {
+        guard !UserDefaults.standard.bool(forKey: completionKey) else { return }
+
+        do {
+            let count = try context.fetchCount(FetchDescriptor<TravelDestination>())
+            var offset = 0
+            var pendingSaves = 0
+            while offset < count {
+                var descriptor = FetchDescriptor<TravelDestination>(
+                    sortBy: [SortDescriptor(\.visitDate, order: .reverse)]
+                )
+                descriptor.fetchOffset = offset
+                descriptor.fetchLimit = 1
+                if let destination = try context.fetch(descriptor).first {
+                    destination.updateHasPhotosFlag()
+                    if context.hasChanges {
+                        pendingSaves += 1
+                    }
+                }
+                if pendingSaves >= 10 {
+                    try context.save()
+                    pendingSaves = 0
+                }
+                offset += 1
+                await Task.yield()
+            }
+            if context.hasChanges {
+                try context.save()
+            }
+            UserDefaults.standard.set(true, forKey: completionKey)
+        } catch {
+            print("⚠️ 地点照片标记补齐失败，将在下次打开选择器时重试: \(error.localizedDescription)")
+        }
     }
 }
 

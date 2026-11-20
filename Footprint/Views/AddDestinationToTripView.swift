@@ -100,7 +100,7 @@ struct AddDestinationToTripView: View {
                 }
             }
             .sheet(isPresented: $showPaywall) {
-                PaywallView()
+                PaywallView(contextMessage: "limit_destination_reached_message".localized)
                     .environmentObject(purchaseManager)
                     .environmentObject(entitlementManager)
             }

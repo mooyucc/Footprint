@@ -48,6 +48,9 @@ struct MapView: View {
         self.selectedTripIdBinding = selectedTripIdBinding
         self.selectedDayFilterBinding = selectedDayFilterBinding
         self.tripsOverride = tripsOverride
+        let forFootprintTab = !autoShowRouteCards
+        _mapCameraPosition = State(initialValue: Self.makeInitialCameraPosition(forFootprintTab: forFootprintTab))
+        _isInitialMapVisible = State(initialValue: autoShowRouteCards || Self.shouldShowMapOnFirstFrame(forFootprintTab: forFootprintTab))
         _tripRoutes = State(initialValue: prefilledTripRoutes ?? [:])
     }
     
@@ -91,11 +94,13 @@ struct MapView: View {
 
     @State var position: MapCameraPosition = .automatic
     @State var selectedDestination: TravelDestination?
-    @State var showingAddDestination = false        // 普通“添加目的地”弹窗
-    @State var showingQuickCheckIn = false          // “快速打卡”弹窗
-    /// 禁止默认 `.automatic` / `.userLocation`：前者框全部标注，后者不走 LocationManager.shared
-    @State var mapCameraPosition: MapCameraPosition = .region(MapView.startupFallbackRegion)
-    /// 拿到用户定位后重建 Map（与切 Tab 同效），避免首帧 drawable=0 / 相机更新被吞
+    @State var showingAddDestination = false        // “添加目的地”弹窗
+    /// 禁止默认 `.automatic` / `.userLocation`：前者框全部标注，后者不走 LocationManager.shared。
+    /// 足迹 Tab 在 init 时若已有定位，第一帧就是手机位置；否则先不创建 Map。
+    @State var mapCameraPosition: MapCameraPosition
+    /// 足迹 Tab：有手机定位，或确认找不到后改落上海，才创建 Map
+    @State var isInitialMapVisible: Bool
+    /// 漂移守卫用；初始锁定不再靠换 id，避免旧 Map 把视野写回去
     @State var mapCameraBootstrapID = UUID()
     @State var visibleRegion: MKCoordinateRegion?
     let regionHolder = MapRegionHolder() // 相机 continuous 回调写入，避免每帧 @State 刷新
@@ -127,7 +132,9 @@ struct MapView: View {
     @State var waitingForLocationToSetCamera = false // 是否正在等待位置来设置相机
     @State var isWaitingForUserLocate = false // 用户点击定位按钮后等待位置
     @State var initialCameraSettleTask: Task<Void, Never>? // appear 后多次重试落到用户定位
-    /// 启动骨架：先出地图框架，约 1s 后再淡入标注与浮层
+    @State var shanghaiFallbackTask: Task<Void, Never>? // 迟迟没有定位时改落到上海
+    @State var initialCameraWaitStartedAt: Date?
+    /// 启动揭晓：Map 就绪后再淡入标注与浮层（不盖瓦片格子）
     @State var isStartupContentVisible = false
     @State var startupContentRevealTask: Task<Void, Never>?
     
@@ -260,8 +267,6 @@ struct MapView: View {
     // 触觉反馈
     @State var selectionFeedbackGenerator = UISelectionFeedbackGenerator()
     let checkInFeedbackGenerator = UIImpactFeedbackGenerator(style: .medium)
-    @State var checkInPulseScale: CGFloat = 1.0
-    @State var checkInPulseOpacity: Double = 0.45
     
     // 简化版中国国界多边形（近似，覆盖中国大陆与海南一带；仅作兜底使用）
     static let chinaMainlandPolygon: [CLLocationCoordinate2D] = [
@@ -551,11 +556,6 @@ struct MapView: View {
         }
     }
     
-    // 打卡按钮的无障碍提示
-    var checkInAccessibilityHint: String {
-        "quick_check_in".localized
-    }
-    
     // 仅为当前选中的旅程重新计算路线（进入"旅程"时避免全量计算）
     func recalcSelectedTripRoutes(forceFullRecalc: Bool = false) {
         guard let selectedId = selectedTripId,
@@ -590,13 +590,9 @@ struct MapView: View {
                 previewCard
                 memoryBubbleOverlay
             }
-            if !autoShowRouteCards {
-                if isStartupContentVisible {
-                    floatingButtons
-                        .transition(.opacity)
-                } else {
-                    mapStartupSkeletonOverlay
-                }
+            if !autoShowRouteCards, isStartupContentVisible {
+                floatingButtons
+                    .transition(.opacity)
             }
             keyboardOverlay
         }

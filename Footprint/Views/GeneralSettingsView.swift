@@ -14,6 +14,7 @@ struct GeneralSettingsView: View {
     @EnvironmentObject var languageManager: LanguageManager
     @EnvironmentObject var countryManager: CountryManager
     @EnvironmentObject var brandColorManager: BrandColorManager
+    @EnvironmentObject var userProfileManager: UserProfileManager
     @ObservedObject var appearanceManager: AppearanceManager
     @AppStorage("mapStyle") private var mapStyleRawValue: String = MapStyle.muted.rawValue
     @AppStorage("mapWeatherEnabled") private var mapWeatherEnabled = false
@@ -21,6 +22,7 @@ struct GeneralSettingsView: View {
     @Environment(\.colorScheme) private var systemColorScheme
     @State private var showingLanguagePicker = false
     @State private var showingCountryPicker = false
+    @State private var themeApplyCount = 0
     
     var body: some View {
         NavigationStack {
@@ -91,61 +93,7 @@ struct GeneralSettingsView: View {
                 
                 // 品牌颜色设置（外观）
                 Section {
-                    VStack(spacing: 16) {
-                        HStack(spacing: 12) {
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(brandColorManager.currentBrandColor)
-                                .frame(width: 60, height: 60)
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.primary.opacity(0.1), lineWidth: 1)
-                                )
-                            
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("brand_color".localized)
-                                    .font(.headline)
-                                
-                                if brandColorManager.isUsingCustomColor {
-                                    Text("custom_color_active".localized)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                } else {
-                                    Text("default_color_active".localized)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            
-                            Spacer()
-                            
-                            ColorPicker("select_brand_color".localized, selection: Binding(
-                                get: {
-                                    brandColorManager.currentBrandColor
-                                },
-                                set: { newColor in
-                                    brandColorManager.setCustomBrandColor(newColor)
-                                }
-                            ), supportsOpacity: false)
-                            .labelsHidden()
-                        }
-                        .padding(.vertical, 8)
-                        
-                        Button {
-                            brandColorManager.resetBrandColorToDefault()
-                        } label: {
-                            HStack {
-                                Image(systemName: "arrow.uturn.backward")
-                                Text("reset_to_default_color".localized)
-                            }
-                            .font(.subheadline)
-                            .foregroundColor(brandColorManager.isUsingCustomColor ? .blue : .secondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(brandColorManager.isUsingCustomColor ? Color.blue.opacity(0.1) : Color.secondary.opacity(0.05))
-                            .cornerRadius(10)
-                        }
-                        .disabled(!brandColorManager.isUsingCustomColor)
-                    }
+                    appearanceColorSection
                 } header: {
                     Text("appearance".localized)
                 } footer: {
@@ -202,6 +150,150 @@ struct GeneralSettingsView: View {
     
     private var currentMapStyle: MapStyle {
         MapStyle(rawValue: mapStyleRawValue) ?? .muted
+    }
+
+    private var themeSuggestions: [ProfileThemeSuggestion] {
+        ProfileThemePalette.suggestions(
+            personaKey: userProfileManager.personaTag,
+            constellationKey: userProfileManager.constellation
+        )
+        .filter { suggestion in
+            !ProfileThemePalette.matches(suggestion.color, brand: brandColorManager.defaultBrandColor)
+        }
+    }
+
+    private var isDefaultTheme: Bool {
+        ProfileThemePalette.matches(
+            brandColorManager.defaultBrandColor,
+            brand: brandColorManager.currentBrandColor
+        )
+    }
+
+    private var isCustomTheme: Bool {
+        guard !isDefaultTheme else { return false }
+        return !themeSuggestions.contains { suggestion in
+            ProfileThemePalette.matches(suggestion.color, brand: brandColorManager.currentBrandColor)
+        }
+    }
+
+    private var appearanceColorSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            themeChoiceRow(
+                color: brandColorManager.defaultBrandColor,
+                source: "theme_source_default".localized,
+                name: "theme_default_name".localized,
+                isCurrent: isDefaultTheme
+            ) {
+                brandColorManager.resetBrandColorToDefault()
+            }
+
+            ForEach(themeSuggestions) { suggestion in
+                themeChoiceRow(
+                    color: suggestion.color,
+                    source: suggestion.sourceTitle,
+                    name: suggestion.attributeName,
+                    isCurrent: ProfileThemePalette.matches(
+                        suggestion.color,
+                        brand: brandColorManager.currentBrandColor
+                    )
+                ) {
+                    brandColorManager.setCustomBrandColor(suggestion.color)
+                }
+            }
+
+            customColorRow
+        }
+        .sensoryFeedback(.impact(weight: .medium, intensity: 0.8), trigger: themeApplyCount)
+    }
+
+    private func themeChoiceRow(
+        color: Color,
+        source: String,
+        name: String,
+        isCurrent: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button {
+            action()
+            themeApplyCount += 1
+        } label: {
+            HStack(spacing: 14) {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(color)
+                    .frame(width: 44, height: 44)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(source)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text(name)
+                        .font(.body.weight(.semibold))
+                        .foregroundColor(.primary)
+                }
+                Spacer(minLength: 8)
+                Text(isCurrent ? "theme_color_in_use".localized : "onboarding_theme_color_use".localized)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(isCurrent ? .secondary : .white)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(isCurrent ? Color.primary.opacity(0.08) : color))
+            }
+            .frame(minHeight: 44)
+        }
+        .buttonStyle(.borderless)
+        .disabled(isCurrent)
+        .accessibilityLabel("\(source) \(name)")
+    }
+
+    private var customColorRow: some View {
+        HStack(spacing: 14) {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(isCustomTheme ? brandColorManager.currentBrandColor : Color.primary.opacity(0.06))
+                .overlay {
+                    if !isCustomTheme {
+                        Image(systemName: "paintpalette")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(.primary)
+                    }
+                }
+                .frame(width: 44, height: 44)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("theme_source_custom".localized)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text("onboarding_theme_color_pick".localized)
+                    .font(.body.weight(.semibold))
+                    .foregroundColor(.primary)
+            }
+
+            Spacer(minLength: 8)
+
+            if isCustomTheme {
+                Text("theme_color_in_use".localized)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(Color.primary.opacity(0.08)))
+            }
+
+            ColorPicker(
+                "select_brand_color".localized,
+                selection: Binding(
+                    get: { brandColorManager.currentBrandColor },
+                    set: { newColor in
+                        brandColorManager.setCustomBrandColor(newColor)
+                    }
+                ),
+                supportsOpacity: false
+            )
+            .labelsHidden()
+        }
+        .frame(minHeight: 44)
     }
 }
 

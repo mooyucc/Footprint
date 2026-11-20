@@ -18,13 +18,13 @@ protocol AIServiceProtocol {
     ///   - province: 省份/州（可选）
     ///   - country: 国家/地区
     ///   - date: 访问日期
-    ///   - existingNotes: 用户已输入的笔记文字（如果存在，AI将主要美化这段文字，而不是生成新内容）
-    ///   - persona: 用户身份标签（用于个性化文风）
-    ///   - mbti: 用户 MBTI 标签（用于个性化文风）
-    ///   - gender: 用户性别（用于个性化文风）
-    ///   - ageGroup: 用户年龄段（用于个性化文风）
-    ///   - constellation: 用户星座（用于个性化文风）
-    /// - Returns: 生成的笔记文本
+    ///   - existingNotes: 用户已写的笔记（如果有，收成一句短句，不扩写）
+    ///   - persona: 保留给调用方，短句提示词不使用
+    ///   - mbti: 保留给调用方，短句提示词不使用
+    ///   - gender: 保留给调用方，短句提示词不使用
+    ///   - ageGroup: 保留给调用方，短句提示词不使用
+    ///   - constellation: 保留给调用方，短句提示词不使用
+    /// - Returns: 一句旅行短句
     func generateNotes(
         from images: [Data],
         location: String,
@@ -42,13 +42,13 @@ protocol AIServiceProtocol {
     /// 生成旅程描述
     /// - Parameters:
     ///   - destinations: 目的地列表
-    ///   - existingDescription: 用户已输入的旅程描述（如果存在，AI将主要美化这段文字，而不是生成新内容）
-    ///   - persona: 用户身份标签（用于个性化文风）
-    ///   - mbti: 用户 MBTI 标签（用于个性化文风）
-    ///   - gender: 用户性别（用于个性化文风）
-    ///   - ageGroup: 用户年龄段（用于个性化文风）
-    ///   - constellation: 用户星座（用于个性化文风）
-    /// - Returns: 生成的旅程描述
+    ///   - existingDescription: 用户已写的旅程描述（如果有，收成一句短句，不扩写）
+    ///   - persona: 保留给调用方，短句提示词不使用
+    ///   - mbti: 保留给调用方，短句提示词不使用
+    ///   - gender: 保留给调用方，短句提示词不使用
+    ///   - ageGroup: 保留给调用方，短句提示词不使用
+    ///   - constellation: 保留给调用方，短句提示词不使用
+    /// - Returns: 一句旅程短句
     func generateTripDescription(
         for destinations: [TravelDestination],
         existingDescription: String?,
@@ -77,7 +77,7 @@ protocol AIServiceProtocol {
     ///   - country: 国家/地区
     ///   - date: 访问日期
     ///   - existingNotes: 用户备注（可空；有则优先提炼）
-    ///   - maxLength: 输出硬上限（字符）
+    ///   - maxLength: 版式上的字符硬上限，会再与短句字数预算取较严的一边
     /// - Returns: 单句短文案
     func generateShareOverlayCaption(
         from images: [Data],

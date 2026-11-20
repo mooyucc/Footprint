@@ -23,9 +23,8 @@ struct OnboardingCoordinatorView: View {
     enum OnboardingStep {
         case welcome
         case identityTag  // 身份标签设置
-        case personalityTag  // 性格标签设置
-        case userAttributes  // 用户属性设置（性别、年龄段）
         case constellation  // 星座设置
+        case themeColor  // 按身份和星座推荐主题色
         case page1  // 语言和国家设置
         case page2  // 外观模式和主题颜色设置
         case paywall  // 订阅页面
@@ -73,28 +72,6 @@ struct OnboardingCoordinatorView: View {
             case .identityTag:
                 OnboardingIdentityTagView {
                     withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                        currentStep = .personalityTag
-                    }
-                }
-                .transition(.asymmetric(
-                    insertion: .move(edge: .trailing).combined(with: .opacity),
-                    removal: .move(edge: .leading).combined(with: .opacity)
-                ))
-            
-            case .personalityTag:
-                OnboardingPersonalityTagView {
-                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
-                        currentStep = .userAttributes
-                    }
-                }
-                .transition(.asymmetric(
-                    insertion: .move(edge: .trailing).combined(with: .opacity),
-                    removal: .move(edge: .leading).combined(with: .opacity)
-                ))
-            
-            case .userAttributes:
-                OnboardingUserAttributesView {
-                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                         currentStep = .constellation
                     }
                 }
@@ -105,6 +82,17 @@ struct OnboardingCoordinatorView: View {
             
             case .constellation:
                 OnboardingConstellationView {
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
+                        currentStep = .themeColor
+                    }
+                }
+                .transition(.asymmetric(
+                    insertion: .move(edge: .trailing).combined(with: .opacity),
+                    removal: .move(edge: .leading).combined(with: .opacity)
+                ))
+            
+            case .themeColor:
+                OnboardingThemeColorView {
                     withAnimation(.spring(response: 0.5, dampingFraction: 0.8)) {
                         currentStep = .paywall
                     }

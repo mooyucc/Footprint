@@ -29,6 +29,8 @@ final class TravelDestination {
     var category: String = "international" // domestic or international
     var type: String = "" // 地点类型：自然奇观、城市风貌、历史人文、美食盛宴、休闲娱乐、户外冒险、文艺打卡
     var isFavorite: Bool = false
+    /// 是否有照片。列表只读这个标记，避免把 externalStorage 的图片读进内存。
+    var hasPhotos: Bool = false
     var trip: TravelTrip? // 所属的旅行组
     
     init(
@@ -63,6 +65,15 @@ final class TravelDestination {
         self.category = category
         self.type = type
         self.isFavorite = isFavorite
+        self.hasPhotos = photoData != nil || !photoDatas.isEmpty
+    }
+
+    /// 照片字段变更后同步标记。仅在照片数据已经在内存中时调用。
+    func updateHasPhotosFlag() {
+        let flagged = photoData != nil || !photoDatas.isEmpty
+        if hasPhotos != flagged {
+            hasPhotos = flagged
+        }
     }
     
     var coordinate: CLLocationCoordinate2D {

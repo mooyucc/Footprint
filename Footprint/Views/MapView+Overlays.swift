@@ -182,37 +182,6 @@ extension MapView {
         return (dayDests, routeSlice)
     }
     
-    /// 启动骨架：Tab/地图结构先可见，内容稍后淡入（对齐常见 App 灰框架体验）
-    var mapStartupSkeletonOverlay: some View {
-        ZStack {
-            VStack {
-                HStack {
-                    Capsule()
-                        .fill(Color.primary.opacity(0.08))
-                        .frame(width: 44, height: 44)
-                    Spacer()
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-                Spacer()
-            }
-            
-            VStack {
-                Spacer()
-                HStack {
-                    Spacer()
-                    Circle()
-                        .fill(Color.primary.opacity(0.10))
-                        .frame(width: 58, height: 58)
-                        .padding(.trailing, 18)
-                        .padding(.bottom, 28)
-                }
-            }
-        }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-    }
-    
     // 清除聚合缓存（用于旅程切换等）
     var floatingButtons: some View {
         ZStack {
@@ -308,91 +277,6 @@ extension MapView {
         // 无额外 top padding，紧贴安全区顶部（此前上方废弃的旅程按钮已移除）
     }
     
-    var bottomCheckInButton: some View {
-        Button {
-            handleCheckIn()
-        } label: {
-            ZStack {
-                // 外圈脉冲光晕（品牌色，呼吸感）
-                Circle()
-                    .fill(brandColorManager.currentBrandColor.opacity(0.25))
-                    .frame(width: 92, height: 92)
-                    .scaleEffect(checkInPulseScale)
-                    .opacity(checkInPulseOpacity)
-                
-                checkInIcon
-                    .footprintMapBrandGlassCircle(
-                        diameter: 72,
-                        brand: brandColorManager.currentBrandColor,
-                        isDark: colorScheme == .dark,
-                        strokeWidth: 2
-                    )
-            }
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("map_button_check_in".localized)
-        .modifier(AccessibilityHintModifier(hint: checkInAccessibilityHint))
-        .padding(.horizontal, 16)
-        .frame(maxWidth: .infinity)
-        .allowsHitTesting(searchText.isEmpty)
-        .opacity(searchText.isEmpty ? 1 : 0)
-        .animation(.easeInOut(duration: 0.2), value: searchText.isEmpty)
-        .onAppear {
-            withAnimation(.easeOut(duration: 1.8).repeatForever(autoreverses: false)) {
-                checkInPulseScale = 1.3
-                checkInPulseOpacity = 0.0
-            }
-        }
-        .onDisappear {
-            checkInPulseScale = 1.0
-            checkInPulseOpacity = 0.45
-        }
-    }
-    
-    // 打卡按钮图标视图，便于在不同外观分支中复用
-    var checkInIcon: some View {
-        Image("DakaIcon")
-            .renderingMode(.template)
-            .resizable()
-            .scaledToFit()
-            .frame(width: 30, height: 30)
-            // 图标颜色使用品牌色，固定透明度
-            .foregroundStyle(brandColorManager.currentBrandColor)
-            // 图标缩放随脉冲在 1.0 → 1.1 之间变化，与外圈脉冲同步
-            .scaleEffect(1.0 + (checkInPulseScale - 1.0) * (0.1 / 0.3))
-    }
-    
-    /// 浮动菜单中使用的打卡图标（小号版本），复用与底部按钮一致的颜色与脉冲动画
-    var assistiveCheckInMenuIcon: some View {
-        ZStack {
-            // 外圈脉冲光晕（缩小版）
-            Circle()
-                .fill(brandColorManager.currentBrandColor.opacity(0.25))
-                .frame(width: 60, height: 60)
-                .scaleEffect(checkInPulseScale)
-                .opacity(checkInPulseOpacity)
-            
-            checkInIcon
-                .footprintMapBrandGlassCircle(
-                    diameter: 46,
-                    brand: brandColorManager.currentBrandColor,
-                    isDark: colorScheme == .dark,
-                    strokeWidth: 1.6
-                )
-        }
-        // 当仅保留浮动菜单时，在这里启动/重置打卡脉冲动画
-        .onAppear {
-            withAnimation(.easeOut(duration: 1.8).repeatForever(autoreverses: false)) {
-                checkInPulseScale = 1.3
-                checkInPulseOpacity = 0.0
-            }
-        }
-        .onDisappear {
-            checkInPulseScale = 1.0
-            checkInPulseOpacity = 0.45
-        }
-    }
-    
     var assistiveMenuActions: [AssistiveMenuAction] {
         [
             AssistiveMenuAction(
@@ -446,7 +330,7 @@ extension MapView {
             ),
             AssistiveMenuAction(
                 id: "memory",
-                icon: "PaopaoIcon",
+                icon: "dot.radiowaves.left.and.right",
                 title: "map_button_memory".localized,
                 isActive: false,
                 action: {
@@ -457,27 +341,14 @@ extension MapView {
     }
     
     
-    @ViewBuilder
     func menuIcon(for icon: String, isActive: Bool, isHighlighted: Bool = false) -> AnyView {
         let iconColor: Color = isHighlighted ? .white : buttonIconColor(isActive: isActive)
-        switch icon {
-        case "PaopaoIcon":
-            return AnyView(
-                Image(icon)
-                    .resizable()
-                    .renderingMode(.template)
-                    .scaledToFit()
-                    .foregroundColor(iconColor)
-                    .frame(width: 22, height: 22)
-            )
-        default:
-            return AnyView(
-                Image(systemName: icon)
-                    .font(.system(size: isHighlighted ? 21 : 20, weight: .semibold))
-                    .foregroundColor(iconColor)
-                    .symbolEffect(.pulse, options: .repeating.speed(0.6), isActive: isHighlighted)
-            )
-        }
+        return AnyView(
+            Image(systemName: icon)
+                .font(.system(size: isHighlighted ? 21 : 20, weight: .semibold))
+                .foregroundColor(iconColor)
+                .symbolEffect(.pulse, options: .repeating.speed(0.6), isActive: isHighlighted)
+        )
     }
     
     // 根据地图样式和激活状态返回按钮图标颜色
@@ -641,54 +512,23 @@ extension MapView {
         .presentationDetents([.height(180)])
     }
     
-    // “快速打卡”弹窗内容
-    @ViewBuilder
-    var quickCheckInSheet: some View {
-        if let prefill = addDestinationPrefill {
-            // 使用 .id 确保 prefill 从 nil 变为有值时 SwiftUI 会重建视图，从而正确应用预填数据
-            let idKey: String = {
-                let name = prefill.name ?? ""
-                guard let loc = prefill.location else { return name.isEmpty ? UUID().uuidString : name }
-                let c = loc.placemark.coordinate
-                return "\(name)-\(c.latitude)-\(c.longitude)"
-            }()
-            QuickCheckInView(prefill: prefill)
-                .id(idKey)
-        } else if isGeocodingLocation {
-            // 快速打卡模式的加载状态
-            VStack(spacing: 20) {
-                ProgressView()
-                    .scaleEffect(1.2)
-                Text("getting_location_info".localized)
-                    .font(.headline)
-                    .foregroundColor(.secondary)
-                Text("identifying_location".localized)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background {
-                FootprintAtmosphereBackground(
-                    accent: brandColorManager.currentBrandColor,
-                    secondaryAccent: FootprintTheme.Accent.secondary
-                )
-            }
-        } else {
-            // 快速打卡模式但还没有位置信息，显示简化界面（会显示加载状态）
-            QuickCheckInView(prefill: nil)
-        }
-    }
-    
-    // 普通"添加目的地"弹窗内容
+    // “添加目的地”弹窗内容
     @ViewBuilder
     var addDestinationSheet: some View {
-        // 只有在明确标记应该使用预填充数据时才使用（例如照片导入）
-        // 普通"添加目的地"功能不使用自动地理编码的残留数据
+        // 只有在明确标记应该使用预填充数据时才使用（打卡、点选地点、照片导入）
+        // 足迹抽屉的空白添加不使用自动地理编码的残留数据
         if shouldUsePrefillForAddDestination, let prefill = addDestinationPrefill {
-            AddDestinationView(prefill: prefill, mapRegion: visibleRegion)
+            // 使用 .id 确保预填从空变为有值、或坐标更新时重建表单
+            let idKey: String = {
+                let name = prefill.name ?? ""
+                let photoCount = prefill.photoDatas.count
+                guard let loc = prefill.location else { return "\(name)-\(photoCount)" }
+                let c = loc.placemark.coordinate
+                return "\(name)-\(c.latitude)-\(c.longitude)-\(photoCount)"
+            }()
+            AddDestinationView(prefill: prefill)
+                .id(idKey)
         } else if isGeocodingLocation && shouldUsePrefillForAddDestination {
-            // 只有在明确需要预填充时才显示加载状态（例如照片导入正在地理编码）
             VStack(spacing: 20) {
                 ProgressView()
                     .scaleEffect(1.2)
@@ -708,8 +548,7 @@ extension MapView {
                 )
             }
         } else {
-            // 普通"添加目的地"：显示空页面，不使用预填充数据
-            AddDestinationView(mapRegion: visibleRegion)
+            AddDestinationView()
         }
     }
     

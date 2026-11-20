@@ -235,7 +235,7 @@ struct AINotePreviewSheet: View {
         .modelContainer(for: [TravelDestination.self, TravelTrip.self, TravelRecommendation.self], inMemory: true)
 }
 
-/// AI笔记预览和编辑Sheet - 用于快速添加页面（不保存到数据库，通过回调返回）
+/// AI 笔记预览。不写入数据库，由调用方把文案放回表单。
 
 struct AINotePreviewSheetForQuickAdd: View {
     let tempDestination: TravelDestination

@@ -1,6 +1,6 @@
-"paywall_title" = "Unlock Pro";
-"paywall_subtitle" = "Unlock unlimited records, data management, and more Pro features. AI uses call credits.";
-"paywall_button_upgrade" = "View Subscription Plan";
+"paywall_title" = "Keep your travel memories";
+"paywall_subtitle" = "Record on trips, revisit anytime. Unlock Pro once for an unlimited archive and polished shares. AI is sold separately.";
+"paywall_button_upgrade" = "View Pro Plans";
 "paywall_button_restore" = "Restore Purchases";
 
 // Membership status card
@@ -12,7 +12,7 @@
 "membership_status_view_restore" = "View benefits / Restore purchases";
 "membership_section" = "Membership";
 "membership_status_free" = "Free";
-"membership_status_free_hint" = "Upgrade to unlock Pro features";
+"membership_status_free_hint" = "Upgrade to keep a complete travel archive";
 
 // Paywall lifetime unlocked
 "paywall_lifetime_unlocked" = "Lifetime access unlocked, no need to purchase again.";
@@ -20,26 +20,34 @@
 "paywall_current_subscription" = "Current";
 "paywall_expires_on" = "Expires: ";
 "paywall_terms_privacy" = "By purchasing you agree to the Terms of Use and Privacy Policy. Auto-renewable; cancel anytime in system subscriptions.";
-"paywall_feature_title" = "Pro features";
-"paywall_feature_ai" = "AI Assistant: notes, trip descriptions, photo analysis, destination recommendations (uses call credits)";
-"paywall_feature_unlimited" = "Unlimited destinations and trip cards";
-"paywall_feature_share_layouts" = "Full share layouts";
-"paywall_feature_import_export" = "Local data import/export";
+"paywall_feature_title" = "What Pro unlocks";
+"paywall_feature_ai" = "AI Assistant sold separately with call credits (not included in Pro)";
+"paywall_feature_ai_aside" = "AI sold separately with call credits";
+"paywall_feature_unlimited" = "Unlimited places and trips for a lasting archive";
+"paywall_feature_photos" = "Up to %d photos per destination";
+"paywall_feature_share_layouts" = "Full share layouts without watermark";
+"paywall_feature_import_export" = "Local backup import/export — take your data with you";
+"share_pro_banner_title" = "Upgrade to Pro for better shares";
+"share_pro_banner_subtitle" = "Remove watermark and unlock full layouts";
+"share_pro_paywall_context" = "Upgrade to Pro to remove the watermark and unlock full share layouts.";
 "paywall_feature_link_maps" = "Link trips to system Maps app";
 "paywall_banner_title" = "Upgrade to Pro to unlock data management";
-"paywall_emotional_message_part1" = "Let \"MooFootprint\" be more fun and long-lasting! We need your support to create more interesting stories together.";
-"paywall_emotional_message_part2" = "Come support us! ✨";
-"paywall_select_plan" = "Choose a plan";
+"paywall_emotional_message_part1" = "You don’t need to log every day — but memories are worth keeping. Support MooFootprint and keep your archive for the long run.";
+"paywall_emotional_message_part2" = "Pay once, come back anytime.";
+"paywall_select_plan" = "Choose a plan (lifetime recommended)";
 "paywall_cta_unlock" = "Unlock Pro";
 "paywall_cta_unlock_price" = "Unlock Pro · %@";
 "paywall_cta_yearly" = "Unlock Pro · %@ / year";
 "paywall_cta_start_trial" = "Start Free Trial";
 "paywall_cta_trial_then_yearly" = "Then %@ per year. Cancel anytime.";
 "paywall_cta_monthly" = "Unlock Pro · %@ / month";
-"paywall_cta_lifetime" = "Buy Lifetime · %@";
+"paywall_cta_lifetime" = "Unlock Lifetime Pro · %@";
 "paywall_cta_current" = "Current Plan";
 "paywall_lifetime_no_ai" = "AI uses trial credits or paid calls";
 "paywall_ai_uses_credits" = "AI uses trial credits or paid calls";
+"paywall_lifetime_plan_subtitle" = "One-time · Best for occasional trips & lifelong revisit";
+"paywall_lifetime_extra" = "No monthly fee · AI sold separately";
+"paywall_subscription_extra" = "Great for a busy travel year · AI sold separately";
 "paywall_subscription_includes_ai" = "Includes unlimited AI";
 "paywall_lifetime_ai_hint" = "AI uses trial credits or paid calls.";
 "paywall_yearly_monthly_equivalent" = "That's %@ per month";
@@ -437,7 +445,7 @@
 "ai_credits_product_subtitle" = "Each purchase grants %@.";
 "ai_credits_product_unavailable" = "Unable to load product information. Please try again later.";
 "ai_credits_usage_title" = "The following actions will consume AI calls:";
-"ai_credits_usage_desc" = "Each AI travel note generation consumes 1 call;\nEach trip description generation or update consumes 1 call;\nEach use of AI travel recommendation consumes 1 call.\nYour credits do not expire and can be used at any time.";
+"ai_credits_usage_desc" = "Each AI travel note generation consumes 1 call;\nEach trip description generation or update consumes 1 call;\nEach use of AI travel recommendation consumes 1 call;\nEach share poster caption generation consumes 1 call.\nYour credits do not expire and can be used at any time.";
 "ai_credits_restore_button" = "Restore Purchases";
 "ai_credits_restore_tip" = "Consumed AI call credits cannot be restored via “Restore Purchases”. Please use all purchased credits on the current device.";
 "ai_buy_per_use_button" = "Buy AI Calls Per Use";
@@ -605,9 +613,10 @@
 "destination_share_cover_option" = "Select cover photo";
 "destination_share_edit_text" = "Edit Text";
 "destination_share_edit_text_hint" = "Tap the preview to edit on-image text";
-"destination_share_overlay_section" = "On Image";
+"destination_share_title_label" = "Title";
+"destination_share_overlay_section" = "Subtitle";
 "destination_share_overlay_placeholder" = "One short line";
-"destination_share_overlay_footer" = "Appears on the poster. Keep it to one short sentence.";
+"destination_share_overlay_footer" = "Title is the place name. Subtitle appears on the poster — keep it to one short sentence.";
 "destination_share_ai_generate" = "AI One-Liner";
 "destination_share_ai_generating" = "Generating…";
 "destination_share_caption_section" = "Share Caption";
@@ -793,14 +802,14 @@
 "onboarding_page1_country_title" = "Country";
 "onboarding_page1_country_description" = "Set your country to distinguish between domestic and international travel";
 "onboarding_identity_tag_title" = "Identity Tag";
-"onboarding_identity_tag_description" = "Pick an identity tag or enter your own to help AI reply in your style.";
+"onboarding_identity_tag_description" = "Pick an identity tag, or enter your own, to suggest a theme color.";
 "onboarding_personality_tag_title" = "Personality Type";
 "onboarding_personality_tag_description" = "Select your personality type to help AI respond in a style that matches you.";
 "onboarding_user_attributes_title" = "User Attributes";
 "onboarding_user_attributes_description" = "Select your gender, age group, and zodiac sign to help AI better understand you and provide more personalized responses.";
 "onboarding_user_attributes_description_short" = "Select your gender and age group to help AI better understand you and provide more personalized responses.";
 "onboarding_constellation_title" = "Zodiac Sign";
-"onboarding_constellation_description" = "Select your zodiac sign to help AI respond in a style that matches your personality.";
+"onboarding_constellation_description" = "Choose a zodiac sign to see a second theme color. You can skip this.";
 "onboarding_page2_title" = "Appearance";
 "onboarding_page2_appearance_title" = "Appearance Mode";
 "onboarding_page2_appearance_description" = "Choose the app's appearance mode. Follow System will automatically switch based on system settings";
@@ -812,23 +821,24 @@
 "onboarding_next" = "Next";
 "onboarding_complete" = "Get Started";
 "onboarding_paywall_nav_title" = "Choose a Plan";
-"onboarding_paywall_title" = "Welcome to MooFootprint";
-"onboarding_paywall_subtitle" = "Start for free and upgrade to Pro anytime for unlimited records and data management.";
+"onboarding_paywall_title" = "Keep your travel memories";
+"onboarding_paywall_subtitle" = "Start free to record and revisit. When you’re ready to keep a full archive, lifetime Pro is the simplest choice.";
 "onboarding_free_tier_title" = "Free plan includes";
 "onboarding_free_destinations" = "Up to %d destinations";
 "onboarding_free_trips" = "Up to %d trips";
 "onboarding_free_photos" = "Up to %d photos per destination";
 "onboarding_free_share" = "Basic share layouts (with watermark)";
 "onboarding_free_ai_trial" = "%d free AI trial uses";
-"onboarding_pro_feature_title" = "Upgrade to Pro for";
-"onboarding_pricing_section_title" = "Choose a subscription";
-"onboarding_recommended_plan" = "Recommended";
+"onboarding_pro_feature_title" = "Pro also unlocks";
+"onboarding_pricing_section_title" = "Choose a plan";
+"onboarding_recommended_plan" = "Best value";
 "onboarding_continue_free" = "Continue with Free";
 "onboarding_continue_free_hint" = "Upgrade anytime in Profile.";
 
 // Profile - Identity Tag & MBTI
 "identity_tag" = "Identity Tag";
-"identity_tag_description" = "Pick an identity tag or enter your own to help AI reply in your style.";
+"identity_tag_description" = "Pick an identity tag, or enter your own, to suggest a theme color.";
+"account_profile_section" = "Profile";
 "identity_tag_placeholder" = "Traveler, foodie, designer…";
 "mbti_title" = "MBTI";
 "mbti_description" = "Select your personality type for more tailored responses.";
@@ -837,7 +847,20 @@
 "age_group_title" = "Age Group";
 "age_group_description" = "Select your age group to help AI better understand your needs.";
 "constellation_title" = "Zodiac Sign";
-"constellation_description" = "Select your zodiac sign to help AI respond in a style that matches your personality.";
+"constellation_description" = "Choose a zodiac sign to see a second theme color.";
+"onboarding_theme_color_title" = "Your Theme Color";
+"onboarding_theme_color_description" = "Your identity suggests the main color. A zodiac sign adds a second option. The current color stays until you tap Use This Color.";
+"onboarding_theme_color_empty" = "A custom identity or no zodiac sign keeps the theme color you already have.";
+"onboarding_theme_color_use" = "Use This Color";
+"onboarding_theme_color_pick" = "Choose My Own";
+"profile_theme_color_description" = "Choosing a color replaces the theme color right away. Identity and zodiac still need to be saved.";
+"theme_source_persona" = "Identity";
+"theme_source_constellation" = "Zodiac";
+"theme_color_in_use" = "In Use";
+"theme_color_reset_hint" = "You can switch back to the app’s default theme color anytime by tapping Default in Settings › General › Appearance.";
+"theme_source_default" = "Default";
+"theme_default_name" = "App";
+"theme_source_custom" = "Custom";
 
 // Profile Options - Persona
 "persona_option_traveler" = "Traveler";

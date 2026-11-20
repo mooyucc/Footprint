@@ -613,7 +613,7 @@ private struct DestinationFootprintRingCard: View {
                 
                 VStack(spacing: 2) {
                     Text("\(centerCount)")
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .footprintMetric()
                         .foregroundStyle(.primary)
                         .contentTransition(.numericText())
                         .animation(.easeInOut(duration: 0.2), value: centerCount)

@@ -57,6 +57,8 @@ struct DestinationDetailView: View {
     }
     
     @State private var mediaItems: [MediaItem] = []
+    /// 网格宽度在 detent 拖动时会亚像素抖动；变化不足 1pt 不更新，避免格子跟着重排
+    @State private var contentWidth: CGFloat = max(UIScreen.main.bounds.width - 32, 1)
     
     init(destination: TravelDestination) {
         self.destination = destination
@@ -71,23 +73,38 @@ struct DestinationDetailView: View {
     }
     
     var body: some View {
-        GeometryReader { geometry in
-            ScrollViewReader { scrollProxy in
-                ScrollView {
-                    detailContent(geometry: geometry)
-                }
-                .safeAreaInset(edge: .bottom) {
-                    Color.clear.frame(height: 20)
-                }
-                .onChange(of: selectedPhotoIndex) { _, newIndex in
-                    // 查看器翻页时把对应缩略图滚进可视区，关闭 zoom 才能落回正确格子
-                    guard showMediaViewer, mediaItems.indices.contains(newIndex) else { return }
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        scrollProxy.scrollTo(mediaScrollID(newIndex), anchor: .center)
-                    }
+        ScrollViewReader { scrollProxy in
+            ScrollView {
+                detailContent(contentWidth: contentWidth)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .safeAreaInset(edge: .bottom) {
+                Color.clear.frame(height: 20)
+            }
+            .background {
+                GeometryReader { geo in
+                    Color.clear.preference(key: DetailContentWidthKey.self, value: geo.size.width)
                 }
             }
-            .navigationBarTitleDisplayMode(.inline)
+            .onPreferenceChange(DetailContentWidthKey.self) { width in
+                guard width > 1 else { return }
+                let next = width - 32
+                guard next > 1, abs(next - contentWidth) > 1 else { return }
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) {
+                    contentWidth = next
+                }
+            }
+            .onChange(of: selectedPhotoIndex) { _, newIndex in
+                // 查看器翻页时把对应缩略图滚进可视区，关闭 zoom 才能落回正确格子
+                guard showMediaViewer, mediaItems.indices.contains(newIndex) else { return }
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    scrollProxy.scrollTo(mediaScrollID(newIndex), anchor: .center)
+                }
+            }
+        }
+        .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: 12) {
@@ -173,7 +190,6 @@ struct DestinationDetailView: View {
                     dismiss()
                 }
             }
-        }
         .appPageBackgroundGradient(for: colorScheme)
         // 本地 cover 看图时禁止拖 sheet；地图入口由外层 MediaViewerSession 锁定
         .interactiveDismissDisabled(showMediaViewer)
@@ -185,8 +201,7 @@ struct DestinationDetailView: View {
     }
     
     @ViewBuilder
-    private func detailContent(geometry: GeometryProxy) -> some View {
-        let contentWidth = geometry.size.width - 32  // 与 .padding(.horizontal, 16) 一致
+    private func detailContent(contentWidth: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading, spacing: 16) {
                 headerSection
@@ -593,6 +608,13 @@ struct DestinationDetailView: View {
 }
 
 // 详情页已移除拖拽排序能力，排序请前往编辑页处理
+
+private struct DetailContentWidthKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
 
 #Preview {
     NavigationStack {

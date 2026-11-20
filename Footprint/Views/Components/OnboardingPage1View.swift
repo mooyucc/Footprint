@@ -156,32 +156,7 @@ struct OnboardingPage1View: View {
                 }
                 .padding(.horizontal, 20)
                 
-                // 页面指示器（显示基本设置的6个步骤）
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(brandColorManager.currentBrandColor)
-                        .frame(width: 8, height: 8)
-                    
-                    Circle()
-                        .fill(Color(.systemGray4))
-                        .frame(width: 8, height: 8)
-                    
-                    Circle()
-                        .fill(Color(.systemGray4))
-                        .frame(width: 8, height: 8)
-                    
-                    Circle()
-                        .fill(Color(.systemGray4))
-                        .frame(width: 8, height: 8)
-                    
-                    Circle()
-                        .fill(Color(.systemGray4))
-                        .frame(width: 8, height: 8)
-                    
-                    Circle()
-                        .fill(Color(.systemGray4))
-                        .frame(width: 8, height: 8)
-                }
+                OnboardingStepDots(count: 5, activeIndex: 0, activeColor: brandColorManager.currentBrandColor)
                 .padding(.bottom, 20)
             }
             .padding(.top, 20)

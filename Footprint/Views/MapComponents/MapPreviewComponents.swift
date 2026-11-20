@@ -103,11 +103,7 @@ struct POIPreviewCard: View {
             }
         }
         .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 15, style: .continuous)
-                .fill(.ultraThinMaterial)
-        )
-        .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
+        .footprintGlassCard(cornerRadius: 15)
     }
     
     // 格式化地址
@@ -195,10 +191,6 @@ struct POISearchingCard: View {
             Spacer()
         }
         .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 15, style: .continuous)
-                .fill(.ultraThinMaterial)
-        )
-        .shadow(color: .black.opacity(0.1), radius: 10, x: 0, y: 5)
+        .footprintGlassCard(cornerRadius: 15)
     }
 }

@@ -37,6 +37,8 @@ extension MapView {
                 // 看图在 sheet 外层 cover：detent 保持用户原样，只禁止拖关闭
                 .presentationDetents([.fraction(0.25), .medium, .large], selection: $destinationDetailDetent)
                 .presentationDragIndicator(.visible)
+                // 下拉先收起/关闭 sheet；只有拉到最大档后，内容才滚动
+                .presentationContentInteraction(.resizes)
                 .interactiveDismissDisabled(mediaViewerSession != nil)
             }
             .fullScreenCover(item: $mediaViewerSession) { session in
@@ -75,15 +77,6 @@ extension MapView {
                 shouldUsePrefillForAddDestination = false  // 重置标志
             }) {
                 addDestinationSheet
-            }
-            // “快速打卡”弹窗
-            .sheet(isPresented: $showingQuickCheckIn, onDismiss: {
-                addDestinationPrefill = nil
-                pendingPhotoPrefill = nil
-                isWaitingForLocation = false
-                isGeocodingLocation = false
-            }) {
-                quickCheckInSheet
             }
             .sheet(isPresented: $showingMapStylePicker) {
                 mapStylePicker
@@ -174,6 +167,12 @@ extension MapView {
                 } else {
                     regionFetchTask?.cancel()
                     regionHolder.cancelDebounce()
+                }
+            }
+            .onChange(of: locationManager.authorizationStatus) { _, status in
+                guard !autoShowRouteCards, !Self.hasSettledInitialCameraThisLaunch else { return }
+                if status == .denied || status == .restricted {
+                    revealShanghaiFallback()
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: ProcessInfo.thermalStateDidChangeNotification)) { _ in
@@ -438,10 +437,12 @@ extension MapView {
     
     /// 本次进程是否已揭过启动内容（Tab 回来不再走骨架）
     private static var hasRevealedStartupContentThisLaunch = false
-    /// 骨架展示时长后再淡入标注/浮层
-    private static let startupContentRevealDelayNs: UInt64 = 1_000_000_000
+    /// 骨架最短展示，避免 Map 已就绪时一闪而过
+    private static let startupContentRevealMinDelayNs: UInt64 = 400_000_000
+    /// 极端情况下仍未出 Map，超时后也揭晓，避免永久卡骨架
+    private static let startupContentRevealMaxWaitNs: UInt64 = 8_000_000_000
     
-    /// 先出地图框架，约 1s 后再显示足迹内容
+    /// 等真 Map 出现后再揭骨架（避免骨架结束露出空白底）
     func scheduleStartupContentReveal() {
         guard !autoShowRouteCards else {
             isStartupContentVisible = true
@@ -457,8 +458,24 @@ extension MapView {
         
         startupContentRevealTask?.cancel()
         startupContentRevealTask = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: Self.startupContentRevealDelayNs)
-            guard !Task.isCancelled else { return }
+            let started = Date()
+            
+            // 等定位落地或上海兜底创建 Map；超时则继续揭晓
+            while !isInitialMapVisible {
+                let elapsed = Date().timeIntervalSince(started)
+                if elapsed * 1_000_000_000 >= Double(Self.startupContentRevealMaxWaitNs) {
+                    break
+                }
+                try? await Task.sleep(nanoseconds: 50_000_000)
+                guard !Task.isCancelled else { return }
+            }
+            
+            let elapsedNs = UInt64(max(0, Date().timeIntervalSince(started)) * 1_000_000_000)
+            if elapsedNs < Self.startupContentRevealMinDelayNs {
+                try? await Task.sleep(nanoseconds: Self.startupContentRevealMinDelayNs - elapsedNs)
+                guard !Task.isCancelled else { return }
+            }
+            
             Self.hasRevealedStartupContentThisLaunch = true
             withAnimation(.easeInOut(duration: 0.35)) {
                 isStartupContentVisible = true
@@ -484,25 +501,58 @@ extension MapView {
     static var hasCompletedInitialCameraSettlement: Bool { hasSettledInitialCameraThisLaunch }
     /// 已写入 mapCameraPosition、等待 Map 实际报到附近的目标坐标
     private static var pendingInitialCameraCoordinate: CLLocationCoordinate2D?
+    /// 为 true 时 pending 是上海默认视野，确认时保持城市跨度，不要收成街道级
+    private static var pendingCameraUsesFallbackRegion = false
     /// 已确认落地的锚点（用于漂移守卫）
     private static var settledInitialCameraCoordinate: CLLocationCoordinate2D?
     private static var initialCameraDriftGuardUntil: Date?
-    /// 本轮 settle 是否已为用户坐标重建过 Map
-    private static var didRemountMapForInitialCamera = false
     /// 离开足迹 Tab 时记住视野，回来时静默恢复（无飞行动画）
     private static var lastFootprintCameraRegion: MKCoordinateRegion?
     
-    /// 等待 GPS 时的回退视野（纯 `.region`，不框全部标注、不依赖 Map 内置定位）
+    /// 找不到手机定位时的视野：上海（人民广场一带）
     static let startupFallbackRegion = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 35.86, longitude: 104.19),
-        span: MKCoordinateSpan(latitudeDelta: 0.35, longitudeDelta: 0.35)
+        center: CLLocationCoordinate2D(latitude: 31.2304, longitude: 121.4737),
+        span: MKCoordinateSpan(latitudeDelta: 0.28, longitudeDelta: 0.28)
     )
+    /// 授权已确定但仍没有定位时，改落到上海（模拟器/无定位时不宜过长）
+    private static let shanghaiFallbackDelayNs: UInt64 = 2_000_000_000
+    /// 权限框还在时继续等，避免用户还没点允许就落到上海
+    private static let shanghaiFallbackAuthorizationCap: TimeInterval = 20
     
     private static func initialUserRegion(for location: CLLocationCoordinate2D) -> MKCoordinateRegion {
         MKCoordinateRegion(
             center: location,
             span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
         )
+    }
+    
+    static func isAcceptableInitialAccuracy(_ accuracy: CLLocationAccuracy?) -> Bool {
+        guard let accuracy else {
+            return LocationManager.shared.lastKnownLocation != nil
+        }
+        guard accuracy > 0 else { return false }
+        return accuracy < initialCameraAccuracyLimit
+    }
+    
+    /// 足迹 Tab 第一帧：已锁定过则恢复上次视野，否则有定位就用手机位置
+    static func makeInitialCameraPosition(forFootprintTab: Bool) -> MapCameraPosition {
+        if forFootprintTab,
+           hasSettledInitialCameraThisLaunch,
+           let region = lastFootprintCameraRegion {
+            return .region(region)
+        }
+        if forFootprintTab,
+           let location = LocationManager.shared.lastKnownLocation,
+           isAcceptableInitialAccuracy(LocationManager.shared.lastLocationAccuracy) {
+            return .region(initialUserRegion(for: location))
+        }
+        return .region(startupFallbackRegion)
+    }
+    
+    /// 足迹 Tab 也首帧挂 Map（默认上海，定位到后再跳）
+    static func shouldShowMapOnFirstFrame(forFootprintTab: Bool) -> Bool {
+        _ = forFootprintTab
+        return true
     }
     
     /// 启动初始相机：仅冷启动飞一次；Tab 回来只恢复上次视野
@@ -514,27 +564,37 @@ extension MapView {
             return
         }
         
+        if initialCameraWaitStartedAt == nil {
+            initialCameraWaitStartedAt = Date()
+        }
         waitingForLocationToSetCamera = true
         if geocoder == nil {
             geocoder = CLGeocoder()
         }
         
+        let status = locationManager.authorizationStatus
+        if status == .denied || status == .restricted {
+            revealShanghaiFallback()
+            return
+        }
+        
         locationManager.startUpdatingLocation(mode: .mapBrowsing)
         locationManager.requestLocation()
         
-        // 已有可用定位：直接飞并重建 Map。无定位时不要反复写入 fallback，
-        // 否则晚到的用户坐标更新会被后续 begin/异步逻辑盖回中国视野。
-        if let userLocation = locationManager.lastKnownLocation,
-           shouldAcceptLocationForInitialCamera(accuracy: locationManager.lastLocationAccuracy) {
-            applyInitialCamera(to: userLocation, animated: false)
+        // Splash 期间可能已经写入定位。onChange 不会补发旧值，这里主动走一次，
+        // 相机和反向地理编码都能在 Map 出现时发生。
+        if locationManager.lastKnownLocation != nil {
+            handleLocationChange(newValue: locationManager.lastKnownLocation)
         }
         
-        // 下一 runloop 再设，避免 onAppear 当帧改 Map 相机无效
         DispatchQueue.main.async {
             self.trySettleInitialCamera()
         }
         
         scheduleInitialCameraSettleRetries()
+        if Self.pendingInitialCameraCoordinate == nil {
+            scheduleShanghaiFallbackIfNeeded()
+        }
     }
     
     /// 在 Map 尚未就绪时反复重试；已写入目标但未确认落地时也会重放相机
@@ -551,26 +611,76 @@ extension MapView {
                 5_000_000_000,
                 8_000_000_000
             ]
-            for (index, delayNs) in delays.enumerated() {
+            for delayNs in delays {
                 try? await Task.sleep(nanoseconds: delayNs)
                 guard !Task.isCancelled else { return }
                 guard !Self.hasSettledInitialCameraThisLaunch else { return }
                 if Self.pendingInitialCameraCoordinate != nil {
-                    // 仅在若干次仍未确认时重建，避免每帧拆掉 Map
-                    let forceRemount = (index == 2 || index == 4 || index == 6)
-                    self.reapplyPendingInitialCamera(forceRemount: forceRemount)
+                    self.reapplyPendingInitialCamera()
                 } else {
                     self.locationManager.requestLocation()
                     self.trySettleInitialCamera()
                 }
             }
+            guard !Task.isCancelled, !Self.hasSettledInitialCameraThisLaunch else { return }
+            guard let location = Self.pendingInitialCameraCoordinate, self.isInitialMapVisible else { return }
+            // 地图已按手机坐标创建，确认回调若被吞掉也解开锁定，避免一直不能拖动
+            self.markInitialCameraSettled(at: location)
         }
+    }
+    
+    /// 授权已定、仍没有可用定位时落到上海。权限框未关闭则继续等。
+    private func scheduleShanghaiFallbackIfNeeded() {
+        guard !autoShowRouteCards, !Self.hasSettledInitialCameraThisLaunch else { return }
+        shanghaiFallbackTask?.cancel()
+        shanghaiFallbackTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: Self.shanghaiFallbackDelayNs)
+            guard !Task.isCancelled else { return }
+            self.revealShanghaiFallbackIfStillNeeded()
+        }
+    }
+    
+    private func revealShanghaiFallbackIfStillNeeded() {
+        guard !autoShowRouteCards, !Self.hasSettledInitialCameraThisLaunch else { return }
+        if Self.pendingInitialCameraCoordinate != nil { return }
+        if let userLocation = locationManager.lastKnownLocation,
+           shouldAcceptLocationForInitialCamera(accuracy: locationManager.lastLocationAccuracy) {
+            applyInitialCamera(to: userLocation, animated: false)
+            handleLocationChange(newValue: userLocation)
+            return
+        }
+        if locationManager.authorizationStatus == .notDetermined {
+            let waited = Date().timeIntervalSince(initialCameraWaitStartedAt ?? .distantPast)
+            if waited < Self.shanghaiFallbackAuthorizationCap {
+                scheduleShanghaiFallbackIfNeeded()
+                return
+            }
+        }
+        revealShanghaiFallback()
+    }
+    
+    /// 找不到手机定位：用上海区域创建 Map。先锁定写回，等相机回调确认后再允许拖动。
+    private func revealShanghaiFallback() {
+        guard !autoShowRouteCards, !Self.hasSettledInitialCameraThisLaunch else { return }
+        if let pending = Self.pendingInitialCameraCoordinate,
+           !Self.pendingCameraUsesFallbackRegion {
+            return
+        }
+        mapCameraPosition = .region(Self.startupFallbackRegion)
+        isInitialMapVisible = true
+        waitingForLocationToSetCamera = false
+        Self.pendingInitialCameraCoordinate = Self.startupFallbackRegion.center
+        Self.pendingCameraUsesFallbackRegion = true
+        shanghaiFallbackTask?.cancel()
+        shanghaiFallbackTask = nil
+        print("📍 未取得手机定位，地图默认到上海")
     }
     
     /// Tab 切回足迹：静默恢复上次区域，不再飞向 GPS
     private func restoreFootprintCameraAfterTabReturn() {
         initialCameraPositionSet = true
         waitingForLocationToSetCamera = false
+        isInitialMapVisible = true
         Self.pendingInitialCameraCoordinate = nil
         if let region = Self.lastFootprintCameraRegion {
             mapCameraPosition = .region(region)
@@ -587,14 +697,20 @@ extension MapView {
             return Self.hasSettledInitialCameraThisLaunch
         }
         
-        if Self.pendingInitialCameraCoordinate != nil {
-            reapplyPendingInitialCamera(forceRemount: false)
+        if let userLocation = locationManager.lastKnownLocation,
+           shouldAcceptLocationForInitialCamera(accuracy: locationManager.lastLocationAccuracy) {
+            if let pending = Self.pendingInitialCameraCoordinate,
+               !Self.pendingCameraUsesFallbackRegion,
+               Self.coordinatesMatch(pending, userLocation) {
+                reapplyPendingInitialCamera()
+            } else {
+                applyInitialCamera(to: userLocation, animated: false)
+            }
             return false
         }
         
-        if let userLocation = locationManager.lastKnownLocation,
-           shouldAcceptLocationForInitialCamera(accuracy: locationManager.lastLocationAccuracy) {
-            applyInitialCamera(to: userLocation, animated: false)
+        if Self.pendingInitialCameraCoordinate != nil {
+            reapplyPendingInitialCamera()
             return false
         }
         
@@ -602,25 +718,39 @@ extension MapView {
         return false
     }
     
-    private func shouldAcceptLocationForInitialCamera(accuracy: CLLocationAccuracy?) -> Bool {
-        guard let accuracy else {
-            return locationManager.lastKnownLocation != nil
-        }
-        guard accuracy > 0 else { return false }
-        return accuracy < Self.initialCameraAccuracyLimit
+    private static func coordinatesMatch(
+        _ lhs: CLLocationCoordinate2D,
+        _ rhs: CLLocationCoordinate2D,
+        within meters: CLLocationDistance = 30
+    ) -> Bool {
+        CLLocation(latitude: lhs.latitude, longitude: lhs.longitude)
+            .distance(from: CLLocation(latitude: rhs.latitude, longitude: rhs.longitude)) <= meters
     }
     
-    /// 写入目标相机并用重建 Map 锁定（切 Tab 能好就是因为重建）
+    private static func regionForPendingCamera(_ location: CLLocationCoordinate2D) -> MKCoordinateRegion {
+        if pendingCameraUsesFallbackRegion {
+            return startupFallbackRegion
+        }
+        return initialUserRegion(for: location)
+    }
+    
+    private func shouldAcceptLocationForInitialCamera(accuracy: CLLocationAccuracy?) -> Bool {
+        Self.isAcceptableInitialAccuracy(accuracy)
+    }
+    
+    /// 先写入手机坐标再显示 Map，让第一帧就是该区域
     func applyInitialCamera(to location: CLLocationCoordinate2D, animated: Bool) {
         guard !Self.hasSettledInitialCameraThisLaunch else { return }
         isWaitingForUserLocate = false
         Self.pendingInitialCameraCoordinate = location
+        Self.pendingCameraUsesFallbackRegion = false
         waitingForLocationToSetCamera = false
+        shanghaiFallbackTask?.cancel()
+        shanghaiFallbackTask = nil
         
         let region = Self.initialUserRegion(for: location)
-        // 初始锁定不用动画：与 fallback 动画插值会把视野再拉回「区域」跨度
         mapCameraPosition = .region(region)
-        remountMapForInitialCameraIfNeeded(force: !Self.didRemountMapForInitialCamera)
+        isInitialMapVisible = true
         
         let accuracy = locationManager.lastLocationAccuracy ?? -1
         print("📍 初始相机已请求飞向用户: (\(location.latitude), \(location.longitude)), 精度=\(String(format: "%.1f", accuracy))米（待 Map 确认）")
@@ -629,27 +759,17 @@ extension MapView {
             confirmInitialCameraIfNeeded(region: visible)
         }
         
-        // animated 参数保留以兼容调用方；初始路径强制无动画
         _ = animated
     }
     
-    private func reapplyPendingInitialCamera(forceRemount: Bool) {
+    private func reapplyPendingInitialCamera() {
         guard !Self.hasSettledInitialCameraThisLaunch,
               let location = Self.pendingInitialCameraCoordinate else { return }
-        mapCameraPosition = .region(Self.initialUserRegion(for: location))
-        if forceRemount {
-            remountMapForInitialCameraIfNeeded(force: true)
-        }
+        mapCameraPosition = .region(Self.regionForPendingCamera(location))
+        isInitialMapVisible = true
         if let visible = visibleRegion ?? regionHolder.pending {
             confirmInitialCameraIfNeeded(region: visible)
         }
-    }
-    
-    private func remountMapForInitialCameraIfNeeded(force: Bool) {
-        guard force || !Self.didRemountMapForInitialCamera else { return }
-        Self.didRemountMapForInitialCamera = true
-        mapCameraBootstrapID = UUID()
-        print("📍 初始相机：重建 Map 以锁定用户位置")
     }
     
     /// Map 相机回调确认已落到用户附近后再标记成功并停重试
@@ -685,20 +805,31 @@ extension MapView {
     
     private func markInitialCameraSettled(at location: CLLocationCoordinate2D) {
         guard !Self.hasSettledInitialCameraThisLaunch else { return }
+        let usesFallback = Self.pendingCameraUsesFallbackRegion
         Self.hasSettledInitialCameraThisLaunch = true
         Self.pendingInitialCameraCoordinate = nil
+        Self.pendingCameraUsesFallbackRegion = false
         Self.settledInitialCameraCoordinate = location
-        Self.initialCameraDriftGuardUntil = Date().addingTimeInterval(Self.initialCameraDriftGuardDuration)
+        Self.initialCameraDriftGuardUntil = usesFallback
+            ? nil
+            : Date().addingTimeInterval(Self.initialCameraDriftGuardDuration)
         waitingForLocationToSetCamera = false
         initialCameraPositionSet = true
         initialCameraSettleTask?.cancel()
         initialCameraSettleTask = nil
+        shanghaiFallbackTask?.cancel()
+        shanghaiFallbackTask = nil
         
-        // 最终再写一次并重建，确保确认帧之后不会停在被吞掉的状态
-        mapCameraPosition = .region(Self.initialUserRegion(for: location))
-        mapCameraBootstrapID = UUID()
+        mapCameraPosition = .region(
+            usesFallback ? Self.startupFallbackRegion : Self.initialUserRegion(for: location)
+        )
+        isInitialMapVisible = true
         
-        print("📍 地图已定位到用户位置: (\(location.latitude), \(location.longitude))")
+        if usesFallback {
+            print("📍 未取得手机定位，地图已落到上海")
+        } else {
+            print("📍 地图已定位到用户位置: (\(location.latitude), \(location.longitude))")
+        }
         refetchVisibleDestinationsIfNeeded()
     }
     
@@ -717,12 +848,14 @@ extension MapView {
         // 未确认的初始飞跃下次 appear 用 lastKnownLocation 重来，避免残留 pending
         if !Self.hasSettledInitialCameraThisLaunch {
             Self.pendingInitialCameraCoordinate = nil
-            Self.didRemountMapForInitialCamera = false
+            Self.pendingCameraUsesFallbackRegion = false
         }
         startupContentRevealTask?.cancel()
         startupContentRevealTask = nil
         initialCameraSettleTask?.cancel()
         initialCameraSettleTask = nil
+        shanghaiFallbackTask?.cancel()
+        shanghaiFallbackTask = nil
         regionHolder.cancelDebounce()
         regionFetchTask?.cancel()
         regionFetchTask = nil

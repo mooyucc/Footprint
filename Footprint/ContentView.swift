@@ -61,7 +61,7 @@ struct ContentView: View {
                 Label {
                     Text("time_capsule_tab".localized)
                 } icon: {
-                    Image(systemName: "clock.fill")
+                    Image(systemName: "calendar.badge.clock")
                 }
             }
             .tag(2)

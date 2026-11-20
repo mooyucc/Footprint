@@ -115,13 +115,13 @@ struct RouteDistanceLabel: View {
                 HStack(spacing: 4) {
                     // 交通方式图标
                     Image(systemName: transportType.iconName)
-                        .font(.system(size: 10, weight: .medium))
+                        .font(FootprintType.Map.distanceIcon)
                         .foregroundColor(transportColor(for: transportType))
                         .frame(width: 14, height: 14)
                     
                     // 距离文本
                     Text(formatDistance(distance))
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(FootprintType.Map.distance)
                         .foregroundColor(.white)
                 }
                 .padding(.horizontal, 8)
@@ -142,13 +142,13 @@ struct RouteDistanceLabel: View {
             HStack(spacing: 4) {
                 // 交通方式图标
                 Image(systemName: transportType.iconName)
-                    .font(.system(size: 10, weight: .medium))
+                    .font(FootprintType.Map.distanceIcon)
                     .foregroundColor(transportColor(for: transportType))
                     .frame(width: 14, height: 14)
                 
                 // 距离文本
                 Text(formatDistance(distance))
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(FootprintType.Map.distance)
                     .foregroundColor(.white)
             }
             .padding(.horizontal, 8)

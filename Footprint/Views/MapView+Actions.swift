@@ -117,7 +117,7 @@ extension MapView {
         }
     }
     
-    // 处理POI添加目的地 - 打开快速打卡弹窗
+    // 处理POI添加目的地 - 打开添加目的地弹窗
     func handlePOIAddDestination(poi: MKMapItem) {
         // 关闭POI预览
         withAnimation(.spring(response: 0.25, dampingFraction: 0.85)) {
@@ -161,21 +161,22 @@ extension MapView {
             category = "international"
         }
         
-        // 设置预填充数据并显示快速打卡界面
+        // 先提交开关和预填，再下一轮打开 sheet。
+        // 首次呈现会读到上一帧：若开关与 showing 写在同一次更新，表单会用空预填初始化，国家和省份就空白。
         isWaitingForLocation = false
         pendingPhotoPrefill = nil
+        shouldUsePrefillForAddDestination = true
         updateAddDestinationPrefill(
             mapItem: poi,
             name: locationName,
             country: countryName,
             category: category
         )
-        // 延迟到下一 run loop 再呈现 sheet，确保 addDestinationPrefill 已提交，避免弹窗内容为空（首次添加时）
         DispatchQueue.main.async {
-            self.showingQuickCheckIn = true
+            self.showingAddDestination = true
         }
     }
-    
+
     // 处理打卡功能：使用用户当前位置添加目的地
     func handleCheckIn() {
         print("📍 点击打卡按钮")
@@ -186,9 +187,10 @@ extension MapView {
             print("✅ 使用已知位置进行打卡: (\(userLocation.latitude), \(userLocation.longitude))")
             
             isGeocodingLocation = true  // 先显示加载状态，避免首帧出现空表单
+            shouldUsePrefillForAddDestination = true
             // 在下一帧显示添加目的地界面，避免第一次呈现时使用旧的模式状态
             DispatchQueue.main.async {
-                self.showingQuickCheckIn = true
+                self.showingAddDestination = true
             }
             
             // 执行反向地理编码
@@ -197,9 +199,10 @@ extension MapView {
             // 如果没有位置信息，先请求定位
             print("⏳ 没有已知位置，请求定位中...")
             
-            // 在下一帧显示添加目的地界面，显示加载状态，确保使用快速打卡模式
+            // 在下一帧显示添加目的地界面，并保持加载状态直到定位完成
+            shouldUsePrefillForAddDestination = true
             DispatchQueue.main.async {
-                self.showingQuickCheckIn = true
+                self.showingAddDestination = true
             }
             isGeocodingLocation = true
             isWaitingForLocation = true
@@ -230,11 +233,9 @@ extension MapView {
         isGeocodingLocation = false
         isWaitingForLocation = false
         restoreMapBrowsingLocationModeIfNeeded()
-        print("❌ 无法获取当前位置，显示快速打卡界面（用户可手动输入位置）")
+        print("❌ 无法获取当前位置，保留添加目的地界面（用户可手动填写）")
         
-        // 即使无法获取位置，也显示快速打卡界面，用户可以手动搜索位置
-        // 不关闭弹窗，让用户可以在快速打卡界面中手动搜索位置
-        // showingAddDestination 保持为 true，会显示 QuickCheckInView(prefill: nil)
+        // 定位失败时不关闭弹窗，表单改为空白，由用户手动填写
     }
     
     func updateAddDestinationPrefill(

@@ -10,6 +10,13 @@ import Foundation
 import SwiftData
 import Combine
 
+/// 年鉴相册一格里的一张封面。优先缩略图，没有缩略图时才带一张原图兜底。
+struct YearAlbumCoverSource: Sendable {
+    let id: UUID
+    let thumbnailData: Data?
+    let fallbackData: Data?
+}
+
 @MainActor
 final class TabListSnapshotStore: ObservableObject {
     static let shared = TabListSnapshotStore()
@@ -29,6 +36,8 @@ final class TabListSnapshotStore: ObservableObject {
     private var didLoadProfileSnapshots = false
     private var didLoadJourneyTrips = false
     private var didLoadFavorites = false
+    /// 年鉴口袋封面 ID：进程内缓存。冷启动为空会随机抽；热启动复用，避免换图。
+    private var yearAlbumCoverIDs: [Int: [UUID]] = [:]
     private let persistQueue = DispatchQueue(label: "com.footprint.tabListSnapshot.persist", qos: .utility)
 
     private init() {
@@ -249,6 +258,106 @@ final class TabListSnapshotStore: ObservableObject {
         descriptor.fetchLimit = limit
         descriptor.relationshipKeyPathsForPrefetching = [\.destinations]
         return (try? context.fetch(descriptor)) ?? []
+    }
+
+    /// 年鉴相册口袋：每年最多几张缩略图，避免把该年地点整页装进内存。
+    /// 冷启动随机抽选；同进程内复用上次 ID，热启动不换图。
+    func yearAlbumCoverSources(year: Int, limit: Int = 3) -> [YearAlbumCoverSource] {
+        guard let context = modelContext else { return [] }
+        let covers = Self.coverSources(
+            year: year,
+            in: context,
+            limit: limit,
+            preferredIDs: yearAlbumCoverIDs[year]
+        )
+        if covers.isEmpty {
+            yearAlbumCoverIDs.removeValue(forKey: year)
+        } else {
+            yearAlbumCoverIDs[year] = covers.map(\.id)
+        }
+        return covers
+    }
+
+    private static func coverSources(
+        year: Int,
+        in context: ModelContext,
+        limit: Int,
+        preferredIDs: [UUID]?
+    ) -> [YearAlbumCoverSource] {
+        let calendar = Calendar.current
+        guard
+            let start = calendar.date(from: DateComponents(year: year, month: 1, day: 1)),
+            let end = calendar.date(from: DateComponents(year: year + 1, month: 1, day: 1))
+        else { return [] }
+
+        if let preferredIDs, !preferredIDs.isEmpty {
+            var covers: [YearAlbumCoverSource] = []
+            covers.reserveCapacity(min(limit, preferredIDs.count))
+            for id in preferredIDs.prefix(limit) {
+                var byID = FetchDescriptor<TravelDestination>(
+                    predicate: #Predicate<TravelDestination> { destination in
+                        destination.id == id
+                    }
+                )
+                byID.fetchLimit = 1
+                guard let destination = try? context.fetch(byID).first else { continue }
+                if let cover = coverSource(from: destination) {
+                    covers.append(cover)
+                }
+            }
+            if !covers.isEmpty { return covers }
+        }
+
+        var descriptor = FetchDescriptor<TravelDestination>(
+            predicate: #Predicate<TravelDestination> { destination in
+                destination.visitDate >= start && destination.visitDate < end
+            },
+            sortBy: [SortDescriptor(\.visitDate, order: .reverse)]
+        )
+        descriptor.fetchLimit = 48
+        let destinations = (try? context.fetch(descriptor)) ?? []
+
+        var withThumbnails: [YearAlbumCoverSource] = []
+        withThumbnails.reserveCapacity(min(limit, destinations.count))
+        for destination in destinations {
+            guard let thumbnail = albumThumbnailData(from: destination) else { continue }
+            withThumbnails.append(
+                YearAlbumCoverSource(id: destination.id, thumbnailData: thumbnail, fallbackData: nil)
+            )
+        }
+
+        let covers = Array(withThumbnails.shuffled().prefix(limit))
+        if !covers.isEmpty { return covers }
+
+        if let destination = destinations.randomElement(),
+           let full = albumFallbackPhotoData(from: destination) {
+            return [
+                YearAlbumCoverSource(id: destination.id, thumbnailData: nil, fallbackData: full)
+            ]
+        }
+        return []
+    }
+
+    private static func coverSource(from destination: TravelDestination) -> YearAlbumCoverSource? {
+        if let thumbnail = albumThumbnailData(from: destination) {
+            return YearAlbumCoverSource(id: destination.id, thumbnailData: thumbnail, fallbackData: nil)
+        }
+        if let full = albumFallbackPhotoData(from: destination) {
+            return YearAlbumCoverSource(id: destination.id, thumbnailData: nil, fallbackData: full)
+        }
+        return nil
+    }
+
+    private static func albumThumbnailData(from destination: TravelDestination) -> Data? {
+        if let first = destination.photoThumbnailDatas.first, !first.isEmpty { return first }
+        if let data = destination.photoThumbnailData, !data.isEmpty { return data }
+        return nil
+    }
+
+    private static func albumFallbackPhotoData(from destination: TravelDestination) -> Data? {
+        if let first = destination.photoDatas.first, !first.isEmpty { return first }
+        if let data = destination.photoData, !data.isEmpty { return data }
+        return nil
     }
 
     static func fetchDestinations(year: Int, in context: ModelContext) -> [TravelDestination] {

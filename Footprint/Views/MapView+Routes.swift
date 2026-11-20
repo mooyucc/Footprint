@@ -84,6 +84,8 @@ extension MapView {
                 lastCalculationTime = Date()
                 isCalculatingClusters = false
                 scheduledClusterRegionKey = ""
+                reinforceRippleDestinationPin()
+                releaseRipplePinIfClustered()
                 
                 #if DEBUG
                 print("🔄 聚合计算完成: \(capturedZoomEnum.description)级别, 耗时: \(String(format: "%.3f", calculationTime))秒, 标注: \(renderedClusterCount)/\(capturedMaxMarkers), 输入地点: \(capturedCount)/\(capturedTotalDestinations)")

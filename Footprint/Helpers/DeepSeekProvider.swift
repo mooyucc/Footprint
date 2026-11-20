@@ -61,198 +61,61 @@ class DeepSeekProvider: AIServiceProtocol {
         country: String,
         date: Date,
         existingNotes: String?,
-        persona: String,
-        mbti: String,
-        gender: String,
-        ageGroup: String,
-        constellation: String
+        persona _: String,
+        mbti _: String,
+        gender _: String,
+        ageGroup _: String,
+        constellation _: String
     ) async throws -> String {
         print("🤖 [DeepSeek] 开始生成笔记，地点: \(location), 省份: \(province), 国家: \(country)")
         
-        // 获取当前语言配置
-        let langConfig = LanguageConfig.forLanguage(currentLanguage)
-        
-        // 构建 Prompt
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = langConfig.dateFormat
-        let localeId = currentLanguage == .chinese || currentLanguage == .chineseTraditional ? "zh_CN" : 
-                       currentLanguage == .japanese ? "ja_JP" : 
-                       currentLanguage == .korean ? "ko_KR" : 
-                       currentLanguage == .french ? "fr_FR" : 
-                       currentLanguage == .spanish ? "es_ES" :
-                       currentLanguage == .german ? "de_DE" : "en_US"
-        dateFormatter.locale = Locale(identifier: localeId)
-        let dateString = dateFormatter.string(from: date)
-        
-        let trimmedPersona = persona.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedMbti = mbti.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedGender = gender.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedAgeGroup = ageGroup.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedConstellation = constellation.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        // 根据身份标签动态设置身份，如果没有则使用默认身份（根据语言）
-        let identity = !trimmedPersona.isEmpty ? trimmedPersona : langConfig.defaultIdentity
-        
-        // 构建完整的地点信息（根据语言）
-        var locationInfo: String
-        let separator = currentLanguage == .english ? ": " : "："
-        let provinceSeparator = currentLanguage == .english ? " (" : "（"
-        let provinceClose = currentLanguage == .english ? ")" : "）"
-        locationInfo = "\(langConfig.locationLabel)\(separator)\(location)"
-        if !province.isEmpty {
-            locationInfo += "\(provinceSeparator)\(province)\(provinceClose)"
-        }
-        locationInfo += "\n- \(langConfig.countryLabel)\(separator)\(country)"
-        
-        // 获取季节信息（用于prompt中，但不写入生成的笔记）
-        let seasonString = getSeasonString(from: date, language: currentLanguage)
-        let seasonLabel = currentLanguage == .english ? "Season" : (currentLanguage == .japanese ? "季節" : (currentLanguage == .korean ? "계절" : (currentLanguage == .french ? "Saison" : (currentLanguage == .spanish ? "Estación" : (currentLanguage == .german ? "Jahreszeit" : "季节")))))
-        
-        // 构建prompt开头（根据语言，使用季节而非具体日期）
-        var promptText: String
-        if currentLanguage == .english {
-            promptText = "You are a \(identity). Generate a travel note based on the following information:\n- \(locationInfo)\n- \(seasonLabel)\(separator)\(seasonString)"
-        } else {
-            promptText = "你是一位\(identity)。根据以下信息生成一段旅行笔记：\n- \(locationInfo)\n- \(seasonLabel)\(separator)\(seasonString)"
-        }
-        
-        // 构建用户画像信息，用于指导文风（但不写入笔记内容）
-        var styleGuidance = ""
-        if !trimmedPersona.isEmpty {
-            styleGuidance += "请以\(trimmedPersona)的身份和口吻来写作"
-        }
-        if !trimmedMbti.isEmpty {
-            if !styleGuidance.isEmpty {
-                styleGuidance += "，"
-            }
-            styleGuidance += "用词和情绪表达应符合\(trimmedMbti)的性格倾向"
-        }
-        if !trimmedGender.isEmpty && trimmedGender != "不愿透露" {
-            if !styleGuidance.isEmpty {
-                styleGuidance += "，"
-            }
-            styleGuidance += "考虑用户性别为\(trimmedGender)的视角和表达习惯"
-        }
-        if !trimmedAgeGroup.isEmpty && trimmedAgeGroup != "不愿透露" {
-            if !styleGuidance.isEmpty {
-                styleGuidance += "，"
-            }
-            styleGuidance += "结合\(trimmedAgeGroup)年龄段的生活经验和关注点"
-        }
-        if !trimmedConstellation.isEmpty && trimmedConstellation != "不愿透露" {
-            if !styleGuidance.isEmpty {
-                styleGuidance += "，"
-            }
-            styleGuidance += "参考\(trimmedConstellation)的性格特质来调整表达风格"
-        }
-        
-        if !styleGuidance.isEmpty {
-            let separator = currentLanguage == .english ? ": " : "："
-            promptText += "\n\n\(langConfig.styleGuidanceLabel)\(separator)\(styleGuidance)。"
-        }
-        
-        // 检查用户是否已输入笔记文字（截断后写入 prompt）
+        let language = currentLanguage
+        let seasonString = getSeasonString(from: date, language: language)
         let trimmedExistingNotes = truncateForPrompt(
             existingNotes ?? "",
             maxLength: PromptBudget.existingNotesChars
         )
-        let hasExistingNotes = !trimmedExistingNotes.isEmpty
         
-        if hasExistingNotes {
-            // 如果用户已写文字，要求美化用户文字
-            let separator = currentLanguage == .english ? ": " : "："
-            if currentLanguage == .english {
-                promptText += "\n\n**User's existing notes**\(separator)\n\(trimmedExistingNotes)\n\n**Important**: The user has already written some notes above. Your main task is to **polish and beautify** the user's existing text, making it more elegant, fluent, and expressive while preserving the original meaning and key information. Do not generate completely new content. Only enhance and refine what the user has written."
-            } else {
-                promptText += "\n\n**用户已写的笔记**\(separator)\n\(trimmedExistingNotes)\n\n**重要提示**：用户已经写了一段笔记文字（见上方）。你的主要任务是**美化用户已写的文字**，使其更加优美、流畅、有表现力，同时保留原文的意思和关键信息。不要生成全新的内容，只需要对用户已写的文字进行润色和美化。"
-            }
-            print("📝 [DeepSeek] 检测到用户已输入笔记，将进行美化处理")
-        }
-        
-        // 如果有照片，使用 Apple Vision API 识别图片内容
+        var photoMood: String?
         if !images.isEmpty {
             print("📸 [Vision] 开始使用Apple Vision API识别\(images.count)张照片...")
-            
             var imageDescriptions: [String] = []
-            let photoLabel = langConfig.photoLabel
-            let separator = currentLanguage == .english ? ": " : "："
             for (index, imageData) in images.prefix(3).enumerated() {
                 if let description = await analyzeImageWithVision(imageData) {
-                    if currentLanguage == .english {
-                        imageDescriptions.append("\(photoLabel) \(index + 1)\(separator)\(description)")
-                    } else {
-                        imageDescriptions.append("\(photoLabel)\(index + 1)\(separator)\(description)")
-                    }
+                    imageDescriptions.append(description)
                     print("✅ [Vision] 照片\(index + 1)识别成功：\(description.prefix(50))...")
                 } else {
                     print("⚠️ [Vision] 照片\(index + 1)识别失败，跳过")
                 }
             }
-            
-            if !imageDescriptions.isEmpty {
-                promptText += "\n- \(langConfig.photoDescriptionLabel)\(separator)\n\(imageDescriptions.joined(separator: "\n"))"
+            if imageDescriptions.isEmpty {
+                print("⚠️ [Vision] 所有照片识别失败")
+            } else {
+                photoMood = imageDescriptions.joined(separator: isCJK(language) ? "；" : "; ")
                 print("✅ [Vision] 图片识别完成，共识别\(imageDescriptions.count)张照片")
-            } else {
-                if currentLanguage == .english {
-                    promptText += "\n- User uploaded \(images.count) photos (image recognition was not successful)"
-                } else {
-                    promptText += "\n- 用户上传了\(images.count)张照片（图片识别未成功）"
-                }
-                print("⚠️ [Vision] 所有照片识别失败，使用通用描述")
-            }
-            
-            // 构建本地化的prompt结尾（有照片的情况）
-            if currentLanguage == .english {
-                if hasExistingNotes {
-                    promptText += "\n\n\(langConfig.importantNoteLabel): Please strictly follow the location information provided above (\(location)\(province.isEmpty ? "" : ", \(province)"), \(country)). Even if the photos may contain information or features of other locations, you must use the provided location information and not infer or guess the location from the photos.\n\nBased on the above information, especially the user's existing notes and photo content descriptions, **polish and beautify** the user's existing notes, \(langConfig.wordLimit144). \(langConfig.requirementsLabel):\n1. **Your main task is to polish the user's existing notes, not to generate new content**\n2. **Must use the provided location information (\(location)\(province.isEmpty ? "" : ", \(province)"), \(country)), do not use other location names that may appear in the photos**\n3. Combine the scenes and content actually seen in the photos (but the location must be \(location))\n4. Make the language more elegant, fluent, and expressive while preserving the original meaning\n5. Reflect local culture or natural features if relevant\n6. \(langConfig.outputLanguageInstruction)\n7. **Do not mention identity tags, MBTI, gender, age group, constellation and other user attribute information, only write pure travel note content**\n8. **Do NOT mention specific dates, times, or location names in the generated note. At most, you can mention the season (\(seasonString)) if it's relevant to the content**\n9. **Important: Word count must be strictly controlled within 144 words, do not exceed**"
-                } else {
-                    promptText += "\n\n\(langConfig.importantNoteLabel): Please strictly follow the location information provided above (\(location)\(province.isEmpty ? "" : ", \(province)"), \(country)) to generate the note. Even if the photos may contain information or features of other locations, you must use the provided location information and not infer or guess the location from the photos.\n\nBased on the above information, especially the photo content descriptions, generate a travel note, \(langConfig.wordLimit144). \(langConfig.requirementsLabel):\n1. **Must use the provided location information (\(location)\(province.isEmpty ? "" : ", \(province)"), \(country)), do not use other location names that may appear in the photos**\n2. Combine the scenes and content actually seen in the photos (but the location must be \(location))\n3. Combine the characteristics and cultural background of this location\n4. Reflect local culture or natural features\n5. Natural and fluent language with personal feelings\n6. \(langConfig.outputLanguageInstruction)\n7. **Do not mention identity tags, MBTI, gender, age group, constellation and other user attribute information, only write pure travel note content**\n8. **Do NOT mention specific dates, times, or location names in the generated note. At most, you can mention the season (\(seasonString)) if it's relevant to the content**\n9. **Important: Word count must be strictly controlled within 144 words, do not exceed**"
-                }
-            } else {
-                let comma = currentLanguage == .chinese || currentLanguage == .chineseTraditional || currentLanguage == .japanese || currentLanguage == .korean ? "，" : ", "
-                if hasExistingNotes {
-                    promptText += "\n\n\(langConfig.importantNoteLabel)：请严格按照上面提供的地点信息（\(location)\(province.isEmpty ? "" : "\(comma)\(province)")，\(country)）。即使照片中可能包含其他地点的信息或特征，也必须使用提供的地点信息，不要从照片中推断或猜测地点。\n\n请根据以上信息，特别是用户已写的笔记和照片内容描述，**美化用户已写的笔记**，\(langConfig.wordLimit144)。\(langConfig.requirementsLabel)：\n1. **你的主要任务是美化用户已写的笔记，而不是生成新内容**\n2. **必须使用提供的地点信息（\(location)\(province.isEmpty ? "" : "\(comma)\(province)")，\(country)），不要使用照片中可能出现的其他地点名称**\n3. 结合照片中实际看到的场景和内容（但地点必须是\(location)）\n4. 使语言更加优美、流畅、有表现力，同时保留原文的意思\n5. 如果相关，体现当地文化或自然风貌\n6. \(langConfig.outputLanguageInstruction)\n7. **不要提及身份标签、MBTI、性别、年龄段、星座等用户属性信息，只写纯粹的旅行笔记内容**\n8. **不要在生成的笔记中提及具体的时间（日期）、地点名称等信息，最多只能提到季节（\(seasonString)）**\n9. **重要：字数必须严格控制在144字以内，不要超过**"
-                } else {
-                    promptText += "\n\n\(langConfig.importantNoteLabel)：请严格按照上面提供的地点信息（\(location)\(province.isEmpty ? "" : "\(comma)\(province)")，\(country)）生成笔记。即使照片中可能包含其他地点的信息或特征，也必须使用提供的地点信息，不要从照片中推断或猜测地点。\n\n请根据以上信息，特别是照片内容描述，生成一段旅行笔记，\(langConfig.wordLimit144)。\(langConfig.requirementsLabel)：\n1. **必须使用提供的地点信息（\(location)\(province.isEmpty ? "" : "\(comma)\(province)")，\(country)），不要使用照片中可能出现的其他地点名称**\n2. 结合照片中实际看到的场景和内容（但地点必须是\(location)）\n3. 结合这个地点的特色和文化背景\n4. 体现当地文化或自然风貌\n5. 语言自然流畅，带有个人感受\n6. \(langConfig.outputLanguageInstruction)\n7. **不要提及身份标签、MBTI、性别、年龄段、星座等用户属性信息，只写纯粹的旅行笔记内容**\n8. **不要在生成的笔记中提及具体的时间（日期）、地点名称等信息，最多只能提到季节（\(seasonString)）**\n9. **重要：字数必须严格控制在144字以内，不要超过**"
-                }
-            }
-        } else {
-            // 构建本地化的prompt结尾（无照片的情况）
-            if currentLanguage == .english {
-                let comma = province.isEmpty ? "" : ", \(province)"
-                if hasExistingNotes {
-                    promptText += "\n\nBased on the above information, especially the user's existing notes, **polish and beautify** the user's existing notes, \(langConfig.wordLimit144). \(langConfig.requirementsLabel):\n1. **Your main task is to polish the user's existing notes, not to generate new content**\n2. Describe the characteristics of this location (\(location)\(comma), \(country))\n3. Make the language more elegant, fluent, and expressive while preserving the original meaning\n4. Reflect local culture or natural features if relevant\n5. \(langConfig.outputLanguageInstruction)\n6. **Do not mention identity tags, MBTI, gender, age group, constellation and other user attribute information, only write pure travel note content**\n7. **Do NOT mention specific dates, times, or location names in the generated note. At most, you can mention the season (\(seasonString)) if it's relevant to the content**\n8. **Important: Word count must be strictly controlled within 144 words, do not exceed**"
-                } else {
-                    promptText += "\n\nGenerate a travel note, \(langConfig.wordLimit144). \(langConfig.requirementsLabel):\n1. Describe the characteristics of this location (\(location)\(comma), \(country))\n2. Reflect local culture or natural features\n3. Natural and fluent language with personal feelings\n4. \(langConfig.outputLanguageInstruction)\n5. **Do not mention identity tags, MBTI, gender, age group, constellation and other user attribute information, only write pure travel note content**\n6. **Do NOT mention specific dates, times, or location names in the generated note. At most, you can mention the season (\(seasonString)) if it's relevant to the content**\n7. **Important: Word count must be strictly controlled within 144 words, do not exceed**"
-                }
-            } else {
-                let comma = currentLanguage == .chinese || currentLanguage == .chineseTraditional || currentLanguage == .japanese || currentLanguage == .korean ? "，" : ", "
-                if hasExistingNotes {
-                    promptText += "\n\n请根据以上信息，特别是用户已写的笔记，**美化用户已写的笔记**，\(langConfig.wordLimit144)。\(langConfig.requirementsLabel)：\n1. **你的主要任务是美化用户已写的笔记，而不是生成新内容**\n2. 描述这个地点（\(location)\(province.isEmpty ? "" : "\(comma)\(province)")，\(country)）的特色\n3. 使语言更加优美、流畅、有表现力，同时保留原文的意思\n4. 如果相关，体现当地文化或自然风貌\n5. \(langConfig.outputLanguageInstruction)\n6. **不要提及身份标签、MBTI、性别、年龄段、星座等用户属性信息，只写纯粹的旅行笔记内容**\n7. **不要在生成的笔记中提及具体的时间（日期）、地点名称等信息，最多只能提到季节（\(seasonString)）**\n8. **重要：字数必须严格控制在144字以内，不要超过**"
-                } else {
-                    promptText += "\n\n请生成一段旅行笔记，\(langConfig.wordLimit144)。\(langConfig.requirementsLabel)：\n1. 描述这个地点（\(location)\(province.isEmpty ? "" : "\(comma)\(province)")，\(country)）的特色\n2. 体现当地文化或自然风貌\n3. 语言自然流畅，带有个人感受\n4. \(langConfig.outputLanguageInstruction)\n5. **不要提及身份标签、MBTI、性别、年龄段、星座等用户属性信息，只写纯粹的旅行笔记内容**\n6. **不要在生成的笔记中提及具体的时间（日期）、地点名称等信息，最多只能提到季节（\(seasonString)）**\n7. **重要：字数必须严格控制在144字以内，不要超过**"
-                }
             }
         }
         
-        let messages: [ChatMessage] = [
-            .user([.text(promptText)])
-        ]
-        
-        let response = try await callChatAPI(messages: messages, model: chatModel)
-        
-        // 限制内容长度在144字以内
-        return limitTo144Characters(response)
+        let prompt = makeShortLinePrompt(
+            kind: .placeNote,
+            language: language,
+            place: placeLine(location: location, province: province, country: country, language: language),
+            season: seasonString,
+            userText: trimmedExistingNotes.isEmpty ? nil : trimmedExistingNotes,
+            photoMood: photoMood
+        )
+        let response = try await callChatAPI(messages: [.user([.text(prompt)])], model: chatModel)
+        return finishShortLine(response, language: language)
     }
     
     func generateTripDescription(
         for destinations: [TravelDestination],
         existingDescription: String?,
-        persona: String,
-        mbti: String,
-        gender: String,
-        ageGroup: String,
-        constellation: String
+        persona _: String,
+        mbti _: String,
+        gender _: String,
+        ageGroup _: String,
+        constellation _: String
     ) async throws -> String {
         print("🤖 [DeepSeek] 开始生成旅程描述，目的地数量: \(destinations.count)")
         
@@ -260,209 +123,68 @@ class DeepSeekProvider: AIServiceProtocol {
             throw AIError.invalidInput("目的地列表为空")
         }
         
-        // 获取当前语言配置
-        let langConfig = LanguageConfig.forLanguage(currentLanguage)
-        
-        let trimmedPersona = persona.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedMbti = mbti.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedGender = gender.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedAgeGroup = ageGroup.trimmingCharacters(in: .whitespacesAndNewlines)
-        let trimmedConstellation = constellation.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        // 根据身份标签动态设置身份，如果没有则使用默认身份（根据语言）
-        let identity = !trimmedPersona.isEmpty ? trimmedPersona : langConfig.defaultIdentity
-        
-        // 构建目的地信息（包含笔记）；限制数量与笔记长度，控制输入 token
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = currentLanguage == .english ? "MMMM d, yyyy" : "yyyy-MM-dd"
-        let localeId = currentLanguage == .chinese || currentLanguage == .chineseTraditional ? "zh_CN" : 
-                       currentLanguage == .japanese ? "ja_JP" : 
-                       currentLanguage == .korean ? "ko_KR" : 
-                       currentLanguage == .french ? "fr_FR" : 
-                       currentLanguage == .spanish ? "es_ES" :
-                       currentLanguage == .german ? "de_DE" : "en_US"
-        dateFormatter.locale = Locale(identifier: localeId)
-        
-        let separator = currentLanguage == .english ? ": " : "："
+        let language = currentLanguage
         let cappedDestinations = Array(destinations.prefix(PromptBudget.maxTripDestinations))
-        // 收集目的地的季节信息
-        let seasons = cappedDestinations.map { getSeasonString(from: $0.visitDate, language: currentLanguage) }
-        let uniqueSeasons = Set(seasons)
+        let seasons = cappedDestinations.map { getSeasonString(from: $0.visitDate, language: language) }
+        var orderedSeasons: [String] = []
+        var seenSeasons = Set<String>()
+        for season in seasons where seenSeasons.insert(season).inserted {
+            orderedSeasons.append(season)
+        }
+        let seasonHint = orderedSeasons.joined(separator: isCJK(language) ? "、" : ", ")
         
-        var destinationsInfo = cappedDestinations.map { dest in
-            // 只显示地点和国家，不显示具体日期
-            var info = "- \(dest.name) (\(dest.country))"
-            // 如果有笔记，添加到信息中（截断）
-            let note = dest.notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        let place = cappedDestinations.map { dest in
+            let name = dest.name.trimmingCharacters(in: .whitespacesAndNewlines)
+            let country = dest.country.trimmingCharacters(in: .whitespacesAndNewlines)
+            if country.isEmpty { return name }
+            return "\(name) (\(country))"
+        }.joined(separator: isCJK(language) ? "、" : ", ")
+        
+        var noteSnippets: [String] = []
+        for dest in cappedDestinations {
+            let note = truncateForPrompt(dest.notes, maxLength: PromptBudget.noteSnippetChars)
             if !note.isEmpty {
-                info += "\n  \(langConfig.noteLabel)\(separator)\(truncateForPrompt(note, maxLength: PromptBudget.noteSnippetChars))"
-            }
-            return info
-        }.joined(separator: "\n\n")
-        
-        // 收集目的地的照片（限制有照片的目的地数量）
-        var allImages: [(destination: String, images: [Data])] = []
-        for destination in cappedDestinations where allImages.count < PromptBudget.maxTripPhotoDestinations {
-            if !destination.photoDatas.isEmpty {
-                allImages.append((destination: destination.name, images: destination.photoDatas))
+                noteSnippets.append(note)
             }
         }
         
-        // 构建prompt开头（根据语言）
-        var promptText: String
-        if currentLanguage == .english {
-            promptText = "You are a \(identity). Analyze the following trip information and generate an overall trip description:\n\nDestination List:\n\(destinationsInfo)"
-        } else {
-            promptText = "你是一位\(identity)。分析以下旅程信息，生成一段旅程整体描述：\n\n目的地列表：\n\(destinationsInfo)"
-        }
-        
-        // 构建用户画像信息，用于指导文风（但不写入描述内容）
-        var styleGuidance = ""
-        if !trimmedPersona.isEmpty {
-            styleGuidance += "请以\(trimmedPersona)的身份和口吻来写作"
-        }
-        if !trimmedMbti.isEmpty {
-            if !styleGuidance.isEmpty {
-                styleGuidance += "，"
-            }
-            styleGuidance += "用词和情绪表达应符合\(trimmedMbti)的性格倾向"
-        }
-        if !trimmedGender.isEmpty && trimmedGender != "不愿透露" {
-            if !styleGuidance.isEmpty {
-                styleGuidance += "，"
-            }
-            styleGuidance += "考虑用户性别为\(trimmedGender)的视角和表达习惯"
-        }
-        if !trimmedAgeGroup.isEmpty && trimmedAgeGroup != "不愿透露" {
-            if !styleGuidance.isEmpty {
-                styleGuidance += "，"
-            }
-            styleGuidance += "结合\(trimmedAgeGroup)年龄段的生活经验和关注点"
-        }
-        if !trimmedConstellation.isEmpty && trimmedConstellation != "不愿透露" {
-            if !styleGuidance.isEmpty {
-                styleGuidance += "，"
-            }
-            styleGuidance += "参考\(trimmedConstellation)的性格特质来调整表达风格"
-        }
-        
-        if !styleGuidance.isEmpty {
-            promptText += "\n\n\(langConfig.styleGuidanceLabel)\(separator)\(styleGuidance)。"
-        }
-        
-        // 检查用户是否已输入旅程描述（截断后写入 prompt）
-        let trimmedExistingDescription = truncateForPrompt(
+        let trimmedExisting = truncateForPrompt(
             existingDescription ?? "",
             maxLength: PromptBudget.existingNotesChars
         )
-        let hasExistingDescription = !trimmedExistingDescription.isEmpty
         
-        if hasExistingDescription {
-            // 如果用户已写描述，要求美化用户文字
-            if currentLanguage == .english {
-                promptText += "\n\n**User's existing trip description**\(separator)\n\(trimmedExistingDescription)\n\n**Important**: The user has already written a trip description above. Your main task is to **polish and beautify** the user's existing text, making it more elegant, fluent, and expressive while preserving the original meaning and key information. Do not generate completely new content. Only enhance and refine what the user has written."
-            } else {
-                promptText += "\n\n**用户已写的旅程描述**\(separator)\n\(trimmedExistingDescription)\n\n**重要提示**：用户已经写了一段旅程描述（见上方）。你的主要任务是**美化用户已写的文字**，使其更加优美、流畅、有表现力，同时保留原文的意思和关键信息。不要生成全新的内容，只需要对用户已写的文字进行润色和美化。"
-            }
-            print("📝 [DeepSeek] 检测到用户已输入旅程描述，将进行美化处理")
-        }
-        
-        // 构建季节信息提示（在照片处理之前，因为两个分支都需要使用）
-        let seasonHint: String
-        if uniqueSeasons.count == 1, let season = uniqueSeasons.first {
-            seasonHint = season
-        } else {
-            seasonHint = uniqueSeasons.joined(separator: currentLanguage == .english ? ", " : "、")
-        }
-        
-        // 如果有照片，使用 Apple Vision API 识别图片内容
-        if !allImages.isEmpty {
-            print("📸 [Vision] 开始使用Apple Vision API识别旅程中的照片，共\(allImages.count)个目的地有照片...")
-            
-            var imageDescriptions: [String] = []
-            var totalProcessed = 0
-            let maxImagesPerDestination = 2 // 每个目的地最多识别2张照片，避免太多
-            
-            for (destName, images) in allImages {
-                var destImageDescriptions: [String] = []
-                
-                for (index, imageData) in images.prefix(maxImagesPerDestination).enumerated() {
-                    if let description = await analyzeImageWithVision(imageData) {
-                        if currentLanguage == .english {
-                            destImageDescriptions.append("  - \(langConfig.photoLabel) \(index + 1)\(separator)\(description)")
-                        } else {
-                            destImageDescriptions.append("  - \(langConfig.photoLabel)\(index + 1)\(separator)\(description)")
-                        }
-                        totalProcessed += 1
-                        print("✅ [Vision] \(destName) 照片\(index + 1)识别成功")
-                    }
-                }
-                
-                if !destImageDescriptions.isEmpty {
-                    if currentLanguage == .english {
-                        imageDescriptions.append("\(destName)'s \(langConfig.photoLabel.lowercased())s\(separator)\n\(destImageDescriptions.joined(separator: "\n"))")
-                    } else {
-                        imageDescriptions.append("\(destName)的\(langConfig.photoLabel)\(separator)\n\(destImageDescriptions.joined(separator: "\n"))")
-                    }
-                }
-            }
-            
-            if !imageDescriptions.isEmpty {
-                if currentLanguage == .english {
-                    promptText += "\n\nPhoto content descriptions in the trip:\n\(imageDescriptions.joined(separator: "\n\n"))"
-                } else {
-                    promptText += "\n\n旅程中的照片内容描述：\n\(imageDescriptions.joined(separator: "\n\n"))"
-                }
-                print("✅ [Vision] 图片识别完成，共识别\(totalProcessed)张照片，来自\(imageDescriptions.count)个目的地")
-            } else {
-                if currentLanguage == .english {
-                    promptText += "\n\nThe trip contains photos, but image recognition was not successful"
-                } else {
-                    promptText += "\n\n旅程中包含照片，但图片识别未成功"
-                }
-                print("⚠️ [Vision] 所有照片识别失败，使用通用描述")
-            }
-            
-            // 构建本地化的prompt结尾（有照片的情况）
-            if currentLanguage == .english {
-                if hasExistingDescription {
-                    promptText += "\n\nBased on the above information, especially the user's existing trip description, photo content descriptions and notes from various locations, **polish and beautify** the user's existing trip description, \(langConfig.wordLimit300). \(langConfig.requirementsLabel):\n1. **Your main task is to polish the user's existing trip description, not to generate new content**\n2. Combine the scenes and content actually seen in the photos\n3. Reference the notes from various locations to reflect the coherence and characteristics of the trip\n4. Make the language more elegant, fluent, and expressive while preserving the original meaning\n5. \(langConfig.outputLanguageInstruction)\n6. **Do not mention identity tags, MBTI, gender, age group, constellation and other user attribute information, only write pure trip description content**\n7. **Do NOT mention specific dates, times, or location names in the generated description. At most, you can mention the season(s) (\(seasonHint)) if it's relevant to the content**\n8. **Important: Word count must be strictly controlled within 300 words, do not exceed**"
-                } else {
-                    promptText += "\n\nBased on the above information, especially the photo content descriptions and notes from various locations, generate an overall trip description, \(langConfig.wordLimit300). \(langConfig.requirementsLabel):\n1. Combine the scenes and content actually seen in the photos\n2. Reference the notes from various locations to reflect the coherence and characteristics of the trip\n3. Natural and fluent language with personal feelings\n4. \(langConfig.outputLanguageInstruction)\n5. **Do not mention identity tags, MBTI, gender, age group, constellation and other user attribute information, only write pure trip description content**\n6. **Do NOT mention specific dates, times, or location names in the generated description. At most, you can mention the season(s) (\(seasonHint)) if it's relevant to the content**\n7. **Important: Word count must be strictly controlled within 300 words, do not exceed**"
-                }
-            } else {
-                if hasExistingDescription {
-                    promptText += "\n\n请根据以上信息，特别是用户已写的旅程描述、照片内容描述和各个地点的笔记，**美化用户已写的旅程描述**，\(langConfig.wordLimit300)。\(langConfig.requirementsLabel)：\n1. **你的主要任务是美化用户已写的旅程描述，而不是生成新内容**\n2. 结合照片中实际看到的场景和内容\n3. 参考各个地点的笔记内容，体现旅程的连贯性和特色\n4. 使语言更加优美、流畅、有表现力，同时保留原文的意思\n5. \(langConfig.outputLanguageInstruction)\n6. **不要提及身份标签、MBTI、性别、年龄段、星座等用户属性信息，只写纯粹的旅程描述内容**\n7. **不要在生成的描述中提及具体的时间（日期）、地点名称等信息，最多只能提到季节（\(seasonHint)）**\n8. **重要：字数必须严格控制在300字以内，不要超过**"
-                } else {
-                    promptText += "\n\n请根据以上信息，特别是照片内容描述和各个地点的笔记，生成一段旅程整体描述，\(langConfig.wordLimit300)。\(langConfig.requirementsLabel)：\n1. 结合照片中实际看到的场景和内容\n2. 参考各个地点的笔记内容，体现旅程的连贯性和特色\n3. 语言自然流畅，带有个人感受\n4. \(langConfig.outputLanguageInstruction)\n5. **不要提及身份标签、MBTI、性别、年龄段、星座等用户属性信息，只写纯粹的旅程描述内容**\n6. **不要在生成的描述中提及具体的时间（日期）、地点名称等信息，最多只能提到季节（\(seasonHint)）**\n7. **重要：字数必须严格控制在300字以内，不要超过**"
-                }
-            }
-        } else {
-            // 构建本地化的prompt结尾（无照片的情况）
-            if currentLanguage == .english {
-                if hasExistingDescription {
-                    promptText += "\n\nBased on the above information, especially the user's existing trip description and notes from various locations, **polish and beautify** the user's existing trip description, \(langConfig.wordLimit300). \(langConfig.requirementsLabel):\n1. **Your main task is to polish the user's existing trip description, not to generate new content**\n2. Reference the notes from various locations to reflect the coherence and characteristics of the trip\n3. Make the language more elegant, fluent, and expressive while preserving the original meaning\n4. \(langConfig.outputLanguageInstruction)\n5. **Do not mention identity tags, MBTI, gender, age group, constellation and other user attribute information, only write pure trip description content**\n6. **Do NOT mention specific dates, times, or location names in the generated description. At most, you can mention the season(s) (\(seasonHint)) if it's relevant to the content**\n7. **Important: Word count must be strictly controlled within 300 words, do not exceed**"
-                } else {
-                    promptText += "\n\nBased on the above information, especially the notes from various locations, generate an overall trip description, \(langConfig.wordLimit300). \(langConfig.requirementsLabel):\n1. Reference the notes from various locations to reflect the coherence and characteristics of the trip\n2. Natural and fluent language with personal feelings\n3. \(langConfig.outputLanguageInstruction)\n4. **Do not mention identity tags, MBTI, gender, age group, constellation and other user attribute information, only write pure trip description content**\n5. **Do NOT mention specific dates, times, or location names in the generated description. At most, you can mention the season(s) (\(seasonHint)) if it's relevant to the content**\n6. **Important: Word count must be strictly controlled within 300 words, do not exceed**"
-                }
-            } else {
-                if hasExistingDescription {
-                    promptText += "\n\n请根据以上信息，特别是用户已写的旅程描述和各个地点的笔记，**美化用户已写的旅程描述**，\(langConfig.wordLimit300)。\(langConfig.requirementsLabel)：\n1. **你的主要任务是美化用户已写的旅程描述，而不是生成新内容**\n2. 参考各个地点的笔记内容，体现旅程的连贯性和特色\n3. 使语言更加优美、流畅、有表现力，同时保留原文的意思\n4. \(langConfig.outputLanguageInstruction)\n5. **不要提及身份标签、MBTI、性别、年龄段、星座等用户属性信息，只写纯粹的旅程描述内容**\n6. **不要在生成的描述中提及具体的时间（日期）、地点名称等信息，最多只能提到季节（\(seasonHint)）**\n7. **重要：字数必须严格控制在300字以内，不要超过**"
-                } else {
-                    promptText += "\n\n请根据以上信息，特别是各个地点的笔记，生成一段旅程整体描述，\(langConfig.wordLimit300)。\(langConfig.requirementsLabel)：\n1. 参考各个地点的笔记内容，体现旅程的连贯性和特色\n2. 语言自然流畅，带有个人感受\n3. \(langConfig.outputLanguageInstruction)\n4. **不要提及身份标签、MBTI、性别、年龄段、星座等用户属性信息，只写纯粹的旅程描述内容**\n5. **不要在生成的描述中提及具体的时间（日期）、地点名称等信息，最多只能提到季节（\(seasonHint)）**\n6. **重要：字数必须严格控制在300字以内，不要超过**"
+        var photoMoods: [String] = []
+        var photoDestinations = 0
+        for destination in cappedDestinations where photoDestinations < PromptBudget.maxTripPhotoDestinations {
+            guard !destination.photoDatas.isEmpty else { continue }
+            photoDestinations += 1
+            for imageData in destination.photoDatas.prefix(2) {
+                if let description = await analyzeImageWithVision(imageData) {
+                    photoMoods.append(description)
                 }
             }
         }
+        if photoDestinations > 0 {
+            print("📸 [Vision] 旅程照片识别完成，有照片的目的地 \(photoDestinations) 个，识别到 \(photoMoods.count) 条意境")
+        }
         
-        let messages: [ChatMessage] = [
-            .user([.text(promptText)])
-        ]
-        
-        let response = try await callChatAPI(messages: messages, model: chatModel)
-        
-        // 限制内容长度在300字以内
-        return limitTo300Characters(response)
+        let prompt = makeShortLinePrompt(
+            kind: .trip,
+            language: language,
+            place: place,
+            season: seasonHint,
+            userText: trimmedExisting.isEmpty ? nil : trimmedExisting,
+            photoMood: photoMoods.isEmpty ? nil : photoMoods.joined(separator: isCJK(language) ? "；" : "; "),
+            extraLines: noteSnippets.isEmpty ? [] : [
+                isCJK(language)
+                    ? "- 各地笔记：\(noteSnippets.joined(separator: "；"))"
+                    : "- Notes from stops: \(noteSnippets.joined(separator: "; "))"
+            ]
+        )
+        let response = try await callChatAPI(messages: [.user([.text(prompt)])], model: chatModel)
+        return finishShortLine(response, language: language)
     }
+    
     
     func analyzeImages(_ images: [Data]) async throws -> ImageAnalysisResult {
         print("🤖 [DeepSeek] 开始分析照片，照片数量: \(images.count)")
@@ -584,68 +306,26 @@ class DeepSeekProvider: AIServiceProtocol {
     ) async throws -> String {
         print("🤖 [DeepSeek] 开始生成海报短句，地点: \(location)")
         
-        let lang = currentLanguage
-        let isChineseFamily = (lang == .chinese || lang == .chineseTraditional || lang == .japanese || lang == .korean)
-        let season = getSeasonString(from: date, language: lang)
-        let note = existingNotes?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let hasNote = !(note?.isEmpty ?? true)
-        
+        let language = currentLanguage
+        let season = getSeasonString(from: date, language: language)
+        let note = truncateForPrompt(existingNotes ?? "", maxLength: PromptBudget.existingNotesChars)
         var photoHint: String?
         if let first = images.first {
             photoHint = await analyzeImageWithVision(first)
         }
         
-        let locationLine = [location, province, country]
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-            .joined(separator: lang == .english ? ", " : "，")
-        
-        let prompt: String
-        if isChineseFamily {
-            let noteBlock = hasNote ? "\n用户备注：\(note!)" : ""
-            let photoBlock = photoHint.map { "\n照片意境：\($0)" } ?? ""
-            prompt = """
-            你在为旅行海报写「图上短句」。只输出一句，像摄影明信片旁的诗意旁白。
-            
-            参考信息（不要把地点名、日期写进句子）：
-            - 地点背景：\(locationLine)
-            - 季节：\(season)\(noteBlock)\(photoBlock)
-            
-            硬性要求：
-            1. 只输出一句，不要引号、标题、标签、换行或解释
-            2. 中文/日文/韩文严格控制在 12～22 字以内（OVERLAY_MAX）
-            3. 不要出现地点名、日期、emoji、hashtag
-            4. 语气克制、留白，像附图旁那句短旁白
-            5. \(LanguageConfig.forLanguage(lang).outputLanguageInstruction)
-            """
-        } else {
-            let noteBlock = hasNote ? "\nUser notes: \(note!)" : ""
-            let photoBlock = photoHint.map { "\nPhoto mood: \($0)" } ?? ""
-            prompt = """
-            Write one short poetic caption for a travel poster (text beside a photo).
-            
-            Context (do NOT put place names or dates into the sentence):
-            - Place: \(locationLine)
-            - Season: \(season)\(noteBlock)\(photoBlock)
-            
-            Rules:
-            1. Output ONLY one sentence — no quotes, titles, hashtags, line breaks, or explanation
-            2. Keep it within 8–12 words (OVERLAY_MAX), max \(maxLength) characters
-            3. No place names, dates, emoji, or hashtags
-            4. Quiet, evocative tone — like a postcard line
-            5. \(LanguageConfig.forLanguage(lang).outputLanguageInstruction)
-            """
-        }
-        
-        let messages: [ChatMessage] = [.user([.text(prompt)])]
-        let response = try await callChatAPI(messages: messages, model: chatModel)
-        let cleaned = response
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .trimmingCharacters(in: CharacterSet(charactersIn: "\"“”‘’"))
-            .replacingOccurrences(of: "\n", with: " ")
-        return limitTextToLength(cleaned, maxLength: maxLength)
+        let prompt = makeShortLinePrompt(
+            kind: .poster,
+            language: language,
+            place: placeLine(location: location, province: province, country: country, language: language),
+            season: season,
+            userText: note.isEmpty ? nil : note,
+            photoMood: photoHint
+        )
+        let response = try await callChatAPI(messages: [.user([.text(prompt)])], model: chatModel)
+        return finishShortLine(response, language: language, characterCap: maxLength)
     }
+    
     
     // MARK: - Private Methods
     
@@ -731,154 +411,130 @@ class DeepSeekProvider: AIServiceProtocol {
         }
     }
     
-    /// 获取语言相关的配置信息
-    private struct LanguageConfig {
-        let languageCode: String
-        let defaultIdentity: String
-        let dateFormat: String
-        let outputLanguageInstruction: String
-        let locationLabel: String
-        let countryLabel: String
-        let visitDateLabel: String
-        let photoDescriptionLabel: String
-        let photoLabel: String
-        let noteLabel: String
-        let styleGuidanceLabel: String
-        let importantNoteLabel: String
-        let requirementsLabel: String
-        let wordLimit144: String
-        let wordLimit300: String
-        
-        static func forLanguage(_ language: LanguageManager.Language) -> LanguageConfig {
-            switch language {
-            case .chinese, .chineseTraditional:
-                return LanguageConfig(
-                    languageCode: "zh",
-                    defaultIdentity: "旅行作家",
-                    dateFormat: "yyyy年MM月dd日",
-                    outputLanguageInstruction: "使用中文输出",
-                    locationLabel: "地点",
-                    countryLabel: "国家",
-                    visitDateLabel: "访问日期",
-                    photoDescriptionLabel: "照片内容描述",
-                    photoLabel: "照片",
-                    noteLabel: "笔记",
-                    styleGuidanceLabel: "**文风指导**（仅用于调整写作风格，不要写入笔记内容）",
-                    importantNoteLabel: "**重要提示**",
-                    requirementsLabel: "要求",
-                    wordLimit144: "**严格限制在144字以内**",
-                    wordLimit300: "**严格限制在300字以内**"
-                )
-            case .english:
-                return LanguageConfig(
-                    languageCode: "en",
-                    defaultIdentity: "travel writer",
-                    dateFormat: "MMMM d, yyyy",
-                    outputLanguageInstruction: "Use English output",
-                    locationLabel: "Location",
-                    countryLabel: "Country",
-                    visitDateLabel: "Visit Date",
-                    photoDescriptionLabel: "Photo Content Description",
-                    photoLabel: "Photo",
-                    noteLabel: "Notes",
-                    styleGuidanceLabel: "**Style Guidance** (only for adjusting writing style, do not include in note content)",
-                    importantNoteLabel: "**Important Note**",
-                    requirementsLabel: "Requirements",
-                    wordLimit144: "**strictly limit to 144 words or less**",
-                    wordLimit300: "**strictly limit to 300 words or less**"
-                )
-            case .japanese:
-                return LanguageConfig(
-                    languageCode: "ja",
-                    defaultIdentity: "旅行作家",
-                    dateFormat: "yyyy年MM月dd日",
-                    outputLanguageInstruction: "日本語で出力してください",
-                    locationLabel: "場所",
-                    countryLabel: "国",
-                    visitDateLabel: "訪問日",
-                    photoDescriptionLabel: "写真の内容説明",
-                    photoLabel: "写真",
-                    noteLabel: "ノート",
-                    styleGuidanceLabel: "**文体指導**（執筆スタイルの調整のみに使用し、ノート内容には記載しないでください）",
-                    importantNoteLabel: "**重要な注意**",
-                    requirementsLabel: "要件",
-                    wordLimit144: "**144文字以内に厳格に制限**",
-                    wordLimit300: "**300文字以内に厳格に制限**"
-                )
-            case .french:
-                return LanguageConfig(
-                    languageCode: "fr",
-                    defaultIdentity: "écrivain de voyage",
-                    dateFormat: "d MMMM yyyy",
-                    outputLanguageInstruction: "Utilisez le français pour la sortie",
-                    locationLabel: "Lieu",
-                    countryLabel: "Pays",
-                    visitDateLabel: "Date de visite",
-                    photoDescriptionLabel: "Description du contenu de la photo",
-                    photoLabel: "Photo",
-                    noteLabel: "Notes",
-                    styleGuidanceLabel: "**Guide de style** (uniquement pour ajuster le style d'écriture, ne pas inclure dans le contenu de la note)",
-                    importantNoteLabel: "**Note importante**",
-                    requirementsLabel: "Exigences",
-                    wordLimit144: "**limiter strictement à 144 mots ou moins**",
-                    wordLimit300: "**limiter strictement à 300 mots ou moins**"
-                )
-            case .spanish:
-                return LanguageConfig(
-                    languageCode: "es",
-                    defaultIdentity: "escritor de viajes",
-                    dateFormat: "d 'de' MMMM 'de' yyyy",
-                    outputLanguageInstruction: "Use español para la salida",
-                    locationLabel: "Ubicación",
-                    countryLabel: "País",
-                    visitDateLabel: "Fecha de visita",
-                    photoDescriptionLabel: "Descripción del contenido de la foto",
-                    photoLabel: "Foto",
-                    noteLabel: "Notas",
-                    styleGuidanceLabel: "**Guía de estilo** (solo para ajustar el estilo de escritura, no incluir en el contenido de la nota)",
-                    importantNoteLabel: "**Nota importante**",
-                    requirementsLabel: "Requisitos",
-                    wordLimit144: "**limitar estrictamente a 144 palabras o menos**",
-                    wordLimit300: "**limitar estrictamente a 300 palabras o menos**"
-                )
-            case .korean:
-                return LanguageConfig(
-                    languageCode: "ko",
-                    defaultIdentity: "여행 작가",
-                    dateFormat: "yyyy년 MM월 dd일",
-                    outputLanguageInstruction: "한국어로 출력하세요",
-                    locationLabel: "장소",
-                    countryLabel: "국가",
-                    visitDateLabel: "방문 날짜",
-                    photoDescriptionLabel: "사진 내용 설명",
-                    photoLabel: "사진",
-                    noteLabel: "노트",
-                    styleGuidanceLabel: "**문체 가이드** (작문 스타일 조정에만 사용하며, 노트 내용에 포함하지 마세요)",
-                    importantNoteLabel: "**중요 참고사항**",
-                    requirementsLabel: "요구사항",
-                    wordLimit144: "**144자 이내로 엄격히 제한**",
-                    wordLimit300: "**300자 이내로 엄격히 제한**"
-                )
-            case .german:
-                return LanguageConfig(
-                    languageCode: "de",
-                    defaultIdentity: "Reiseschriftsteller",
-                    dateFormat: "d. MMMM yyyy",
-                    outputLanguageInstruction: "Bitte auf Deutsch ausgeben",
-                    locationLabel: "Ort",
-                    countryLabel: "Land",
-                    visitDateLabel: "Besuchsdatum",
-                    photoDescriptionLabel: "Beschreibung des Fotoinhalts",
-                    photoLabel: "Foto",
-                    noteLabel: "Notizen",
-                    styleGuidanceLabel: "**Stilhinweis** (nur zur Anpassung des Schreibstils, nicht in den Notizinhalt aufnehmen)",
-                    importantNoteLabel: "**Wichtiger Hinweis**",
-                    requirementsLabel: "Anforderungen",
-                    wordLimit144: "**streng auf maximal 144 Wörter begrenzen**",
-                    wordLimit300: "**streng auf maximal 300 Wörter begrenzen**"
-                )
-            }
+    /// 笔记、旅程描述、海报短句共用的一句旁白。
+    private enum ShortLineKind {
+        case placeNote
+        case trip
+        case poster
+    }
+    
+    private func isCJK(_ language: LanguageManager.Language) -> Bool {
+        switch language {
+        case .chinese, .chineseTraditional, .japanese, .korean:
+            return true
+        case .english, .french, .spanish, .german:
+            return false
         }
+    }
+    
+    private func outputLanguageInstruction(for language: LanguageManager.Language) -> String {
+        switch language {
+        case .chinese, .chineseTraditional:
+            return "使用中文输出"
+        case .english:
+            return "Use English output"
+        case .japanese:
+            return "日本語で出力してください"
+        case .french:
+            return "Utilisez le français pour la sortie"
+        case .spanish:
+            return "Use español para la salida"
+        case .korean:
+            return "한국어로 출력하세요"
+        case .german:
+            return "Bitte auf Deutsch ausgeben"
+        }
+    }
+    
+    private func placeLine(location: String, province: String, country: String, language: LanguageManager.Language) -> String {
+        [location, province, country]
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: isCJK(language) ? "，" : ", ")
+    }
+    
+    private func makeShortLinePrompt(
+        kind: ShortLineKind,
+        language: LanguageManager.Language,
+        place: String,
+        season: String,
+        userText: String?,
+        photoMood: String?,
+        extraLines: [String] = []
+    ) -> String {
+        let cjk = isCJK(language)
+        let task: String
+        switch kind {
+        case .placeNote:
+            task = cjk ? "为这一处停留写一句" : "Write one line for this stop."
+        case .trip:
+            task = cjk ? "为整趟旅程写一句，不要罗列地点" : "Write one line for the whole trip. Do not list places."
+        case .poster:
+            task = cjk ? "为这张照片写一句" : "Write one line for this photo."
+        }
+        
+        var lines: [String] = []
+        if !place.isEmpty {
+            lines.append(cjk ? "- 地点背景：\(place)" : "- Place: \(place)")
+        }
+        if !season.isEmpty {
+            lines.append(cjk ? "- 季节：\(season)" : "- Season: \(season)")
+        }
+        if let userText, !userText.isEmpty {
+            lines.append(cjk ? "- 用户原文：\(userText)" : "- User text: \(userText)")
+        }
+        if let photoMood, !photoMood.isEmpty {
+            lines.append(cjk ? "- 照片意境：\(photoMood)" : "- Photo mood: \(photoMood)")
+        }
+        lines.append(contentsOf: extraLines.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty })
+        let context = lines.joined(separator: "\n")
+        let languageLine = outputLanguageInstruction(for: language)
+        
+        if cjk {
+            return """
+            你在写旅行图上短句。只输出一句，像摄影明信片旁的旁白。
+            
+            任务：\(task)
+            参考（不要把地点名、日期写进句子）：
+            \(context)
+            
+            硬性要求：
+            1. 只输出一句，不要引号、标题、标签、换行或解释
+            2. 严格控制在 12～30 字以内（OVERLAY_MAX）
+            3. 不要出现地点名、日期、emoji、hashtag
+            4. 语气克制、留白
+            5. 若有用户原文，把它收成这一句，不要扩写
+            6. \(languageLine)
+            """
+        }
+        return """
+        Write one short line for a travel photo, like a postcard caption.
+        
+        Task: \(task)
+        Context (do NOT put place names or dates into the sentence):
+        \(context)
+        
+        Rules:
+        1. Output ONLY one sentence — no quotes, titles, hashtags, line breaks, or explanation
+        2. Keep it within 8–20 words (OVERLAY_MAX)
+        3. No place names, dates, emoji, or hashtags
+        4. Quiet, with room to breathe
+        5. If the user already wrote text, compress it into this one line
+        6. \(languageLine)
+        """
+    }
+    
+    private func finishShortLine(_ response: String, language: LanguageManager.Language, characterCap: Int? = nil) -> String {
+        let cleaned = response
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\"“”‘’「」『』"))
+            .replacingOccurrences(of: "\n", with: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let limited = isCJK(language)
+            ? limitTextToLength(cleaned, maxLength: 30)
+            : limitToWordCount(cleaned, maxWords: 20)
+        guard let characterCap else { return limited }
+        return limitTextToLength(limited, maxLength: characterCap)
     }
     
     /// 调用 DeepSeek Chat API
@@ -891,10 +547,8 @@ class DeepSeekProvider: AIServiceProtocol {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.timeoutInterval = requestTimeout
         
-        // 限制最大token数
-        // 对于笔记生成：中文平均每个字约1-2个token，144字约需要200-300 tokens
-        // 对于旅程描述：300字约需要400-600 tokens
-        // 根据消息内容判断是笔记还是旅程描述
+        // 笔记、旅程描述、海报短句的提示词都带 OVERLAY_MAX。
+        // 30 个汉字大约 60–90 token，多留一点余量把句子写完。
         let promptText = messages.compactMap { msg -> String? in
             if case .user(let items) = msg, let first = items.first, case .text(let text) = first {
                 return text
@@ -902,16 +556,7 @@ class DeepSeekProvider: AIServiceProtocol {
             return nil
         }.joined()
         
-        let maxTokens: Int
-        if promptText.contains("OVERLAY_MAX") {
-            maxTokens = 80   // 海报短句
-        } else if promptText.contains("300字") {
-            maxTokens = 600  // 旅程描述：300字
-        } else if promptText.contains("144字") {
-            maxTokens = 300  // 笔记：144字
-        } else {
-            maxTokens = 1000  // 默认值
-        }
+        let maxTokens = promptText.contains("OVERLAY_MAX") ? 128 : 1000
         
         let requestBody = ChatCompletionRequest(
             model: model,
@@ -1096,42 +741,33 @@ class DeepSeekProvider: AIServiceProtocol {
         return String(trimmed.prefix(maxLength)) + "…"
     }
     
-    /// 限制文本长度在指定字符数以内
+    /// 限制文本长度。超长时只在末尾几个字内认句末标点，避免逗号把短句切碎。
     private func limitTextToLength(_ text: String, maxLength: Int) -> String {
-        // 中文字符按1个字符计算
-        if text.count <= maxLength {
-            return text
-        }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > maxLength else { return trimmed }
         
-        // 截断到指定长度，尽量在句号、感叹号、问号处截断
-        let truncated = String(text.prefix(maxLength))
-        
-        // 尝试在最后一个标点符号处截断
-        let punctuationMarks: [Character] = ["。", "！", "？", "，", ".", "!", "?", ","]
+        let truncated = String(trimmed.prefix(maxLength))
+        let sentenceMarks = CharacterSet(charactersIn: "。！？.!?")
+        let windowStart = max(maxLength - 8, 0)
         var bestIndex = truncated.count
-        
-        for mark in punctuationMarks {
-            if let range = truncated.range(of: String(mark), options: .backwards, range: truncated.startIndex..<truncated.endIndex) {
-                let index = truncated.distance(from: truncated.startIndex, to: range.upperBound)
-                if index <= maxLength && index > max(maxLength - 50, 0) { // 在最后50个字符内寻找
-                    bestIndex = index
-                    break
-                }
+        var offset = 0
+        for character in truncated {
+            offset += 1
+            guard offset > windowStart else { continue }
+            if String(character).rangeOfCharacter(from: sentenceMarks) != nil {
+                bestIndex = offset
             }
         }
-        
         return String(truncated.prefix(bestIndex)).trimmingCharacters(in: .whitespacesAndNewlines)
     }
     
-    /// 限制文本长度在144个字符（中文）以内
-    private func limitTo144Characters(_ text: String) -> String {
-        return limitTextToLength(text, maxLength: 144)
+    /// 拉丁语种按词截断，不切断单词。
+    private func limitToWordCount(_ text: String, maxWords: Int) -> String {
+        let words = text.split(whereSeparator: { $0.isWhitespace })
+        guard words.count > maxWords else { return text }
+        return words.prefix(maxWords).joined(separator: " ")
     }
     
-    /// 限制文本长度在300个字符（中文）以内
-    private func limitTo300Characters(_ text: String) -> String {
-        return limitTextToLength(text, maxLength: 300)
-    }
     
     /// 解析照片分析结果
     private func parseImageAnalysisResult(from jsonString: String) throws -> ImageAnalysisResult {

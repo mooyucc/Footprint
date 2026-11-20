@@ -25,6 +25,7 @@ struct BadgeProgressSummaryCard: View {
     var onCrossHintTap: (() -> Void)? = nil
     
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var dataRevision = DestinationDataRevision.shared
     @State private var provinceReady: [String: ProvinceTicketReady] = [:]
@@ -35,9 +36,15 @@ struct BadgeProgressSummaryCard: View {
     private let gridSpacing: CGFloat = 12
     private let columnSpacing: CGFloat = 10
     
+    /// 省份票：iPhone 竖屏 2 / 横屏 3；iPad 竖屏 4 / 横屏 5。国家圆标保持更密。
     private var columnCount: Int {
         if usesProvinceTickets {
-            return horizontalSizeClass == .regular ? 3 : 2
+            switch (horizontalSizeClass, verticalSizeClass) {
+            case (.regular, .regular): return 4
+            case (.regular, _): return 5
+            case (_, .compact): return 3
+            default: return 2
+            }
         }
         return horizontalSizeClass == .regular ? 6 : 4
     }
@@ -65,29 +72,101 @@ struct BadgeProgressSummaryCard: View {
     }
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            headerRow
-            
-            if total > 0 {
-                progressBar
-            }
-            
-            if showsBadgeTiles {
-                badgeGrid
-            }
-            
-            if let crossHintText, onCrossHintTap != nil {
-                FootprintCardHairline()
-                crossHintRow(text: crossHintText)
+        Group {
+            if usesProvinceTickets {
+                provinceBody
+            } else {
+                summaryBody
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 14)
-        .footprintGlassCard(cornerRadius: 18, glow: accent)
         .accessibilityElement(children: .contain)
         .accessibilityLabel(accessibilitySummary)
         .task(id: provinceLoadKey) {
             await loadProvinceFaces()
+        }
+    }
+
+    /// 国家等短卡片：整卡玻璃，高度有限。
+    private var summaryBody: some View {
+        summaryStack
+            .padding(.horizontal, 14)
+            .padding(.vertical, 14)
+            .footprintGlassCard(cornerRadius: 18, glow: accent)
+    }
+
+    /// 省份票可以排很高。玻璃只包标题和进度条；网格放在不透明底上，
+    /// 避免 clipShape / glassEffect 把 LazyVGrid 收成一整块离屏图层。
+    private var provinceBody: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 12) {
+                headerRow
+                if total > 0 {
+                    progressBar
+                }
+                if showsBadgeTiles && items.isEmpty {
+                    Text(emptyText)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.vertical, 4)
+                }
+                if !showsProvinceGrid {
+                    provinceCrossHint
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 14)
+            .footprintGlassCard(cornerRadius: 18, glow: accent)
+
+            if showsProvinceGrid {
+                VStack(alignment: .leading, spacing: 12) {
+                    provinceTicketGrid
+                    provinceCrossHint
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 14)
+                .background {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(colorScheme == .dark
+                            ? Color(white: 0.16).opacity(0.70)
+                            : Color.white.opacity(0.72))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .strokeBorder(FootprintChrome.cardStroke(colorScheme), lineWidth: 0.5)
+                        }
+                }
+            }
+        }
+    }
+
+    private var showsProvinceGrid: Bool {
+        showsBadgeTiles && !items.isEmpty
+    }
+
+    @ViewBuilder
+    private var provinceCrossHint: some View {
+        if let crossHintText, onCrossHintTap != nil {
+            FootprintCardHairline()
+            crossHintRow(text: crossHintText)
+        }
+    }
+
+    private var summaryStack: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            headerRow
+
+            if total > 0 {
+                progressBar
+            }
+
+            if showsBadgeTiles {
+                badgeGrid
+            }
+
+            if let crossHintText, onCrossHintTap != nil {
+                FootprintCardHairline()
+                crossHintRow(text: crossHintText)
+            }
         }
     }
 
@@ -143,7 +222,7 @@ struct BadgeProgressSummaryCard: View {
                 .font(.headline)
                 .foregroundStyle(accent)
             Text(title)
-                .font(.headline.weight(.semibold))
+                .font(FootprintType.section)
                 .foregroundStyle(.primary)
             
             Spacer(minLength: 8)
@@ -185,8 +264,7 @@ struct BadgeProgressSummaryCard: View {
                     .frame(width: fillWidth, height: barHeight)
                 
                 Text("\(unlocked)")
-                    .font(.system(size: unlocked >= 100 ? 9 : 11, weight: .bold, design: .rounded))
-                    .monospacedDigit()
+                    .footprintMetric(size: unlocked >= 100 ? 9 : 11, weight: .bold)
                     .foregroundStyle(.primary)
                     .frame(width: badgeDiameter, height: badgeDiameter)
                     .background(Circle().fill(Color(.systemBackground)))
@@ -295,11 +373,9 @@ struct BadgeProgressSummaryCard: View {
             }
         }
         .onPreferenceChange(ProvinceGridWidthKey.self) { newValue in
-            // 只定一次列宽；首帧偏小时允许变大纠正，滚动中不接受变小以免抖动
+            // 忽略滚动微抖；横竖屏 / 分屏导致明显变宽或变窄时同步更新
             guard newValue > 1 else { return }
-            if provinceGridWidth == 0 {
-                provinceGridWidth = newValue
-            } else if newValue > provinceGridWidth + 1 {
+            if provinceGridWidth == 0 || abs(newValue - provinceGridWidth) > 8 {
                 provinceGridWidth = newValue
             }
         }

@@ -14,6 +14,7 @@ struct EditDestinationView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var entitlementManager: EntitlementManager
+    @EnvironmentObject private var aiCreditManager: AICreditManager
     @Query(sort: \TravelTrip.startDate, order: .reverse) private var trips: [TravelTrip]
     @StateObject private var languageManager = LanguageManager.shared
     
@@ -39,6 +40,8 @@ struct EditDestinationView: View {
     @State private var videoData: Data?
     @State private var selectedTrip: TravelTrip?
     @State private var showDeleteConfirmation = false
+    @State private var tempDestinationForAI: TravelDestination?
+    @State private var showCreditPaywall = false
     
     let categories = ["domestic", "international"]
     private var maxPhotos: Int {
@@ -148,10 +151,13 @@ struct EditDestinationView: View {
                 // 使用可复用的视频选择组件
                 VideoSelectionSection(videoData: $videoData)
                 
-                Section("notes".localized) {
-                    TextEditor(text: $notes)
-                        .frame(minHeight: 100)
-                }
+                NotesSection(
+                    notes: $notes,
+                    onAITap: {
+                        handleAITap()
+                    },
+                    canUseAI: canUseAI
+                )
                 
                 Section {
                     Button(role: .destructive) {
@@ -193,6 +199,17 @@ struct EditDestinationView: View {
             } message: {
                 Text("confirm_delete_destination".localized(with: destination.name))
             }
+            .sheet(isPresented: $showCreditPaywall) {
+                AICreditPaywallView()
+            }
+            .sheet(item: $tempDestinationForAI) { tempDestination in
+                AINotePreviewSheetForQuickAdd(
+                    tempDestination: tempDestination,
+                    onSave: { generatedNotes in
+                        notes = generatedNotes
+                    }
+                )
+            }
             .onChange(of: selectedPhotos) { oldValue, newValue in
                 Task {
                     // 载入当前选择的所有图片数据
@@ -230,6 +247,43 @@ struct EditDestinationView: View {
     
     private var isValid: Bool {
         !name.isEmpty && !country.isEmpty
+    }
+
+    private var canUseAI: Bool {
+        if BetaInfo.isBetaBuild { return true }
+        if entitlementManager.canUseAIFeatures { return true }
+        return aiCreditManager.remaining > 0
+    }
+
+    /// 用当前编辑内容生成笔记，写回输入框，随表单一并保存。
+    private func handleAITap() {
+        guard canUseAI else {
+            showCreditPaywall = true
+            return
+        }
+
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty || !destination.name.isEmpty else { return }
+
+        let datas = photoItems.map(\.data)
+        let thumbnails = photoItems.map(\.thumbnailData)
+        tempDestinationForAI = TravelDestination(
+            name: trimmedName.isEmpty ? destination.name : trimmedName,
+            country: country.isEmpty ? destination.country : country,
+            province: province,
+            latitude: destination.latitude,
+            longitude: destination.longitude,
+            visitDate: visitDate,
+            notes: notes,
+            photoData: datas.first,
+            photoDatas: datas,
+            photoThumbnailData: thumbnails.first,
+            photoThumbnailDatas: thumbnails,
+            videoData: videoData,
+            category: category,
+            type: type,
+            isFavorite: isFavorite
+        )
     }
     
     private func loadDestinationData() {
@@ -276,6 +330,7 @@ struct EditDestinationView: View {
         destination.photoThumbnailDatas = thumbnailsToSave
         destination.photoThumbnailData = thumbnailsToSave.first
         destination.videoData = videoData
+        destination.updateHasPhotosFlag()
         destination.trip = selectedTrip
         
         // 显式保存更改，确保数据已同步
@@ -342,5 +397,8 @@ struct EditDestinationView: View {
     
     return EditDestinationView(destination: destination)
         .modelContainer(container)
+        .environmentObject(EntitlementManager.shared)
+        .environmentObject(AICreditManager.shared)
+        .environmentObject(BrandColorManager.shared)
 }
 

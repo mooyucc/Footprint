@@ -43,7 +43,6 @@ struct AICreditPaywallView: View {
         usageDescriptionOverride ?? "ai_credits_usage_desc".localized
     }
     
-    @State private var showPaywall = false
     @State private var purchasingProductID: String?
     
     var body: some View {
@@ -59,7 +58,6 @@ struct AICreditPaywallView: View {
                         headerSection
                         counterSection
                         productSection
-                        viewProPlansSecondaryLink
                         usageInfoSection
                         restoreSection
                     }
@@ -83,9 +81,6 @@ struct AICreditPaywallView: View {
             }
             .task {
                 await purchaseManager.loadProducts()
-            }
-            .sheet(isPresented: $showPaywall) {
-                PaywallView()
             }
         }
     }
@@ -115,19 +110,6 @@ struct AICreditPaywallView: View {
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-    }
-    
-    private var viewProPlansSecondaryLink: some View {
-        Button {
-            showPaywall = true
-        } label: {
-            Text("paywall_button_upgrade".localized)
-                .font(.footnote.weight(.medium))
-                .foregroundColor(.secondary)
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: 44)
-        }
-        .buttonStyle(.plain)
     }
     
     private var counterSection: some View {

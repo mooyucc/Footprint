@@ -38,6 +38,10 @@ enum ProvinceTicketPicker {
         0.51, 0.06, 0.15, 0.33, 0.60, 0.07, 0.09, 0.56, 0.43
     ]
 
+    /// 各省封面地点：进程内缓存。冷启动为空会随机抽；热启动复用，避免换图。
+    @MainActor
+    private static var preferredDestinationIDs: [String: UUID] = [:]
+
     private static let dateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
@@ -62,15 +66,12 @@ enum ProvinceTicketPicker {
         return ProvinceTicketPalette(ground: sampled.ground, paper: sampled.paper)
     }
 
-    /// 同一省份名始终抽到同一张有图地点；地点照片集合变化后才会换。
+    /// 冷启动随机抽一张有图地点；同进程内复用，热启动不换图。编号/色板仍按省名稳定。
+    @MainActor
     static func face(seed: String, destinations: [TravelDestination]) -> ProvinceTicketFace {
         let hash = BadgeTicketBarcodeSeed.make(seed)
-        let candidates = destinations
-            .filter(hasPhoto)
-            .sorted { $0.id.uuidString < $1.id.uuidString }
-        let picked: TravelDestination? = candidates.isEmpty
-            ? nil
-            : candidates[Int(hash % UInt64(candidates.count))]
+        let candidates = destinations.filter(hasPhoto)
+        let picked = pickDestination(seed: seed, candidates: candidates)
 
         let dateText = picked.map { dateFormatter.string(from: $0.visitDate) } ?? ""
 
@@ -87,6 +88,28 @@ enum ProvinceTicketPicker {
             fullData: picked.flatMap(fullData),
             paletteIndex: Int(hash % UInt64(paletteHues.count))
         )
+    }
+
+    @MainActor
+    private static func pickDestination(
+        seed: String,
+        candidates: [TravelDestination]
+    ) -> TravelDestination? {
+        guard !candidates.isEmpty else {
+            preferredDestinationIDs.removeValue(forKey: seed)
+            return nil
+        }
+        if let preferred = preferredDestinationIDs[seed],
+           let match = candidates.first(where: { $0.id == preferred }) {
+            return match
+        }
+        let picked = candidates.randomElement()
+        if let picked {
+            preferredDestinationIDs[seed] = picked.id
+        } else {
+            preferredDestinationIDs.removeValue(forKey: seed)
+        }
+        return picked
     }
 
     private static func hasPhoto(_ destination: TravelDestination) -> Bool {

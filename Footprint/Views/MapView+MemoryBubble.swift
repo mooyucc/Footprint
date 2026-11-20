@@ -21,50 +21,106 @@ extension MapView {
     var memoryBubbleOverlay: some View {
         GeometryReader { geometry in
             ZStack {
-                // 吹出肥皂泡泡动画 - 从地点上方吹出
-                if showSoapBubbles, !autoShowRouteCards, !isThermallyCritical, let destination = selectedBubbleDestination {
-                    // 计算地点在地图上的屏幕坐标
-                    let screenPoint = convertCoordinateToScreenPoint(destination.coordinate, in: geometry.size)
-                    
-                    // 从地点上方（向上偏移约80点）吹出肥皂泡泡
-                    let bubbleStartPosition = CGPoint(
-                        x: screenPoint.x,
-                        y: screenPoint.y - 80 // 地点上方
-                    )
-                    
-                    SoapBubblesView(
-                        position: bubbleStartPosition,
-                        direction: .pi / 2, // 主要向上吹
-                        spreadAngle: .pi / 3, // 约60度扩散角度，向上飘散，带有轻微摆动
-                        isDarkMapStyle: isDarkMapStyle, // 传递地图样式信息，用于调整泡泡对比度
-                        isActive: showSoapBubbles,
-                        onPlaySound: { soundType in
-                            // 在泡泡动画过程中播放音效，根据类型播放不同音效
-                            // 使用3种不同的音效变体，营造Q弹感和层次感
-                            switch soundType {
-                            case 0:
-                                playBubblePopSound1() // 气泡音效
-                            case 1:
-                                playBubblePopSound2() // 轻微点击音效
-                            case 2:
-                                playBubblePopSound3() // 消息接收音效
-                            default:
-                                playBubblePopSound1()
-                            }
-                        },
+                if showSoapBubbles,
+                   !autoShowRouteCards,
+                   !isThermallyCritical,
+                   let destination = selectedBubbleDestination,
+                   let region = visibleRegion ?? regionHolder.pending {
+                    LocationWaterRipple(
+                        region: region,
+                        coordinate: destination.coordinate,
+                        canvasSize: geometry.size,
+                        mapStyle: currentMapStyle,
+                        interfaceStyle: colorScheme == .dark ? .dark : .light,
                         onComplete: {
-                            showSoapBubbles = false
-                            selectedBubbleDestination = nil
+                            finishRippleVisual()
                         }
-                    )
-                    .id(soapBubblesID) // 使用 ID 确保每次创建新实例
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .allowsHitTesting(false) // 不阻挡其他交互
-                    .zIndex(1000) // 确保在最上层
+                    ) {
+                        ripplePin(for: destination)
+                    }
+                    .id(soapBubblesID)
+                    .zIndex(1000)
                 }
             }
         }
-        .allowsHitTesting(true)
+        .background {
+            if showSoapBubbles {
+                Color.clear
+                    .contentShape(Rectangle())
+            }
+        }
+        .allowsHitTesting(showSoapBubbles)
+    }
+
+    /// 波纹期间不改 Map 的 allowsHitTesting，避免标注层被拆掉。用手势遮罩挡住拖动。
+    func finishRippleVisual() {
+        if let destination = selectedBubbleDestination {
+            pinDestinationInClusters(destination)
+        }
+        showSoapBubbles = false
+        releaseRipplePinIfClustered()
+    }
+
+    /// 聚类里已经有这枚单独标注后，再撤掉回忆流程的临时针。
+    func releaseRipplePinIfClustered() {
+        guard !showSoapBubbles, let destination = selectedBubbleDestination else { return }
+        if isCalculatingClusters {
+            return
+        }
+        let clustered = cachedClusterAnnotations.contains {
+            $0.destinations.count == 1 && $0.destinations[0].id == destination.id
+        }
+        guard clustered else {
+            scheduleClusterRecalculationIfNeeded()
+            return
+        }
+        selectedBubbleDestination = nil
+    }
+
+    /// 把目标地点放进当前聚类结果，保证波纹结束后地图上仍有这枚针。
+    func pinDestinationInClusters(_ destination: TravelDestination) {
+        var clusters = cachedClusterAnnotations.compactMap { cluster -> ClusterAnnotation? in
+            let remaining = cluster.destinations.filter { $0.id != destination.id }
+            guard !remaining.isEmpty else { return nil }
+            if remaining.count == cluster.destinations.count {
+                return cluster
+            }
+            return ClusterAnnotation(destinations: remaining, displayType: cluster.displayType)
+        }
+        let alreadySingle = clusters.contains {
+            $0.destinations.count == 1 && $0.destinations[0].id == destination.id
+        }
+        if !alreadySingle {
+            clusters.append(ClusterAnnotation(destinations: [destination]))
+        }
+        cachedClusterAnnotations = clusters
+    }
+
+    func reinforceRippleDestinationPin() {
+        guard let destination = selectedBubbleDestination ?? targetBubbleDestination else { return }
+        pinDestinationInClusters(destination)
+    }
+
+    /// 波纹盖住地图标注时，把同一枚针画在透镜上面，圆心不跟着被折射。
+    func ripplePin(for destination: TravelDestination) -> some View {
+        ZStack {
+            ClusterAnnotationView(
+                cluster: ClusterAnnotation(destinations: [destination]),
+                zoomLevel: currentZoomLevel,
+                tripColorMap: tripColorMapping,
+                accentColor: brandAccentColor,
+                weatherSummary: nil,
+                mapMode: .myFootprints
+            )
+            Text(destination.name)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.primary)
+                .lineLimit(1)
+                .shadow(color: .white.opacity(0.9), radius: 1.5)
+                .shadow(color: .black.opacity(0.35), radius: 2, x: 0, y: 1)
+                .offset(y: 34)
+        }
+        .allowsHitTesting(false)
     }
     
     // 地图地点标注弹窗覆盖层
@@ -115,8 +171,6 @@ extension MapView {
             }
 
             await MainActor.run {
-                playBubbleSound()
-
                 targetBubbleDestination = randomDestination
                 waitingForMapToReachDestination = true
 
@@ -130,11 +184,11 @@ extension MapView {
                 }
 
                 print("🫧 地图 Zoom in 到地点: \(randomDestination.name)")
-                print("🫧 等待地图到达地点后吹出肥皂泡泡...")
+                print("🫧 等待地图到达地点后荡开水波...")
 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
                     if waitingForMapToReachDestination {
-                        print("🫧 超时保护：强制触发肥皂泡泡动画")
+                        print("🫧 超时保护：强制触发水波动画")
                         self.checkAndTriggerBubbles()
                     }
                 }
@@ -158,7 +212,7 @@ extension MapView {
         }
     }
     
-    // 检查地图是否已到达目标地点，如果到达则触发肥皂泡泡
+    // 检查地图是否已到达目标地点，如果到达则从地点荡开水波
     func checkAndTriggerBubbles() {
         guard waitingForMapToReachDestination,
               let target = targetBubbleDestination,
@@ -182,11 +236,12 @@ extension MapView {
         let isNearCenter = latDiff < latSpan * 0.2 && lonDiff < lonSpan * 0.2
         
         if isNearCenter {
-            print("🫧 地图已到达地点，触发肥皂泡泡动画")
+            print("🫧 地图已到达地点，触发水波动画")
             waitingForMapToReachDestination = false
             targetBubbleDestination = nil
             
-            // 触发肥皂泡泡动画
+            // 触发水波：先把地点钉进聚类，结束时地图上还留着这枚针
+            pinDestinationInClusters(target)
             selectedBubbleDestination = target
             showSoapBubbles = true
             soapBubblesID = UUID()

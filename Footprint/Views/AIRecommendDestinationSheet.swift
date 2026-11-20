@@ -10,8 +10,6 @@ import SwiftData
 import StoreKit
 
 struct AIRecommendDestinationSheet: View {
-    let destinations: [TravelDestination]
-    
     private enum RecommendPhase {
         case hub
         case active
@@ -326,8 +324,9 @@ struct AIRecommendDestinationSheet: View {
             return
         }
         
+        let recentDestinations = fetchRecentDestinations()
         Task {
-            let text = await aiManager.recommendNextDestinations(from: destinations)
+            let text = await aiManager.recommendNextDestinations(from: recentDestinations)
             await MainActor.run {
                 isLoading = false
                 let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -340,6 +339,15 @@ struct AIRecommendDestinationSheet: View {
         }
     }
     
+    /// 推荐只用最近 30 条的文字字段，点「生成」时再取。
+    private func fetchRecentDestinations() -> [TravelDestination] {
+        var descriptor = FetchDescriptor<TravelDestination>(
+            sortBy: [SortDescriptor(\.visitDate, order: .reverse)]
+        )
+        descriptor.fetchLimit = 30
+        return (try? modelContext.fetch(descriptor)) ?? []
+    }
+
     private func copyToClipboard(_ text: String) {
         #if os(iOS)
         UIPasteboard.general.string = text

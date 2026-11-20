@@ -36,7 +36,7 @@ extension MapView {
                 print("❌ 图片加载失败：所选图片均无法读取")
                 await MainActor.run {
                     photoImportError = .failedToLoad
-                    showingQuickCheckIn = false
+                    showingAddDestination = false
                     pendingPhotoPrefill = nil
                     photoImportItems = []
                     showingPhotoImportPicker = false
@@ -88,7 +88,8 @@ extension MapView {
                     )
                     photoImportError = nil
                     isGeocodingLocation = true
-                    showingQuickCheckIn = true
+                    shouldUsePrefillForAddDestination = true
+                    showingAddDestination = true
                     addDestinationPrefill = nil
                     
                     print("🔄 开始逆地理编码...")
@@ -106,7 +107,8 @@ extension MapView {
                         photoThumbnailDatas: thumbnailDatas
                     )
                     isGeocodingLocation = false
-                    showingQuickCheckIn = true
+                    shouldUsePrefillForAddDestination = true
+                    showingAddDestination = true
                     photoImportError = nil
                 }
             }

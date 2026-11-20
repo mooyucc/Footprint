@@ -194,7 +194,7 @@ struct DataSettingsView: View {
             }
         }
         .sheet(isPresented: $showPaywall) {
-            PaywallView()
+            PaywallView(contextMessage: "import_export_locked_message".localized)
                 .environmentObject(purchaseManager)
                 .environmentObject(entitlementManager)
         }
@@ -446,6 +446,7 @@ struct DataSettingsView: View {
                     await MainActor.run {
                         destination.photoData = processed.0
                         destination.photoThumbnailData = processed.1
+                        destination.updateHasPhotosFlag()
                     }
                 }
                 
@@ -474,6 +475,7 @@ struct DataSettingsView: View {
                         if let firstThumbnail = optimizedThumbnailDatas.first {
                             destination.photoThumbnailData = firstThumbnail
                         }
+                        destination.updateHasPhotosFlag()
                     }
                 }
             }
